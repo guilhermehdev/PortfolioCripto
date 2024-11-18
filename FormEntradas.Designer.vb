@@ -129,7 +129,7 @@ Partial Class FormEntradas
         ' cbCripto
         ' 
         cbCripto.FormattingEnabled = True
-        cbCripto.Items.AddRange(New Object() {"BTC", "ETH", "SOL", "NEAR", "PENDLE", "DOG", "ATH", "ZRO", "PEPE", "KSM"})
+        cbCripto.Items.AddRange(New Object() {"BTC", "ETH", "SOL", "NEAR", "PENDLE", "KSM", "ENA", "DOG", "ATH", "ZRO", "PEPE", "VISTA"})
         cbCripto.Location = New Point(25, 27)
         cbCripto.Name = "cbCripto"
         cbCripto.Size = New Size(90, 23)
