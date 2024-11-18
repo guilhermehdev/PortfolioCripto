@@ -1,5 +1,5 @@
 ﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
-Partial Class Form1
+Partial Class FormMain
     Inherits System.Windows.Forms.Form
 
     'Form overrides dispose to clean up the component list.
@@ -26,7 +26,9 @@ Partial Class Form1
         CadastroToolStripMenuItem = New ToolStripMenuItem()
         CriptoToolStripMenuItem = New ToolStripMenuItem()
         FecharToolStripMenuItem = New ToolStripMenuItem()
+        DataGridView1 = New DataGridView()
         MenuStrip1.SuspendLayout()
+        CType(DataGridView1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
         ' MenuStrip1
@@ -34,7 +36,7 @@ Partial Class Form1
         MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, FecharToolStripMenuItem})
         MenuStrip1.Location = New Point(0, 0)
         MenuStrip1.Name = "MenuStrip1"
-        MenuStrip1.Size = New Size(878, 24)
+        MenuStrip1.Size = New Size(1085, 24)
         MenuStrip1.TabIndex = 10
         MenuStrip1.Text = "MenuStrip1"
         ' 
@@ -48,7 +50,7 @@ Partial Class Form1
         ' CriptoToolStripMenuItem
         ' 
         CriptoToolStripMenuItem.Name = "CriptoToolStripMenuItem"
-        CriptoToolStripMenuItem.Size = New Size(119, 22)
+        CriptoToolStripMenuItem.Size = New Size(180, 22)
         CriptoToolStripMenuItem.Text = "Entradas"
         ' 
         ' FecharToolStripMenuItem
@@ -57,20 +59,36 @@ Partial Class Form1
         FecharToolStripMenuItem.Size = New Size(54, 20)
         FecharToolStripMenuItem.Text = "Fechar"
         ' 
-        ' Form1
+        ' DataGridView1
+        ' 
+        DataGridView1.AllowUserToAddRows = False
+        DataGridView1.AllowUserToDeleteRows = False
+        DataGridView1.AllowUserToOrderColumns = True
+        DataGridView1.BackgroundColor = Color.Ivory
+        DataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        DataGridView1.Dock = DockStyle.Fill
+        DataGridView1.Location = New Point(0, 24)
+        DataGridView1.Name = "DataGridView1"
+        DataGridView1.ReadOnly = True
+        DataGridView1.Size = New Size(1085, 546)
+        DataGridView1.TabIndex = 11
+        ' 
+        ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(878, 432)
+        ClientSize = New Size(1085, 570)
+        Controls.Add(DataGridView1)
         Controls.Add(MenuStrip1)
         FormBorderStyle = FormBorderStyle.FixedSingle
         MainMenuStrip = MenuStrip1
         MaximizeBox = False
-        Name = "Form1"
+        Name = "FormMain"
         StartPosition = FormStartPosition.CenterScreen
         Text = "Portfolio Cripto"
         MenuStrip1.ResumeLayout(False)
         MenuStrip1.PerformLayout()
+        CType(DataGridView1, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -78,5 +96,6 @@ Partial Class Form1
     Friend WithEvents CadastroToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents CriptoToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents FecharToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents DataGridView1 As DataGridView
 
 End Class

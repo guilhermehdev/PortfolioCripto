@@ -1,4 +1,4 @@
-﻿Public Class Form1
+﻿Public Class FormMain
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.ShowDialog()
@@ -6,6 +6,12 @@
 
     Private Sub FecharToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles FecharToolStripMenuItem.Click
         Application.Exit()
+    End Sub
+
+    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        Dim json As New JSON
+
+        json.LoadCriptos()
     End Sub
 
 End Class

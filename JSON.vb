@@ -6,7 +6,7 @@ Imports System.IO
 Public Class JSON
     Private path As String = Application.StartupPath & "\JSON\criptos.json"
     Private jsonString As String = File.ReadAllText(path)
-    Public bindingSource As New BindingSource()
+    Private bindingSource As New BindingSource()
 
     Public Function CheckJSONKey(ByVal jsonKey As String)
         Try
@@ -103,7 +103,7 @@ Public Class JSON
 
     End Function
 
-    Public Sub LoadJSONtoDataGrid(ByVal datagrid As DataGridView)
+    Public Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing)
 
         If File.Exists(path) Then
             Dim jsonObject As JObject = JObject.Parse(jsonString)
@@ -130,11 +130,70 @@ Public Class JSON
             Next
 
             bindingSource.DataSource = allItems
-            datagrid.DataSource = bindingSource
 
+            If datagrid IsNot Nothing Then
+                datagrid.DataSource = bindingSource
+            End If
+
+            Return allItems
         Else
             MessageBox.Show("O arquivo JSON não foi encontrado.")
+            Return False
         End If
+
+    End Function
+
+    Public Function ConvertListToDataTable(Of T)(list As List(Of T)) As DataTable
+        Dim table As New DataTable()
+
+        ' Obter as propriedades da classe T
+        Dim properties = GetType(T).GetProperties()
+
+        ' Criar colunas no DataTable baseadas nas propriedades
+        For Each prop In properties
+            table.Columns.Add(prop.Name, If(Nullable.GetUnderlyingType(prop.PropertyType), prop.PropertyType))
+        Next
+
+        ' Adicionar linhas no DataTable
+        For Each item In list
+            Dim row = table.NewRow()
+            For Each prop In properties
+                row(prop.Name) = If(prop.GetValue(item), DBNull.Value)
+            Next
+            table.Rows.Add(row)
+        Next
+
+        Return table
+
+    End Function
+
+    Public Sub LoadCriptos(datagrid As DataGridView)
+        Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
+
+        Dim newDT As New DataTable()
+        newDT.Columns.Add("Cripto", GetType(Integer))
+        newDT.Columns.Add("Name", GetType(String))
+        newDT.Columns.Add("Value", GetType(Decimal))
+        newDT.Columns.Add("MarketCap", GetType(String)) ' Nova coluna
+        newDT.Columns.Add("UpdatedDate", GetType(DateTime)) ' Outra nova coluna
+
+        ' Adicionar dados do DataTable original ao novo
+        For Each row As DataRow In originalDT.Rows
+            Dim newRow As DataRow = newDT.NewRow()
+            newRow("ID") = row("ID")
+            newRow("Name") = row("Name")
+            newRow("Value") = row("Value")
+            newRow("MarketCap") = "Not Available" ' Valor padrão para nova coluna
+            newRow("UpdatedDate") = DateTime.Now ' Preencher com a data atual
+            newDT.Rows.Add(newRow)
+        Next
+
+        datagrid.DataSource = newDT
+        'For Each row As DataRow In dt.Rows
+        'MsgBox(row("InitialPrice"))
+        'Next
+
+
     End Sub
 
 End Class
