@@ -146,16 +146,12 @@ Public Class JSON
 
     Public Function ConvertListToDataTable(Of T)(list As List(Of T)) As DataTable
         Dim table As New DataTable()
-
-        ' Obter as propriedades da classe T
         Dim properties = GetType(T).GetProperties()
 
-        ' Criar colunas no DataTable baseadas nas propriedades
         For Each prop In properties
             table.Columns.Add(prop.Name, If(Nullable.GetUnderlyingType(prop.PropertyType), prop.PropertyType))
         Next
 
-        ' Adicionar linhas no DataTable
         For Each item In list
             Dim row = table.NewRow()
             For Each prop In properties
@@ -172,11 +168,16 @@ Public Class JSON
         Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
 
         Dim newDT As New DataTable()
-        newDT.Columns.Add("Cripto", GetType(Integer))
-        newDT.Columns.Add("Name", GetType(String))
-        newDT.Columns.Add("Value", GetType(Decimal))
-        newDT.Columns.Add("MarketCap", GetType(String)) ' Nova coluna
-        newDT.Columns.Add("UpdatedDate", GetType(DateTime)) ' Outra nova coluna
+        newDT.Columns.Add("Cripto", GetType(String))
+        newDT.Columns.Add("%", GetType(Integer))
+        newDT.Columns.Add("Wallet", GetType(String))
+        newDT.Columns.Add("Qtd", GetType(String))
+        newDT.Columns.Add("valorEntrada$", GetType(Decimal))
+        newDT.Columns.Add("valorEntradaR$", GetType(Decimal))
+        newDT.Columns.Add("precoMedio", GetType(Decimal))
+        newDT.Columns.Add("precoAtual", GetType(Decimal))
+        newDT.Columns.Add("valorAtual$", GetType(Decimal))
+        newDT.Columns.Add("valorAtualR$", GetType(Decimal))
 
         ' Adicionar dados do DataTable original ao novo
         For Each row As DataRow In originalDT.Rows
