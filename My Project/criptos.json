@@ -1,0 +1,50 @@
+{
+  "SOL": [
+    {
+      "InitialPrice": "$155.00",
+      "Qtd": 123.0,
+      "Data": "22/11/2024",
+      "Wallet": "Phantom"
+    }
+  ],
+  "PENDLE": [
+    {
+      "InitialPrice": "$5.52",
+      "Qtd": 44.43,
+      "Data": "22/11/2024",
+      "Wallet": "TrustWallet"
+    }
+  ],
+  "NEAR": [
+    {
+      "InitialPrice": "$4.56",
+      "Qtd": 2296.0,
+      "Data": "22/11/2024",
+      "Wallet": "TrustWallet"
+    }
+  ],
+  "ZRO": [
+    {
+      "InitialPrice": "$3.97",
+      "Qtd": 1528.0,
+      "Data": "22/11/2024",
+      "Wallet": "Gate.io"
+    }
+  ],
+  "DOG": [
+    {
+      "InitialPrice": "$0.00",
+      "Qtd": 22317.0,
+      "Data": "22/11/2024",
+      "Wallet": "Gate.io"
+    }
+  ],
+  "PEPE": [
+    {
+      "InitialPrice": "$0.00",
+      "Qtd": 4246774.0,
+      "Data": "22/11/2024",
+      "Wallet": "Binance"
+    }
+  ]
+}

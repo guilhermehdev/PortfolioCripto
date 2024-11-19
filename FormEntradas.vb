@@ -30,7 +30,7 @@ Public Class FormEntradas
         Try
             preco = CDec(TbPrecoEntrada.Text)
 
-            TbPrecoEntrada.Text = preco.ToString("C2", New CultureInfo("en-US"))
+            TbPrecoEntrada.Text = preco.ToString("C", New CultureInfo("en-US")).Replace("US$", "$")
         Catch ex As Exception
 
         End Try
@@ -42,11 +42,11 @@ Public Class FormEntradas
         Dim json As New JSON
         Dim row As DataGridViewRow = dgCriptos.CurrentRow
 
-
         Dim key As String = dgCriptos.CurrentCell.Value.ToString()
         If json.DeleteJSON(key) Then
             dgCriptos.Rows.Remove(row)
         End If
+
     End Sub
 
     Private Sub dgCriptos_RowEnter(sender As Object, e As DataGridViewCellEventArgs) Handles dgCriptos.RowEnter
@@ -60,6 +60,10 @@ Public Class FormEntradas
 
         End Try
 
+    End Sub
+
+    Private Sub tbQtd_Leave(sender As Object, e As EventArgs) Handles tbQtd.Leave
+        ' tbQtd.Text = tbQtd.Text.Replace(",", ".")
     End Sub
 
 End Class

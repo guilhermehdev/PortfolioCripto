@@ -133,6 +133,7 @@ Public Class JSON
 
             If datagrid IsNot Nothing Then
                 datagrid.DataSource = bindingSource
+                datagrid.Columns(1).HeaderText = "Preço médio"
             End If
 
             Return allItems

@@ -49,7 +49,7 @@ Partial Class FormEntradas
         ' Label3
         ' 
         Label3.AutoSize = True
-        Label3.Location = New Point(121, 52)
+        Label3.Location = New Point(184, 53)
         Label3.Name = "Label3"
         Label3.Size = New Size(40, 15)
         Label3.TabIndex = 13
@@ -59,7 +59,7 @@ Partial Class FormEntradas
         ' 
         cbWallet.FormattingEnabled = True
         cbWallet.Items.AddRange(New Object() {"Metamask", "TrustWallet", "Phantom", "Binance", "Bybit", "Gate.io"})
-        cbWallet.Location = New Point(121, 70)
+        cbWallet.Location = New Point(184, 71)
         cbWallet.Name = "cbWallet"
         cbWallet.Size = New Size(140, 23)
         cbWallet.TabIndex = 12
@@ -67,7 +67,7 @@ Partial Class FormEntradas
         ' Label2
         ' 
         Label2.AutoSize = True
-        Label2.Location = New Point(25, 53)
+        Label2.Location = New Point(12, 53)
         Label2.Name = "Label2"
         Label2.Size = New Size(27, 15)
         Label2.TabIndex = 11
@@ -76,16 +76,16 @@ Partial Class FormEntradas
         ' tbQtd
         ' 
         tbQtd.BorderStyle = BorderStyle.FixedSingle
-        tbQtd.Location = New Point(25, 71)
+        tbQtd.Location = New Point(12, 71)
         tbQtd.Name = "tbQtd"
-        tbQtd.Size = New Size(90, 23)
+        tbQtd.Size = New Size(166, 23)
         tbQtd.TabIndex = 10
         tbQtd.Text = "0"
         ' 
         ' Label1
         ' 
         Label1.AutoSize = True
-        Label1.Location = New Point(121, 9)
+        Label1.Location = New Point(108, 9)
         Label1.Name = "Label1"
         Label1.Size = New Size(119, 15)
         Label1.TabIndex = 9
@@ -94,7 +94,7 @@ Partial Class FormEntradas
         ' Label4
         ' 
         Label4.AutoSize = True
-        Label4.Location = New Point(267, 9)
+        Label4.Location = New Point(229, 9)
         Label4.Name = "Label4"
         Label4.Size = New Size(31, 15)
         Label4.TabIndex = 15
@@ -103,16 +103,16 @@ Partial Class FormEntradas
         ' dtpDataEntrada
         ' 
         dtpDataEntrada.Format = DateTimePickerFormat.Short
-        dtpDataEntrada.Location = New Point(267, 27)
+        dtpDataEntrada.Location = New Point(229, 27)
         dtpDataEntrada.Name = "dtpDataEntrada"
-        dtpDataEntrada.Size = New Size(115, 23)
+        dtpDataEntrada.Size = New Size(95, 23)
         dtpDataEntrada.TabIndex = 16
         ' 
         ' btSalvarEntrada
         ' 
-        btSalvarEntrada.Location = New Point(267, 71)
+        btSalvarEntrada.Location = New Point(330, 27)
         btSalvarEntrada.Name = "btSalvarEntrada"
-        btSalvarEntrada.Size = New Size(115, 23)
+        btSalvarEntrada.Size = New Size(77, 67)
         btSalvarEntrada.TabIndex = 17
         btSalvarEntrada.Text = "Salvar"
         btSalvarEntrada.UseVisualStyleBackColor = True
@@ -120,7 +120,7 @@ Partial Class FormEntradas
         ' Label5
         ' 
         Label5.AutoSize = True
-        Label5.Location = New Point(25, 9)
+        Label5.Location = New Point(12, 9)
         Label5.Name = "Label5"
         Label5.Size = New Size(40, 15)
         Label5.TabIndex = 19
@@ -130,7 +130,7 @@ Partial Class FormEntradas
         ' 
         cbCripto.FormattingEnabled = True
         cbCripto.Items.AddRange(New Object() {"BTC", "ETH", "SOL", "NEAR", "PENDLE", "KSM", "ENA", "DOG", "ATH", "ZRO", "PEPE", "VISTA"})
-        cbCripto.Location = New Point(25, 27)
+        cbCripto.Location = New Point(12, 27)
         cbCripto.Name = "cbCripto"
         cbCripto.Size = New Size(90, 23)
         cbCripto.TabIndex = 18
@@ -138,18 +138,18 @@ Partial Class FormEntradas
         ' TbPrecoEntrada
         ' 
         TbPrecoEntrada.BorderStyle = BorderStyle.FixedSingle
-        TbPrecoEntrada.Location = New Point(121, 27)
+        TbPrecoEntrada.Location = New Point(108, 27)
         TbPrecoEntrada.Name = "TbPrecoEntrada"
-        TbPrecoEntrada.Size = New Size(140, 23)
+        TbPrecoEntrada.Size = New Size(115, 23)
         TbPrecoEntrada.TabIndex = 20
         TbPrecoEntrada.Text = "0,00"
         ' 
         ' GroupBox1
         ' 
         GroupBox1.Controls.Add(dgCriptos)
-        GroupBox1.Location = New Point(25, 100)
+        GroupBox1.Location = New Point(12, 100)
         GroupBox1.Name = "GroupBox1"
-        GroupBox1.Size = New Size(357, 261)
+        GroupBox1.Size = New Size(395, 261)
         GroupBox1.TabIndex = 21
         GroupBox1.TabStop = False
         GroupBox1.Text = "Registros"
@@ -171,7 +171,7 @@ Partial Class FormEntradas
         dgCriptos.ReadOnly = True
         dgCriptos.RowHeadersWidth = 4
         dgCriptos.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgCriptos.Size = New Size(345, 233)
+        dgCriptos.Size = New Size(383, 233)
         dgCriptos.TabIndex = 0
         ' 
         ' ContextMenuStrip1
@@ -191,7 +191,7 @@ Partial Class FormEntradas
         StatusStrip1.Items.AddRange(New ToolStripItem() {ToolStripStatusLabel1})
         StatusStrip1.Location = New Point(0, 370)
         StatusStrip1.Name = "StatusStrip1"
-        StatusStrip1.Size = New Size(409, 22)
+        StatusStrip1.Size = New Size(419, 22)
         StatusStrip1.TabIndex = 22
         StatusStrip1.Text = "StatusStrip1"
         ' 
@@ -205,7 +205,7 @@ Partial Class FormEntradas
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(409, 392)
+        ClientSize = New Size(419, 392)
         Controls.Add(StatusStrip1)
         Controls.Add(GroupBox1)
         Controls.Add(TbPrecoEntrada)
