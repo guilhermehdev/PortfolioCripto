@@ -1,13 +1,11 @@
-﻿Imports System
+﻿
 Imports System.Net.Http
 Imports System.Net.Http.Headers
-Imports System.Threading.Tasks
-Imports System.Windows.Forms
 Imports System.Text.Json
 Imports System.Globalization
 
 Public Class Cotacao
-    Private Shared ReadOnly apiKey As String = "803eb0bd-7743-468d-869a-f5b4914e4f29" ' Substitua pela sua chave de API
+    Private Shared ReadOnly apiKey As String = "803eb0bd-7743-468d-869a-f5b4914e4f29"
     Private Shared ReadOnly apiUrl As String = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
 
     Public Async Function GetCriptoPrices(simbolosCripto As String) As Task(Of String)
@@ -37,7 +35,7 @@ Public Class Cotacao
                         .GetProperty("price") _
                         .GetDecimal()
 
-                Return preco.ToString("C2", New CultureInfo("en-US"))
+                Return preco
 
             End Using
         Catch e As HttpRequestException

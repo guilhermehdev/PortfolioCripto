@@ -6,7 +6,7 @@ Public Class FormEntradas
         Dim json As New JSON
         Dim key = cbCripto.SelectedItem.ToString
 
-        If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.SelectedItem.ToString) Then
+        If json.AppendJSON(key, CDec(TbPrecoEntrada.Text), tbQtd.Text, dtpDataEntrada.Text, cbWallet.SelectedItem.ToString) Then
             MsgBox("Salvo!")
             FormEntradas_Load(sender, e)
         End If
@@ -28,9 +28,7 @@ Public Class FormEntradas
         Dim preco As Decimal
 
         Try
-            preco = CDec(TbPrecoEntrada.Text)
-
-            TbPrecoEntrada.Text = preco.ToString("C", New CultureInfo("en-US")).Replace("US$", "$")
+            TbPrecoEntrada.Text = preco.ToString("C", New CultureInfo("en-US"))
         Catch ex As Exception
 
         End Try
@@ -49,7 +47,7 @@ Public Class FormEntradas
 
     End Sub
 
-    Private Sub dgCriptos_RowEnter(sender As Object, e As DataGridViewCellEventArgs) Handles dgCriptos.RowEnter
+    Private Sub dgCriptos_CellEnter(sender As Object, e As DataGridViewCellEventArgs) Handles dgCriptos.CellEnter
         Try
             cbCripto.Text = dgCriptos.SelectedRows.Item(0).Cells(0).Value.ToString
             TbPrecoEntrada.Text = dgCriptos.SelectedRows.Item(0).Cells(1).Value.ToString
@@ -57,13 +55,9 @@ Public Class FormEntradas
             dtpDataEntrada.Value = dgCriptos.SelectedRows.Item(0).Cells(3).Value.ToString
             cbWallet.Text = dgCriptos.SelectedRows.Item(0).Cells(4).Value.ToString
         Catch ex As Exception
-
+            MsgBox(ex.Message)
         End Try
 
-    End Sub
-
-    Private Sub tbQtd_Leave(sender As Object, e As EventArgs) Handles tbQtd.Leave
-        ' tbQtd.Text = tbQtd.Text.Replace(",", ".")
     End Sub
 
 End Class

@@ -26,9 +26,9 @@ Partial Class FormMain
         CadastroToolStripMenuItem = New ToolStripMenuItem()
         CriptoToolStripMenuItem = New ToolStripMenuItem()
         FecharToolStripMenuItem = New ToolStripMenuItem()
-        DataGridView1 = New DataGridView()
+        dgPortfolio = New DataGridView()
         MenuStrip1.SuspendLayout()
-        CType(DataGridView1, ComponentModel.ISupportInitialize).BeginInit()
+        CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
         ' MenuStrip1
@@ -50,7 +50,7 @@ Partial Class FormMain
         ' CriptoToolStripMenuItem
         ' 
         CriptoToolStripMenuItem.Name = "CriptoToolStripMenuItem"
-        CriptoToolStripMenuItem.Size = New Size(180, 22)
+        CriptoToolStripMenuItem.Size = New Size(119, 22)
         CriptoToolStripMenuItem.Text = "Entradas"
         ' 
         ' FecharToolStripMenuItem
@@ -59,26 +59,26 @@ Partial Class FormMain
         FecharToolStripMenuItem.Size = New Size(54, 20)
         FecharToolStripMenuItem.Text = "Fechar"
         ' 
-        ' DataGridView1
+        ' dgPortfolio
         ' 
-        DataGridView1.AllowUserToAddRows = False
-        DataGridView1.AllowUserToDeleteRows = False
-        DataGridView1.AllowUserToOrderColumns = True
-        DataGridView1.BackgroundColor = Color.Ivory
-        DataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        DataGridView1.Dock = DockStyle.Fill
-        DataGridView1.Location = New Point(0, 24)
-        DataGridView1.Name = "DataGridView1"
-        DataGridView1.ReadOnly = True
-        DataGridView1.Size = New Size(1085, 546)
-        DataGridView1.TabIndex = 11
+        dgPortfolio.AllowUserToAddRows = False
+        dgPortfolio.AllowUserToDeleteRows = False
+        dgPortfolio.AllowUserToOrderColumns = True
+        dgPortfolio.BackgroundColor = Color.Ivory
+        dgPortfolio.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        dgPortfolio.Dock = DockStyle.Fill
+        dgPortfolio.Location = New Point(0, 24)
+        dgPortfolio.Name = "dgPortfolio"
+        dgPortfolio.ReadOnly = True
+        dgPortfolio.Size = New Size(1085, 546)
+        dgPortfolio.TabIndex = 11
         ' 
         ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(1085, 570)
-        Controls.Add(DataGridView1)
+        Controls.Add(dgPortfolio)
         Controls.Add(MenuStrip1)
         FormBorderStyle = FormBorderStyle.FixedSingle
         MainMenuStrip = MenuStrip1
@@ -88,7 +88,7 @@ Partial Class FormMain
         Text = "Portfolio Cripto"
         MenuStrip1.ResumeLayout(False)
         MenuStrip1.PerformLayout()
-        CType(DataGridView1, ComponentModel.ISupportInitialize).EndInit()
+        CType(dgPortfolio, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -96,6 +96,6 @@ Partial Class FormMain
     Friend WithEvents CadastroToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents CriptoToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents FecharToolStripMenuItem As ToolStripMenuItem
-    Friend WithEvents DataGridView1 As DataGridView
+    Friend WithEvents dgPortfolio As DataGridView
 
 End Class

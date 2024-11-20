@@ -1,5 +1,6 @@
 ﻿Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
+Imports System.Globalization
 Imports System.IO
 
 
@@ -164,29 +165,66 @@ Public Class JSON
 
     End Function
 
-    Public Sub LoadCriptos(datagrid As DataGridView)
+    Public Async Sub LoadCriptos(datagrid As DataGridView)
         Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
+        Dim getCriptoData As New Cotacao
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
-        newDT.Columns.Add("%", GetType(Integer))
+        newDT.Columns.Add("%", GetType(String))
         newDT.Columns.Add("Wallet", GetType(String))
         newDT.Columns.Add("Qtd", GetType(String))
-        newDT.Columns.Add("valorEntrada$", GetType(Decimal))
-        newDT.Columns.Add("valorEntradaR$", GetType(Decimal))
-        newDT.Columns.Add("precoMedio", GetType(Decimal))
-        newDT.Columns.Add("precoAtual", GetType(Decimal))
-        newDT.Columns.Add("valorAtual$", GetType(Decimal))
-        newDT.Columns.Add("valorAtualR$", GetType(Decimal))
+        newDT.Columns.Add("valorEntrada$", GetType(String))
+        newDT.Columns.Add("valorEntradaR$", GetType(String))
+        newDT.Columns.Add("precoMedio", GetType(String))
+        newDT.Columns.Add("precoAtual", GetType(String))
+        newDT.Columns.Add("valorAtual$", GetType(String))
+        newDT.Columns.Add("valorAtualR$", GetType(String))
 
         ' Adicionar dados do DataTable original ao novo
         For Each row As DataRow In originalDT.Rows
             Dim newRow As DataRow = newDT.NewRow()
-            newRow("ID") = row("ID")
-            newRow("Name") = row("Name")
-            newRow("Value") = row("Value")
-            newRow("MarketCap") = "Not Available" ' Valor padrão para nova coluna
-            newRow("UpdatedDate") = DateTime.Now ' Preencher com a data atual
+
+            Dim critoPriceTask As Task(Of String) = getCriptoData.GetCriptoPrices(row("Cripto"))
+            Dim currPrice As Decimal = Await critoPriceTask
+            Dim initialPrice As Decimal = row("InitialPrice").ToString.Replace(".", ",")
+            Dim initialValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * row("InitialPrice").ToString.Replace(".", ",")
+            Dim initialValueBRL As Decimal = initialValueUSD * 5.7
+            Dim currValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * currPrice
+            Dim currValueBRL As Decimal = currValueUSD * 5.7
+
+            newRow("Cripto") = row("Cripto")
+
+            newRow("%") = "10%"
+
+            newRow("Wallet") = row("Wallet")
+
+            If row("Qtd").ToString.Contains(".") Then
+                newRow("Qtd") = row("Qtd").ToString.Replace(".", ",")
+            Else
+                newRow("Qtd") = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
+            End If
+
+            newRow("valorEntrada$") = initialValueUSD.ToString("C", New CultureInfo("en-US"))
+
+            newRow("valorEntradaR$") = initialValueBRL.ToString("C", New CultureInfo("pt-BR"))
+
+            If initialPrice > 1 Then
+                newRow("precoMedio") = initialPrice.ToString("C", New CultureInfo("en-US"))
+            Else
+                newRow("precoMedio") = initialPrice.ToString("C8", New CultureInfo("en-US"))
+            End If
+
+            If currPrice > 1 Then
+                newRow("precoAtual") = currPrice.ToString("C", New CultureInfo("en-US"))
+            Else
+                newRow("precoAtual") = currPrice.ToString("C8", New CultureInfo("en-US"))
+            End If
+
+            newRow("valorAtual$") = currValueUSD.ToString("C", New CultureInfo("en-US")).Replace("US$", "")
+
+            newRow("valorAtualR$") = currValueBRL.ToString("C", New CultureInfo("pt-BR")).Replace("US$", "")
+
             newDT.Rows.Add(newRow)
         Next
 
