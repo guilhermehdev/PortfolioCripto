@@ -41,10 +41,17 @@ Public Class JSON
         Return Nothing
     End Function
 
-    Function AppendJSON(ByVal chave As String, ByVal InitialPrice As String, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String)
+    Function AppendJSON(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String)
         Try
             Dim jsonObject As JObject = JObject.Parse(jsonString)
             Dim newObject As New JObject()
+
+            'If InitialPrice > 1 Then
+            'newObject("InitialPrice") = InitialPrice.ToString("C", New CultureInfo("en-US"))
+            ' Else
+            'newObject("InitialPrice") = currPrice.ToString("C8", New CultureInfo("en-US"))
+            'End If
+
             newObject("InitialPrice") = InitialPrice
             newObject("Qtd") = Qtd
             newObject("Data") = Data

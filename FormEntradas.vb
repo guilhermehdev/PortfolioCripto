@@ -6,7 +6,7 @@ Public Class FormEntradas
         Dim json As New JSON
         Dim key = cbCripto.SelectedItem.ToString
 
-        If json.AppendJSON(key, CDec(TbPrecoEntrada.Text), tbQtd.Text, dtpDataEntrada.Text, cbWallet.SelectedItem.ToString) Then
+        If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.SelectedItem.ToString) Then
             MsgBox("Salvo!")
             FormEntradas_Load(sender, e)
         End If
@@ -18,20 +18,9 @@ Public Class FormEntradas
         Dim json As New JSON
         cbCripto.SelectedIndex = 0
         cbWallet.SelectedIndex = 0
-        TbPrecoEntrada.Text = "0,00"
+        TbPrecoEntrada.Text = 0.00
         tbQtd.Text = 0
         json.LoadJSONtoDataGrid(dgCriptos)
-
-    End Sub
-
-    Private Sub TbPrecoEntrada_Leave(sender As Object, e As EventArgs) Handles TbPrecoEntrada.Leave
-        Dim preco As Decimal
-
-        Try
-            TbPrecoEntrada.Text = preco.ToString("C", New CultureInfo("en-US"))
-        Catch ex As Exception
-
-        End Try
 
     End Sub
 
@@ -55,7 +44,7 @@ Public Class FormEntradas
             dtpDataEntrada.Value = dgCriptos.SelectedRows.Item(0).Cells(3).Value.ToString
             cbWallet.Text = dgCriptos.SelectedRows.Item(0).Cells(4).Value.ToString
         Catch ex As Exception
-            MsgBox(ex.Message)
+            ' MsgBox(ex.Message)
         End Try
 
     End Sub
