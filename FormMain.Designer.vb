@@ -22,11 +22,15 @@ Partial Class FormMain
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
+        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         MenuStrip1 = New MenuStrip()
         CadastroToolStripMenuItem = New ToolStripMenuItem()
         CriptoToolStripMenuItem = New ToolStripMenuItem()
         FecharToolStripMenuItem = New ToolStripMenuItem()
         dgPortfolio = New DataGridView()
+        lbDolar = New Label()
+        Label1 = New Label()
         MenuStrip1.SuspendLayout()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
@@ -36,7 +40,7 @@ Partial Class FormMain
         MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, FecharToolStripMenuItem})
         MenuStrip1.Location = New Point(0, 0)
         MenuStrip1.Name = "MenuStrip1"
-        MenuStrip1.Size = New Size(1085, 24)
+        MenuStrip1.Size = New Size(921, 24)
         MenuStrip1.TabIndex = 10
         MenuStrip1.Text = "MenuStrip1"
         ' 
@@ -64,23 +68,70 @@ Partial Class FormMain
         dgPortfolio.AllowUserToAddRows = False
         dgPortfolio.AllowUserToDeleteRows = False
         dgPortfolio.AllowUserToOrderColumns = True
-        dgPortfolio.BackgroundColor = Color.Ivory
+        dgPortfolio.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        dgPortfolio.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgPortfolio.BackgroundColor = Color.White
+        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = SystemColors.Control
+        DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle1.ForeColor = SystemColors.WindowText
+        DataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
+        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
         dgPortfolio.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        dgPortfolio.Dock = DockStyle.Fill
-        dgPortfolio.Location = New Point(0, 24)
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = SystemColors.Window
+        DataGridViewCellStyle2.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.False
+        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
+        dgPortfolio.Location = New Point(12, 27)
+        dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
-        dgPortfolio.Size = New Size(1085, 546)
+        dgPortfolio.RowHeadersWidth = 4
+        dgPortfolio.ScrollBars = ScrollBars.Vertical
+        dgPortfolio.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgPortfolio.Size = New Size(897, 372)
         dgPortfolio.TabIndex = 11
+        ' 
+        ' lbDolar
+        ' 
+        lbDolar.AutoSize = True
+        lbDolar.FlatStyle = FlatStyle.Flat
+        lbDolar.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        lbDolar.ForeColor = Color.ForestGreen
+        lbDolar.Location = New Point(186, 2)
+        lbDolar.Name = "lbDolar"
+        lbDolar.Size = New Size(45, 19)
+        lbDolar.TabIndex = 12
+        lbDolar.Text = "$0.00"
+        ' 
+        ' Label1
+        ' 
+        Label1.AutoSize = True
+        Label1.FlatStyle = FlatStyle.Flat
+        Label1.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        Label1.ForeColor = Color.Black
+        Label1.Location = New Point(140, 2)
+        Label1.Name = "Label1"
+        Label1.Size = New Size(51, 19)
+        Label1.TabIndex = 13
+        Label1.Text = "Dolar:"
         ' 
         ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(1085, 570)
+        ClientSize = New Size(921, 477)
+        Controls.Add(Label1)
+        Controls.Add(lbDolar)
         Controls.Add(dgPortfolio)
         Controls.Add(MenuStrip1)
-        FormBorderStyle = FormBorderStyle.FixedSingle
+        Font = New Font("Segoe UI", 9F)
         MainMenuStrip = MenuStrip1
         MaximizeBox = False
         Name = "FormMain"
@@ -97,5 +148,7 @@ Partial Class FormMain
     Friend WithEvents CriptoToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents FecharToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents dgPortfolio As DataGridView
+    Friend WithEvents lbDolar As Label
+    Friend WithEvents Label1 As Label
 
 End Class

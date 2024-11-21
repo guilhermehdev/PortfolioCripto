@@ -46,12 +46,6 @@ Public Class JSON
             Dim jsonObject As JObject = JObject.Parse(jsonString)
             Dim newObject As New JObject()
 
-            'If InitialPrice > 1 Then
-            'newObject("InitialPrice") = InitialPrice.ToString("C", New CultureInfo("en-US"))
-            ' Else
-            'newObject("InitialPrice") = currPrice.ToString("C8", New CultureInfo("en-US"))
-            'End If
-
             newObject("InitialPrice") = InitialPrice
             newObject("Qtd") = Qtd
             newObject("Data") = Data
@@ -141,7 +135,6 @@ Public Class JSON
 
             If datagrid IsNot Nothing Then
                 datagrid.DataSource = bindingSource
-                datagrid.Columns(1).HeaderText = "Preço médio"
             End If
 
             Return allItems
@@ -175,6 +168,7 @@ Public Class JSON
     Public Async Sub LoadCriptos(datagrid As DataGridView)
         Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
         Dim getCriptoData As New Cotacao
+        Dim USDBRLprice = Await getCriptoData.GetUSDBRL
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
@@ -187,6 +181,7 @@ Public Class JSON
         newDT.Columns.Add("precoAtual", GetType(String))
         newDT.Columns.Add("valorAtual$", GetType(String))
         newDT.Columns.Add("valorAtualR$", GetType(String))
+        newDT.Columns.Add("ROI", GetType(String))
 
         ' Adicionar dados do DataTable original ao novo
         For Each row As DataRow In originalDT.Rows
@@ -196,9 +191,10 @@ Public Class JSON
             Dim currPrice As Decimal = Await critoPriceTask
             Dim initialPrice As Decimal = row("InitialPrice").ToString.Replace(".", ",")
             Dim initialValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * row("InitialPrice").ToString.Replace(".", ",")
-            Dim initialValueBRL As Decimal = initialValueUSD * 5.7
+            Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
             Dim currValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * currPrice
-            Dim currValueBRL As Decimal = currValueUSD * 5.7
+            Dim currValueBRL As Decimal = currValueUSD * USDBRLprice
+            Dim roi = currValueUSD - initialValueUSD
 
             newRow("Cripto") = row("Cripto")
 
@@ -232,14 +228,13 @@ Public Class JSON
 
             newRow("valorAtualR$") = currValueBRL.ToString("C", New CultureInfo("pt-BR")).Replace("US$", "")
 
+            newRow("ROI") = roi.ToString("C", New CultureInfo("en-US"))
+
             newDT.Rows.Add(newRow)
+
         Next
 
         datagrid.DataSource = newDT
-        'For Each row As DataRow In dt.Rows
-        'MsgBox(row("InitialPrice"))
-        'Next
-
 
     End Sub
 

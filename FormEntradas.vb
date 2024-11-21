@@ -21,7 +21,12 @@ Public Class FormEntradas
         TbPrecoEntrada.Text = 0.00
         tbQtd.Text = 0
         json.LoadJSONtoDataGrid(dgCriptos)
-
+        dgCriptos.Columns(1).HeaderText = "Preço médio/entrada"
+        dgCriptos.Columns(0).Width = 60
+        dgCriptos.Columns(1).Width = 90
+        dgCriptos.Columns(2).Width = 80
+        dgCriptos.Columns(3).Width = 80
+        dgCriptos.Columns(4).Width = 104
     End Sub
 
 
@@ -39,8 +44,8 @@ Public Class FormEntradas
     Private Sub dgCriptos_CellEnter(sender As Object, e As DataGridViewCellEventArgs) Handles dgCriptos.CellEnter
         Try
             cbCripto.Text = dgCriptos.SelectedRows.Item(0).Cells(0).Value.ToString
-            TbPrecoEntrada.Text = dgCriptos.SelectedRows.Item(0).Cells(1).Value.ToString
-            tbQtd.Text = dgCriptos.SelectedRows.Item(0).Cells(2).Value.ToString
+            TbPrecoEntrada.Text = dgCriptos.SelectedRows.Item(0).Cells(1).Value.ToString.Replace(".", ",")
+            tbQtd.Text = dgCriptos.SelectedRows.Item(0).Cells(2).Value.ToString.Replace(".", ",")
             dtpDataEntrada.Value = dgCriptos.SelectedRows.Item(0).Cells(3).Value.ToString
             cbWallet.Text = dgCriptos.SelectedRows.Item(0).Cells(4).Value.ToString
         Catch ex As Exception

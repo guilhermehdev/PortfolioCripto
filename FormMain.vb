@@ -1,4 +1,6 @@
-﻿Public Class FormMain
+﻿Imports System.Globalization
+
+Public Class FormMain
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -8,10 +10,13 @@
         Application.Exit()
     End Sub
 
-    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    Private Async Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Dim json As New JSON
+        Dim usdTask As New Cotacao
+        Dim usdValue = Await usdTask.GetUSDBRL
 
         json.LoadCriptos(dgPortfolio)
+        lbDolar.Text = $"R$ {Format(usdValue, "#,##0.00")}"
 
     End Sub
 
