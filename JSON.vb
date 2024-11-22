@@ -165,10 +165,11 @@ Public Class JSON
 
     End Function
 
-    Public Async Sub LoadCriptos(datagrid As DataGridView)
+    Public Async Function LoadCriptos(datagrid As DataGridView) As Task(Of Decimal)
         Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
         Dim getCriptoData As New Cotacao
         Dim USDBRLprice = Await getCriptoData.GetUSDBRL
+        Dim total As Decimal
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
@@ -176,11 +177,9 @@ Public Class JSON
         newDT.Columns.Add("Wallet", GetType(String))
         newDT.Columns.Add("Qtd", GetType(String))
         newDT.Columns.Add("valorEntrada$", GetType(String))
-        newDT.Columns.Add("valorEntradaR$", GetType(String))
         newDT.Columns.Add("precoMedio", GetType(String))
         newDT.Columns.Add("precoAtual", GetType(String))
         newDT.Columns.Add("valorAtual$", GetType(String))
-        newDT.Columns.Add("valorAtualR$", GetType(String))
         newDT.Columns.Add("ROI", GetType(String))
 
         ' Adicionar dados do DataTable original ao novo
@@ -195,6 +194,7 @@ Public Class JSON
             Dim currValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * currPrice
             Dim currValueBRL As Decimal = currValueUSD * USDBRLprice
             Dim roi = currValueUSD - initialValueUSD
+            total += roi
 
             newRow("Cripto") = row("Cripto")
 
@@ -208,9 +208,7 @@ Public Class JSON
                 newRow("Qtd") = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
             End If
 
-            newRow("valorEntrada$") = initialValueUSD.ToString("C", New CultureInfo("en-US"))
-
-            newRow("valorEntradaR$") = initialValueBRL.ToString("C", New CultureInfo("pt-BR"))
+            newRow("valorEntrada$") = initialValueUSD.ToString("C", New CultureInfo("en-US")) & " / " & initialValueBRL.ToString("C", New CultureInfo("pt-BR"))
 
             If initialPrice > 1 Then
                 newRow("precoMedio") = initialPrice.ToString("C", New CultureInfo("en-US"))
@@ -224,19 +222,41 @@ Public Class JSON
                 newRow("precoAtual") = currPrice.ToString("C8", New CultureInfo("en-US"))
             End If
 
-            newRow("valorAtual$") = currValueUSD.ToString("C", New CultureInfo("en-US")).Replace("US$", "")
+            newRow("valorAtual$") = currValueUSD.ToString("C", New CultureInfo("en-US")) & " / " & currValueBRL.ToString("C", New CultureInfo("pt-BR"))
 
-            newRow("valorAtualR$") = currValueBRL.ToString("C", New CultureInfo("pt-BR")).Replace("US$", "")
-
-            newRow("ROI") = roi.ToString("C", New CultureInfo("en-US"))
+            newRow("ROI") = roi.ToString("C", New CultureInfo("en-US")) & " / " & CDec(roi * USDBRLprice).ToString("C", New CultureInfo("pt-BR"))
 
             newDT.Rows.Add(newRow)
 
         Next
 
         datagrid.DataSource = newDT
+        datagrid.Columns(0).Width = 70
+        datagrid.Columns(1).Width = 55
+        datagrid.Columns(2).Width = 100
+        datagrid.Columns(3).Width = 100
+        datagrid.Columns(4).HeaderText = "Valor de entrada/médio"
+        datagrid.Columns(4).Width = 180
+        datagrid.Columns(5).HeaderText = "Preço de entrada/médio"
+        datagrid.Columns(5).Width = 120
+        datagrid.Columns(6).HeaderText = "Preço atual"
+        datagrid.Columns(6).Width = 120
+        datagrid.Columns(7).HeaderText = "Valor atual"
+        datagrid.Columns(7).Width = 180
+        datagrid.Columns(8).HeaderText = "ROI"
+        datagrid.Columns(8).Width = 160
 
-    End Sub
+        Return total
+
+    End Function
+
+    Public Function USDformat(ByVal value As Decimal)
+        Return value.ToString("C", New CultureInfo("en-US"))
+    End Function
+
+    Public Function BRLformat(ByVal value As Decimal)
+        Return value.ToString("C", New CultureInfo("pt-BR"))
+    End Function
 
 End Class
 
