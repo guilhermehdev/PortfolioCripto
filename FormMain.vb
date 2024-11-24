@@ -21,11 +21,8 @@ Public Class FormMain
         lbBTC.Text = json.USDformat(Await usdTask.GetCriptoPrices("BTC"))
         lbDom.Text = $"{dom.Value:F2}%"
 
-        Label2.Text = json.USDformat(total)
-        Label2.Location = New Point((PanelProfits.Width / 2) - (Label2.Width) - (lbDiv.Width / 2), 3)
-        lbTotalBRL.Text = json.BRLformat(total)
-        lbDiv.Location = New Point(Label2.Location.X + Label2.Width, 3)
-        lbTotalBRL.Location = New Point(lbDiv.Location.X + lbDiv.Width, 3)
+        lbTotalBRL.Text = json.BRLformat(total * usdValue)
+        lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
 
     End Sub
     Private Sub btRefresh_Click(sender As Object, e As EventArgs) Handles btRefresh.Click

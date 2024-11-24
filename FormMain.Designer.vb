@@ -22,8 +22,8 @@ Partial Class FormMain
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
-        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         MenuStrip1 = New MenuStrip()
         CadastroToolStripMenuItem = New ToolStripMenuItem()
         CriptoToolStripMenuItem = New ToolStripMenuItem()
@@ -31,10 +31,8 @@ Partial Class FormMain
         dgPortfolio = New DataGridView()
         lbDolar = New Label()
         Label1 = New Label()
-        Label2 = New Label()
         GroupBox1 = New GroupBox()
         PanelProfits = New Panel()
-        lbDiv = New Label()
         lbTotalBRL = New Label()
         Label5 = New Label()
         Label3 = New Label()
@@ -85,23 +83,23 @@ Partial Class FormMain
         dgPortfolio.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         dgPortfolio.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgPortfolio.BackgroundColor = Color.White
-        DataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle3.BackColor = SystemColors.Control
-        DataGridViewCellStyle3.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle3.ForeColor = SystemColors.WindowText
-        DataGridViewCellStyle3.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle3.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
-        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle3
+        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = SystemColors.Control
+        DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle1.ForeColor = SystemColors.WindowText
+        DataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
+        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
         dgPortfolio.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle4.BackColor = SystemColors.Window
-        DataGridViewCellStyle4.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle4.ForeColor = SystemColors.ControlText
-        DataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight
-        DataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText
-        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.False
-        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle4
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = SystemColors.Window
+        DataGridViewCellStyle2.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight
+        DataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.False
+        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
         dgPortfolio.Location = New Point(12, 27)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
@@ -138,18 +136,6 @@ Partial Class FormMain
         Label1.TabIndex = 13
         Label1.Text = "Dolar:"
         ' 
-        ' Label2
-        ' 
-        Label2.AutoSize = True
-        Label2.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
-        Label2.ForeColor = Color.Chartreuse
-        Label2.Location = New Point(353, 3)
-        Label2.Name = "Label2"
-        Label2.Size = New Size(71, 30)
-        Label2.TabIndex = 14
-        Label2.Text = "$0.00"
-        Label2.TextAlign = ContentAlignment.MiddleCenter
-        ' 
         ' GroupBox1
         ' 
         GroupBox1.Controls.Add(PanelProfits)
@@ -164,33 +150,19 @@ Partial Class FormMain
         ' PanelProfits
         ' 
         PanelProfits.BackColor = Color.Indigo
-        PanelProfits.Controls.Add(lbDiv)
         PanelProfits.Controls.Add(lbTotalBRL)
         PanelProfits.Controls.Add(Label5)
-        PanelProfits.Controls.Add(Label2)
         PanelProfits.Dock = DockStyle.Bottom
         PanelProfits.Location = New Point(3, 71)
         PanelProfits.Name = "PanelProfits"
         PanelProfits.Size = New Size(995, 37)
         PanelProfits.TabIndex = 15
         ' 
-        ' lbDiv
-        ' 
-        lbDiv.AutoSize = True
-        lbDiv.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
-        lbDiv.ForeColor = Color.White
-        lbDiv.Location = New Point(424, 3)
-        lbDiv.Name = "lbDiv"
-        lbDiv.Size = New Size(33, 30)
-        lbDiv.TabIndex = 17
-        lbDiv.Text = "//"
-        lbDiv.TextAlign = ContentAlignment.MiddleCenter
-        ' 
         ' lbTotalBRL
         ' 
         lbTotalBRL.AutoSize = True
         lbTotalBRL.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
-        lbTotalBRL.ForeColor = Color.Yellow
+        lbTotalBRL.ForeColor = Color.LawnGreen
         lbTotalBRL.Location = New Point(456, 3)
         lbTotalBRL.Name = "lbTotalBRL"
         lbTotalBRL.Size = New Size(91, 30)
@@ -216,7 +188,7 @@ Partial Class FormMain
         Label3.FlatStyle = FlatStyle.Flat
         Label3.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
         Label3.ForeColor = Color.Black
-        Label3.Location = New Point(742, 3)
+        Label3.Location = New Point(737, 3)
         Label3.Name = "Label3"
         Label3.Size = New Size(39, 19)
         Label3.TabIndex = 17
@@ -229,7 +201,7 @@ Partial Class FormMain
         lbBTC.FlatStyle = FlatStyle.Flat
         lbBTC.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
         lbBTC.ForeColor = Color.DarkOrange
-        lbBTC.Location = New Point(776, 3)
+        lbBTC.Location = New Point(771, 3)
         lbBTC.Name = "lbBTC"
         lbBTC.Size = New Size(45, 19)
         lbBTC.TabIndex = 16
@@ -312,7 +284,6 @@ Partial Class FormMain
     Friend WithEvents dgPortfolio As DataGridView
     Friend WithEvents lbDolar As Label
     Friend WithEvents Label1 As Label
-    Friend WithEvents Label2 As Label
     Friend WithEvents GroupBox1 As GroupBox
     Friend WithEvents Label3 As Label
     Friend WithEvents lbBTC As Label
@@ -322,6 +293,5 @@ Partial Class FormMain
     Friend WithEvents PanelProfits As Panel
     Friend WithEvents Label5 As Label
     Friend WithEvents lbTotalBRL As Label
-    Friend WithEvents lbDiv As Label
 
 End Class

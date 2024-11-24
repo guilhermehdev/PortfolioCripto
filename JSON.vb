@@ -231,8 +231,8 @@ Public Class JSON
         Next
 
         datagrid.DataSource = newDT
-        datagrid.Columns(0).Width = 70
-        datagrid.Columns(1).Width = 55
+        datagrid.Columns(0).Width = 75
+        datagrid.Columns(1).Width = 75
         datagrid.Columns(2).Width = 100
         datagrid.Columns(3).Width = 100
         datagrid.Columns(4).HeaderText = "Valor de entrada/médio"
