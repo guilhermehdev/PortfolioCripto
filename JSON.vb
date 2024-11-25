@@ -170,17 +170,25 @@ Public Class JSON
         Dim getCriptoData As New Cotacao
         Dim USDBRLprice = Await getCriptoData.GetUSDBRL
         Dim total As Decimal
+        Dim wallet As String = ""
+        Dim currValueUSD As Decimal
+        Dim currValueBRL As Decimal
+        Dim roi As Decimal
+        Dim perform As Decimal?
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
-        newDT.Columns.Add("%", GetType(String))
+        newDT.Columns.Add("Perf", GetType(String))
         newDT.Columns.Add("Wallet", GetType(String))
         newDT.Columns.Add("Qtd", GetType(String))
-        newDT.Columns.Add("valorEntrada$", GetType(String))
+        newDT.Columns.Add("vlEntradaUSD", GetType(String))
+        newDT.Columns.Add("vlEntradaBRL", GetType(String))
         newDT.Columns.Add("precoMedio", GetType(String))
         newDT.Columns.Add("precoAtual", GetType(String))
-        newDT.Columns.Add("valorAtual$", GetType(String))
-        newDT.Columns.Add("ROI", GetType(String))
+        newDT.Columns.Add("vlAtualUSD", GetType(String))
+        newDT.Columns.Add("vlAtualBRL", GetType(String))
+        newDT.Columns.Add("ROIusd", GetType(String))
+        newDT.Columns.Add("ROIbrl", GetType(String))
 
         ' Adicionar dados do DataTable original ao novo
         For Each row As DataRow In originalDT.Rows
@@ -191,16 +199,18 @@ Public Class JSON
             Dim initialPrice As Decimal = row("InitialPrice").ToString.Replace(".", ",")
             Dim initialValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * row("InitialPrice").ToString.Replace(".", ",")
             Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
-            Dim currValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * currPrice
-            Dim currValueBRL As Decimal = currValueUSD * USDBRLprice
-            Dim roi = currValueUSD - initialValueUSD
+            wallet = row("Wallet")
+            currValueUSD = row("Qtd").ToString.Replace(".", ",") * currPrice
+            currValueBRL = currValueUSD * USDBRLprice
+            roi = currValueUSD - initialValueUSD
+            perform = (roi / initialValueUSD) * 100
             total += roi
 
             newRow("Cripto") = row("Cripto")
+            '$"{perform.Value:F2}%"
+            newRow("Perf") = $"{perform.Value:F2}%"
 
-            newRow("%") = "10%"
-
-            newRow("Wallet") = row("Wallet")
+            newRow("Wallet") = wallet
 
             If row("Qtd").ToString.Contains(".") Then
                 newRow("Qtd") = row("Qtd").ToString.Replace(".", ",")
@@ -208,7 +218,9 @@ Public Class JSON
                 newRow("Qtd") = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
             End If
 
-            newRow("valorEntrada$") = initialValueUSD.ToString("C", New CultureInfo("en-US")) & " / " & initialValueBRL.ToString("C", New CultureInfo("pt-BR"))
+            newRow("vlEntradaUSD") = USDformat(initialValueUSD)
+
+            newRow("vlEntradaBRL") = BRLformat(initialValueBRL)
 
             If initialPrice > 1 Then
                 newRow("precoMedio") = initialPrice.ToString("C", New CultureInfo("en-US"))
@@ -222,29 +234,141 @@ Public Class JSON
                 newRow("precoAtual") = currPrice.ToString("C8", New CultureInfo("en-US"))
             End If
 
-            newRow("valorAtual$") = currValueUSD.ToString("C", New CultureInfo("en-US")) & " / " & currValueBRL.ToString("C", New CultureInfo("pt-BR"))
+            newRow("vlAtualUSD") = USDformat(currValueUSD)
 
-            newRow("ROI") = roi.ToString("C", New CultureInfo("en-US")) & " / " & CDec(roi * USDBRLprice).ToString("C", New CultureInfo("pt-BR"))
+            newRow("vlAtualBRL") = BRLformat(currValueBRL)
+
+            newRow("ROIusd") = USDformat(roi)
+
+            newRow("ROIbrl") = BRLformat(roi * USDBRLprice)
 
             newDT.Rows.Add(newRow)
 
         Next
+        Dim fontsize As Int16 = 9.7
+        Dim fontname As String = "Calibri"
 
         datagrid.DataSource = newDT
+
         datagrid.Columns(0).Width = 75
-        datagrid.Columns(1).Width = 75
-        datagrid.Columns(2).Width = 100
-        datagrid.Columns(3).Width = 100
-        datagrid.Columns(4).HeaderText = "Valor de entrada/médio"
-        datagrid.Columns(4).Width = 180
-        datagrid.Columns(5).HeaderText = "Preço de entrada/médio"
-        datagrid.Columns(5).Width = 120
-        datagrid.Columns(6).HeaderText = "Preço atual"
-        datagrid.Columns(6).Width = 120
-        datagrid.Columns(7).HeaderText = "Valor atual"
-        datagrid.Columns(7).Width = 180
-        datagrid.Columns(8).HeaderText = "ROI"
-        datagrid.Columns(8).Width = 160
+        With datagrid.Columns(0).DefaultCellStyle
+            .BackColor = Color.Black
+            .ForeColor = Color.Cyan
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+        datagrid.Columns(1).Width = 80
+        With datagrid.Columns(1).DefaultCellStyle
+            .BackColor = Color.FromArgb(30, 30, 30)
+            .ForeColor = Color.Orange
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+        datagrid.Columns(2).Width = 80
+        With datagrid.Columns(2).DefaultCellStyle
+            .BackColor = Color.FromArgb(50, 50, 50)
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+        datagrid.Columns(3).Width = 95
+        With datagrid.Columns(3).DefaultCellStyle
+            .BackColor = Color.MidnightBlue
+            .ForeColor = Color.Red
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+        datagrid.Columns(4).HeaderText = "Valor entrada/médio USD"
+        datagrid.Columns(4).Width = 95
+        With datagrid.Columns(4).DefaultCellStyle
+            .BackColor = Color.Black
+            .ForeColor = Color.Lime
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+        datagrid.Columns(5).HeaderText = "Valor entrada/médio BRL"
+        datagrid.Columns(5).Width = 95
+        With datagrid.Columns(5).DefaultCellStyle
+            .BackColor = Color.Black
+            .ForeColor = Color.Yellow
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+
+        datagrid.Columns(6).HeaderText = "Preço entrada USD"
+        datagrid.Columns(6).Width = 95
+        With datagrid.Columns(6).DefaultCellStyle
+            .BackColor = Color.Indigo
+            .ForeColor = Color.Lime
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+        datagrid.Columns(7).HeaderText = "Preço atual"
+        datagrid.Columns(7).Width = 95
+        With datagrid.Columns(7).DefaultCellStyle
+            .BackColor = Color.Indigo
+            .ForeColor = Color.Yellow
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+        datagrid.Columns(8).HeaderText = "Valor atual USD"
+        datagrid.Columns(8).Width = 95
+        With datagrid.Columns(8).DefaultCellStyle
+            .BackColor = Color.FromArgb(30, 30, 30)
+            .ForeColor = Color.Lime
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+        datagrid.Columns(9).HeaderText = "Valor atual BRL"
+        datagrid.Columns(9).Width = 95
+        With datagrid.Columns(9).DefaultCellStyle
+            .BackColor = Color.FromArgb(30, 30, 30)
+            .ForeColor = Color.Yellow
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+
+        datagrid.Columns(10).HeaderText = "ROI"
+        datagrid.Columns(10).Width = 95
+        With datagrid.Columns(10).DefaultCellStyle
+            .BackColor = Color.FromArgb(20, 20, 20)
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+        datagrid.Columns(11).HeaderText = ""
+        datagrid.Columns(11).Width = 95
+        With datagrid.Columns(11).DefaultCellStyle
+            .BackColor = Color.FromArgb(20, 20, 20)
+            .ForeColor = Color.IndianRed
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+        End With
+
+        For Each row As DataGridViewRow In datagrid.Rows
+
+            Select Case row.Cells(2).Value
+                Case "Binance"
+                    row.Cells(2).Style.ForeColor = Color.Goldenrod
+                Case "Metamask"
+                    row.Cells(2).Style.ForeColor = Color.DarkOrange
+                Case "TrustWallet"
+                    row.Cells(2).Style.ForeColor = Color.LawnGreen
+                Case "Phantom"
+                    row.Cells(2).Style.ForeColor = Color.MediumPurple
+                Case "Bybit"
+                    row.Cells(2).Style.ForeColor = Color.Gainsboro
+                Case "Gate.io"
+                    row.Cells(2).Style.ForeColor = Color.DodgerBlue
+            End Select
+
+            Select Case CInt(row.Cells(1).Value.ToString.Replace("%", ""))
+                Case > 0
+                    row.Cells(1).Style.ForeColor = Color.LawnGreen
+            End Select
+
+            Select Case CDec(row.Cells(11).Value)
+                Case > 0
+                    row.Cells(11).Style.ForeColor = Color.Aquamarine
+            End Select
+        Next
 
         Return total
 
