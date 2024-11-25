@@ -30,20 +30,22 @@ Partial Class FormMain
         CriptoToolStripMenuItem = New ToolStripMenuItem()
         FecharToolStripMenuItem = New ToolStripMenuItem()
         dgPortfolio = New DataGridView()
-        lbDolar = New Label()
-        Label1 = New Label()
         PanelProfits = New Panel()
         lbTotalBRL = New Label()
         Label5 = New Label()
-        Label3 = New Label()
-        lbBTC = New Label()
+        GroupBox1 = New GroupBox()
+        Panel1 = New Panel()
+        btRefresh = New Button()
         Label4 = New Label()
         lbDom = New Label()
-        btRefresh = New Button()
-        Label2 = New Label()
+        Label3 = New Label()
+        lbBTC = New Label()
+        Label1 = New Label()
+        lbDolar = New Label()
         MenuStrip1.SuspendLayout()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
+        Panel1.SuspendLayout()
         SuspendLayout()
         ' 
         ' MenuStrip1
@@ -82,26 +84,28 @@ Partial Class FormMain
         dgPortfolio.AllowUserToAddRows = False
         dgPortfolio.AllowUserToDeleteRows = False
         dgPortfolio.AllowUserToOrderColumns = True
+        dgPortfolio.AllowUserToResizeRows = False
         dgPortfolio.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         dgPortfolio.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgPortfolio.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgPortfolio.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
         DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
         DataGridViewCellStyle1.ForeColor = Color.Turquoise
-        DataGridViewCellStyle1.SelectionBackColor = Color.DarkOrange
+        DataGridViewCellStyle1.SelectionBackColor = Color.Transparent
         DataGridViewCellStyle1.SelectionForeColor = SystemColors.ControlText
         DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
         dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
-        dgPortfolio.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
         DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
         DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         DataGridViewCellStyle2.Font = New Font("Calibri", 12F)
         DataGridViewCellStyle2.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle2.SelectionBackColor = Color.DarkOrange
+        DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
         DataGridViewCellStyle2.SelectionForeColor = SystemColors.ControlText
-        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.False
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
         dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
+        dgPortfolio.EnableHeadersVisualStyles = False
         dgPortfolio.Location = New Point(0, 27)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
@@ -111,43 +115,17 @@ Partial Class FormMain
         DataGridViewCellStyle3.Font = New Font("Segoe UI", 9F)
         DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
         DataGridViewCellStyle3.Padding = New Padding(2)
-        DataGridViewCellStyle3.SelectionBackColor = Color.Orange
+        DataGridViewCellStyle3.SelectionBackColor = Color.DarkOrange
         DataGridViewCellStyle3.SelectionForeColor = SystemColors.ControlText
         DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
         dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
         dgPortfolio.RowHeadersWidth = 4
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
-        dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = SystemColors.ControlText
+        dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = SystemColors.ButtonHighlight
         dgPortfolio.ScrollBars = ScrollBars.Vertical
         dgPortfolio.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgPortfolio.Size = New Size(1084, 388)
+        dgPortfolio.Size = New Size(1084, 382)
         dgPortfolio.TabIndex = 11
-        ' 
-        ' lbDolar
-        ' 
-        lbDolar.AutoSize = True
-        lbDolar.BackColor = Color.Transparent
-        lbDolar.FlatStyle = FlatStyle.Flat
-        lbDolar.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
-        lbDolar.ForeColor = Color.GreenYellow
-        lbDolar.Location = New Point(755, 3)
-        lbDolar.Name = "lbDolar"
-        lbDolar.Size = New Size(45, 19)
-        lbDolar.TabIndex = 12
-        lbDolar.Text = "$0.00"
-        ' 
-        ' Label1
-        ' 
-        Label1.AutoSize = True
-        Label1.BackColor = Color.Transparent
-        Label1.FlatStyle = FlatStyle.Flat
-        Label1.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
-        Label1.ForeColor = Color.LightGray
-        Label1.Location = New Point(709, 3)
-        Label1.Name = "Label1"
-        Label1.Size = New Size(51, 19)
-        Label1.TabIndex = 13
-        Label1.Text = "Dolar:"
         ' 
         ' PanelProfits
         ' 
@@ -183,57 +161,32 @@ Partial Class FormMain
         Label5.TabIndex = 15
         Label5.Text = "Lucro:"
         ' 
-        ' Label3
+        ' GroupBox1
         ' 
-        Label3.AutoSize = True
-        Label3.BackColor = Color.Transparent
-        Label3.FlatStyle = FlatStyle.Flat
-        Label3.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
-        Label3.ForeColor = Color.LightGray
-        Label3.Location = New Point(825, 3)
-        Label3.Name = "Label3"
-        Label3.Size = New Size(39, 19)
-        Label3.TabIndex = 17
-        Label3.Text = "BTC:"
+        GroupBox1.Dock = DockStyle.Bottom
+        GroupBox1.Font = New Font("Calibri", 14F, FontStyle.Italic)
+        GroupBox1.ForeColor = Color.LightGray
+        GroupBox1.Location = New Point(0, 415)
+        GroupBox1.Name = "GroupBox1"
+        GroupBox1.Size = New Size(1084, 88)
+        GroupBox1.TabIndex = 21
+        GroupBox1.TabStop = False
+        GroupBox1.Text = "Estatisticas"
         ' 
-        ' lbBTC
+        ' Panel1
         ' 
-        lbBTC.AutoSize = True
-        lbBTC.BackColor = Color.Transparent
-        lbBTC.FlatStyle = FlatStyle.Flat
-        lbBTC.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
-        lbBTC.ForeColor = Color.DarkOrange
-        lbBTC.Location = New Point(859, 3)
-        lbBTC.Name = "lbBTC"
-        lbBTC.Size = New Size(45, 19)
-        lbBTC.TabIndex = 16
-        lbBTC.Text = "$0.00"
-        ' 
-        ' Label4
-        ' 
-        Label4.AutoSize = True
-        Label4.BackColor = Color.Transparent
-        Label4.FlatStyle = FlatStyle.Flat
-        Label4.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
-        Label4.ForeColor = Color.LightGray
-        Label4.Location = New Point(953, 3)
-        Label4.Name = "Label4"
-        Label4.Size = New Size(75, 19)
-        Label4.TabIndex = 19
-        Label4.Text = "Dom BTC:"
-        ' 
-        ' lbDom
-        ' 
-        lbDom.AutoSize = True
-        lbDom.BackColor = Color.Transparent
-        lbDom.FlatStyle = FlatStyle.Flat
-        lbDom.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
-        lbDom.ForeColor = Color.DeepSkyBlue
-        lbDom.Location = New Point(1024, 3)
-        lbDom.Name = "lbDom"
-        lbDom.Size = New Size(29, 19)
-        lbDom.TabIndex = 18
-        lbDom.Text = "0%"
+        Panel1.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        Panel1.Controls.Add(btRefresh)
+        Panel1.Controls.Add(Label4)
+        Panel1.Controls.Add(lbDom)
+        Panel1.Controls.Add(Label3)
+        Panel1.Controls.Add(lbBTC)
+        Panel1.Controls.Add(Label1)
+        Panel1.Controls.Add(lbDolar)
+        Panel1.Location = New Point(611, -1)
+        Panel1.Name = "Panel1"
+        Panel1.Size = New Size(473, 29)
+        Panel1.TabIndex = 22
         ' 
         ' btRefresh
         ' 
@@ -243,23 +196,90 @@ Partial Class FormMain
         btRefresh.FlatStyle = FlatStyle.Popup
         btRefresh.Font = New Font("Calibri", 10F)
         btRefresh.ForeColor = Color.Transparent
-        btRefresh.Location = New Point(620, 2)
+        btRefresh.Location = New Point(3, 3)
         btRefresh.Name = "btRefresh"
         btRefresh.Size = New Size(75, 23)
-        btRefresh.TabIndex = 20
+        btRefresh.TabIndex = 27
         btRefresh.Text = "Atualizar"
         btRefresh.UseVisualStyleBackColor = False
         ' 
-        ' Label2
+        ' Label4
         ' 
-        Label2.AutoSize = True
-        Label2.Font = New Font("Calibri", 14F, FontStyle.Bold Or FontStyle.Italic)
-        Label2.ForeColor = Color.LightGray
-        Label2.Location = New Point(7, 418)
-        Label2.Name = "Label2"
-        Label2.Size = New Size(97, 23)
-        Label2.TabIndex = 21
-        Label2.Text = "Estatísticas"
+        Label4.AutoSize = True
+        Label4.BackColor = Color.Transparent
+        Label4.FlatStyle = FlatStyle.Flat
+        Label4.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        Label4.ForeColor = Color.LightGray
+        Label4.Location = New Point(336, 4)
+        Label4.Name = "Label4"
+        Label4.Size = New Size(75, 19)
+        Label4.TabIndex = 26
+        Label4.Text = "Dom BTC:"
+        ' 
+        ' lbDom
+        ' 
+        lbDom.AutoSize = True
+        lbDom.BackColor = Color.Transparent
+        lbDom.FlatStyle = FlatStyle.Flat
+        lbDom.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        lbDom.ForeColor = Color.DeepSkyBlue
+        lbDom.Location = New Point(407, 4)
+        lbDom.Name = "lbDom"
+        lbDom.Size = New Size(29, 19)
+        lbDom.TabIndex = 25
+        lbDom.Text = "0%"
+        ' 
+        ' Label3
+        ' 
+        Label3.AutoSize = True
+        Label3.BackColor = Color.Transparent
+        Label3.FlatStyle = FlatStyle.Flat
+        Label3.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        Label3.ForeColor = Color.LightGray
+        Label3.Location = New Point(208, 4)
+        Label3.Name = "Label3"
+        Label3.Size = New Size(39, 19)
+        Label3.TabIndex = 24
+        Label3.Text = "BTC:"
+        ' 
+        ' lbBTC
+        ' 
+        lbBTC.AutoSize = True
+        lbBTC.BackColor = Color.Transparent
+        lbBTC.FlatStyle = FlatStyle.Flat
+        lbBTC.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        lbBTC.ForeColor = Color.DarkOrange
+        lbBTC.Location = New Point(242, 4)
+        lbBTC.Name = "lbBTC"
+        lbBTC.Size = New Size(45, 19)
+        lbBTC.TabIndex = 23
+        lbBTC.Text = "$0.00"
+        ' 
+        ' Label1
+        ' 
+        Label1.AutoSize = True
+        Label1.BackColor = Color.Transparent
+        Label1.FlatStyle = FlatStyle.Flat
+        Label1.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        Label1.ForeColor = Color.LightGray
+        Label1.Location = New Point(92, 4)
+        Label1.Name = "Label1"
+        Label1.Size = New Size(51, 19)
+        Label1.TabIndex = 22
+        Label1.Text = "Dolar:"
+        ' 
+        ' lbDolar
+        ' 
+        lbDolar.AutoSize = True
+        lbDolar.BackColor = Color.Transparent
+        lbDolar.FlatStyle = FlatStyle.Flat
+        lbDolar.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        lbDolar.ForeColor = Color.GreenYellow
+        lbDolar.Location = New Point(138, 4)
+        lbDolar.Name = "lbDolar"
+        lbDolar.Size = New Size(45, 19)
+        lbDolar.TabIndex = 21
+        lbDolar.Text = "$0.00"
         ' 
         ' FormMain
         ' 
@@ -267,19 +287,12 @@ Partial Class FormMain
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         ClientSize = New Size(1084, 540)
-        Controls.Add(Label2)
+        Controls.Add(Panel1)
+        Controls.Add(GroupBox1)
         Controls.Add(PanelProfits)
-        Controls.Add(btRefresh)
-        Controls.Add(Label4)
-        Controls.Add(lbDom)
-        Controls.Add(Label3)
-        Controls.Add(lbBTC)
-        Controls.Add(Label1)
-        Controls.Add(lbDolar)
         Controls.Add(dgPortfolio)
         Controls.Add(MenuStrip1)
         Font = New Font("Segoe UI", 9F)
-        FormBorderStyle = FormBorderStyle.FixedSingle
         MainMenuStrip = MenuStrip1
         Name = "FormMain"
         StartPosition = FormStartPosition.CenterScreen
@@ -289,6 +302,8 @@ Partial Class FormMain
         CType(dgPortfolio, ComponentModel.ISupportInitialize).EndInit()
         PanelProfits.ResumeLayout(False)
         PanelProfits.PerformLayout()
+        Panel1.ResumeLayout(False)
+        Panel1.PerformLayout()
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -297,16 +312,17 @@ Partial Class FormMain
     Friend WithEvents CriptoToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents FecharToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents dgPortfolio As DataGridView
-    Friend WithEvents lbDolar As Label
-    Friend WithEvents Label1 As Label
-    Friend WithEvents Label3 As Label
-    Friend WithEvents lbBTC As Label
-    Friend WithEvents Label4 As Label
-    Friend WithEvents lbDom As Label
-    Friend WithEvents btRefresh As Button
     Friend WithEvents PanelProfits As Panel
     Friend WithEvents Label5 As Label
     Friend WithEvents lbTotalBRL As Label
-    Friend WithEvents Label2 As Label
+    Friend WithEvents GroupBox1 As GroupBox
+    Friend WithEvents Panel1 As Panel
+    Friend WithEvents btRefresh As Button
+    Friend WithEvents Label4 As Label
+    Friend WithEvents lbDom As Label
+    Friend WithEvents Label3 As Label
+    Friend WithEvents lbBTC As Label
+    Friend WithEvents Label1 As Label
+    Friend WithEvents lbDolar As Label
 
 End Class

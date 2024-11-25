@@ -7,8 +7,8 @@ Public Class Cotacao
     Private Shared ReadOnly apiKey As String = "803eb0bd-7743-468d-869a-f5b4914e4f29"
     Private Shared ReadOnly apiUrlHistorical As String = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
 
-    Private Shared ReadOnly apiUrl As String = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
-    'Private Shared ReadOnly apiUrl As String = "https://sandbox-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
+    'Private Shared ReadOnly apiUrl As String = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
+    Private Shared ReadOnly apiUrl As String = "https://sandbox-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
 
     Public Async Function GetCriptoPrices(simbolosCripto As String) As Task(Of String)
 

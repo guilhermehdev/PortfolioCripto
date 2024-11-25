@@ -180,15 +180,15 @@ Public Class JSON
         newDT.Columns.Add("Cripto", GetType(String))
         newDT.Columns.Add("Perf", GetType(String))
         newDT.Columns.Add("Wallet", GetType(String))
-        newDT.Columns.Add("Qtd", GetType(String))
-        newDT.Columns.Add("vlEntradaUSD", GetType(String))
-        newDT.Columns.Add("vlEntradaBRL", GetType(String))
-        newDT.Columns.Add("precoMedio", GetType(String))
-        newDT.Columns.Add("precoAtual", GetType(String))
-        newDT.Columns.Add("vlAtualUSD", GetType(String))
-        newDT.Columns.Add("vlAtualBRL", GetType(String))
-        newDT.Columns.Add("ROIusd", GetType(String))
-        newDT.Columns.Add("ROIbrl", GetType(String))
+        newDT.Columns.Add("Qtd", GetType(Decimal))
+        newDT.Columns.Add("vlEntradaUSD", GetType(Decimal))
+        newDT.Columns.Add("vlEntradaBRL", GetType(Decimal))
+        newDT.Columns.Add("precoMedio", GetType(Decimal))
+        newDT.Columns.Add("precoAtual", GetType(Decimal))
+        newDT.Columns.Add("vlAtualUSD", GetType(Decimal))
+        newDT.Columns.Add("vlAtualBRL", GetType(Decimal))
+        newDT.Columns.Add("ROIusd", GetType(Decimal))
+        newDT.Columns.Add("ROIbrl", GetType(Decimal))
 
         ' Adicionar dados do DataTable original ao novo
         For Each row As DataRow In originalDT.Rows
@@ -218,49 +218,60 @@ Public Class JSON
                 newRow("Qtd") = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
             End If
 
-            newRow("vlEntradaUSD") = USDformat(initialValueUSD)
+            newRow("vlEntradaUSD") = initialValueUSD
 
-            newRow("vlEntradaBRL") = BRLformat(initialValueBRL)
+            newRow("vlEntradaBRL") = initialValueBRL
 
-            If initialPrice > 1 Then
-                newRow("precoMedio") = initialPrice.ToString("C", New CultureInfo("en-US"))
-            Else
-                newRow("precoMedio") = initialPrice.ToString("C8", New CultureInfo("en-US"))
-            End If
+            newRow("precoMedio") = initialPrice
 
-            If currPrice > 1 Then
-                newRow("precoAtual") = currPrice.ToString("C", New CultureInfo("en-US"))
-            Else
-                newRow("precoAtual") = currPrice.ToString("C8", New CultureInfo("en-US"))
-            End If
+            newRow("precoAtual") = currPrice
 
-            newRow("vlAtualUSD") = USDformat(currValueUSD)
+            newRow("vlAtualUSD") = (currValueUSD)
 
-            newRow("vlAtualBRL") = BRLformat(currValueBRL)
+            newRow("vlAtualBRL") = (currValueBRL)
 
-            newRow("ROIusd") = USDformat(roi)
+            newRow("ROIusd") = (roi)
 
-            newRow("ROIbrl") = BRLformat(roi * USDBRLprice)
+            newRow("ROIbrl") = (roi * USDBRLprice)
 
             newDT.Rows.Add(newRow)
 
         Next
+
+        datagrid.DataSource = newDT
+        FormatGrid(datagrid)
+
+        Return total
+
+    End Function
+
+    Public Sub FormatGrid(ByVal datagrid As DataGridView)
         Dim fontsize As Int16 = 9.7
         Dim fontname As String = "Calibri"
 
-        datagrid.DataSource = newDT
+        datagrid.ColumnHeadersHeight = 40
+        datagrid.CellBorderStyle = DataGridViewCellBorderStyle.None
+        datagrid.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
+        datagrid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+        With datagrid.ColumnHeadersDefaultCellStyle
+            .BackColor = Color.FromArgb(64, 64, 64)
+            .ForeColor = Color.Orange
+            .Font = New Font("Calibri", 10, FontStyle.Italic)
+        End With
 
         datagrid.Columns(0).Width = 75
         With datagrid.Columns(0).DefaultCellStyle
             .BackColor = Color.Black
-            .ForeColor = Color.Cyan
+            .ForeColor = Color.White
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
 
+        datagrid.Columns(1).HeaderText = "%"
         datagrid.Columns(1).Width = 80
         With datagrid.Columns(1).DefaultCellStyle
             .BackColor = Color.FromArgb(30, 30, 30)
-            .ForeColor = Color.Orange
+            .ForeColor = Color.Red
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
 
@@ -273,44 +284,47 @@ Public Class JSON
         datagrid.Columns(3).Width = 95
         With datagrid.Columns(3).DefaultCellStyle
             .BackColor = Color.MidnightBlue
-            .ForeColor = Color.Red
+            .ForeColor = Color.Gold
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
 
-        datagrid.Columns(4).HeaderText = "Valor entrada/médio USD"
+        datagrid.Columns(4).HeaderText = "Valor entrada/médio"
         datagrid.Columns(4).Width = 95
         With datagrid.Columns(4).DefaultCellStyle
             .BackColor = Color.Black
-            .ForeColor = Color.Lime
+            .ForeColor = Color.LimeGreen
+            .Format = "C"
+            .FormatProvider = New CultureInfo("en-US")
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
 
-        datagrid.Columns(5).HeaderText = "Valor entrada/médio BRL"
+        datagrid.Columns(5).HeaderText = ""
         datagrid.Columns(5).Width = 95
         With datagrid.Columns(5).DefaultCellStyle
             .BackColor = Color.Black
-            .ForeColor = Color.Yellow
+            .ForeColor = Color.DeepSkyBlue
+            .Format = "C"
+            .FormatProvider = New CultureInfo("pt-BR")
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
-
 
         datagrid.Columns(6).HeaderText = "Preço entrada USD"
         datagrid.Columns(6).Width = 95
         With datagrid.Columns(6).DefaultCellStyle
-            .BackColor = Color.Indigo
-            .ForeColor = Color.Lime
+            .BackColor = Color.FromArgb(32, 0, 82)
+            .ForeColor = Color.LimeGreen
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
 
         datagrid.Columns(7).HeaderText = "Preço atual"
         datagrid.Columns(7).Width = 95
         With datagrid.Columns(7).DefaultCellStyle
-            .BackColor = Color.Indigo
-            .ForeColor = Color.Yellow
+            .BackColor = Color.FromArgb(32, 0, 82)
+            .ForeColor = Color.DeepSkyBlue
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
 
-        datagrid.Columns(8).HeaderText = "Valor atual USD"
+        datagrid.Columns(8).HeaderText = "Valor atual"
         datagrid.Columns(8).Width = 95
         With datagrid.Columns(8).DefaultCellStyle
             .BackColor = Color.FromArgb(30, 30, 30)
@@ -318,19 +332,20 @@ Public Class JSON
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
 
-        datagrid.Columns(9).HeaderText = "Valor atual BRL"
+        datagrid.Columns(9).HeaderText = ""
         datagrid.Columns(9).Width = 95
         With datagrid.Columns(9).DefaultCellStyle
             .BackColor = Color.FromArgb(30, 30, 30)
-            .ForeColor = Color.Yellow
+            .ForeColor = Color.DeepSkyBlue
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
-
 
         datagrid.Columns(10).HeaderText = "ROI"
         datagrid.Columns(10).Width = 95
         With datagrid.Columns(10).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
+            .Format = "C2"
+            .FormatProvider = New CultureInfo("en-US")
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
 
@@ -339,10 +354,17 @@ Public Class JSON
         With datagrid.Columns(11).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.IndianRed
+            .Format = "C2"
+            .FormatProvider = New CultureInfo("pt-BR")
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
         End With
 
         For Each row As DataGridViewRow In datagrid.Rows
+
+            Select Case CInt(row.Cells(1).Value.ToString.Replace("%", ""))
+                Case > 0
+                    row.Cells(1).Style.ForeColor = Color.LawnGreen
+            End Select
 
             Select Case row.Cells(2).Value
                 Case "Binance"
@@ -359,20 +381,76 @@ Public Class JSON
                     row.Cells(2).Style.ForeColor = Color.DodgerBlue
             End Select
 
-            Select Case CInt(row.Cells(1).Value.ToString.Replace("%", ""))
+            Select Case CDec(row.Cells(10).Value)
                 Case > 0
-                    row.Cells(1).Style.ForeColor = Color.LawnGreen
+                    row.Cells(10).Style.ForeColor = Color.Aquamarine
+                Case < 0
+                    row.Cells(10).Style.ForeColor = Color.LightCoral
             End Select
 
             Select Case CDec(row.Cells(11).Value)
                 Case > 0
-                    row.Cells(11).Style.ForeColor = Color.Aquamarine
+                    row.Cells(11).Style.ForeColor = Color.Aqua
+                Case < 0
+                    row.Cells(11).Style.ForeColor = Color.LightCoral
             End Select
+
+
+            If row.Cells(6).Value > 1 Then
+                With row.Cells(6)
+                    .Style.Format = "C2"
+                    .Style.FormatProvider = New CultureInfo("en-US")
+                End With
+            Else
+                With row.Cells(6)
+                    .Style.Format = "C8"
+                    .Style.FormatProvider = New CultureInfo("en-US")
+                End With
+            End If
+
+            If row.Cells(7).Value > 1 Then
+                With row.Cells(7)
+                    .Style.Format = "C2"
+                    .Style.FormatProvider = New CultureInfo("en-US")
+                End With
+            Else
+                With row.Cells(7)
+                    .Style.Format = "C8"
+                    .Style.FormatProvider = New CultureInfo("en-US")
+                End With
+            End If
+
+            If row.Cells(8).Value > 1 Then
+                With row.Cells(8)
+                    .Style.Format = "C2"
+                    .Style.FormatProvider = New CultureInfo("en-US")
+                End With
+            Else
+                With row.Cells(8)
+                    .Style.Format = "C8"
+                    .Style.FormatProvider = New CultureInfo("en-US")
+                End With
+            End If
+
+            If row.Cells(9).Value > 1 Then
+                With row.Cells(9)
+                    .Style.Format = "C2"
+                    .Style.FormatProvider = New CultureInfo("en-US")
+                End With
+            Else
+                With row.Cells(9)
+                    .Style.Format = "C8"
+                    .Style.FormatProvider = New CultureInfo("en-US")
+                End With
+            End If
+
+            row.Height = 35
+            datagrid.ClearSelection()
+            datagrid.CurrentCell = Nothing
+
         Next
 
-        Return total
-
-    End Function
+    End Sub
 
     Public Function USDformat(ByVal value As Decimal)
         Return value.ToString("C", New CultureInfo("en-US"))
