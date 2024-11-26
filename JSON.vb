@@ -246,7 +246,7 @@ Public Class JSON
     End Function
 
     Public Sub FormatGrid(ByVal datagrid As DataGridView)
-        Dim fontsize As Int16 = 9.7
+        Dim fontsize As Int16 = 12
         Dim fontname As String = "Calibri"
 
         datagrid.ColumnHeadersHeight = 40
@@ -265,6 +265,7 @@ Public Class JSON
             .BackColor = Color.Black
             .ForeColor = Color.White
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
         datagrid.Columns(1).HeaderText = "%"
@@ -273,12 +274,14 @@ Public Class JSON
             .BackColor = Color.FromArgb(30, 30, 30)
             .ForeColor = Color.Red
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(2).Width = 80
+        datagrid.Columns(2).Width = 85
         With datagrid.Columns(2).DefaultCellStyle
             .BackColor = Color.FromArgb(50, 50, 50)
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
         datagrid.Columns(3).Width = 95
@@ -286,6 +289,7 @@ Public Class JSON
             .BackColor = Color.MidnightBlue
             .ForeColor = Color.Gold
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
         datagrid.Columns(4).HeaderText = "Valor entrada/médio"
@@ -296,6 +300,7 @@ Public Class JSON
             .Format = "C"
             .FormatProvider = New CultureInfo("en-US")
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
         datagrid.Columns(5).HeaderText = ""
@@ -306,6 +311,7 @@ Public Class JSON
             .Format = "C"
             .FormatProvider = New CultureInfo("pt-BR")
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
         datagrid.Columns(6).HeaderText = "Preço entrada USD"
@@ -314,6 +320,7 @@ Public Class JSON
             .BackColor = Color.FromArgb(32, 0, 82)
             .ForeColor = Color.LimeGreen
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
         datagrid.Columns(7).HeaderText = "Preço atual"
@@ -322,6 +329,7 @@ Public Class JSON
             .BackColor = Color.FromArgb(32, 0, 82)
             .ForeColor = Color.DeepSkyBlue
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
         datagrid.Columns(8).HeaderText = "Valor atual"
@@ -330,6 +338,7 @@ Public Class JSON
             .BackColor = Color.FromArgb(30, 30, 30)
             .ForeColor = Color.Lime
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
         datagrid.Columns(9).HeaderText = ""
@@ -338,6 +347,7 @@ Public Class JSON
             .BackColor = Color.FromArgb(30, 30, 30)
             .ForeColor = Color.DeepSkyBlue
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
         datagrid.Columns(10).HeaderText = "ROI"
@@ -347,6 +357,7 @@ Public Class JSON
             .Format = "C2"
             .FormatProvider = New CultureInfo("en-US")
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
         datagrid.Columns(11).HeaderText = ""
@@ -357,6 +368,7 @@ Public Class JSON
             .Format = "C2"
             .FormatProvider = New CultureInfo("pt-BR")
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
         For Each row As DataGridViewRow In datagrid.Rows

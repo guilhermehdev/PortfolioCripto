@@ -22,9 +22,11 @@ Partial Class FormMain
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
-        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        components = New ComponentModel.Container()
+        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle5 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         MenuStrip1 = New MenuStrip()
         CadastroToolStripMenuItem = New ToolStripMenuItem()
         CriptoToolStripMenuItem = New ToolStripMenuItem()
@@ -42,6 +44,11 @@ Partial Class FormMain
         lbBTC = New Label()
         Label1 = New Label()
         lbDolar = New Label()
+        NotifyIcon1 = New NotifyIcon(components)
+        Timer1 = New Timer(components)
+        OpçõesToolStripMenuItem = New ToolStripMenuItem()
+        IntervaloToolStripMenuItem = New ToolStripMenuItem()
+        JSONToolStripMenuItem = New ToolStripMenuItem()
         MenuStrip1.SuspendLayout()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
@@ -51,7 +58,7 @@ Partial Class FormMain
         ' MenuStrip1
         ' 
         MenuStrip1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, FecharToolStripMenuItem})
+        MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, OpçõesToolStripMenuItem, FecharToolStripMenuItem})
         MenuStrip1.Location = New Point(0, 0)
         MenuStrip1.Name = "MenuStrip1"
         MenuStrip1.Size = New Size(1084, 24)
@@ -68,8 +75,10 @@ Partial Class FormMain
         ' 
         ' CriptoToolStripMenuItem
         ' 
+        CriptoToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        CriptoToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         CriptoToolStripMenuItem.Name = "CriptoToolStripMenuItem"
-        CriptoToolStripMenuItem.Size = New Size(119, 22)
+        CriptoToolStripMenuItem.Size = New Size(180, 22)
         CriptoToolStripMenuItem.Text = "Entradas"
         ' 
         ' FecharToolStripMenuItem
@@ -89,39 +98,39 @@ Partial Class FormMain
         dgPortfolio.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgPortfolio.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         dgPortfolio.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle1.ForeColor = Color.Turquoise
-        DataGridViewCellStyle1.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle1.SelectionForeColor = SystemColors.ControlText
-        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
-        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
-        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle2.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle2.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle2.SelectionForeColor = SystemColors.ControlText
-        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
-        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle4.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle4.ForeColor = Color.Turquoise
+        DataGridViewCellStyle4.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle4.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
+        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
+        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle5.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle5.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle5.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle5.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.True
+        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle5
         dgPortfolio.EnableHeadersVisualStyles = False
         dgPortfolio.Location = New Point(0, 27)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
-        DataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle3.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle3.Padding = New Padding(2)
-        DataGridViewCellStyle3.SelectionBackColor = Color.DarkOrange
-        DataGridViewCellStyle3.SelectionForeColor = SystemColors.ControlText
-        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
-        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
+        DataGridViewCellStyle6.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle6.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle6.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle6.Padding = New Padding(2)
+        DataGridViewCellStyle6.SelectionBackColor = Color.DarkOrange
+        DataGridViewCellStyle6.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
+        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle6
         dgPortfolio.RowHeadersWidth = 4
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
-        dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = SystemColors.ButtonHighlight
+        dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgPortfolio.ScrollBars = ScrollBars.Vertical
         dgPortfolio.SelectionMode = DataGridViewSelectionMode.FullRowSelect
         dgPortfolio.Size = New Size(1084, 382)
@@ -142,7 +151,7 @@ Partial Class FormMain
         ' 
         lbTotalBRL.AutoSize = True
         lbTotalBRL.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
-        lbTotalBRL.ForeColor = Color.Cyan
+        lbTotalBRL.ForeColor = Color.Lime
         lbTotalBRL.Location = New Point(456, 3)
         lbTotalBRL.Name = "lbTotalBRL"
         lbTotalBRL.Size = New Size(91, 30)
@@ -171,7 +180,7 @@ Partial Class FormMain
         GroupBox1.Size = New Size(1084, 88)
         GroupBox1.TabIndex = 21
         GroupBox1.TabStop = False
-        GroupBox1.Text = "Estatisticas"
+        GroupBox1.Text = "Visão geral"
         ' 
         ' Panel1
         ' 
@@ -281,6 +290,37 @@ Partial Class FormMain
         lbDolar.TabIndex = 21
         lbDolar.Text = "$0.00"
         ' 
+        ' NotifyIcon1
+        ' 
+        NotifyIcon1.BalloonTipIcon = ToolTipIcon.Info
+        NotifyIcon1.Icon = CType(resources.GetObject("NotifyIcon1.Icon"), Icon)
+        NotifyIcon1.Text = "NotifyIcon1"
+        NotifyIcon1.Visible = True
+        ' 
+        ' OpçõesToolStripMenuItem
+        ' 
+        OpçõesToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {IntervaloToolStripMenuItem, JSONToolStripMenuItem})
+        OpçõesToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        OpçõesToolStripMenuItem.Name = "OpçõesToolStripMenuItem"
+        OpçõesToolStripMenuItem.Size = New Size(96, 20)
+        OpçõesToolStripMenuItem.Text = "Configurações"
+        ' 
+        ' IntervaloToolStripMenuItem
+        ' 
+        IntervaloToolStripMenuItem.BackColor = SystemColors.ActiveCaptionText
+        IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
+        IntervaloToolStripMenuItem.Size = New Size(180, 22)
+        IntervaloToolStripMenuItem.Text = "Intervalo"
+        ' 
+        ' JSONToolStripMenuItem
+        ' 
+        JSONToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
+        JSONToolStripMenuItem.Size = New Size(180, 22)
+        JSONToolStripMenuItem.Text = "JSON"
+        ' 
         ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
@@ -324,5 +364,10 @@ Partial Class FormMain
     Friend WithEvents lbBTC As Label
     Friend WithEvents Label1 As Label
     Friend WithEvents lbDolar As Label
+    Friend WithEvents NotifyIcon1 As NotifyIcon
+    Friend WithEvents Timer1 As Timer
+    Friend WithEvents OpçõesToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents IntervaloToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents JSONToolStripMenuItem As ToolStripMenuItem
 
 End Class
