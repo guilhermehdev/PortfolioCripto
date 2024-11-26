@@ -150,3 +150,10 @@ Public Class Cotacao
 
 
 End Class
+Public Class TransparentPictureBox
+    Inherits PictureBox
+
+    Protected Overrides Sub OnPaintBackground(pevent As PaintEventArgs)
+        ' Não pinta o fundo, preservando a transparência
+    End Sub
+End Class
