@@ -11,7 +11,8 @@ Public Class FormMain
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        'Label2.Visible = True
+        lbLoadFromMarket.Visible = True
+        TimerBlink.Start()
         'Me.Cursor = Cursors.WaitCursor
         'dgPortfolio.Cursor = Cursors.WaitCursor
         ' SetupLabels()
@@ -54,7 +55,9 @@ Public Class FormMain
         Dim dom As Decimal? = Await Task.Run(Async Function() Await usdTask.GetBTCDOM())
         Dim total = Await json.LoadCriptos(dgPortfolio)
 
-        Label2.Visible = False
+        lbLoadFromMarket.Visible = False
+        TimerBlink.Stop()
+
         Me.Cursor = Cursors.Default
         dgPortfolio.Cursor = Cursors.Default
 
@@ -172,6 +175,20 @@ Public Class FormMain
 
     Private Sub OpçõesToolStripMenuItem_MouseLeave(sender As Object, e As EventArgs) Handles OpçõesToolStripMenuItem.MouseLeave
         OpçõesToolStripMenuItem.ForeColor = Color.White
+    End Sub
+
+    Private Sub TimerBlink_Tick(sender As Object, e As EventArgs) Handles TimerBlink.Tick
+        If lbLoadFromMarket.Visible = True Then
+            If lbLoadFromMarket.ForeColor = Color.OrangeRed Then
+                lbLoadFromMarket.ForeColor = Color.Gold
+            ElseIf lbLoadFromMarket.ForeColor = Color.Gold Then
+                lbLoadFromMarket.ForeColor = Color.White
+            ElseIf lbLoadFromMarket.ForeColor = Color.White Then
+                lbLoadFromMarket.ForeColor = Color.Yellow
+            ElseIf lbLoadFromMarket.ForeColor = Color.Yellow Then
+                lbLoadFromMarket.ForeColor = Color.OrangeRed
+            End If
+        End If
     End Sub
 
 End Class

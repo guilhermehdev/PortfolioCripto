@@ -23,9 +23,9 @@ Partial Class FormMain
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
         components = New ComponentModel.Container()
-        Dim DataGridViewCellStyle13 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle14 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle15 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         MenuStrip1 = New MenuStrip()
         CadastroToolStripMenuItem = New ToolStripMenuItem()
@@ -44,7 +44,6 @@ Partial Class FormMain
         Label16 = New Label()
         Label14 = New Label()
         Label13 = New Label()
-        Label2 = New Label()
         lbDataTotalToday = New Label()
         Label10 = New Label()
         Label11 = New Label()
@@ -55,6 +54,7 @@ Partial Class FormMain
         lbTotalEntradaBRL = New Label()
         lbTotalEntrada = New Label()
         Label6 = New Label()
+        lbLoadFromMarket = New Label()
         Panel1 = New Panel()
         lbAtualizaEm = New Label()
         lbRefresh = New Label()
@@ -68,6 +68,7 @@ Partial Class FormMain
         NotifyIcon1 = New NotifyIcon(components)
         TimerRefresh = New Timer(components)
         TimerCountdown = New Timer(components)
+        TimerBlink = New Timer(components)
         MenuStrip1.SuspendLayout()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
@@ -142,42 +143,42 @@ Partial Class FormMain
         dgPortfolio.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgPortfolio.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         dgPortfolio.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle13.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle13.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle13.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle13.ForeColor = Color.Turquoise
-        DataGridViewCellStyle13.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle13.SelectionForeColor = SystemColors.ControlText
-        DataGridViewCellStyle13.WrapMode = DataGridViewTriState.True
-        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle13
-        DataGridViewCellStyle14.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle14.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle14.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle14.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle14.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle14.SelectionForeColor = SystemColors.ControlText
-        DataGridViewCellStyle14.WrapMode = DataGridViewTriState.True
-        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle14
+        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle1.ForeColor = Color.Turquoise
+        DataGridViewCellStyle1.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle1.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
+        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle2.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle2.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle2.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
+        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
         dgPortfolio.EnableHeadersVisualStyles = False
         dgPortfolio.Location = New Point(0, 27)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
-        DataGridViewCellStyle15.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle15.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle15.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle15.Padding = New Padding(2)
-        DataGridViewCellStyle15.SelectionBackColor = Color.DarkOrange
-        DataGridViewCellStyle15.SelectionForeColor = SystemColors.ControlText
-        DataGridViewCellStyle15.WrapMode = DataGridViewTriState.True
-        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle15
+        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle3.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle3.Padding = New Padding(2)
+        DataGridViewCellStyle3.SelectionBackColor = Color.DarkOrange
+        DataGridViewCellStyle3.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
+        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
         dgPortfolio.RowHeadersWidth = 4
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgPortfolio.ScrollBars = ScrollBars.Vertical
         dgPortfolio.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgPortfolio.Size = New Size(1084, 360)
+        dgPortfolio.Size = New Size(1084, 350)
         dgPortfolio.TabIndex = 11
         ' 
         ' PanelProfits
@@ -234,7 +235,6 @@ Partial Class FormMain
         GroupOverview.Controls.Add(Label16)
         GroupOverview.Controls.Add(Label14)
         GroupOverview.Controls.Add(Label13)
-        GroupOverview.Controls.Add(Label2)
         GroupOverview.Controls.Add(lbDataTotalToday)
         GroupOverview.Controls.Add(Label10)
         GroupOverview.Controls.Add(Label11)
@@ -295,24 +295,11 @@ Partial Class FormMain
         Label13.TabIndex = 10
         Label13.Text = "USD"
         ' 
-        ' Label2
-        ' 
-        Label2.Anchor = AnchorStyles.Right
-        Label2.AutoSize = True
-        Label2.BackColor = Color.Transparent
-        Label2.Font = New Font("Segoe UI", 9F, FontStyle.Italic)
-        Label2.ForeColor = Color.OrangeRed
-        Label2.Location = New Point(907, -3)
-        Label2.Name = "Label2"
-        Label2.Size = New Size(178, 15)
-        Label2.TabIndex = 0
-        Label2.Text = "Carregando dados do mercado..."
-        Label2.Visible = False
-        ' 
         ' lbDataTotalToday
         ' 
         lbDataTotalToday.AutoSize = True
         lbDataTotalToday.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        lbDataTotalToday.ForeColor = Color.DeepSkyBlue
         lbDataTotalToday.Location = New Point(301, 63)
         lbDataTotalToday.Name = "lbDataTotalToday"
         lbDataTotalToday.Size = New Size(85, 19)
@@ -411,6 +398,20 @@ Partial Class FormMain
         Label6.Size = New Size(134, 19)
         Label6.TabIndex = 0
         Label6.Text = "Valores de entrada:"
+        ' 
+        ' lbLoadFromMarket
+        ' 
+        lbLoadFromMarket.Anchor = AnchorStyles.Right
+        lbLoadFromMarket.AutoSize = True
+        lbLoadFromMarket.BackColor = Color.Transparent
+        lbLoadFromMarket.Font = New Font("Segoe UI", 9F, FontStyle.Italic)
+        lbLoadFromMarket.ForeColor = Color.OrangeRed
+        lbLoadFromMarket.Location = New Point(906, 380)
+        lbLoadFromMarket.Name = "lbLoadFromMarket"
+        lbLoadFromMarket.Size = New Size(178, 15)
+        lbLoadFromMarket.TabIndex = 0
+        lbLoadFromMarket.Text = "Carregando dados do mercado..."
+        lbLoadFromMarket.Visible = False
         ' 
         ' Panel1
         ' 
@@ -560,6 +561,9 @@ Partial Class FormMain
         ' 
         TimerCountdown.Interval = 1000
         ' 
+        ' TimerBlink
+        ' 
+        ' 
         ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
@@ -570,6 +574,7 @@ Partial Class FormMain
         Controls.Add(GroupOverview)
         Controls.Add(PanelProfits)
         Controls.Add(dgPortfolio)
+        Controls.Add(lbLoadFromMarket)
         Controls.Add(MenuStrip1)
         Font = New Font("Segoe UI", 9F)
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
@@ -613,7 +618,7 @@ Partial Class FormMain
     Friend WithEvents JSONToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents lbRefresh As Label
     Friend WithEvents TimerCountdown As Timer
-    Friend WithEvents Label2 As Label
+    Friend WithEvents lbLoadFromMarket As Label
     Friend WithEvents Label6 As Label
     Friend WithEvents lbTotalEntrada As Label
     Friend WithEvents lbTotalEntradaBRL As Label
@@ -630,5 +635,6 @@ Partial Class FormMain
     Friend WithEvents Label16 As Label
     Friend WithEvents lbPerformWallet As Label
     Friend WithEvents lbAtualizaEm As Label
+    Friend WithEvents TimerBlink As Timer
 
 End Class
