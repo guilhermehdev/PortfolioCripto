@@ -36,12 +36,14 @@
         timerRefresh.Stop()
         timerCount.Stop()
         cbIntervalo.SelectedIndex = 0
-        FormMain.lbRefresh.Text = ""
+        FormMain.lbRefresh.Visible = False
+        FormMain.lbAtualizaEm.Visible = False
     End Sub
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles btCancelTimer.Click
         timerRefresh.Stop()
         timerCount.Stop()
-        FormMain.lbRefresh.Text = ""
+        FormMain.lbRefresh.Visible = False
+        FormMain.lbAtualizaEm.Visible = False
         Me.Close()
     End Sub
 End Class

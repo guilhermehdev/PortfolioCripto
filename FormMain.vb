@@ -1,5 +1,4 @@
-﻿Imports System.Threading.Tasks
-Imports Microsoft.VisualBasic.Devices
+﻿Imports System.Windows.Forms.DataVisualization.Charting
 Public Class FormMain
     Public remainingtimeInSeconds As Integer
 
@@ -17,6 +16,35 @@ Public Class FormMain
         'dgPortfolio.Cursor = Cursors.WaitCursor
         ' SetupLabels()
         lbDataTotalToday.Text = Date.Today & ":"
+
+        Dim myChart As New Chart With {
+            .Width = 200,
+            .Height = 100,
+            .Top = 5,
+            .Left = 700
+        }
+
+        ' Adicionar uma área de gráfico
+        Dim chartArea As New ChartArea("MainArea")
+        myChart.ChartAreas.Add(chartArea)
+
+        ' Criar uma série para os dados
+        Dim series As New Series("Vendas")
+        series.ChartType = SeriesChartType.Column ' Definir o tipo de gráfico (barra neste caso)
+        series.Points.AddXY("Janeiro", 100)
+        series.Points.AddXY("Fevereiro", 150)
+        series.Points.AddXY("Março", 200)
+        series.Points.AddXY("Abril", 250)
+
+        ' Adicionar a série ao gráfico
+        myChart.Series.Add(series)
+
+        ' Adicionar título ao gráfico (opcional)
+        Dim chartTitle As New Title("Gráfico de Vendas", Docking.Top, New Font("Arial", 10), Color.Black)
+        myChart.Titles.Add(chartTitle)
+
+        Me.GroupOverview.Controls.Add(myChart)
+
     End Sub
 
     Public Async Sub SetupLabels()
@@ -50,11 +78,11 @@ Public Class FormMain
         dgPortfolio.CurrentCell = Nothing
     End Sub
 
-    Private Sub GroupBox1_Paint(sender As Object, e As PaintEventArgs) Handles GroupBox1.Paint
+    Private Sub GroupBox1_Paint(sender As Object, e As PaintEventArgs) Handles GroupOverview.Paint
         e.Graphics.Clear(Me.BackColor)
-        Dim text As String = GroupBox1.Text
+        Dim text As String = GroupOverview.Text
         If Not String.IsNullOrEmpty(text) Then
-            e.Graphics.DrawString(text, GroupBox1.Font, New SolidBrush(GroupBox1.ForeColor), 10, 0)
+            e.Graphics.DrawString(text, GroupOverview.Font, New SolidBrush(GroupOverview.ForeColor), 10, 0)
         End If
     End Sub
     Private Sub FormMain_Resize(sender As Object, e As EventArgs) Handles MyBase.Resize
@@ -117,7 +145,9 @@ Public Class FormMain
     End Sub
     Private Sub TimerCountdown_Tick(sender As Object, e As EventArgs) Handles TimerCountdown.Tick
         remainingtimeInSeconds -= 1
-        lbRefresh.Text = $"Atualiza em: {(remainingtimeInSeconds \ 60).ToString("D2")}:{(remainingtimeInSeconds Mod 60).ToString("D2")}"
+        lbAtualizaEm.Visible = True
+        lbRefresh.Visible = True
+        lbRefresh.Text = $"{(remainingtimeInSeconds \ 60).ToString("D2")}:{(remainingtimeInSeconds Mod 60).ToString("D2")}"
     End Sub
 
     Private Sub NotifyIcon1_MouseMove(sender As Object, e As MouseEventArgs) Handles NotifyIcon1.MouseMove
@@ -126,6 +156,22 @@ Public Class FormMain
 
     Private Sub TotalAdjust()
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
+    End Sub
+
+    Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter
+        CadastroToolStripMenuItem.ForeColor = Color.Black
+    End Sub
+
+    Private Sub OpçõesToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles OpçõesToolStripMenuItem.MouseEnter
+        OpçõesToolStripMenuItem.ForeColor = Color.Black
+    End Sub
+
+    Private Sub CadastroToolStripMenuItem_MouseLeave(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseLeave
+        CadastroToolStripMenuItem.ForeColor = Color.White
+    End Sub
+
+    Private Sub OpçõesToolStripMenuItem_MouseLeave(sender As Object, e As EventArgs) Handles OpçõesToolStripMenuItem.MouseLeave
+        OpçõesToolStripMenuItem.ForeColor = Color.White
     End Sub
 
 End Class
