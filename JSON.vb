@@ -170,6 +170,7 @@ Public Class JSON
         Dim getCriptoData As New Cotacao
         Dim USDBRLprice = Await getCriptoData.GetUSDBRL
         Dim total As Decimal
+        Dim totalEntrada As Decimal
         Dim wallet As String = ""
         Dim currValueUSD As Decimal
         Dim currValueBRL As Decimal
@@ -205,6 +206,7 @@ Public Class JSON
             roi = currValueUSD - initialValueUSD
             perform = (roi / initialValueUSD) * 100
             total += roi
+            totalEntrada += initialValueUSD
 
             newRow("Cripto") = row("Cripto")
             '$"{perform.Value:F2}%"

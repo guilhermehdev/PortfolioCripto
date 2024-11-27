@@ -12,10 +12,11 @@ Public Class FormMain
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Label2.Visible = True
-        Me.Cursor = Cursors.WaitCursor
-        dgPortfolio.Cursor = Cursors.WaitCursor
-        SetupLabels()
+        'Label2.Visible = True
+        'Me.Cursor = Cursors.WaitCursor
+        'dgPortfolio.Cursor = Cursors.WaitCursor
+        ' SetupLabels()
+        lbDataTotalToday.Text = Date.Today & ":"
     End Sub
 
     Public Async Sub SetupLabels()
