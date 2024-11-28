@@ -2,6 +2,7 @@
 Imports Newtonsoft.Json.Linq
 Imports System.Globalization
 Imports System.IO
+Imports Windows.Win32.System
 
 
 Public Class JSON
@@ -165,10 +166,12 @@ Public Class JSON
 
     End Function
 
-    Public Async Function LoadCriptos(datagrid As DataGridView) As Task(Of Decimal)
+    Public Async Function LoadCriptos(datagrid As DataGridView) As Task
         Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
         Dim getCriptoData As New Cotacao
         Dim USDBRLprice = Await getCriptoData.GetUSDBRL
+        Dim json As New JSON
+        Dim dom As Decimal? = Await Task.Run(Async Function() Await getCriptoData.GetBTCDOM())
         Dim total As Decimal
         Dim totalEntrada As Decimal
         Dim wallet As String = ""
@@ -194,7 +197,6 @@ Public Class JSON
         ' Adicionar dados do DataTable original ao novo
         For Each row As DataRow In originalDT.Rows
             Dim newRow As DataRow = newDT.NewRow()
-
             Dim critoPriceTask As Task(Of String) = getCriptoData.GetCriptoPrices(row("Cripto"))
             Dim currPrice As Decimal = Await critoPriceTask
             Dim initialPrice As Decimal = row("InitialPrice").ToString.Replace(".", ",")
@@ -205,13 +207,11 @@ Public Class JSON
             currValueBRL = currValueUSD * USDBRLprice
             roi = currValueUSD - initialValueUSD
             perform = (roi / initialValueUSD) * 100
-            total += roi
             totalEntrada += initialValueUSD
+            total += roi
 
             newRow("Cripto") = row("Cripto")
-            '$"{perform.Value:F2}%"
             newRow("Perf") = $"{perform.Value:F2}%"
-
             newRow("Wallet") = wallet
 
             If row("Qtd").ToString.Contains(".") Then
@@ -221,29 +221,37 @@ Public Class JSON
             End If
 
             newRow("vlEntradaUSD") = initialValueUSD
-
             newRow("vlEntradaBRL") = initialValueBRL
-
             newRow("precoMedio") = initialPrice
-
             newRow("precoAtual") = currPrice
-
             newRow("vlAtualUSD") = (currValueUSD)
-
             newRow("vlAtualBRL") = (currValueBRL)
-
             newRow("ROIusd") = (roi)
-
             newRow("ROIbrl") = (roi * USDBRLprice)
-
             newDT.Rows.Add(newRow)
-
         Next
+
+        FormMain.lbTotalBRL.Visible = True
+        FormMain.lbTotalBRL.Text = BRLformat(total * USDBRLprice)
+        If total > 0 Then
+            FormMain.lbTotalBRL.ForeColor = Color.FromArgb(0, 255, 0)
+        Else
+            FormMain.lbTotalBRL.ForeColor = Color.FromArgb(255, 73, 73)
+        End If
+
+        FormMain.lbDolar.Text = $"R$ {Format(USDBRLprice, "#,##0.00")}"
+        FormMain.lbBTC.Text = USDformat(Await getCriptoData.GetCriptoPrices("BTC"))
+        FormMain.lbDom.Text = $"{dom.Value:F2}%"
+        FormMain.lbPerformWallet.Text = $"{(totalEntrada / roi)}%"
+        FormMain.lbTotalEntradaUSD.Text = "0.00"
+        FormMain.lbTotalEntradaBRL.Text = "0.00"
+        FormMain.lbValoresHojeUSD.Text = "0.00"
+        FormMain.lbValoresHojeBRL.Text = "0.00"
+        FormMain.lbRoiUSD.Text = "0.00"
+        FormMain.lbRoiBRL.Text = "0.00"
 
         datagrid.DataSource = newDT
         FormatGrid(datagrid)
-
-        Return total
 
     End Function
 

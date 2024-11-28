@@ -15,7 +15,7 @@ Public Class FormMain
         TimerBlink.Start()
         'Me.Cursor = Cursors.WaitCursor
         'dgPortfolio.Cursor = Cursors.WaitCursor
-        ' SetupLabels()
+        Setup()
         lbDataTotalToday.Text = Date.Today & ":"
 
         Dim myChart As New Chart With {
@@ -48,29 +48,15 @@ Public Class FormMain
 
     End Sub
 
-    Public Async Sub SetupLabels()
-        Dim json As New JSON
-        Dim usdTask As New Cotacao
-        Dim usdValue = Await usdTask.GetUSDBRL()
-        Dim dom As Decimal? = Await Task.Run(Async Function() Await usdTask.GetBTCDOM())
-        Dim total = Await json.LoadCriptos(dgPortfolio)
+    Public Async Sub Setup()
+        Dim Cjson As New JSON
+        Await Cjson.LoadCriptos(dgPortfolio)
 
         lbLoadFromMarket.Visible = False
         TimerBlink.Stop()
 
         Me.Cursor = Cursors.Default
         dgPortfolio.Cursor = Cursors.Default
-
-        lbDolar.Text = $"R$ {Format(usdValue, "#,##0.00")}"
-        lbBTC.Text = json.USDformat(Await usdTask.GetCriptoPrices("BTC"))
-        lbDom.Text = $"{dom.Value:F2}%"
-        lbTotalBRL.Visible = True
-        lbTotalBRL.Text = json.BRLformat(total * usdValue)
-        If total > 0 Then
-            lbTotalBRL.ForeColor = Color.FromArgb(0, 255, 0)
-        Else
-            lbTotalBRL.ForeColor = Color.FromArgb(255, 73, 73)
-        End If
 
         TotalAdjust()
 
@@ -138,7 +124,7 @@ Public Class FormMain
         Dim json As New JSON
         Try
 
-            SetupLabels()
+            Setup()
             json.FormatGrid(dgPortfolio)
             Me.remainingtimeInSeconds = TimerRefresh.Interval / 1000
         Catch ex As Exception

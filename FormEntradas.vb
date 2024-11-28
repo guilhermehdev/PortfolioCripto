@@ -56,7 +56,7 @@ Public Class FormEntradas
 
     Private Sub FormEntradas_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed
         Try
-            FormMain.SetupLabels()
+            FormMain.Setup()
         Catch ex As Exception
 
         End Try
