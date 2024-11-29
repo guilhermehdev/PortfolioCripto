@@ -1,50 +1,50 @@
 {
   "SOL": [
     {
-      "InitialPrice": "$155.00",
-      "Qtd": 123.0,
-      "Data": "22/11/2024",
+      "InitialPrice": 155.0,
+      "Qtd": 1.23,
+      "Data": "26/11/2024",
       "Wallet": "Phantom"
     }
   ],
   "PENDLE": [
     {
-      "InitialPrice": "$5.52",
+      "InitialPrice": 3.6,
       "Qtd": 44.43,
-      "Data": "22/11/2024",
+      "Data": "01/08/2024",
       "Wallet": "TrustWallet"
     }
   ],
   "NEAR": [
     {
-      "InitialPrice": "$4.56",
-      "Qtd": 2296.0,
-      "Data": "22/11/2024",
+      "InitialPrice": 4.65,
+      "Qtd": 26.45,
+      "Data": "22/08/2024",
       "Wallet": "TrustWallet"
-    }
-  ],
-  "ZRO": [
-    {
-      "InitialPrice": "$3.97",
-      "Qtd": 1528.0,
-      "Data": "22/11/2024",
-      "Wallet": "Gate.io"
     }
   ],
   "DOG": [
     {
-      "InitialPrice": "$0.00",
-      "Qtd": 22317.0,
-      "Data": "22/11/2024",
+      "InitialPrice": 0.004053,
+      "Qtd": 23641.0,
+      "Data": "22/08/2024",
       "Wallet": "Gate.io"
     }
   ],
   "PEPE": [
     {
-      "InitialPrice": "$0.00",
-      "Qtd": 4246774.0,
-      "Data": "22/11/2024",
+      "InitialPrice": 9.887E-06,
+      "Qtd": 6408866.82,
+      "Data": "22/08/2024",
       "Wallet": "Binance"
+    }
+  ],
+  "ENA": [
+    {
+      "InitialPrice": 0.5926,
+      "Qtd": 37.02,
+      "Data": "22/11/2024",
+      "Wallet": "Gate.io"
     }
   ]
 }
