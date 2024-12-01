@@ -172,13 +172,14 @@ Public Class JSON
         Dim USDBRLprice = Await getCriptoData.GetUSDBRL
         Dim json As New JSON
         Dim dom As Decimal? = Await Task.Run(Async Function() Await getCriptoData.GetBTCDOM())
-        Dim total As Decimal
+        Dim profit As Decimal
         Dim totalEntrada As Decimal
         Dim wallet As String = ""
         Dim currValueUSD As Decimal
         Dim currValueBRL As Decimal
         Dim roi As Decimal
         Dim perform As Decimal?
+        Dim performWallet As Decimal?
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
@@ -194,6 +195,7 @@ Public Class JSON
         newDT.Columns.Add("ROIusd", GetType(Decimal))
         newDT.Columns.Add("ROIbrl", GetType(Decimal))
 
+
         ' Adicionar dados do DataTable original ao novo
         For Each row As DataRow In originalDT.Rows
             Dim newRow As DataRow = newDT.NewRow()
@@ -208,7 +210,7 @@ Public Class JSON
             roi = currValueUSD - initialValueUSD
             perform = (roi / initialValueUSD) * 100
             totalEntrada += initialValueUSD
-            total += roi
+            profit += roi
 
             newRow("Cripto") = row("Cripto")
             newRow("Perf") = $"{perform.Value:F2}%"
@@ -231,27 +233,38 @@ Public Class JSON
             newDT.Rows.Add(newRow)
         Next
 
+        performWallet = (profit / totalEntrada) * 100
+
+        ' MsgBox(totalEntrada & " " & profit)
+
         FormMain.lbTotalBRL.Visible = True
-        FormMain.lbTotalBRL.Text = BRLformat(total * USDBRLprice)
-        If total > 0 Then
+        FormMain.lbTotalBRL.Text = BRLformat(profit * USDBRLprice)
+        If profit > 0 Then
             FormMain.lbTotalBRL.ForeColor = Color.FromArgb(0, 255, 0)
         Else
             FormMain.lbTotalBRL.ForeColor = Color.FromArgb(255, 73, 73)
         End If
 
-        FormMain.lbDolar.Text = $"R$ {Format(USDBRLprice, "#,##0.00")}"
+        FormMain.lbDolar.Text = BRLformat(USDBRLprice)
         FormMain.lbBTC.Text = USDformat(Await getCriptoData.GetCriptoPrices("BTC"))
         FormMain.lbDom.Text = $"{dom.Value:F2}%"
-        FormMain.lbPerformWallet.Text = $"{(totalEntrada / roi)}%"
-        FormMain.lbTotalEntradaUSD.Text = "0.00"
-        FormMain.lbTotalEntradaBRL.Text = "0.00"
-        FormMain.lbValoresHojeUSD.Text = "0.00"
-        FormMain.lbValoresHojeBRL.Text = "0.00"
-        FormMain.lbRoiUSD.Text = "0.00"
-        FormMain.lbRoiBRL.Text = "0.00"
+        FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
+        FormMain.lbTotalEntradaUSD.Text = USDformat(totalEntrada)
+        FormMain.lbTotalEntradaBRL.Text = BRLformat(totalEntrada * USDBRLprice)
+        FormMain.lbValoresHojeUSD.Text = USDformat(currValueUSD)
+        FormMain.lbValoresHojeBRL.Text = BRLformat(currValueUSD * USDBRLprice)
+        FormMain.lbRoiUSD.Text = USDformat(profit)
+
 
         datagrid.DataSource = newDT
         FormatGrid(datagrid)
+
+
+        FormMain.lbLoadFromMarket.Visible = False
+        FormMain.TimerBlink.Stop()
+
+        FormMain.Cursor = Cursors.Default
+        FormMain.dgPortfolio.Cursor = Cursors.Default
 
     End Function
 
@@ -265,8 +278,8 @@ Public Class JSON
         datagrid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 
         With datagrid.ColumnHeadersDefaultCellStyle
-            .BackColor = Color.FromArgb(64, 64, 64)
-            .ForeColor = Color.Orange
+            .BackColor = Color.FromArgb(40, 40, 40)
+            .ForeColor = Color.Aqua
             .Font = New Font("Calibri", 10, FontStyle.Italic)
         End With
 

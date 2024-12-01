@@ -11,10 +11,7 @@ Public Class FormMain
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        lbLoadFromMarket.Visible = True
-        TimerBlink.Start()
-        'Me.Cursor = Cursors.WaitCursor
-        'dgPortfolio.Cursor = Cursors.WaitCursor
+
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
 
@@ -50,13 +47,13 @@ Public Class FormMain
 
     Public Async Sub Setup()
         Dim Cjson As New JSON
+
+        lbLoadFromMarket.Visible = True
+        TimerBlink.Start()
+        Cursor = Cursors.WaitCursor
+        dgPortfolio.Cursor = Cursors.WaitCursor
+
         Await Cjson.LoadCriptos(dgPortfolio)
-
-        lbLoadFromMarket.Visible = False
-        TimerBlink.Stop()
-
-        Me.Cursor = Cursors.Default
-        dgPortfolio.Cursor = Cursors.Default
 
         TotalAdjust()
 
@@ -95,7 +92,7 @@ Public Class FormMain
 
     Private Sub btRefresh_Click_1(sender As Object, e As EventArgs) Handles btRefresh.Click
         Try
-            Form1_Load(sender, e)
+            Setup()
         Catch ex As Exception
 
         End Try
