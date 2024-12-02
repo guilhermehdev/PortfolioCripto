@@ -173,7 +173,8 @@ Public Class JSON
         Dim json As New JSON
         Dim dom As Decimal? = Await Task.Run(Async Function() Await getCriptoData.GetBTCDOM())
         Dim profit As Decimal
-        Dim totalEntrada As Decimal
+        Dim initialValue As Decimal
+        Dim currValue As Decimal
         Dim wallet As String = ""
         Dim currValueUSD As Decimal
         Dim currValueBRL As Decimal
@@ -209,7 +210,8 @@ Public Class JSON
             currValueBRL = currValueUSD * USDBRLprice
             roi = currValueUSD - initialValueUSD
             perform = (roi / initialValueUSD) * 100
-            totalEntrada += initialValueUSD
+            initialValue += initialValueUSD
+            currValue += currValueUSD
             profit += roi
 
             newRow("Cripto") = row("Cripto")
@@ -233,7 +235,7 @@ Public Class JSON
             newDT.Rows.Add(newRow)
         Next
 
-        performWallet = (profit / totalEntrada) * 100
+        performWallet = (profit / initialValue) * 100
 
         ' MsgBox(totalEntrada & " " & profit)
 
@@ -249,10 +251,10 @@ Public Class JSON
         FormMain.lbBTC.Text = USDformat(Await getCriptoData.GetCriptoPrices("BTC"))
         FormMain.lbDom.Text = $"{dom.Value:F2}%"
         FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
-        FormMain.lbTotalEntradaUSD.Text = USDformat(totalEntrada)
-        FormMain.lbTotalEntradaBRL.Text = BRLformat(totalEntrada * USDBRLprice)
-        FormMain.lbValoresHojeUSD.Text = USDformat(currValueUSD)
-        FormMain.lbValoresHojeBRL.Text = BRLformat(currValueUSD * USDBRLprice)
+        FormMain.lbTotalEntradaUSD.Text = USDformat(initialValue)
+        FormMain.lbTotalEntradaBRL.Text = BRLformat(initialValue * USDBRLprice)
+        FormMain.lbValoresHojeUSD.Text = USDformat(currValue)
+        FormMain.lbValoresHojeBRL.Text = BRLformat(currValue * USDBRLprice)
         FormMain.lbRoiUSD.Text = USDformat(profit)
 
 
@@ -477,6 +479,51 @@ Public Class JSON
                     .Style.Format = "C8"
                     .Style.FormatProvider = New CultureInfo("en-US")
                 End With
+            End If
+
+
+            If row.Cells(7).Value < row.Cells(6).Value Then
+                With row.Cells(7)
+                    .Style.ForeColor = Color.IndianRed
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(8)
+                    .Style.ForeColor = Color.Orange
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(9)
+                    .Style.ForeColor = Color.DarkOrange
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(0)
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(1)
+                    .Style.ForeColor = Color.IndianRed
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(2)
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(3)
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(4)
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(5)
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(6)
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(10)
+                    .Style.BackColor = Color.DarkRed
+                End With
+                With row.Cells(11)
+                    .Style.BackColor = Color.DarkRed
+                End With
+
             End If
 
             row.Height = 35
