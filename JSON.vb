@@ -337,11 +337,11 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(6).HeaderText = "Preço entrada USD"
+        datagrid.Columns(6).HeaderText = "Preço entrada"
         datagrid.Columns(6).Width = 95
         With datagrid.Columns(6).DefaultCellStyle
             .BackColor = Color.FromArgb(32, 0, 82)
-            .ForeColor = Color.LimeGreen
+            .ForeColor = Color.LightYellow
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
@@ -350,7 +350,7 @@ Public Class JSON
         datagrid.Columns(7).Width = 95
         With datagrid.Columns(7).DefaultCellStyle
             .BackColor = Color.FromArgb(32, 0, 82)
-            .ForeColor = Color.DeepSkyBlue
+            .ForeColor = Color.Yellow
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With

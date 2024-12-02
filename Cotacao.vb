@@ -98,7 +98,7 @@ Public Class Cotacao
                 Dim responseBody As String = Await response.Content.ReadAsStringAsync()
 
                 ' Exibe o JSON retornado para depuração
-                MsgBox(responseBody)
+                ' MsgBox(responseBody)
 
                 ' Processa o JSON
                 Dim json = JsonDocument.Parse(responseBody)
