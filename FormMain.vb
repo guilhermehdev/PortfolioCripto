@@ -1,4 +1,6 @@
-﻿Imports System.Windows.Forms.DataVisualization.Charting
+﻿
+Imports System.Windows.Forms.DataVisualization.Charting
+
 Public Class FormMain
     Public remainingtimeInSeconds As Integer
 
@@ -11,37 +13,19 @@ Public Class FormMain
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-
+        Dim gCriptos As New Charts
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
 
-        Dim myChart As New Chart With {
-            .Width = 200,
-            .Height = 100,
-            .Top = 5,
-            .Left = 700
-        }
+        Dim meuDicionario As New Dictionary(Of String, Integer)
 
-        ' Adicionar uma área de gráfico
-        Dim chartArea As New ChartArea("MainArea")
-        myChart.ChartAreas.Add(chartArea)
+        ' Adicionar itens (chave, valor)
+        meuDicionario.Add("Chave1", 100)
+        meuDicionario.Add("Chave2", 200)
+        meuDicionario.Add("Chave3", 300)
 
-        ' Criar uma série para os dados
-        Dim series As New Series("Vendas")
-        series.ChartType = SeriesChartType.Column ' Definir o tipo de gráfico (barra neste caso)
-        series.Points.AddXY("Janeiro", 100)
-        series.Points.AddXY("Fevereiro", 150)
-        series.Points.AddXY("Março", 200)
-        series.Points.AddXY("Abril", 250)
+        gCriptos.Graph(200, 100, 5, 700, "Criptos", "Criptos", SeriesChartType.Column, meuDicionario, GroupOverview)
 
-        ' Adicionar a série ao gráfico
-        myChart.Series.Add(series)
-
-        ' Adicionar título ao gráfico (opcional)
-        Dim chartTitle As New Title("Gráfico de Vendas", Docking.Top, New Font("Arial", 10), Color.Black)
-        myChart.Titles.Add(chartTitle)
-
-        Me.GroupOverview.Controls.Add(myChart)
 
     End Sub
 

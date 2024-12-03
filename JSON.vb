@@ -237,8 +237,6 @@ Public Class JSON
 
         performWallet = (profit / initialValue) * 100
 
-        ' MsgBox(totalEntrada & " " & profit)
-
         FormMain.lbTotalBRL.Visible = True
         FormMain.lbTotalBRL.Text = BRLformat(profit * USDBRLprice)
         If profit > 0 Then
