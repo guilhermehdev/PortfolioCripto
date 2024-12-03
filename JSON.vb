@@ -174,7 +174,7 @@ Public Class JSON
         Dim dom As Decimal? = Await Task.Run(Async Function() Await getCriptoData.GetBTCDOM())
         Dim profit As Decimal
         Dim initialValue As Decimal
-        Dim currValue As Decimal
+        Dim currValueTotal As Decimal
         Dim wallet As String = ""
         Dim currValueUSD As Decimal
         Dim currValueBRL As Decimal
@@ -211,7 +211,7 @@ Public Class JSON
             roi = currValueUSD - initialValueUSD
             perform = (roi / initialValueUSD) * 100
             initialValue += initialValueUSD
-            currValue += currValueUSD
+            currValueTotal += currValueUSD
             profit += roi
 
             newRow("Cripto") = row("Cripto")
@@ -253,14 +253,27 @@ Public Class JSON
         FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
         FormMain.lbTotalEntradaUSD.Text = USDformat(initialValue)
         FormMain.lbTotalEntradaBRL.Text = BRLformat(initialValue * USDBRLprice)
-        FormMain.lbValoresHojeUSD.Text = USDformat(currValue)
-        FormMain.lbValoresHojeBRL.Text = BRLformat(currValue * USDBRLprice)
+        FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal)
+        FormMain.lbValoresHojeBRL.Text = BRLformat(currValueTotal * USDBRLprice)
         FormMain.lbRoiUSD.Text = USDformat(profit)
 
+        If currValueTotal < initialValue Then
+            FormMain.lbValoresHojeUSD.ForeColor = Color.IndianRed
+            FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal * -1)
+        End If
+
+        If (currValueTotal * USDBRLprice) < (initialValue * USDBRLprice) Then
+            FormMain.lbValoresHojeBRL.ForeColor = Color.IndianRed
+            FormMain.lbValoresHojeBRL.Text = BRLformat((currValueTotal * USDBRLprice) * -1)
+        End If
+
+        If profit < 0 Then
+            FormMain.lbRoiUSD.ForeColor = Color.Red
+            FormMain.lbRoiUSD.Text = USDformat(profit * -1)
+        End If
 
         datagrid.DataSource = newDT
         FormatGrid(datagrid)
-
 
         FormMain.lbLoadFromMarket.Visible = False
         FormMain.TimerBlink.Stop()

@@ -54,8 +54,7 @@ Public Class FormMain
         dgPortfolio.Cursor = Cursors.WaitCursor
 
         Await Cjson.LoadCriptos(dgPortfolio)
-
-        TotalAdjust()
+        LabelAdjust()
 
     End Sub
 
@@ -82,7 +81,7 @@ Public Class FormMain
                 NotifyIcon1.ShowBalloonTip(3000, "Porfólio Cripto", lbBTC.Text, ToolTipIcon.Info)
             End If
 
-            TotalAdjust()
+            LabelAdjust()
 
         Catch ex As Exception
 
@@ -140,8 +139,9 @@ Public Class FormMain
         NotifyIcon1.Text = "BTC: " & lbBTC.Text
     End Sub
 
-    Private Sub TotalAdjust()
+    Private Sub LabelAdjust()
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
+        lbPerformWallet.Location = New Point((PanelPerformance.Width / 2) - (lbPerformWallet.Width / 2), 38)
     End Sub
 
     Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter
