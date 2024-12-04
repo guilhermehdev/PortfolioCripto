@@ -24,7 +24,7 @@ Public Class FormMain
         meuDicionario.Add("Chave2", 200)
         meuDicionario.Add("Chave3", 300)
 
-        gCriptos.Graph(200, 100, 5, 700, "Criptos", "Criptos", SeriesChartType.Column, meuDicionario, GroupOverview)
+        gCriptos.Graph(200, 100, 5, 700, "Criptos", "Criptos", 8, Color.White, Color.Black, SeriesChartType.Column, meuDicionario, GroupOverview)
 
 
     End Sub
@@ -39,6 +39,7 @@ Public Class FormMain
 
         Await Cjson.LoadCriptos(dgPortfolio)
         LabelAdjust()
+        dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
 
     End Sub
 
