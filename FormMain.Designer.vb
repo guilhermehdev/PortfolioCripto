@@ -45,15 +45,15 @@ Partial Class FormMain
         PanelPerformance = New Panel()
         Label16 = New Label()
         lbPerformWallet = New Label()
+        Label6 = New Label()
         lbDataTotalToday = New Label()
+        Label7 = New Label()
+        Label12 = New Label()
         lbValoresHojeBRL = New Label()
         lbValoresHojeUSD = New Label()
-        Label12 = New Label()
         lbRoiUSD = New Label()
-        Label7 = New Label()
         lbTotalEntradaBRL = New Label()
         lbTotalEntradaUSD = New Label()
-        Label6 = New Label()
         lbLoadFromMarket = New Label()
         Panel1 = New Panel()
         lbAtualizaEm = New Label()
@@ -237,21 +237,17 @@ Partial Class FormMain
         GroupOverview.Controls.Add(PictureBox2)
         GroupOverview.Controls.Add(PictureBox1)
         GroupOverview.Controls.Add(PanelPerformance)
-        GroupOverview.Controls.Add(lbDataTotalToday)
         GroupOverview.Controls.Add(lbValoresHojeBRL)
         GroupOverview.Controls.Add(lbValoresHojeUSD)
-        GroupOverview.Controls.Add(Label12)
         GroupOverview.Controls.Add(lbRoiUSD)
-        GroupOverview.Controls.Add(Label7)
         GroupOverview.Controls.Add(lbTotalEntradaBRL)
         GroupOverview.Controls.Add(lbTotalEntradaUSD)
-        GroupOverview.Controls.Add(Label6)
         GroupOverview.Dock = DockStyle.Bottom
         GroupOverview.Font = New Font("Calibri", 14F, FontStyle.Italic)
         GroupOverview.ForeColor = Color.Aqua
-        GroupOverview.Location = New Point(0, 414)
+        GroupOverview.Location = New Point(0, 408)
         GroupOverview.Name = "GroupOverview"
-        GroupOverview.Size = New Size(1084, 132)
+        GroupOverview.Size = New Size(1084, 138)
         GroupOverview.TabIndex = 21
         GroupOverview.TabStop = False
         GroupOverview.Text = "Visão geral"
@@ -259,7 +255,7 @@ Partial Class FormMain
         ' PictureBox2
         ' 
         PictureBox2.Image = CType(resources.GetObject("PictureBox2.Image"), Image)
-        PictureBox2.Location = New Point(518, 22)
+        PictureBox2.Location = New Point(374, 33)
         PictureBox2.Name = "PictureBox2"
         PictureBox2.Size = New Size(35, 25)
         PictureBox2.SizeMode = PictureBoxSizeMode.StretchImage
@@ -269,7 +265,7 @@ Partial Class FormMain
         ' PictureBox1
         ' 
         PictureBox1.Image = CType(resources.GetObject("PictureBox1.Image"), Image)
-        PictureBox1.Location = New Point(418, 22)
+        PictureBox1.Location = New Point(274, 33)
         PictureBox1.Name = "PictureBox1"
         PictureBox1.Size = New Size(35, 25)
         PictureBox1.SizeMode = PictureBoxSizeMode.StretchImage
@@ -280,9 +276,13 @@ Partial Class FormMain
         ' 
         PanelPerformance.Controls.Add(Label16)
         PanelPerformance.Controls.Add(lbPerformWallet)
-        PanelPerformance.Location = New Point(29, 42)
+        PanelPerformance.Controls.Add(Label6)
+        PanelPerformance.Controls.Add(lbDataTotalToday)
+        PanelPerformance.Controls.Add(Label7)
+        PanelPerformance.Controls.Add(Label12)
+        PanelPerformance.Location = New Point(13, 22)
         PanelPerformance.Name = "PanelPerformance"
-        PanelPerformance.Size = New Size(199, 77)
+        PanelPerformance.Size = New Size(252, 110)
         PanelPerformance.TabIndex = 14
         ' 
         ' Label16
@@ -290,7 +290,7 @@ Partial Class FormMain
         Label16.AutoSize = True
         Label16.Font = New Font("Calibri", 12F, FontStyle.Italic)
         Label16.ForeColor = Color.White
-        Label16.Location = New Point(14, 14)
+        Label16.Location = New Point(3, 14)
         Label16.Name = "Label16"
         Label16.Size = New Size(172, 19)
         Label16.TabIndex = 12
@@ -299,31 +299,64 @@ Partial Class FormMain
         ' lbPerformWallet
         ' 
         lbPerformWallet.AutoSize = True
-        lbPerformWallet.Font = New Font("Calibri", 14F, FontStyle.Italic)
+        lbPerformWallet.Font = New Font("Calibri", 13F, FontStyle.Italic)
         lbPerformWallet.ForeColor = Color.GreenYellow
-        lbPerformWallet.Location = New Point(64, 38)
+        lbPerformWallet.Location = New Point(174, 13)
         lbPerformWallet.Name = "lbPerformWallet"
-        lbPerformWallet.Size = New Size(34, 23)
+        lbPerformWallet.Size = New Size(32, 22)
         lbPerformWallet.TabIndex = 13
         lbPerformWallet.Text = "0%"
+        ' 
+        ' Label6
+        ' 
+        Label6.AutoSize = True
+        Label6.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        Label6.ForeColor = Color.White
+        Label6.Location = New Point(100, 45)
+        Label6.Name = "Label6"
+        Label6.Size = New Size(134, 19)
+        Label6.TabIndex = 0
+        Label6.Text = "Valores de entrada:"
         ' 
         ' lbDataTotalToday
         ' 
         lbDataTotalToday.AutoSize = True
         lbDataTotalToday.Font = New Font("Calibri", 12F, FontStyle.Italic)
         lbDataTotalToday.ForeColor = Color.DarkOrange
-        lbDataTotalToday.Location = New Point(316, 75)
+        lbDataTotalToday.Location = New Point(145, 64)
         lbDataTotalToday.Name = "lbDataTotalToday"
         lbDataTotalToday.Size = New Size(85, 19)
         lbDataTotalToday.TabIndex = 9
         lbDataTotalToday.Text = "00/00/0000"
+        ' 
+        ' Label7
+        ' 
+        Label7.AutoSize = True
+        Label7.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        Label7.ForeColor = Color.White
+        Label7.Location = New Point(198, 87)
+        Label7.Name = "Label7"
+        Label7.Size = New Size(36, 19)
+        Label7.TabIndex = 3
+        Label7.Text = "ROI:"
+        ' 
+        ' Label12
+        ' 
+        Label12.AutoSize = True
+        Label12.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        Label12.ForeColor = Color.White
+        Label12.Location = New Point(68, 64)
+        Label12.Name = "Label12"
+        Label12.Size = New Size(81, 19)
+        Label12.TabIndex = 6
+        Label12.Text = "Valores em"
         ' 
         ' lbValoresHojeBRL
         ' 
         lbValoresHojeBRL.AutoSize = True
         lbValoresHojeBRL.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbValoresHojeBRL.ForeColor = Color.DeepSkyBlue
-        lbValoresHojeBRL.Location = New Point(515, 75)
+        lbValoresHojeBRL.Location = New Point(371, 86)
         lbValoresHojeBRL.Name = "lbValoresHojeBRL"
         lbValoresHojeBRL.Size = New Size(37, 19)
         lbValoresHojeBRL.TabIndex = 8
@@ -334,51 +367,29 @@ Partial Class FormMain
         lbValoresHojeUSD.AutoSize = True
         lbValoresHojeUSD.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbValoresHojeUSD.ForeColor = Color.LimeGreen
-        lbValoresHojeUSD.Location = New Point(415, 75)
+        lbValoresHojeUSD.Location = New Point(271, 86)
         lbValoresHojeUSD.Name = "lbValoresHojeUSD"
         lbValoresHojeUSD.Size = New Size(37, 19)
         lbValoresHojeUSD.TabIndex = 7
         lbValoresHojeUSD.Text = "0.00"
-        ' 
-        ' Label12
-        ' 
-        Label12.AutoSize = True
-        Label12.Font = New Font("Calibri", 12F, FontStyle.Italic)
-        Label12.ForeColor = Color.White
-        Label12.Location = New Point(237, 75)
-        Label12.Name = "Label12"
-        Label12.Size = New Size(81, 19)
-        Label12.TabIndex = 6
-        Label12.Text = "Valores em"
         ' 
         ' lbRoiUSD
         ' 
         lbRoiUSD.AutoSize = True
         lbRoiUSD.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbRoiUSD.ForeColor = Color.Lime
-        lbRoiUSD.Location = New Point(415, 98)
+        lbRoiUSD.Location = New Point(271, 109)
         lbRoiUSD.Name = "lbRoiUSD"
         lbRoiUSD.Size = New Size(37, 19)
         lbRoiUSD.TabIndex = 4
         lbRoiUSD.Text = "0.00"
-        ' 
-        ' Label7
-        ' 
-        Label7.AutoSize = True
-        Label7.Font = New Font("Calibri", 12F, FontStyle.Italic)
-        Label7.ForeColor = Color.White
-        Label7.Location = New Point(368, 98)
-        Label7.Name = "Label7"
-        Label7.Size = New Size(36, 19)
-        Label7.TabIndex = 3
-        Label7.Text = "ROI:"
         ' 
         ' lbTotalEntradaBRL
         ' 
         lbTotalEntradaBRL.AutoSize = True
         lbTotalEntradaBRL.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbTotalEntradaBRL.ForeColor = Color.DeepSkyBlue
-        lbTotalEntradaBRL.Location = New Point(515, 56)
+        lbTotalEntradaBRL.Location = New Point(371, 67)
         lbTotalEntradaBRL.Name = "lbTotalEntradaBRL"
         lbTotalEntradaBRL.Size = New Size(37, 19)
         lbTotalEntradaBRL.TabIndex = 2
@@ -389,22 +400,11 @@ Partial Class FormMain
         lbTotalEntradaUSD.AutoSize = True
         lbTotalEntradaUSD.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbTotalEntradaUSD.ForeColor = Color.LimeGreen
-        lbTotalEntradaUSD.Location = New Point(415, 56)
+        lbTotalEntradaUSD.Location = New Point(271, 67)
         lbTotalEntradaUSD.Name = "lbTotalEntradaUSD"
         lbTotalEntradaUSD.Size = New Size(37, 19)
         lbTotalEntradaUSD.TabIndex = 1
         lbTotalEntradaUSD.Text = "0.00"
-        ' 
-        ' Label6
-        ' 
-        Label6.AutoSize = True
-        Label6.Font = New Font("Calibri", 12F, FontStyle.Italic)
-        Label6.ForeColor = Color.White
-        Label6.Location = New Point(270, 56)
-        Label6.Name = "Label6"
-        Label6.Size = New Size(134, 19)
-        Label6.TabIndex = 0
-        Label6.Text = "Valores de entrada:"
         ' 
         ' lbLoadFromMarket
         ' 
@@ -413,7 +413,7 @@ Partial Class FormMain
         lbLoadFromMarket.BackColor = Color.Transparent
         lbLoadFromMarket.Font = New Font("Segoe UI", 9F, FontStyle.Italic)
         lbLoadFromMarket.ForeColor = Color.OrangeRed
-        lbLoadFromMarket.Location = New Point(461, 396)
+        lbLoadFromMarket.Location = New Point(461, 390)
         lbLoadFromMarket.Name = "lbLoadFromMarket"
         lbLoadFromMarket.Size = New Size(178, 15)
         lbLoadFromMarket.TabIndex = 0
@@ -432,7 +432,7 @@ Partial Class FormMain
         Panel1.Controls.Add(lbBTC)
         Panel1.Controls.Add(Label1)
         Panel1.Controls.Add(lbDolar)
-        Panel1.Location = New Point(490, -1)
+        Panel1.Location = New Point(486, -1)
         Panel1.Name = "Panel1"
         Panel1.Size = New Size(594, 29)
         Panel1.TabIndex = 22

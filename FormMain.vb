@@ -13,20 +13,8 @@ Public Class FormMain
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Dim gCriptos As New Charts
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
-
-        Dim meuDicionario As New Dictionary(Of String, Integer)
-
-        ' Adicionar itens (chave, valor)
-        meuDicionario.Add("Chave1", 100)
-        meuDicionario.Add("Chave2", 200)
-        meuDicionario.Add("Chave3", 300)
-
-        gCriptos.Graph(200, 100, 5, 700, "Criptos", "Criptos", 8, Color.White, Color.Black, SeriesChartType.Column, meuDicionario, GroupOverview)
-
-
     End Sub
 
     Public Async Sub Setup()
@@ -126,7 +114,7 @@ Public Class FormMain
 
     Private Sub LabelAdjust()
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
-        lbPerformWallet.Location = New Point((PanelPerformance.Width / 2) - (lbPerformWallet.Width / 2), 38)
+        ' lbPerformWallet.Location = New Point((PanelPerformance.Width / 2) - (lbPerformWallet.Width / 2), 38)
     End Sub
 
     Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter
@@ -157,6 +145,12 @@ Public Class FormMain
                 lbLoadFromMarket.ForeColor = Color.OrangeRed
             End If
         End If
+    End Sub
+
+    Public Sub criptoGraph(criptoDic As Dictionary(Of String, Decimal))
+        Dim gCriptos As New Charts
+
+        gCriptos.Graph(350, 150, -7, 480, "Criptos", "Criptos", 8, Color.Aqua, Color.FromArgb(31, 33, 32), SeriesChartType.Column, criptoDic, GroupOverview)
     End Sub
 
 End Class

@@ -181,6 +181,7 @@ Public Class JSON
         Dim roi As Decimal
         Dim perform As Decimal?
         Dim performWallet As Decimal?
+        Dim criptoDic As New Dictionary(Of String, Decimal)
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
@@ -205,6 +206,7 @@ Public Class JSON
             Dim initialPrice As Decimal = row("InitialPrice").ToString.Replace(".", ",")
             Dim initialValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * row("InitialPrice").ToString.Replace(".", ",")
             Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
+
             wallet = row("Wallet")
             currValueUSD = row("Qtd").ToString.Replace(".", ",") * currPrice
             currValueBRL = currValueUSD * USDBRLprice
@@ -233,7 +235,12 @@ Public Class JSON
             newRow("ROIusd") = (roi)
             newRow("ROIbrl") = (roi * USDBRLprice)
             newDT.Rows.Add(newRow)
+
+            criptoDic.Add(row("Cripto"), initialValueUSD)
+
         Next
+
+        FormMain.criptoGraph(criptoDic)
 
         performWallet = (profit / initialValue) * 100
 
