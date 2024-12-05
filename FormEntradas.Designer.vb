@@ -23,6 +23,9 @@ Partial Class FormEntradas
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         components = New ComponentModel.Container()
+        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormEntradas))
         cbWallet = New ComboBox()
         Label2 = New Label()
@@ -52,7 +55,7 @@ Partial Class FormEntradas
         ' 
         cbWallet.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
         cbWallet.FlatStyle = FlatStyle.Flat
-        cbWallet.ForeColor = Color.DeepSkyBlue
+        cbWallet.ForeColor = Color.White
         cbWallet.FormattingEnabled = True
         cbWallet.Items.AddRange(New Object() {"Metamask", "TrustWallet", "Phantom", "Binance", "Bybit", "Gate.io"})
         cbWallet.Location = New Point(184, 71)
@@ -150,21 +153,52 @@ Partial Class FormEntradas
         ' dgCriptos
         ' 
         dgCriptos.AllowUserToAddRows = False
+        dgCriptos.AllowUserToDeleteRows = False
         dgCriptos.AllowUserToOrderColumns = True
-        dgCriptos.AllowUserToResizeColumns = False
         dgCriptos.AllowUserToResizeRows = False
+        dgCriptos.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        dgCriptos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgCriptos.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        dgCriptos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        dgCriptos.CellBorderStyle = DataGridViewCellBorderStyle.None
+        dgCriptos.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
+        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle1.Font = New Font("Calibri", 14F, FontStyle.Italic)
+        DataGridViewCellStyle1.ForeColor = Color.Turquoise
+        DataGridViewCellStyle1.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle1.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
+        dgCriptos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
         dgCriptos.ContextMenuStrip = ContextMenuStrip1
-        dgCriptos.Cursor = Cursors.Hand
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle2.Font = New Font("Calibri", 14F, FontStyle.Italic)
+        DataGridViewCellStyle2.ForeColor = Color.Aqua
+        DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle2.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
+        dgCriptos.DefaultCellStyle = DataGridViewCellStyle2
+        dgCriptos.EnableHeadersVisualStyles = False
         dgCriptos.Location = New Point(6, 29)
         dgCriptos.MultiSelect = False
         dgCriptos.Name = "dgCriptos"
         dgCriptos.ReadOnly = True
+        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle3.Font = New Font("Calibri", 14F, FontStyle.Italic)
+        DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle3.Padding = New Padding(2)
+        DataGridViewCellStyle3.SelectionBackColor = Color.DarkOrange
+        DataGridViewCellStyle3.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
+        dgCriptos.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
         dgCriptos.RowHeadersWidth = 4
+        dgCriptos.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
+        dgCriptos.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgCriptos.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
+        dgCriptos.ScrollBars = ScrollBars.Vertical
         dgCriptos.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgCriptos.Size = New Size(420, 225)
-        dgCriptos.TabIndex = 0
+        dgCriptos.Size = New Size(420, 227)
+        dgCriptos.TabIndex = 12
         ' 
         ' ContextMenuStrip1
         ' 
@@ -284,7 +318,6 @@ Partial Class FormEntradas
     Friend WithEvents Label5 As Label
     Friend WithEvents cbCripto As ComboBox
     Friend WithEvents GroupBox1 As GroupBox
-    Friend WithEvents dgCriptos As DataGridView
     Friend WithEvents ContextMenuStrip1 As ContextMenuStrip
     Friend WithEvents ExcluirToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents StatusStrip1 As StatusStrip
@@ -293,4 +326,5 @@ Partial Class FormEntradas
     Friend WithEvents Label3 As Label
     Friend WithEvents tbQtd As MaskedTextBox
     Friend WithEvents TbPrecoEntrada As MaskedTextBox
+    Friend WithEvents dgCriptos As DataGridView
 End Class

@@ -1,7 +1,9 @@
 ﻿Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
+Imports System.Drawing.Drawing2D
 Imports System.Globalization
 Imports System.IO
+Imports System.Runtime.InteropServices.JavaScript.JSType
 Imports Windows.Win32.System
 
 
@@ -166,7 +168,6 @@ Public Class JSON
         Return table
 
     End Function
-
     Public Async Function LoadCriptos(datagrid As DataGridView) As Task(Of Dictionary(Of String, Decimal))
         Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
         Dim getCriptoData As New Cotacao
@@ -182,7 +183,11 @@ Public Class JSON
         Dim roi As Decimal
         Dim perform As Decimal?
         Dim performWallet As Decimal?
+        Dim arrayInitialPrice As Array = Array.Empty(Of Object)
         Dim criptoDic As New Dictionary(Of String, Decimal)
+        Dim arrayWallets As Array = Array.Empty(Of Object)
+        Dim walletDic As New Dictionary(Of String, Decimal)
+        Dim arrayAddress As Array = Array.Empty(Of Object)
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
@@ -237,9 +242,11 @@ Public Class JSON
                 newRow("ROIbrl") = (roi * USDBRLprice)
                 newDT.Rows.Add(newRow)
 
-                criptoDic.Add(row("Cripto"), initialValueUSD)
+                criptoDic.Add(row("Cripto"), currValueUSD)
+                walletDic.Add(wallet, initialValueUSD)
 
             Next
+
 
             performWallet = (profit / initialValue) * 100
 
@@ -289,6 +296,7 @@ Public Class JSON
 
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Alert")
+            Return Nothing
         End Try
 
     End Function
@@ -564,6 +572,11 @@ Public Class JSON
     Public Function BRLformat(ByVal value As Decimal)
         Return value.ToString("C", New CultureInfo("pt-BR"))
     End Function
+
+    Public Sub Console(debug As String)
+        System.Diagnostics.Debug.WriteLine(debug)
+    End Sub
+
 
 End Class
 

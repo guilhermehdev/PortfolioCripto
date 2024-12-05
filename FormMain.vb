@@ -1,5 +1,4 @@
-﻿
-Imports System.Windows.Forms.DataVisualization.Charting
+﻿Imports System.Windows.Forms.DataVisualization.Charting
 
 Public Class FormMain
     Public remainingtimeInSeconds As Integer
@@ -114,7 +113,6 @@ Public Class FormMain
 
     Private Sub LabelAdjust()
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
-        ' lbPerformWallet.Location = New Point((PanelPerformance.Width / 2) - (lbPerformWallet.Width / 2), 38)
     End Sub
 
     Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter

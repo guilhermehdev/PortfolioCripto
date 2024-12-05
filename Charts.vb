@@ -65,7 +65,7 @@ Public Class Charts
         Next
 
         For Each point In series.Points
-            point.Label = "$" & point.YValues(0).ToString("N2") ' Formato de dólar com 2 casas decimais
+            point.Label = "$" & point.YValues(0).ToString("N2")
         Next
 
         myChart.Series.Add(series)
@@ -74,7 +74,5 @@ Public Class Charts
         container.Controls.Add(myChart)
 
     End Sub
-
-
 
 End Class
