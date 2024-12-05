@@ -26,14 +26,12 @@ Partial Class FormEntradas
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormEntradas))
         cbWallet = New ComboBox()
         Label2 = New Label()
-        tbQtd = New TextBox()
         Label1 = New Label()
         Label4 = New Label()
         dtpDataEntrada = New DateTimePicker()
         btSalvarEntrada = New Button()
         Label5 = New Label()
         cbCripto = New ComboBox()
-        TbPrecoEntrada = New TextBox()
         GroupBox1 = New GroupBox()
         dgCriptos = New DataGridView()
         ContextMenuStrip1 = New ContextMenuStrip(components)
@@ -42,6 +40,8 @@ Partial Class FormEntradas
         ToolStripStatusLabel1 = New ToolStripStatusLabel()
         ButtonCancel = New Button()
         Label3 = New Label()
+        tbQtd = New MaskedTextBox()
+        TbPrecoEntrada = New MaskedTextBox()
         GroupBox1.SuspendLayout()
         CType(dgCriptos, ComponentModel.ISupportInitialize).BeginInit()
         ContextMenuStrip1.SuspendLayout()
@@ -70,22 +70,11 @@ Partial Class FormEntradas
         Label2.TabIndex = 11
         Label2.Text = "Qtd"
         ' 
-        ' tbQtd
-        ' 
-        tbQtd.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
-        tbQtd.BorderStyle = BorderStyle.FixedSingle
-        tbQtd.ForeColor = Color.Gold
-        tbQtd.Location = New Point(12, 71)
-        tbQtd.Name = "tbQtd"
-        tbQtd.Size = New Size(166, 23)
-        tbQtd.TabIndex = 10
-        tbQtd.Text = "0"
-        ' 
         ' Label1
         ' 
         Label1.AutoSize = True
         Label1.ForeColor = SystemColors.ButtonHighlight
-        Label1.Location = New Point(130, 9)
+        Label1.Location = New Point(135, 9)
         Label1.Name = "Label1"
         Label1.Size = New Size(119, 15)
         Label1.TabIndex = 9
@@ -145,17 +134,6 @@ Partial Class FormEntradas
         cbCripto.Name = "cbCripto"
         cbCripto.Size = New Size(116, 23)
         cbCripto.TabIndex = 18
-        ' 
-        ' TbPrecoEntrada
-        ' 
-        TbPrecoEntrada.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
-        TbPrecoEntrada.BorderStyle = BorderStyle.FixedSingle
-        TbPrecoEntrada.ForeColor = Color.LightYellow
-        TbPrecoEntrada.Location = New Point(134, 27)
-        TbPrecoEntrada.Name = "TbPrecoEntrada"
-        TbPrecoEntrada.Size = New Size(115, 23)
-        TbPrecoEntrada.TabIndex = 20
-        TbPrecoEntrada.Text = "0,00"
         ' 
         ' GroupBox1
         ' 
@@ -241,17 +219,39 @@ Partial Class FormEntradas
         Label3.TabIndex = 24
         Label3.Text = "Endereço"
         ' 
+        ' tbQtd
+        ' 
+        tbQtd.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
+        tbQtd.ForeColor = Color.Gold
+        tbQtd.Location = New Point(12, 71)
+        tbQtd.Name = "tbQtd"
+        tbQtd.PromptChar = "0"c
+        tbQtd.Size = New Size(166, 23)
+        tbQtd.TabIndex = 1
+        tbQtd.Text = "0"
+        ' 
+        ' TbPrecoEntrada
+        ' 
+        TbPrecoEntrada.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
+        TbPrecoEntrada.ForeColor = SystemColors.MenuBar
+        TbPrecoEntrada.Location = New Point(135, 27)
+        TbPrecoEntrada.Name = "TbPrecoEntrada"
+        TbPrecoEntrada.Size = New Size(115, 23)
+        TbPrecoEntrada.TabIndex = 25
+        TbPrecoEntrada.Text = "$0,00"
+        ' 
         ' FormEntradas
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         ClientSize = New Size(456, 392)
+        Controls.Add(TbPrecoEntrada)
+        Controls.Add(tbQtd)
         Controls.Add(Label3)
         Controls.Add(ButtonCancel)
         Controls.Add(StatusStrip1)
         Controls.Add(GroupBox1)
-        Controls.Add(TbPrecoEntrada)
         Controls.Add(Label5)
         Controls.Add(cbCripto)
         Controls.Add(btSalvarEntrada)
@@ -259,9 +259,8 @@ Partial Class FormEntradas
         Controls.Add(Label4)
         Controls.Add(cbWallet)
         Controls.Add(Label2)
-        Controls.Add(tbQtd)
         Controls.Add(Label1)
-        FormBorderStyle = FormBorderStyle.FixedSingle
+        FormBorderStyle = FormBorderStyle.FixedToolWindow
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
         MaximizeBox = False
         MinimizeBox = False
@@ -278,14 +277,12 @@ Partial Class FormEntradas
     End Sub
     Friend WithEvents cbWallet As ComboBox
     Friend WithEvents Label2 As Label
-    Friend WithEvents tbQtd As TextBox
     Friend WithEvents Label1 As Label
     Friend WithEvents Label4 As Label
     Friend WithEvents dtpDataEntrada As DateTimePicker
     Friend WithEvents btSalvarEntrada As Button
     Friend WithEvents Label5 As Label
     Friend WithEvents cbCripto As ComboBox
-    Friend WithEvents TbPrecoEntrada As TextBox
     Friend WithEvents GroupBox1 As GroupBox
     Friend WithEvents dgCriptos As DataGridView
     Friend WithEvents ContextMenuStrip1 As ContextMenuStrip
@@ -294,4 +291,6 @@ Partial Class FormEntradas
     Friend WithEvents ToolStripStatusLabel1 As ToolStripStatusLabel
     Friend WithEvents ButtonCancel As Button
     Friend WithEvents Label3 As Label
+    Friend WithEvents tbQtd As MaskedTextBox
+    Friend WithEvents TbPrecoEntrada As MaskedTextBox
 End Class

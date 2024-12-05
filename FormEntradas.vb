@@ -5,12 +5,15 @@ Public Class FormEntradas
     Private Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
         Dim json As New JSON
         Dim key = cbCripto.SelectedItem.ToString
-
-        If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.SelectedItem.ToString) Then
-            MsgBox("Salvo!")
-            FormEntradas_Load(sender, e)
-            FormMain.GroupOverview.Controls.RemoveByKey("CriptoChart")
-            FormMain.Setup()
+        If (IsNothing(tbQtd.Text) Or tbQtd.Text = 0) Or (Not IsNumeric(TbPrecoEntrada.Text) Or TbPrecoEntrada.Text = 0 Or IsNothing(TbPrecoEntrada)) Then
+            MsgBox("Preencha todos os campos!")
+        Else
+            If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.SelectedItem.ToString) Then
+                MsgBox("Salvo!")
+                FormEntradas_Load(sender, e)
+                FormMain.GroupOverview.Controls.RemoveByKey("CriptoChart")
+                FormMain.Setup()
+            End If
         End If
 
     End Sub
