@@ -454,7 +454,7 @@ Partial Class FormMain
         lbRefresh.AutoSize = True
         lbRefresh.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
         lbRefresh.ForeColor = Color.Gold
-        lbRefresh.Location = New Point(89, 7)
+        lbRefresh.Location = New Point(94, 7)
         lbRefresh.Name = "lbRefresh"
         lbRefresh.Size = New Size(38, 15)
         lbRefresh.TabIndex = 0
@@ -469,7 +469,7 @@ Partial Class FormMain
         btRefresh.FlatStyle = FlatStyle.Popup
         btRefresh.Font = New Font("Calibri", 10F)
         btRefresh.ForeColor = Color.Transparent
-        btRefresh.Location = New Point(133, 3)
+        btRefresh.Location = New Point(143, 3)
         btRefresh.Name = "btRefresh"
         btRefresh.Size = New Size(75, 23)
         btRefresh.TabIndex = 27
@@ -535,7 +535,7 @@ Partial Class FormMain
         Label1.FlatStyle = FlatStyle.Flat
         Label1.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
         Label1.ForeColor = Color.LightGray
-        Label1.Location = New Point(222, 4)
+        Label1.Location = New Point(233, 4)
         Label1.Name = "Label1"
         Label1.Size = New Size(51, 19)
         Label1.TabIndex = 22
@@ -548,7 +548,7 @@ Partial Class FormMain
         lbDolar.FlatStyle = FlatStyle.Flat
         lbDolar.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
         lbDolar.ForeColor = Color.GreenYellow
-        lbDolar.Location = New Point(268, 4)
+        lbDolar.Location = New Point(279, 4)
         lbDolar.Name = "lbDolar"
         lbDolar.Size = New Size(45, 19)
         lbDolar.TabIndex = 21
