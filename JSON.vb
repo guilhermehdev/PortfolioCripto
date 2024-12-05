@@ -10,6 +10,7 @@ Public Class JSON
     Private jsonString As String = File.ReadAllText(path)
     Private bindingSource As New BindingSource()
 
+
     Public Function CheckJSONKey(ByVal jsonKey As String)
         Try
             Dim dados As JObject = JObject.Parse(jsonString)
@@ -166,7 +167,7 @@ Public Class JSON
 
     End Function
 
-    Public Async Function LoadCriptos(datagrid As DataGridView) As Task
+    Public Async Function LoadCriptos(datagrid As DataGridView) As Task(Of Dictionary(Of String, Decimal))
         Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
         Dim getCriptoData As New Cotacao
         Dim USDBRLprice = Await getCriptoData.GetUSDBRL
@@ -197,94 +198,98 @@ Public Class JSON
         newDT.Columns.Add("ROIusd", GetType(Decimal))
         newDT.Columns.Add("ROIbrl", GetType(Decimal))
 
+        Try
+            ' Adicionar dados do DataTable original ao novo
+            For Each row As DataRow In originalDT.Rows
+                Dim newRow As DataRow = newDT.NewRow()
+                Dim critoPriceTask As Task(Of String) = getCriptoData.GetCriptoPrices(row("Cripto"))
+                Dim currPrice As Decimal = Await critoPriceTask
+                Dim initialPrice As Decimal = row("InitialPrice").ToString.Replace(".", ",")
+                Dim initialValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * row("InitialPrice").ToString.Replace(".", ",")
+                Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
 
-        ' Adicionar dados do DataTable original ao novo
-        For Each row As DataRow In originalDT.Rows
-            Dim newRow As DataRow = newDT.NewRow()
-            Dim critoPriceTask As Task(Of String) = getCriptoData.GetCriptoPrices(row("Cripto"))
-            Dim currPrice As Decimal = Await critoPriceTask
-            Dim initialPrice As Decimal = row("InitialPrice").ToString.Replace(".", ",")
-            Dim initialValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * row("InitialPrice").ToString.Replace(".", ",")
-            Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
+                wallet = row("Wallet")
+                currValueUSD = row("Qtd").ToString.Replace(".", ",") * currPrice
+                currValueBRL = currValueUSD * USDBRLprice
+                roi = currValueUSD - initialValueUSD
+                perform = (roi / initialValueUSD) * 100
+                initialValue += initialValueUSD
+                currValueTotal += currValueUSD
+                profit += roi
 
-            wallet = row("Wallet")
-            currValueUSD = row("Qtd").ToString.Replace(".", ",") * currPrice
-            currValueBRL = currValueUSD * USDBRLprice
-            roi = currValueUSD - initialValueUSD
-            perform = (roi / initialValueUSD) * 100
-            initialValue += initialValueUSD
-            currValueTotal += currValueUSD
-            profit += roi
+                newRow("Cripto") = row("Cripto")
+                newRow("Perf") = $"{perform.Value:F2}%"
+                newRow("Wallet") = wallet
 
-            newRow("Cripto") = row("Cripto")
-            newRow("Perf") = $"{perform.Value:F2}%"
-            newRow("Wallet") = wallet
+                If row("Qtd").ToString.Contains(".") Then
+                    newRow("Qtd") = row("Qtd").ToString.Replace(".", ",")
+                Else
+                    newRow("Qtd") = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
+                End If
 
-            If row("Qtd").ToString.Contains(".") Then
-                newRow("Qtd") = row("Qtd").ToString.Replace(".", ",")
+                newRow("vlEntradaUSD") = initialValueUSD
+                newRow("vlEntradaBRL") = initialValueBRL
+                newRow("precoMedio") = initialPrice
+                newRow("precoAtual") = currPrice
+                newRow("vlAtualUSD") = (currValueUSD)
+                newRow("vlAtualBRL") = (currValueBRL)
+                newRow("ROIusd") = (roi)
+                newRow("ROIbrl") = (roi * USDBRLprice)
+                newDT.Rows.Add(newRow)
+
+                criptoDic.Add(row("Cripto"), initialValueUSD)
+
+            Next
+
+            performWallet = (profit / initialValue) * 100
+
+            FormMain.lbTotalBRL.Visible = True
+            FormMain.lbTotalBRL.Text = BRLformat(profit * USDBRLprice)
+            If profit > 0 Then
+                FormMain.lbTotalBRL.ForeColor = Color.FromArgb(0, 255, 0)
             Else
-                newRow("Qtd") = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
+                FormMain.lbTotalBRL.ForeColor = Color.FromArgb(255, 73, 73)
             End If
 
-            newRow("vlEntradaUSD") = initialValueUSD
-            newRow("vlEntradaBRL") = initialValueBRL
-            newRow("precoMedio") = initialPrice
-            newRow("precoAtual") = currPrice
-            newRow("vlAtualUSD") = (currValueUSD)
-            newRow("vlAtualBRL") = (currValueBRL)
-            newRow("ROIusd") = (roi)
-            newRow("ROIbrl") = (roi * USDBRLprice)
-            newDT.Rows.Add(newRow)
+            FormMain.lbDolar.Text = BRLformat(USDBRLprice)
+            FormMain.lbBTC.Text = USDformat(Await getCriptoData.GetCriptoPrices("BTC"))
+            FormMain.lbDom.Text = $"{dom.Value:F2}%"
+            FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
+            FormMain.lbTotalEntradaUSD.Text = USDformat(initialValue)
+            FormMain.lbTotalEntradaBRL.Text = BRLformat(initialValue * USDBRLprice)
+            FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal)
+            FormMain.lbValoresHojeBRL.Text = BRLformat(currValueTotal * USDBRLprice)
+            FormMain.lbRoiUSD.Text = USDformat(profit)
 
-            criptoDic.Add(row("Cripto"), initialValueUSD)
+            If currValueTotal < initialValue Then
+                FormMain.lbValoresHojeUSD.ForeColor = Color.IndianRed
+                FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal * -1)
+            End If
 
-        Next
+            If (currValueTotal * USDBRLprice) < (initialValue * USDBRLprice) Then
+                FormMain.lbValoresHojeBRL.ForeColor = Color.IndianRed
+                FormMain.lbValoresHojeBRL.Text = BRLformat((currValueTotal * USDBRLprice) * -1)
+            End If
 
-        FormMain.criptoGraph(criptoDic)
+            If profit < 0 Then
+                FormMain.lbRoiUSD.ForeColor = Color.Red
+                FormMain.lbRoiUSD.Text = USDformat(profit * -1)
+            End If
 
-        performWallet = (profit / initialValue) * 100
+            datagrid.DataSource = newDT
+            FormatGrid(datagrid)
 
-        FormMain.lbTotalBRL.Visible = True
-        FormMain.lbTotalBRL.Text = BRLformat(profit * USDBRLprice)
-        If profit > 0 Then
-            FormMain.lbTotalBRL.ForeColor = Color.FromArgb(0, 255, 0)
-        Else
-            FormMain.lbTotalBRL.ForeColor = Color.FromArgb(255, 73, 73)
-        End If
+            FormMain.lbLoadFromMarket.Visible = False
+            FormMain.TimerBlink.Stop()
 
-        FormMain.lbDolar.Text = BRLformat(USDBRLprice)
-        FormMain.lbBTC.Text = USDformat(Await getCriptoData.GetCriptoPrices("BTC"))
-        FormMain.lbDom.Text = $"{dom.Value:F2}%"
-        FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
-        FormMain.lbTotalEntradaUSD.Text = USDformat(initialValue)
-        FormMain.lbTotalEntradaBRL.Text = BRLformat(initialValue * USDBRLprice)
-        FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal)
-        FormMain.lbValoresHojeBRL.Text = BRLformat(currValueTotal * USDBRLprice)
-        FormMain.lbRoiUSD.Text = USDformat(profit)
+            FormMain.Cursor = Cursors.Default
+            FormMain.dgPortfolio.Cursor = Cursors.Default
 
-        If currValueTotal < initialValue Then
-            FormMain.lbValoresHojeUSD.ForeColor = Color.IndianRed
-            FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal * -1)
-        End If
+            Return criptoDic
 
-        If (currValueTotal * USDBRLprice) < (initialValue * USDBRLprice) Then
-            FormMain.lbValoresHojeBRL.ForeColor = Color.IndianRed
-            FormMain.lbValoresHojeBRL.Text = BRLformat((currValueTotal * USDBRLprice) * -1)
-        End If
-
-        If profit < 0 Then
-            FormMain.lbRoiUSD.ForeColor = Color.Red
-            FormMain.lbRoiUSD.Text = USDformat(profit * -1)
-        End If
-
-        datagrid.DataSource = newDT
-        FormatGrid(datagrid)
-
-        FormMain.lbLoadFromMarket.Visible = False
-        FormMain.TimerBlink.Stop()
-
-        FormMain.Cursor = Cursors.Default
-        FormMain.dgPortfolio.Cursor = Cursors.Default
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Alert")
+        End Try
 
     End Function
 

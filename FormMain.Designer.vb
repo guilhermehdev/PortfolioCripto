@@ -69,6 +69,7 @@ Partial Class FormMain
         TimerRefresh = New Timer(components)
         TimerCountdown = New Timer(components)
         TimerBlink = New Timer(components)
+        Timer1 = New Timer(components)
         MenuStrip1.SuspendLayout()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
@@ -571,6 +572,11 @@ Partial Class FormMain
         ' TimerBlink
         ' 
         ' 
+        ' Timer1
+        ' 
+        Timer1.Enabled = True
+        Timer1.Interval = 1000
+        ' 
         ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
@@ -647,5 +653,6 @@ Partial Class FormMain
     Friend WithEvents PanelPerformance As Panel
     Friend WithEvents PictureBox2 As PictureBox
     Friend WithEvents PictureBox1 As PictureBox
+    Friend WithEvents Timer1 As Timer
 
 End Class

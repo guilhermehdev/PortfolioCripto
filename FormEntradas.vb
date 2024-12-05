@@ -9,6 +9,8 @@ Public Class FormEntradas
         If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.SelectedItem.ToString) Then
             MsgBox("Salvo!")
             FormEntradas_Load(sender, e)
+            FormMain.GroupOverview.Controls.RemoveByKey("CriptoChart")
+            FormMain.Setup()
         End If
 
     End Sub
@@ -34,9 +36,11 @@ Public Class FormEntradas
         Dim json As New JSON
         Dim row As DataGridViewRow = dgCriptos.CurrentRow
 
-        Dim key As String = dgCriptos.CurrentCell.Value.ToString()
+        Dim key As String = dgCriptos.CurrentRow.Cells(0).Value.ToString()
         If json.DeleteJSON(key) Then
             dgCriptos.Rows.Remove(row)
+            FormMain.GroupOverview.Controls.RemoveByKey("CriptoChart")
+            FormMain.Setup()
         End If
 
     End Sub
@@ -54,11 +58,9 @@ Public Class FormEntradas
 
     End Sub
 
-    Private Sub FormEntradas_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed
-        Try
-            FormMain.Setup()
-        Catch ex As Exception
 
-        End Try
+    Private Sub ButtonCancel_Click(sender As Object, e As EventArgs) Handles ButtonCancel.Click
+        Me.Close()
     End Sub
+
 End Class

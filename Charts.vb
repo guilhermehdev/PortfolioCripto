@@ -13,7 +13,8 @@ Public Class Charts
            .Height = height,
            .Top = top,
            .Left = left,
-           .BackColor = Color.FromArgb(31, 33, 32)
+           .BackColor = Color.FromArgb(31, 33, 32),
+           .Name = "CriptoChart"
        }
 
         myChart.Font = New Font("Calibri", 10, FontStyle.Bold)
@@ -69,6 +70,7 @@ Public Class Charts
 
         myChart.Series.Add(series)
         myChart.Titles.Add(chartTitle)
+        myChart.ChartAreas("MainArea").RecalculateAxesScale()
         container.Controls.Add(myChart)
 
     End Sub
