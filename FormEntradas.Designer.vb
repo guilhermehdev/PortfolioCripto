@@ -57,7 +57,7 @@ Partial Class FormEntradas
         cbWallet.FlatStyle = FlatStyle.Flat
         cbWallet.ForeColor = Color.White
         cbWallet.FormattingEnabled = True
-        cbWallet.Items.AddRange(New Object() {"Metamask", "TrustWallet", "Phantom", "Binance", "Bybit", "Gate.io"})
+        cbWallet.Items.AddRange(New Object() {"Metamask", "TrustWallet", "Phantom", "Binance", "Bybit", "Gate.io", "MEXC"})
         cbWallet.Location = New Point(184, 71)
         cbWallet.Name = "cbWallet"
         cbWallet.Size = New Size(182, 23)
@@ -132,7 +132,7 @@ Partial Class FormEntradas
         cbCripto.FlatStyle = FlatStyle.Flat
         cbCripto.ForeColor = Color.White
         cbCripto.FormattingEnabled = True
-        cbCripto.Items.AddRange(New Object() {"BTC", "ETH", "SOL", "NEAR", "PENDLE", "KSM", "ENA", "DOG", "ATH", "ZRO", "PEPE", "VISTA"})
+        cbCripto.Items.AddRange(New Object() {"BTC", "ETH", "SOL", "NEAR", "PENDLE", "KSM", "ENA", "DOG", "ATH", "ZRO", "PEPE", "VISTA", "MLC"})
         cbCripto.Location = New Point(12, 27)
         cbCripto.Name = "cbCripto"
         cbCripto.Size = New Size(116, 23)

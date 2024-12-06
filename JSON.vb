@@ -365,14 +365,14 @@ Public Class JSON
         With datagrid.Columns(1).DefaultCellStyle
             .BackColor = Color.FromArgb(30, 30, 30)
             .ForeColor = Color.Red
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
         datagrid.Columns(2).Width = 85
         With datagrid.Columns(2).DefaultCellStyle
             .BackColor = Color.FromArgb(50, 50, 50)
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
@@ -380,7 +380,7 @@ Public Class JSON
         With datagrid.Columns(3).DefaultCellStyle
             .BackColor = Color.MidnightBlue
             .ForeColor = Color.Gold
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Font = New Font(fontname, fontsize, FontStyle.Italic)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
@@ -391,7 +391,7 @@ Public Class JSON
             .ForeColor = Color.LimeGreen
             .Format = "C"
             .FormatProvider = New CultureInfo("en-US")
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
@@ -402,7 +402,7 @@ Public Class JSON
             .ForeColor = Color.DeepSkyBlue
             .Format = "C"
             .FormatProvider = New CultureInfo("pt-BR")
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
@@ -429,7 +429,7 @@ Public Class JSON
         With datagrid.Columns(8).DefaultCellStyle
             .BackColor = Color.FromArgb(30, 30, 30)
             .ForeColor = Color.Lime
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
@@ -438,7 +438,7 @@ Public Class JSON
         With datagrid.Columns(9).DefaultCellStyle
             .BackColor = Color.FromArgb(30, 30, 30)
             .ForeColor = Color.DeepSkyBlue
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
@@ -448,7 +448,7 @@ Public Class JSON
             .BackColor = Color.FromArgb(20, 20, 20)
             .Format = "C2"
             .FormatProvider = New CultureInfo("en-US")
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
@@ -459,7 +459,7 @@ Public Class JSON
             .ForeColor = Color.IndianRed
             .Format = "C2"
             .FormatProvider = New CultureInfo("pt-BR")
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
