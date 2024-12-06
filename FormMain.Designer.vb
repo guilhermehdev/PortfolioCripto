@@ -301,11 +301,11 @@ Partial Class FormMain
         ' lbPerformWallet
         ' 
         lbPerformWallet.AutoSize = True
-        lbPerformWallet.Font = New Font("Calibri", 13F, FontStyle.Italic)
+        lbPerformWallet.Font = New Font("Calibri", 12F, FontStyle.Italic)
         lbPerformWallet.ForeColor = Color.GreenYellow
-        lbPerformWallet.Location = New Point(174, 13)
+        lbPerformWallet.Location = New Point(170, 14)
         lbPerformWallet.Name = "lbPerformWallet"
-        lbPerformWallet.Size = New Size(32, 22)
+        lbPerformWallet.Size = New Size(28, 19)
         lbPerformWallet.TabIndex = 13
         lbPerformWallet.Text = "0%"
         ' 

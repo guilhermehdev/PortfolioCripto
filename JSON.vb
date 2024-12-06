@@ -187,7 +187,7 @@ Public Class JSON
         Dim criptoDic As New Dictionary(Of String, Decimal)
         Dim listAddress As New List(Of String)
         Dim listInitValue As New List(Of Decimal)
-        Dim walletDic As New Dictionary(Of String, Decimal)
+        Dim addressDic As New Dictionary(Of String, Decimal)
 
 
         Dim newDT As New DataTable()
@@ -251,11 +251,19 @@ Public Class JSON
 
             Dim arrayInitValue() As Decimal = listInitValue.ToArray
             Dim arrayAddress() As String = listAddress.ToArray
+            Dim arraySum() = Array.Empty(Of Object)()
+            Dim listSum As New List(Of KeyValuePair(Of String, Decimal))
 
             For i = 0 To listAddress.Count - 1
-                SomaSe(arrayInitValue, arrayAddress, listAddress(i))
-
+                listSum.Add(New KeyValuePair(Of String, Decimal)(listAddress(i), SomaSe(arrayInitValue, arrayAddress, listAddress(i))))
             Next
+
+            Dim filteredSum = listSum.GroupBy(Function(item) item.Key).Select(Function(grupo) grupo.First()).ToList()
+
+            For Each item In filteredSum
+                addressDic.Add(item.Key, item.Value)
+            Next
+
 
             performWallet = (profit / initialValue) * 100
 
@@ -302,6 +310,7 @@ Public Class JSON
             FormMain.dgPortfolio.Cursor = Cursors.Default
 
             FormMain.criptoGraph(criptoDic)
+            FormMain.addressGraph(addressDic)
 
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Alert")

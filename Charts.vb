@@ -3,7 +3,7 @@ Imports System.Windows.Forms.DataVisualization.Charting
 
 Public Class Charts
 
-    Public Sub Graph(ByVal width As Integer, ByVal height As Integer, ByVal top As Integer, ByVal left As Integer, serieName As String, title As String, titlefontSize As Integer, titleColor As Color, backgroundColor As Color, chartType As SeriesChartType, seriesItens As Dictionary(Of String, Decimal), container As Control)
+    Public Sub collumGraph(ByVal width As Integer, ByVal height As Integer, ByVal top As Integer, ByVal left As Integer, serieName As String, title As String, titlefontSize As Integer, titleColor As Color, backgroundColor As Color, chartType As SeriesChartType, seriesItens As Dictionary(Of String, Decimal), container As Control)
         Dim chartArea As New ChartArea("MainArea")
         Dim chartTitle As New Title(title, Docking.Top, New Font("Arial", titlefontSize), titleColor)
         Dim series As New Series(serieName)
@@ -71,6 +71,43 @@ Public Class Charts
         myChart.Series.Add(series)
         myChart.Titles.Add(chartTitle)
         myChart.ChartAreas("MainArea").RecalculateAxesScale()
+        container.Controls.Add(myChart)
+
+    End Sub
+
+    Public Sub pieGraph(ByVal width As Integer, ByVal height As Integer, ByVal top As Integer, ByVal left As Integer, title As String, titlefontSize As Integer, titleColor As Color, backgroundColor As Color, seriesItens As Dictionary(Of String, Decimal), seriesFontSize As Integer, seriesFontColor As Color, container As Control)
+        Dim chartArea As New ChartArea("MainArea")
+        Dim chartTitle As New Title(title, Docking.Top, New Font("Arial", titlefontSize), titleColor)
+        Dim series As New Series("MainSerie")
+        Dim legend As New Legend("MainLegend")
+        Dim myChart As New Chart With {
+           .Width = width,
+           .Height = height,
+           .Top = top,
+           .Left = left,
+           .BackColor = Color.FromArgb(31, 33, 32),
+           .Name = "CriptoChart"
+       }
+
+        myChart.ChartAreas.Add(chartArea)
+        With myChart.ChartAreas("MainArea")
+            .BackColor = backgroundColor
+            .Area3DStyle.Enable3D = True
+        End With
+
+        series.ChartType = SeriesChartType.Pie
+        series.LabelForeColor = seriesFontColor
+        series.Font = New Font("Calibri", seriesFontSize, FontStyle.Bold)
+
+        For Each item As KeyValuePair(Of String, Decimal) In seriesItens
+            series.Points.AddXY(item.Key, item.Value)
+        Next
+
+        series.Label = "#AXISLABEL \n #PERCENT" ' Exibir percentual no rótulo
+        series.CustomProperties = "PieLabelStyle=inside, PieLineColor=red"
+
+        myChart.Series.Add(series)
+        myChart.Titles.Add(chartTitle)
         container.Controls.Add(myChart)
 
     End Sub
