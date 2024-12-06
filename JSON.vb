@@ -3,6 +3,7 @@ Imports Newtonsoft.Json.Linq
 Imports System.Drawing.Drawing2D
 Imports System.Globalization
 Imports System.IO
+Imports System.Net
 Imports System.Runtime.InteropServices.JavaScript.JSType
 Imports Windows.Win32.System
 
@@ -183,11 +184,11 @@ Public Class JSON
         Dim roi As Decimal
         Dim perform As Decimal?
         Dim performWallet As Decimal?
-        Dim arrayInitialPrice As Array = Array.Empty(Of Object)
         Dim criptoDic As New Dictionary(Of String, Decimal)
-        Dim arrayWallets As Array = Array.Empty(Of Object)
+        Dim listAddress As New List(Of String)
+        Dim listInitValue As New List(Of Decimal)
         Dim walletDic As New Dictionary(Of String, Decimal)
-        Dim arrayAddress As Array = Array.Empty(Of Object)
+
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
@@ -243,10 +244,18 @@ Public Class JSON
                 newDT.Rows.Add(newRow)
 
                 criptoDic.Add(row("Cripto"), currValueUSD)
-                walletDic.Add(wallet, initialValueUSD)
 
+                listAddress.Add(wallet)
+                listInitValue.Add(initialValueUSD)
             Next
 
+            Dim arrayInitValue() As Decimal = listInitValue.ToArray
+            Dim arrayAddress() As String = listAddress.ToArray
+
+            For i = 0 To listAddress.Count - 1
+                SomaSe(arrayInitValue, arrayAddress, listAddress(i))
+
+            Next
 
             performWallet = (profit / initialValue) * 100
 
@@ -292,12 +301,30 @@ Public Class JSON
             FormMain.Cursor = Cursors.Default
             FormMain.dgPortfolio.Cursor = Cursors.Default
 
-            Return criptoDic
+            FormMain.criptoGraph(criptoDic)
 
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Alert")
-            Return Nothing
         End Try
+
+    End Function
+
+    Public Function SomaSe(ByVal valores() As Decimal, ByVal criterios() As String, ByVal criterio As String) As Double
+        Dim soma As Decimal = 0
+
+        ' Verificar se os arrays têm o mesmo tamanho
+        If valores.Length <> criterios.Length Then
+            Throw New ArgumentException("Os arrays de valores e critérios devem ter o mesmo tamanho.")
+        End If
+
+        ' Iterar pelos arrays e somar os valores que atendem ao critério
+        For i As Integer = 0 To valores.Length - 1
+            If criterios(i) = criterio Then
+                soma += valores(i)
+            End If
+        Next
+
+        Return soma
 
     End Function
 

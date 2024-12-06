@@ -23,8 +23,7 @@ Public Class FormMain
         TimerBlink.Start()
         Cursor = Cursors.WaitCursor
         dgPortfolio.Cursor = Cursors.WaitCursor
-
-        criptoGraph(Await Cjson.LoadCriptos(dgPortfolio))
+        Await Cjson.LoadCriptos(dgPortfolio)
         LabelAdjust()
         dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
 
