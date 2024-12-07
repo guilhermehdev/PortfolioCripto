@@ -548,47 +548,48 @@ Public Class JSON
                 End With
             End If
 
+            Dim rowBackColor As Color = Color.FromArgb(88, 0, 0)
 
             If row.Cells(7).Value < row.Cells(6).Value Then
                 With row.Cells(7)
                     .Style.ForeColor = Color.IndianRed
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(8)
                     .Style.ForeColor = Color.Orange
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(9)
                     .Style.ForeColor = Color.DarkOrange
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(0)
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(1)
                     .Style.ForeColor = Color.IndianRed
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(2)
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(3)
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(4)
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(5)
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(6)
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(10)
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(11)
-                    .Style.BackColor = Color.DarkRed
+                    .Style.BackColor = rowBackColor
                 End With
 
             End If
