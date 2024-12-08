@@ -539,12 +539,12 @@ Public Class JSON
             If row.Cells(9).Value > 1 Then
                 With row.Cells(9)
                     .Style.Format = "C2"
-                    .Style.FormatProvider = New CultureInfo("en-US")
+                    .Style.FormatProvider = New CultureInfo("pt-BR")
                 End With
             Else
                 With row.Cells(9)
                     .Style.Format = "C8"
-                    .Style.FormatProvider = New CultureInfo("en-US")
+                    .Style.FormatProvider = New CultureInfo("pt-BR")
                 End With
             End If
 

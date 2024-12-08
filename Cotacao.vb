@@ -40,10 +40,13 @@ Public Class Cotacao
 
             End Using
         Catch e As HttpRequestException
-            Return "Erro ao chamar a API: " & e.Message
+            MessageBox.Show("Erro ao chamar a API: " & e.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return False
         Catch ex As Exception
-            Return "Erro ao processar a resposta: " & ex.Message
+            MessageBox.Show("Erro ao processar a resposta: " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return False
         End Try
+
     End Function
 
     Public Async Function GetUSDBRL() As Task(Of Decimal)
