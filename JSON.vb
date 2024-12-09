@@ -598,6 +598,12 @@ Public Class JSON
             datagrid.ClearSelection()
             datagrid.CurrentCell = Nothing
 
+            If datagrid.RowCount < 10 Then
+                datagrid.Height = (datagrid.RowCount * 35) + 43
+            Else
+                datagrid.Height = 350
+            End If
+
         Next
 
     End Sub

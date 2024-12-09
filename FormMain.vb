@@ -24,8 +24,10 @@ Public Class FormMain
         Cursor = Cursors.WaitCursor
         dgPortfolio.Cursor = Cursors.WaitCursor
         Await Cjson.LoadCriptos(dgPortfolio)
-        LabelAdjust()
         dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
+        Adjust()
+
+        ' MsgBox(Me.Height & " / " & (MenuStrip1.Height & " " & dgPortfolio.Height & " " & PanelGraphs.Height & " " & PanelProfits.Height))
 
     End Sub
 
@@ -34,13 +36,6 @@ Public Class FormMain
         dgPortfolio.CurrentCell = Nothing
     End Sub
 
-    Private Sub GroupBox1_Paint(sender As Object, e As PaintEventArgs) Handles GroupOverview.Paint
-        e.Graphics.Clear(Me.BackColor)
-        Dim text As String = GroupOverview.Text
-        If Not String.IsNullOrEmpty(text) Then
-            e.Graphics.DrawString(text, GroupOverview.Font, New SolidBrush(GroupOverview.ForeColor), 10, 0)
-        End If
-    End Sub
     Private Sub FormMain_Resize(sender As Object, e As EventArgs) Handles MyBase.Resize
         Dim json As New JSON
         Try
@@ -52,7 +47,7 @@ Public Class FormMain
                 NotifyIcon1.ShowBalloonTip(3000, "Porfólio Cripto", lbBTC.Text, ToolTipIcon.Info)
             End If
 
-            LabelAdjust()
+            Adjust()
 
         Catch ex As Exception
 
@@ -90,10 +85,9 @@ Public Class FormMain
     Private Sub Timer1_Tick(sender As Object, e As EventArgs) Handles TimerRefresh.Tick
         Dim json As New JSON
         Try
-
-            Setup()
             json.FormatGrid(dgPortfolio)
             Me.remainingtimeInSeconds = TimerRefresh.Interval / 1000
+            Setup()
         Catch ex As Exception
 
         End Try
@@ -110,8 +104,10 @@ Public Class FormMain
         NotifyIcon1.Text = "BTC: " & lbBTC.Text
     End Sub
 
-    Private Sub LabelAdjust()
+    Private Sub Adjust()
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
+        PanelGraphs.Width = Me.Width
+        Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + 60
     End Sub
 
     Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter
@@ -147,13 +143,13 @@ Public Class FormMain
     Public Sub criptoGraph(criptoDic As Dictionary(Of String, Decimal))
         Dim gCriptos As New Charts
 
-        gCriptos.collumGraph(480, 190, 0, 400, "Criptos", "Criptos", 10, Color.Aqua, Color.FromArgb(31, 33, 32), SeriesChartType.Column, criptoDic, GroupOverview)
+        gCriptos.collumGraph(480, 190, -2, 400, "Criptos", "Criptos", 10, Color.Aqua, Color.FromArgb(30, 30, 30), SeriesChartType.Column, criptoDic, PanelGraphs)
     End Sub
 
     Public Sub addressGraph(criptoDic As Dictionary(Of String, Decimal))
         Dim gCriptos As New Charts
 
-        gCriptos.pieGraph(400, 190, 0, 770, "Wallets", 10, Color.Aqua, Color.FromArgb(31, 33, 32), criptoDic, 7.5, Color.White, GroupOverview)
+        gCriptos.pieGraph(400, 190, -2, 770, "Wallets", 10, Color.Aqua, Color.FromArgb(30, 30, 30), criptoDic, 7.5, Color.White, PanelGraphs)
     End Sub
 
     Private Sub dgPortfolio_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles dgPortfolio.CellPainting

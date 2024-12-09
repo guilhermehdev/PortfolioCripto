@@ -13,7 +13,7 @@ Public Class Charts
            .Height = height,
            .Top = top,
            .Left = left,
-           .BackColor = Color.FromArgb(31, 33, 32),
+           .BackColor = backgroundColor,
            .Name = "CriptoChart"
        }
 
@@ -85,7 +85,7 @@ Public Class Charts
            .Height = height,
            .Top = top,
            .Left = left,
-           .BackColor = Color.FromArgb(31, 33, 32),
+           .BackColor = backgroundColor,
            .Name = "CriptoChart"
        }
 
