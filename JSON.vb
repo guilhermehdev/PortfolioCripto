@@ -342,7 +342,7 @@ Public Class JSON
         Dim fontname As String = "Calibri"
 
         datagrid.ColumnHeadersHeight = 40
-        datagrid.CellBorderStyle = DataGridViewCellBorderStyle.None
+        datagrid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal
         datagrid.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         datagrid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 

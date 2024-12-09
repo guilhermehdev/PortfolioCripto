@@ -156,4 +156,32 @@ Public Class FormMain
         gCriptos.pieGraph(400, 190, 0, 770, "Wallets", 10, Color.Aqua, Color.FromArgb(31, 33, 32), criptoDic, 7.5, Color.White, GroupOverview)
     End Sub
 
+    Private Sub dgPortfolio_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles dgPortfolio.CellPainting
+        If e.RowIndex >= 0 Then
+
+            ' Pinta o fundo e o texto padrão
+            e.PaintBackground(e.CellBounds, True)
+            e.PaintContent(e.CellBounds)
+
+            Using pen As New Pen(Color.FromArgb(50, 50, 50), 0.5)
+                Dim rect = e.CellBounds
+                Dim y = rect.Bottom - 1 ' Posição da linha inferior da célula
+                e.Graphics.DrawLine(pen, rect.Left, y, rect.Right, y)
+            End Using
+
+            Dim colunasComLinhasVerticais As Integer() = {0, 1, 2, 3, 5, 7, 9, 11} ' Índices das colunas que terão linhas verticais
+            If colunasComLinhasVerticais.Contains(e.ColumnIndex) Then
+                Using pen As New Pen(Color.FromArgb(65, 65, 65), 1)
+                    Dim rect = e.CellBounds
+                    Dim x = rect.Right - 1 ' Posição da borda direita da célula
+                    e.Graphics.DrawLine(pen, x, rect.Top, x, rect.Bottom)
+                End Using
+            End If
+
+            e.Handled = True ' Impede o desenho padrão
+
+        End If
+
+    End Sub
+
 End Class
