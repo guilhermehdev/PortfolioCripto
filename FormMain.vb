@@ -147,13 +147,13 @@ Public Class FormMain
     Public Sub criptoGraph(criptoDic As Dictionary(Of String, Decimal))
         Dim gCriptos As New Charts
 
-        gCriptos.collumGraph(400, 190, 0, 480, "Criptos", "Criptos", 10, Color.Aqua, Color.FromArgb(31, 33, 32), SeriesChartType.Column, criptoDic, GroupOverview)
+        gCriptos.collumGraph(480, 190, 0, 400, "Criptos", "Criptos", 10, Color.Aqua, Color.FromArgb(31, 33, 32), SeriesChartType.Column, criptoDic, GroupOverview)
     End Sub
 
     Public Sub addressGraph(criptoDic As Dictionary(Of String, Decimal))
         Dim gCriptos As New Charts
 
-        gCriptos.pieGraph(350, 190, 0, 800, "Wallets", 10, Color.Aqua, Color.FromArgb(31, 33, 32), criptoDic, 7.5, Color.White, GroupOverview)
+        gCriptos.pieGraph(400, 190, 0, 770, "Wallets", 10, Color.Aqua, Color.FromArgb(31, 33, 32), criptoDic, 7.5, Color.White, GroupOverview)
     End Sub
 
 End Class

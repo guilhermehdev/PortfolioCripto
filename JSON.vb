@@ -363,7 +363,7 @@ Public Class JSON
         datagrid.Columns(1).HeaderText = "%"
         datagrid.Columns(1).Width = 80
         With datagrid.Columns(1).DefaultCellStyle
-            .BackColor = Color.FromArgb(30, 30, 30)
+            .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.Red
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -371,7 +371,7 @@ Public Class JSON
 
         datagrid.Columns(2).Width = 85
         With datagrid.Columns(2).DefaultCellStyle
-            .BackColor = Color.FromArgb(50, 50, 50)
+            .BackColor = Color.FromArgb(20, 20, 20)
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
@@ -387,7 +387,7 @@ Public Class JSON
         datagrid.Columns(4).HeaderText = "Valor entrada/médio"
         datagrid.Columns(4).Width = 95
         With datagrid.Columns(4).DefaultCellStyle
-            .BackColor = Color.Black
+            .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.LimeGreen
             .Format = "C"
             .FormatProvider = New CultureInfo("en-US")
@@ -398,7 +398,7 @@ Public Class JSON
         datagrid.Columns(5).HeaderText = ""
         datagrid.Columns(5).Width = 95
         With datagrid.Columns(5).DefaultCellStyle
-            .BackColor = Color.Black
+            .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.DeepSkyBlue
             .Format = "C"
             .FormatProvider = New CultureInfo("pt-BR")
@@ -427,7 +427,7 @@ Public Class JSON
         datagrid.Columns(8).HeaderText = "Valor atual"
         datagrid.Columns(8).Width = 95
         With datagrid.Columns(8).DefaultCellStyle
-            .BackColor = Color.FromArgb(30, 30, 30)
+            .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.Lime
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -436,7 +436,7 @@ Public Class JSON
         datagrid.Columns(9).HeaderText = ""
         datagrid.Columns(9).Width = 95
         With datagrid.Columns(9).DefaultCellStyle
-            .BackColor = Color.FromArgb(30, 30, 30)
+            .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.DeepSkyBlue
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
