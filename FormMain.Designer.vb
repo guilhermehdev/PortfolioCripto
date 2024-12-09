@@ -133,7 +133,7 @@ Partial Class FormMain
         dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgPortfolio.ScrollBars = ScrollBars.Vertical
         dgPortfolio.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgPortfolio.Size = New Size(1084, 350)
+        dgPortfolio.Size = New Size(1154, 350)
         dgPortfolio.TabIndex = 11
         ' 
         ' PanelProfits
@@ -145,7 +145,7 @@ Partial Class FormMain
         PanelProfits.Dock = DockStyle.Bottom
         PanelProfits.Location = New Point(0, 577)
         PanelProfits.Name = "PanelProfits"
-        PanelProfits.Size = New Size(1084, 40)
+        PanelProfits.Size = New Size(1154, 40)
         PanelProfits.TabIndex = 15
         ' 
         ' Label15
@@ -191,7 +191,7 @@ Partial Class FormMain
         lbLoadFromMarket.BackColor = Color.Transparent
         lbLoadFromMarket.Font = New Font("Segoe UI", 9F, FontStyle.Italic)
         lbLoadFromMarket.ForeColor = Color.OrangeRed
-        lbLoadFromMarket.Location = New Point(453, 2)
+        lbLoadFromMarket.Location = New Point(488, 2)
         lbLoadFromMarket.Name = "lbLoadFromMarket"
         lbLoadFromMarket.Size = New Size(178, 15)
         lbLoadFromMarket.TabIndex = 0
@@ -210,7 +210,7 @@ Partial Class FormMain
         Panel1.Controls.Add(lbBTC)
         Panel1.Controls.Add(Label1)
         Panel1.Controls.Add(lbDolar)
-        Panel1.Location = New Point(486, -1)
+        Panel1.Location = New Point(556, -1)
         Panel1.Name = "Panel1"
         Panel1.Size = New Size(594, 29)
         Panel1.TabIndex = 22
@@ -534,7 +534,7 @@ Partial Class FormMain
         PanelGraphs.Dock = DockStyle.Bottom
         PanelGraphs.Location = New Point(0, 395)
         PanelGraphs.Name = "PanelGraphs"
-        PanelGraphs.Size = New Size(1084, 182)
+        PanelGraphs.Size = New Size(1154, 182)
         PanelGraphs.TabIndex = 32
         ' 
         ' Panel2
@@ -543,7 +543,7 @@ Partial Class FormMain
         Panel2.Dock = DockStyle.Bottom
         Panel2.Location = New Point(0, 375)
         Panel2.Name = "Panel2"
-        Panel2.Size = New Size(1084, 20)
+        Panel2.Size = New Size(1154, 20)
         Panel2.TabIndex = 33
         ' 
         ' CadastroToolStripMenuItem
@@ -599,7 +599,7 @@ Partial Class FormMain
         MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, OpçõesToolStripMenuItem, FecharToolStripMenuItem})
         MenuStrip1.Location = New Point(0, 0)
         MenuStrip1.Name = "MenuStrip1"
-        MenuStrip1.Size = New Size(1084, 24)
+        MenuStrip1.Size = New Size(1154, 24)
         MenuStrip1.TabIndex = 10
         MenuStrip1.Text = "MenuStrip1"
         ' 
@@ -630,7 +630,7 @@ Partial Class FormMain
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        ClientSize = New Size(1084, 617)
+        ClientSize = New Size(1154, 617)
         Controls.Add(pbUSD)
         Controls.Add(pbBRL)
         Controls.Add(Panel2)

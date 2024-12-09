@@ -95,7 +95,7 @@ Public Class Charts
             .Area3DStyle.Enable3D = True
         End With
 
-        series.ChartType = SeriesChartType.Pie
+        series.ChartType = SeriesChartType.Doughnut
         series.LabelForeColor = seriesFontColor
         series.Font = New Font("Calibri", seriesFontSize, FontStyle.Bold)
 
@@ -104,7 +104,7 @@ Public Class Charts
         Next
 
         series.Label = "#AXISLABEL \n #PERCENT" ' Exibir percentual no rótulo
-        series.CustomProperties = "PieLabelStyle=inside, PieLineColor=red"
+        series.CustomProperties = "PieLabelStyle=outside, PieLineColor=gray"
 
         myChart.Series.Add(series)
         myChart.Titles.Add(chartTitle)

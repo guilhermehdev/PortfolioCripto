@@ -104,6 +104,11 @@ Public Class FormMain
     Private Sub Adjust()
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
         PanelGraphs.Width = Me.Width
+        If dgPortfolio.RowCount < 10 Then
+            dgPortfolio.Height = (dgPortfolio.RowCount * 35) + 43
+        Else
+            dgPortfolio.Height = 350
+        End If
         Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + 60
     End Sub
 
@@ -140,13 +145,13 @@ Public Class FormMain
     Public Sub criptoGraph(criptoDic As Dictionary(Of String, Decimal))
         Dim gCriptos As New Charts
 
-        gCriptos.collumGraph(480, 190, -2, 400, "Criptos", "Criptos", 10, Color.Aqua, Color.FromArgb(30, 30, 30), SeriesChartType.Column, criptoDic, PanelGraphs)
+        gCriptos.collumGraph(440, 190, -2, 400, "Criptos", "Criptos", 10, Color.Aqua, Color.FromArgb(30, 30, 30), SeriesChartType.Column, criptoDic, PanelGraphs)
     End Sub
 
     Public Sub addressGraph(criptoDic As Dictionary(Of String, Decimal))
         Dim gCriptos As New Charts
 
-        gCriptos.pieGraph(400, 190, -2, 770, "Wallets", 10, Color.Aqua, Color.FromArgb(30, 30, 30), criptoDic, 7.5, Color.White, PanelGraphs)
+        gCriptos.pieGraph(350, 190, -2, 830, "Wallets", 10, Color.Aqua, Color.FromArgb(30, 30, 30), criptoDic, 7.5, Color.White, PanelGraphs)
     End Sub
 
     Private Sub dgPortfolio_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles dgPortfolio.CellPainting
@@ -162,7 +167,7 @@ Public Class FormMain
                 e.Graphics.DrawLine(pen, rect.Left, y, rect.Right, y)
             End Using
 
-            Dim colunasComLinhasVerticais As Integer() = {0, 1, 2, 3, 5, 7, 9, 11} ' Índices das colunas que terão linhas verticais
+            Dim colunasComLinhasVerticais As Integer() = {0} ' Índices das colunas que terão linhas verticais
             If colunasComLinhasVerticais.Contains(e.ColumnIndex) Then
                 Using pen As New Pen(Color.FromArgb(65, 65, 65), 1)
                     Dim rect = e.CellBounds
@@ -196,7 +201,6 @@ Public Class FormMain
         dgPortfolio.Columns(5).Visible = True
         dgPortfolio.Columns(9).Visible = True
         dgPortfolio.Columns(11).Visible = True
-
 
     End Sub
 

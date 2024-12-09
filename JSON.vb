@@ -182,6 +182,7 @@ Public Class JSON
         Dim currValueUSD As Decimal
         Dim currValueBRL As Decimal
         Dim roi As Decimal
+        Dim x As String
         Dim perform As Decimal?
         Dim performWallet As Decimal?
         Dim criptoDic As New Dictionary(Of String, Decimal)
@@ -203,6 +204,7 @@ Public Class JSON
         newDT.Columns.Add("vlAtualBRL", GetType(Decimal))
         newDT.Columns.Add("ROIusd", GetType(Decimal))
         newDT.Columns.Add("ROIbrl", GetType(Decimal))
+        newDT.Columns.Add("X", GetType(String))
 
         Try
             ' Adicionar dados do DataTable original ao novo
@@ -222,6 +224,7 @@ Public Class JSON
                 initialValue += initialValueUSD
                 currValueTotal += currValueUSD
                 profit += roi
+                x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
 
                 newRow("Cripto") = row("Cripto")
                 newRow("Perf") = $"{perform.Value:F2}%"
@@ -241,6 +244,14 @@ Public Class JSON
                 newRow("vlAtualBRL") = (currValueBRL)
                 newRow("ROIusd") = (roi)
                 newRow("ROIbrl") = (roi * USDBRLprice)
+
+                If x < 1 Then
+                    newRow("X") = "0 X"
+                Else
+                    newRow("X") = $"{x} X"
+                End If
+
+
                 newDT.Rows.Add(newRow)
 
                 criptoDic.Add(row("Cripto"), currValueUSD)
@@ -312,8 +323,11 @@ Public Class JSON
             FormMain.criptoGraph(criptoDic)
             FormMain.addressGraph(addressDic)
 
+            Return Nothing
+
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Alert")
+            Return Nothing
         End Try
 
     End Function
@@ -452,13 +466,22 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(11).HeaderText = ""
+        datagrid.Columns(11).HeaderText = "ROI"
         datagrid.Columns(11).Width = 95
         With datagrid.Columns(11).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.IndianRed
             .Format = "C2"
             .FormatProvider = New CultureInfo("pt-BR")
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
+        End With
+
+        datagrid.Columns(12).HeaderText = "X"
+        datagrid.Columns(12).Width = 60
+        With datagrid.Columns(12).DefaultCellStyle
+            .BackColor = Color.FromArgb(20, 20, 20)
+            .ForeColor = Color.Red
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
@@ -597,12 +620,6 @@ Public Class JSON
             row.Height = 35
             datagrid.ClearSelection()
             datagrid.CurrentCell = Nothing
-
-            If datagrid.RowCount < 10 Then
-                datagrid.Height = (datagrid.RowCount * 35) + 43
-            Else
-                datagrid.Height = 350
-            End If
 
             datagrid.Columns(4).Visible = True
             datagrid.Columns(8).Visible = True
