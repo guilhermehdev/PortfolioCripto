@@ -26,9 +26,6 @@ Public Class FormMain
         Await Cjson.LoadCriptos(dgPortfolio)
         dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
         Adjust()
-
-        ' MsgBox(Me.Height & " / " & (MenuStrip1.Height & " " & dgPortfolio.Height & " " & PanelGraphs.Height & " " & PanelProfits.Height))
-
     End Sub
 
     Private Sub dgPortfolio_MouseLeave(sender As Object, e As EventArgs) Handles dgPortfolio.MouseLeave
@@ -177,6 +174,29 @@ Public Class FormMain
             e.Handled = True ' Impede o desenho padrão
 
         End If
+
+    End Sub
+
+    Private Sub pbUSD_Click(sender As Object, e As EventArgs) Handles pbUSD.Click
+        dgPortfolio.Columns(4).Visible = True
+        dgPortfolio.Columns(8).Visible = True
+        dgPortfolio.Columns(10).Visible = True
+
+        dgPortfolio.Columns(5).Visible = False
+        dgPortfolio.Columns(9).Visible = False
+        dgPortfolio.Columns(11).Visible = False
+
+    End Sub
+
+    Private Sub pbBRL_Click(sender As Object, e As EventArgs) Handles pbBRL.Click
+        dgPortfolio.Columns(4).Visible = False
+        dgPortfolio.Columns(8).Visible = False
+        dgPortfolio.Columns(10).Visible = False
+
+        dgPortfolio.Columns(5).Visible = True
+        dgPortfolio.Columns(9).Visible = True
+        dgPortfolio.Columns(11).Visible = True
+
 
     End Sub
 

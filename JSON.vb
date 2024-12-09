@@ -395,7 +395,7 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(5).HeaderText = ""
+        datagrid.Columns(5).HeaderText = "Valor entrada/médio"
         datagrid.Columns(5).Width = 95
         With datagrid.Columns(5).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
@@ -433,7 +433,7 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(9).HeaderText = ""
+        datagrid.Columns(9).HeaderText = "Valor atual"
         datagrid.Columns(9).Width = 95
         With datagrid.Columns(9).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
@@ -603,6 +603,14 @@ Public Class JSON
             Else
                 datagrid.Height = 350
             End If
+
+            datagrid.Columns(4).Visible = True
+            datagrid.Columns(8).Visible = True
+            datagrid.Columns(10).Visible = True
+
+            datagrid.Columns(5).Visible = False
+            datagrid.Columns(9).Visible = False
+            datagrid.Columns(11).Visible = False
 
         Next
 

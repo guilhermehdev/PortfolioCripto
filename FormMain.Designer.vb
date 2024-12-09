@@ -27,13 +27,6 @@ Partial Class FormMain
         Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
-        MenuStrip1 = New MenuStrip()
-        CadastroToolStripMenuItem = New ToolStripMenuItem()
-        CriptoToolStripMenuItem = New ToolStripMenuItem()
-        OpçõesToolStripMenuItem = New ToolStripMenuItem()
-        IntervaloToolStripMenuItem = New ToolStripMenuItem()
-        JSONToolStripMenuItem = New ToolStripMenuItem()
-        FecharToolStripMenuItem = New ToolStripMenuItem()
         dgPortfolio = New DataGridView()
         PanelProfits = New Panel()
         Label15 = New Label()
@@ -72,7 +65,15 @@ Partial Class FormMain
         lbTotalEntradaUSD = New Label()
         PanelGraphs = New Panel()
         Panel2 = New Panel()
-        MenuStrip1.SuspendLayout()
+        CadastroToolStripMenuItem = New ToolStripMenuItem()
+        CriptoToolStripMenuItem = New ToolStripMenuItem()
+        OpçõesToolStripMenuItem = New ToolStripMenuItem()
+        IntervaloToolStripMenuItem = New ToolStripMenuItem()
+        JSONToolStripMenuItem = New ToolStripMenuItem()
+        FecharToolStripMenuItem = New ToolStripMenuItem()
+        MenuStrip1 = New MenuStrip()
+        pbBRL = New PictureBox()
+        pbUSD = New PictureBox()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
         Panel1.SuspendLayout()
@@ -81,64 +82,10 @@ Partial Class FormMain
         PanelPerformance.SuspendLayout()
         PanelGraphs.SuspendLayout()
         Panel2.SuspendLayout()
+        MenuStrip1.SuspendLayout()
+        CType(pbBRL, ComponentModel.ISupportInitialize).BeginInit()
+        CType(pbUSD, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
-        ' 
-        ' MenuStrip1
-        ' 
-        MenuStrip1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, OpçõesToolStripMenuItem, FecharToolStripMenuItem})
-        MenuStrip1.Location = New Point(0, 0)
-        MenuStrip1.Name = "MenuStrip1"
-        MenuStrip1.Size = New Size(1084, 24)
-        MenuStrip1.TabIndex = 10
-        MenuStrip1.Text = "MenuStrip1"
-        ' 
-        ' CadastroToolStripMenuItem
-        ' 
-        CadastroToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {CriptoToolStripMenuItem})
-        CadastroToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
-        CadastroToolStripMenuItem.Name = "CadastroToolStripMenuItem"
-        CadastroToolStripMenuItem.Size = New Size(66, 20)
-        CadastroToolStripMenuItem.Text = "Cadastro"
-        ' 
-        ' CriptoToolStripMenuItem
-        ' 
-        CriptoToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        CriptoToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
-        CriptoToolStripMenuItem.Name = "CriptoToolStripMenuItem"
-        CriptoToolStripMenuItem.Size = New Size(119, 22)
-        CriptoToolStripMenuItem.Text = "Entradas"
-        ' 
-        ' OpçõesToolStripMenuItem
-        ' 
-        OpçõesToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {IntervaloToolStripMenuItem, JSONToolStripMenuItem})
-        OpçõesToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
-        OpçõesToolStripMenuItem.Name = "OpçõesToolStripMenuItem"
-        OpçõesToolStripMenuItem.Size = New Size(96, 20)
-        OpçõesToolStripMenuItem.Text = "Configurações"
-        ' 
-        ' IntervaloToolStripMenuItem
-        ' 
-        IntervaloToolStripMenuItem.BackColor = SystemColors.ActiveCaptionText
-        IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
-        IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
-        IntervaloToolStripMenuItem.Size = New Size(120, 22)
-        IntervaloToolStripMenuItem.Text = "Intervalo"
-        ' 
-        ' JSONToolStripMenuItem
-        ' 
-        JSONToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
-        JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
-        JSONToolStripMenuItem.Size = New Size(120, 22)
-        JSONToolStripMenuItem.Text = "JSON"
-        ' 
-        ' FecharToolStripMenuItem
-        ' 
-        FecharToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
-        FecharToolStripMenuItem.Name = "FecharToolStripMenuItem"
-        FecharToolStripMenuItem.Size = New Size(54, 20)
-        FecharToolStripMenuItem.Text = "Fechar"
         ' 
         ' dgPortfolio
         ' 
@@ -272,7 +219,7 @@ Partial Class FormMain
         ' 
         lbAtualizaEm.AutoSize = True
         lbAtualizaEm.ForeColor = Color.White
-        lbAtualizaEm.Location = New Point(17, 6)
+        lbAtualizaEm.Location = New Point(103, 6)
         lbAtualizaEm.Name = "lbAtualizaEm"
         lbAtualizaEm.Size = New Size(72, 15)
         lbAtualizaEm.TabIndex = 28
@@ -284,7 +231,7 @@ Partial Class FormMain
         lbRefresh.AutoSize = True
         lbRefresh.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
         lbRefresh.ForeColor = Color.Gold
-        lbRefresh.Location = New Point(94, 7)
+        lbRefresh.Location = New Point(180, 7)
         lbRefresh.Name = "lbRefresh"
         lbRefresh.Size = New Size(38, 15)
         lbRefresh.TabIndex = 0
@@ -299,7 +246,7 @@ Partial Class FormMain
         btRefresh.FlatStyle = FlatStyle.Popup
         btRefresh.Font = New Font("Calibri", 10F)
         btRefresh.ForeColor = Color.Transparent
-        btRefresh.Location = New Point(143, 3)
+        btRefresh.Location = New Point(21, 3)
         btRefresh.Name = "btRefresh"
         btRefresh.Size = New Size(75, 23)
         btRefresh.TabIndex = 27
@@ -599,12 +546,93 @@ Partial Class FormMain
         Panel2.Size = New Size(1084, 20)
         Panel2.TabIndex = 33
         ' 
+        ' CadastroToolStripMenuItem
+        ' 
+        CadastroToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {CriptoToolStripMenuItem})
+        CadastroToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        CadastroToolStripMenuItem.Name = "CadastroToolStripMenuItem"
+        CadastroToolStripMenuItem.Size = New Size(66, 20)
+        CadastroToolStripMenuItem.Text = "Cadastro"
+        ' 
+        ' CriptoToolStripMenuItem
+        ' 
+        CriptoToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        CriptoToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        CriptoToolStripMenuItem.Name = "CriptoToolStripMenuItem"
+        CriptoToolStripMenuItem.Size = New Size(119, 22)
+        CriptoToolStripMenuItem.Text = "Entradas"
+        ' 
+        ' OpçõesToolStripMenuItem
+        ' 
+        OpçõesToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {IntervaloToolStripMenuItem, JSONToolStripMenuItem})
+        OpçõesToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        OpçõesToolStripMenuItem.Name = "OpçõesToolStripMenuItem"
+        OpçõesToolStripMenuItem.Size = New Size(96, 20)
+        OpçõesToolStripMenuItem.Text = "Configurações"
+        ' 
+        ' IntervaloToolStripMenuItem
+        ' 
+        IntervaloToolStripMenuItem.BackColor = SystemColors.ActiveCaptionText
+        IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
+        IntervaloToolStripMenuItem.Size = New Size(120, 22)
+        IntervaloToolStripMenuItem.Text = "Intervalo"
+        ' 
+        ' JSONToolStripMenuItem
+        ' 
+        JSONToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
+        JSONToolStripMenuItem.Size = New Size(120, 22)
+        JSONToolStripMenuItem.Text = "JSON"
+        ' 
+        ' FecharToolStripMenuItem
+        ' 
+        FecharToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        FecharToolStripMenuItem.Name = "FecharToolStripMenuItem"
+        FecharToolStripMenuItem.Size = New Size(54, 20)
+        FecharToolStripMenuItem.Text = "Fechar"
+        ' 
+        ' MenuStrip1
+        ' 
+        MenuStrip1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, OpçõesToolStripMenuItem, FecharToolStripMenuItem})
+        MenuStrip1.Location = New Point(0, 0)
+        MenuStrip1.Name = "MenuStrip1"
+        MenuStrip1.Size = New Size(1084, 24)
+        MenuStrip1.TabIndex = 10
+        MenuStrip1.Text = "MenuStrip1"
+        ' 
+        ' pbBRL
+        ' 
+        pbBRL.Cursor = Cursors.Hand
+        pbBRL.Image = CType(resources.GetObject("pbBRL.Image"), Image)
+        pbBRL.Location = New Point(454, 7)
+        pbBRL.Name = "pbBRL"
+        pbBRL.Size = New Size(25, 15)
+        pbBRL.SizeMode = PictureBoxSizeMode.StretchImage
+        pbBRL.TabIndex = 34
+        pbBRL.TabStop = False
+        ' 
+        ' pbUSD
+        ' 
+        pbUSD.Cursor = Cursors.Hand
+        pbUSD.Image = CType(resources.GetObject("pbUSD.Image"), Image)
+        pbUSD.Location = New Point(425, 7)
+        pbUSD.Name = "pbUSD"
+        pbUSD.Size = New Size(25, 15)
+        pbUSD.SizeMode = PictureBoxSizeMode.StretchImage
+        pbUSD.TabIndex = 35
+        pbUSD.TabStop = False
+        ' 
         ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         ClientSize = New Size(1084, 617)
+        Controls.Add(pbUSD)
+        Controls.Add(pbBRL)
         Controls.Add(Panel2)
         Controls.Add(PanelGraphs)
         Controls.Add(Panel1)
@@ -617,8 +645,6 @@ Partial Class FormMain
         Name = "FormMain"
         StartPosition = FormStartPosition.CenterScreen
         Text = "Portfolio Cripto"
-        MenuStrip1.ResumeLayout(False)
-        MenuStrip1.PerformLayout()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).EndInit()
         PanelProfits.ResumeLayout(False)
         PanelProfits.PerformLayout()
@@ -632,13 +658,13 @@ Partial Class FormMain
         PanelGraphs.PerformLayout()
         Panel2.ResumeLayout(False)
         Panel2.PerformLayout()
+        MenuStrip1.ResumeLayout(False)
+        MenuStrip1.PerformLayout()
+        CType(pbBRL, ComponentModel.ISupportInitialize).EndInit()
+        CType(pbUSD, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
         PerformLayout()
     End Sub
-    Friend WithEvents MenuStrip1 As MenuStrip
-    Friend WithEvents CadastroToolStripMenuItem As ToolStripMenuItem
-    Friend WithEvents CriptoToolStripMenuItem As ToolStripMenuItem
-    Friend WithEvents FecharToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents dgPortfolio As DataGridView
     Friend WithEvents PanelProfits As Panel
     Friend WithEvents Label5 As Label
@@ -653,9 +679,6 @@ Partial Class FormMain
     Friend WithEvents lbDolar As Label
     Friend WithEvents NotifyIcon1 As NotifyIcon
     Friend WithEvents TimerRefresh As Timer
-    Friend WithEvents OpçõesToolStripMenuItem As ToolStripMenuItem
-    Friend WithEvents IntervaloToolStripMenuItem As ToolStripMenuItem
-    Friend WithEvents JSONToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents lbRefresh As Label
     Friend WithEvents TimerCountdown As Timer
     Friend WithEvents lbLoadFromMarket As Label
@@ -680,5 +703,14 @@ Partial Class FormMain
     Friend WithEvents lbTotalEntradaUSD As Label
     Friend WithEvents PanelGraphs As Panel
     Friend WithEvents Panel2 As Panel
+    Friend WithEvents CadastroToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents CriptoToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents OpçõesToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents IntervaloToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents JSONToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents FecharToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents MenuStrip1 As MenuStrip
+    Friend WithEvents pbBRL As PictureBox
+    Friend WithEvents pbUSD As PictureBox
 
 End Class
