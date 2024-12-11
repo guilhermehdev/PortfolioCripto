@@ -506,6 +506,8 @@ Public Class JSON
                     row.Cells(2).Style.ForeColor = Color.Gainsboro
                 Case "Gate.io"
                     row.Cells(2).Style.ForeColor = Color.DodgerBlue
+                Case "MEXC"
+                    row.Cells(2).Style.ForeColor = Color.White
             End Select
 
             Select Case CDec(row.Cells(10).Value)
