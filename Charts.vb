@@ -86,7 +86,7 @@ Public Class Charts
            .Top = top,
            .Left = left,
            .BackColor = backgroundColor,
-           .Name = "CriptoChart"
+           .Name = "WalletChart"
        }
 
         myChart.ChartAreas.Add(chartArea)
@@ -110,6 +110,11 @@ Public Class Charts
         myChart.Titles.Add(chartTitle)
         container.Controls.Add(myChart)
 
+    End Sub
+
+    Public Sub removeCharts()
+        FormMain.PanelGraphs.Controls.RemoveByKey("CriptoChart")
+        FormMain.PanelGraphs.Controls.RemoveByKey("WalletChart")
     End Sub
 
 End Class

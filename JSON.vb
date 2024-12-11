@@ -275,7 +275,6 @@ Public Class JSON
                 addressDic.Add(item.Key, item.Value)
             Next
 
-
             performWallet = (profit / initialValue) * 100
 
             FormMain.lbTotalBRL.Visible = True

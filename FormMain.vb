@@ -18,7 +18,9 @@ Public Class FormMain
 
     Public Async Sub Setup()
         Dim Cjson As New JSON
+        Dim chart As New Charts
 
+        chart.removeCharts()
         lbLoadFromMarket.Visible = True
         TimerBlink.Start()
         Cursor = Cursors.WaitCursor

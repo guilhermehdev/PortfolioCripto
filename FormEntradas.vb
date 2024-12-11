@@ -1,6 +1,7 @@
 ﻿Imports System.Globalization
 
 Public Class FormEntradas
+    Dim charts As New Charts
 
     Private Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
         Dim json As New JSON
@@ -11,7 +12,7 @@ Public Class FormEntradas
             If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.SelectedItem.ToString) Then
                 MsgBox("Salvo!")
                 FormEntradas_Load(sender, e)
-                FormMain.PanelGraphs.Controls.RemoveByKey("CriptoChart")
+                Charts.removeCharts()
                 FormMain.Setup()
             End If
         End If
@@ -124,7 +125,7 @@ Public Class FormEntradas
         Dim key As String = dgCriptos.CurrentRow.Cells(0).Value.ToString()
         If json.DeleteJSON(key) Then
             dgCriptos.Rows.Remove(row)
-            FormMain.PanelGraphs.Controls.RemoveByKey("CriptoChart")
+            Charts.removeCharts()
             FormMain.Setup()
         End If
 
