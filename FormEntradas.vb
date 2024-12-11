@@ -12,7 +12,6 @@ Public Class FormEntradas
             If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.SelectedItem.ToString) Then
                 MsgBox("Salvo!")
                 FormEntradas_Load(sender, e)
-                Charts.removeCharts()
                 FormMain.Setup()
             End If
         End If
@@ -125,7 +124,6 @@ Public Class FormEntradas
         Dim key As String = dgCriptos.CurrentRow.Cells(0).Value.ToString()
         If json.DeleteJSON(key) Then
             dgCriptos.Rows.Remove(row)
-            Charts.removeCharts()
             FormMain.Setup()
         End If
 
