@@ -1,22 +1,54 @@
 ﻿Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
-Imports System.Drawing.Drawing2D
+Imports System.Text.Json
 Imports System.Globalization
 Imports System.IO
-Imports System.Net
-Imports System.Runtime.InteropServices.JavaScript.JSType
-Imports Windows.Win32.System
 
 
 Public Class JSON
-    Private path As String = Application.StartupPath & "\JSON\criptos.json"
-    Private jsonString As String = File.ReadAllText(path)
+    Private pathFile As String = Application.StartupPath & "\JSON\criptos.json"
     Private bindingSource As New BindingSource()
 
+    Private Function loadJSONfile()
+        Dim jsonString As String = File.ReadAllText(pathFile)
+        Return jsonString
+    End Function
+
+    Private Function checkJSONfile()
+        If Not Directory.Exists(Application.StartupPath & "\JSON") Or Not File.Exists(pathFile) Then
+            Directory.CreateDirectory(Application.StartupPath & "\JSON")
+
+            Dim criptos As New Dictionary(Of String, List(Of Dictionary(Of String, Object))) From {
+            {"BTC", New List(Of Dictionary(Of String, Object)) From {
+                New Dictionary(Of String, Object) From {
+                        {"InitialPrice", 10000.0},
+                        {"Qtd", 2},
+                        {"Data", "01/01/2000"},
+                        {"Wallet", "Binance"}
+                    }
+                }
+            }
+        }
+
+            Dim jsonString As String = System.Text.Json.JsonSerializer.Serialize(criptos, New JsonSerializerOptions With {
+            .WriteIndented = True ' Para deixar o JSON formatado
+            })
+
+            File.WriteAllText(pathFile, jsonString)
+
+            Return True
+
+        Else
+
+            Return True
+
+        End If
+
+    End Function
 
     Public Function CheckJSONKey(ByVal jsonKey As String)
         Try
-            Dim dados As JObject = JObject.Parse(jsonString)
+            Dim dados As JObject = JObject.Parse(loadJSONfile)
 
             If dados.ContainsKey(jsonKey) Then
                 Return True
@@ -34,7 +66,7 @@ Public Class JSON
 
     Public Function FindByJSONkey(ByVal jsonKey As String) As JObject
         Try
-            Dim dados As JObject = JObject.Parse(jsonString)
+            Dim dados As JObject = JObject.Parse(loadJSONfile)
 
             If CheckJSONKey(jsonKey) Then
                 Return dados(jsonKey)
@@ -48,7 +80,7 @@ Public Class JSON
 
     Function AppendJSON(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String)
         Try
-            Dim jsonObject As JObject = JObject.Parse(jsonString)
+            Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
             Dim newObject As New JObject()
 
             newObject("InitialPrice") = InitialPrice
@@ -63,7 +95,7 @@ Public Class JSON
 
             bindingSource.DataSource = itemsArray
 
-            File.WriteAllText(path, jsonObject.ToString())
+            File.WriteAllText(pathFile, jsonObject.ToString())
 
             Return True
 
@@ -74,23 +106,10 @@ Public Class JSON
 
     End Function
 
-    Public Sub UpdateJSON(ByVal param As String, ByVal newValue As String)
-        Try
-            Dim jObject As JObject = TryCast(Newtonsoft.Json.JsonConvert.DeserializeObject(jsonString), JObject)
-            Dim jToken As JToken = jObject.SelectToken(param)
-            jToken.Replace(newValue)
-            Dim updatedJsonString As String = jObject.ToString()
-            File.WriteAllText(path, jObject.ToString(Formatting.Indented))
-        Catch ex As Exception
-
-        End Try
-
-    End Sub
-
     Public Function DeleteJSON(ByVal key As String)
-        If File.Exists(path) Then
+        If File.Exists(pathFile) Then
 
-            Dim jsonObject As JObject = JObject.Parse(jsonString)
+            Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
             Dim chaveParaExcluir As String = key
 
             If jsonObject.ContainsKey(chaveParaExcluir) Then
@@ -101,7 +120,7 @@ Public Class JSON
                 Return False
             End If
             ' Salva o JSON modificado de volta no arquivo
-            File.WriteAllText(path, jsonObject.ToString())
+            File.WriteAllText(pathFile, jsonObject.ToString())
             Return True
         Else
             MessageBox.Show("O arquivo JSON não foi encontrado.")
@@ -112,8 +131,8 @@ Public Class JSON
 
     Public Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing)
 
-        If File.Exists(path) Then
-            Dim jsonObject As JObject = JObject.Parse(jsonString)
+        If checkJSONfile() Then
+            Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
             Dim allItems As New List(Of ItemKey)()
 
             For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
@@ -144,7 +163,6 @@ Public Class JSON
 
             Return allItems
         Else
-            MessageBox.Show("O arquivo JSON não foi encontrado.")
             Return False
         End If
 
