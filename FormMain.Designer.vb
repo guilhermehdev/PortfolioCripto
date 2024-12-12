@@ -70,12 +70,12 @@ Partial Class FormMain
         OpçõesToolStripMenuItem = New ToolStripMenuItem()
         IntervaloToolStripMenuItem = New ToolStripMenuItem()
         JSONToolStripMenuItem = New ToolStripMenuItem()
+        ImportarToolStripMenuItem = New ToolStripMenuItem()
+        ExportarToolStripMenuItem = New ToolStripMenuItem()
         FecharToolStripMenuItem = New ToolStripMenuItem()
         MenuStrip1 = New MenuStrip()
         pbBRL = New PictureBox()
         pbUSD = New PictureBox()
-        ImportarToolStripMenuItem = New ToolStripMenuItem()
-        ExportarToolStripMenuItem = New ToolStripMenuItem()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
         Panel1.SuspendLayout()
@@ -337,7 +337,6 @@ Partial Class FormMain
         ' 
         NotifyIcon1.BalloonTipIcon = ToolTipIcon.Info
         NotifyIcon1.Icon = CType(resources.GetObject("NotifyIcon1.Icon"), Icon)
-        NotifyIcon1.Text = "klkllkl"
         NotifyIcon1.Visible = True
         ' 
         ' TimerRefresh
@@ -577,7 +576,7 @@ Partial Class FormMain
         IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
-        IntervaloToolStripMenuItem.Size = New Size(180, 22)
+        IntervaloToolStripMenuItem.Size = New Size(120, 22)
         IntervaloToolStripMenuItem.Text = "Intervalo"
         ' 
         ' JSONToolStripMenuItem
@@ -586,8 +585,24 @@ Partial Class FormMain
         JSONToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem, ExportarToolStripMenuItem})
         JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
-        JSONToolStripMenuItem.Size = New Size(180, 22)
+        JSONToolStripMenuItem.Size = New Size(120, 22)
         JSONToolStripMenuItem.Text = "JSON"
+        ' 
+        ' ImportarToolStripMenuItem
+        ' 
+        ImportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
+        ImportarToolStripMenuItem.Size = New Size(120, 22)
+        ImportarToolStripMenuItem.Text = "Importar"
+        ' 
+        ' ExportarToolStripMenuItem
+        ' 
+        ExportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
+        ExportarToolStripMenuItem.Size = New Size(120, 22)
+        ExportarToolStripMenuItem.Text = "Exportar"
         ' 
         ' FecharToolStripMenuItem
         ' 
@@ -627,22 +642,6 @@ Partial Class FormMain
         pbUSD.SizeMode = PictureBoxSizeMode.StretchImage
         pbUSD.TabIndex = 35
         pbUSD.TabStop = False
-        ' 
-        ' ImportarToolStripMenuItem
-        ' 
-        ImportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
-        ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
-        ImportarToolStripMenuItem.Size = New Size(180, 22)
-        ImportarToolStripMenuItem.Text = "Importar"
-        ' 
-        ' ExportarToolStripMenuItem
-        ' 
-        ExportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
-        ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        ExportarToolStripMenuItem.Size = New Size(180, 22)
-        ExportarToolStripMenuItem.Text = "Exportar"
         ' 
         ' FormMain
         ' 
