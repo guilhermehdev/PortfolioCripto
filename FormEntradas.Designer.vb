@@ -294,7 +294,7 @@ Partial Class FormEntradas
         Controls.Add(cbWallet)
         Controls.Add(Label2)
         Controls.Add(Label1)
-        FormBorderStyle = FormBorderStyle.FixedToolWindow
+        FormBorderStyle = FormBorderStyle.FixedSingle
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
         MaximizeBox = False
         MinimizeBox = False
