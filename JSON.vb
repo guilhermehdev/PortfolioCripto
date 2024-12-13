@@ -796,6 +796,17 @@ Public Class JSON
         System.Diagnostics.Debug.WriteLine(debug)
     End Sub
 
+    Public Sub captureRightClick(datagrid As DataGridView, e As MouseEventArgs)
+        If e.Button = MouseButtons.Right Then
+
+            Dim hitTest As DataGridView.HitTestInfo = datagrid.HitTest(e.X, e.Y)
+
+            If hitTest.Type = DataGridViewHitTestType.Cell Then
+                datagrid.ClearSelection()
+                datagrid.Rows(hitTest.RowIndex).Selected = True
+            End If
+        End If
+    End Sub
 
 End Class
 

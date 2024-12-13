@@ -118,21 +118,18 @@ Public Class FormEntradas
 
     End Sub
 
-
     Private Sub ExcluirToolStripMenuItem_Click_1(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
         Dim json As New JSON
-        Dim row As DataGridViewRow = dgCriptos.CurrentRow
+        Dim row As DataGridViewRow = dgCriptos.SelectedRows.Item(0)
 
-        Dim key As String = dgCriptos.CurrentRow.Cells(0).Value.ToString()
+        Dim key As String = dgCriptos.SelectedRows.Item(0).Cells(0).Value.ToString()
         If json.DeleteJSON(key) Then
             dgCriptos.Rows.Remove(row)
+            FormEntradas_Load(sender, e)
             FormMain.Setup()
         End If
 
     End Sub
-
-
-
     Private Sub ButtonCancel_Click(sender As Object, e As EventArgs) Handles ButtonCancel.Click
         Me.Close()
     End Sub
@@ -154,6 +151,11 @@ Public Class FormEntradas
     End Sub
     Private Sub btAddSymbol_Click(sender As Object, e As EventArgs) Handles btAddSymbol.Click
         FormSymbols.Show()
+    End Sub
+
+    Private Sub dgCriptos_MouseDown(sender As Object, e As MouseEventArgs) Handles dgCriptos.MouseDown
+        Dim json As New JSON
+        json.captureRightClick(dgCriptos, e)
     End Sub
 
 End Class
