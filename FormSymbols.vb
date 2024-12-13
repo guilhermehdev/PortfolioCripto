@@ -38,9 +38,14 @@
     End Sub
     Private Sub ExcluirToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
         Dim json As New JSON
-        json.RemoveWalletExchangeSymbolFromJson(Application.StartupPath & "\JSON\symbols.json", dgSymbols.CurrentRow.Cells(0).Value.ToString)
+        json.RemoveWalletExchangeSymbolFromJson(Application.StartupPath & "\JSON\symbols.json", dgSymbols.SelectedRows(0).Cells(0).Value.ToString)
         FormSymbols_Load(sender, e)
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\symbols.json", FormEntradas.cbCripto, Nothing)
+    End Sub
+
+    Private Sub dgSymbols_MouseDown(sender As Object, e As MouseEventArgs) Handles dgSymbols.MouseDown
+        Dim json As New JSON
+        json.captureRightClick(dgSymbols, e)
     End Sub
 
 End Class

@@ -38,9 +38,13 @@
     End Sub
     Private Sub ExcluirToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
         Dim json As New JSON
-        json.RemoveWalletExchangeSymbolFromJson(Application.StartupPath & "\JSON\wallets.json", dgWalletExchange.CurrentRow.Cells(0).Value.ToString)
+        json.RemoveWalletExchangeSymbolFromJson(Application.StartupPath & "\JSON\wallets.json", dgWalletExchange.SelectedRows(0).Cells(0).Value.ToString)
         FormWalletExchange_Load(sender, e)
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", FormEntradas.cbWallet, Nothing)
+    End Sub
+    Private Sub dgWalletExchange_MouseDown(sender As Object, e As MouseEventArgs) Handles dgWalletExchange.MouseDown
+        Dim json As New JSON
+        json.captureRightClick(dgWalletExchange, e)
     End Sub
 
 End Class
