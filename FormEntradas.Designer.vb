@@ -299,7 +299,7 @@ Partial Class FormEntradas
         MinimizeBox = False
         Name = "FormEntradas"
         StartPosition = FormStartPosition.CenterScreen
-        Text = "Lançar entradas"
+        Text = "Lançar aportes"
         GroupBox1.ResumeLayout(False)
         CType(dgCriptos, ComponentModel.ISupportInitialize).EndInit()
         ContextMenuStrip1.ResumeLayout(False)

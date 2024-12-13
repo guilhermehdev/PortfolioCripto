@@ -28,17 +28,18 @@ Partial Class FormWalletExchange
         Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
         GroupBox1 = New GroupBox()
         dgWalletExchange = New DataGridView()
+        ContextMenuStrip1 = New ContextMenuStrip(components)
+        ExcluirToolStripMenuItem = New ToolStripMenuItem()
         tbQtd = New MaskedTextBox()
         Label2 = New Label()
         btSalvarEntrada = New Button()
         StatusStrip1 = New StatusStrip()
         ToolStripStatusLabel1 = New ToolStripStatusLabel()
-        ContextMenuStrip1 = New ContextMenuStrip(components)
-        ExcluirToolStripMenuItem = New ToolStripMenuItem()
+        ToolStripStatusLabel2 = New ToolStripStatusLabel()
         GroupBox1.SuspendLayout()
         CType(dgWalletExchange, ComponentModel.ISupportInitialize).BeginInit()
-        StatusStrip1.SuspendLayout()
         ContextMenuStrip1.SuspendLayout()
+        StatusStrip1.SuspendLayout()
         SuspendLayout()
         ' 
         ' GroupBox1
@@ -103,6 +104,18 @@ Partial Class FormWalletExchange
         dgWalletExchange.Size = New Size(210, 278)
         dgWalletExchange.TabIndex = 12
         ' 
+        ' ContextMenuStrip1
+        ' 
+        ContextMenuStrip1.Items.AddRange(New ToolStripItem() {ExcluirToolStripMenuItem})
+        ContextMenuStrip1.Name = "ContextMenuStrip1"
+        ContextMenuStrip1.Size = New Size(110, 26)
+        ' 
+        ' ExcluirToolStripMenuItem
+        ' 
+        ExcluirToolStripMenuItem.Name = "ExcluirToolStripMenuItem"
+        ExcluirToolStripMenuItem.Size = New Size(109, 22)
+        ExcluirToolStripMenuItem.Text = "Excluir"
+        ' 
         ' tbQtd
         ' 
         tbQtd.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
@@ -139,7 +152,7 @@ Partial Class FormWalletExchange
         ' StatusStrip1
         ' 
         StatusStrip1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        StatusStrip1.Items.AddRange(New ToolStripItem() {ToolStripStatusLabel1})
+        StatusStrip1.Items.AddRange(New ToolStripItem() {ToolStripStatusLabel1, ToolStripStatusLabel2})
         StatusStrip1.Location = New Point(0, 385)
         StatusStrip1.Name = "StatusStrip1"
         StatusStrip1.Size = New Size(252, 22)
@@ -152,17 +165,12 @@ Partial Class FormWalletExchange
         ToolStripStatusLabel1.Size = New Size(55, 17)
         ToolStripStatusLabel1.Text = "Registros"
         ' 
-        ' ContextMenuStrip1
+        ' ToolStripStatusLabel2
         ' 
-        ContextMenuStrip1.Items.AddRange(New ToolStripItem() {ExcluirToolStripMenuItem})
-        ContextMenuStrip1.Name = "ContextMenuStrip1"
-        ContextMenuStrip1.Size = New Size(181, 48)
-        ' 
-        ' ExcluirToolStripMenuItem
-        ' 
-        ExcluirToolStripMenuItem.Name = "ExcluirToolStripMenuItem"
-        ExcluirToolStripMenuItem.Size = New Size(180, 22)
-        ExcluirToolStripMenuItem.Text = "Excluir"
+        ToolStripStatusLabel2.ForeColor = SystemColors.ButtonHighlight
+        ToolStripStatusLabel2.Name = "ToolStripStatusLabel2"
+        ToolStripStatusLabel2.Size = New Size(258, 17)
+        ToolStripStatusLabel2.Text = "Botão direito para excluir o registro selecionado"
         ' 
         ' FormWalletExchange
         ' 
@@ -182,9 +190,9 @@ Partial Class FormWalletExchange
         Text = "Cadastrar Wallet / Exchange"
         GroupBox1.ResumeLayout(False)
         CType(dgWalletExchange, ComponentModel.ISupportInitialize).EndInit()
+        ContextMenuStrip1.ResumeLayout(False)
         StatusStrip1.ResumeLayout(False)
         StatusStrip1.PerformLayout()
-        ContextMenuStrip1.ResumeLayout(False)
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -198,4 +206,5 @@ Partial Class FormWalletExchange
     Friend WithEvents ToolStripStatusLabel1 As ToolStripStatusLabel
     Friend WithEvents ContextMenuStrip1 As ContextMenuStrip
     Friend WithEvents ExcluirToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents ToolStripStatusLabel2 As ToolStripStatusLabel
 End Class
