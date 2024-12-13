@@ -5,7 +5,7 @@ Public Class FormEntradas
 
     Private Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
         Dim json As New JSON
-        Dim key = cbCripto.SelectedItem.ToString
+        Dim key = cbCripto.Text
         If (IsNothing(tbQtd.Text) Or tbQtd.Text = 0) Or (Not IsNumeric(TbPrecoEntrada.Text) Or TbPrecoEntrada.Text = 0 Or IsNothing(TbPrecoEntrada)) Then
             MsgBox("Preencha todos os campos!")
         Else
@@ -26,7 +26,8 @@ Public Class FormEntradas
         TbPrecoEntrada.Text = 0.00
         tbQtd.Text = 0
         json.LoadJSONtoDataGrid(dgCriptos)
-        json.loadFromJSON2ComboGrid(cbWallet, Nothing)
+        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", cbWallet, Nothing)
+        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\symbols.json", cbCripto, Nothing)
         FormatGrid(dgCriptos)
     End Sub
 
@@ -150,6 +151,9 @@ Public Class FormEntradas
 
     Private Sub btAddWallet_Click(sender As Object, e As EventArgs) Handles btAddWallet.Click
         FormWalletExchange.Show()
+    End Sub
+    Private Sub btAddSymbol_Click(sender As Object, e As EventArgs) Handles btAddSymbol.Click
+        FormSymbols.Show()
     End Sub
 
 End Class

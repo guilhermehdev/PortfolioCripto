@@ -15,9 +15,9 @@ Public Class JSON
         Return jsonString
     End Function
 
-    Public Sub loadFromJSON2ComboGrid(Optional combobox As System.Windows.Forms.ComboBox = Nothing, Optional grid As DataGridView = Nothing)
+    Public Sub loadFromJSON2ComboGrid(filePath As String, Optional combobox As System.Windows.Forms.ComboBox = Nothing, Optional grid As DataGridView = Nothing)
 
-        Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
+        'Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
 
         ' Tente ler o arquivo e pegar os dados JSON
         Dim jsonData As String = String.Empty
@@ -54,9 +54,9 @@ Public Class JSON
 
     End Sub
 
-    Public Sub AddWalletExchangeToJson(newValue As String)
+    Public Sub AddWalletExchangeSymbolToJson(filePath As String, newValue As String)
         ' Caminho do arquivo JSON
-        Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
+        ' Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
 
         ' Verificar se o arquivo existe
         If Not File.Exists(filePath) Then
@@ -102,9 +102,9 @@ Public Class JSON
 
     End Sub
 
-    Public Sub RemoveWalletExchangeFromJson(valueToRemove As String)
+    Public Sub RemoveWalletExchangeSymbolFromJson(filePath As String, valueToRemove As String)
         ' Caminho do arquivo JSON
-        Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
+        'Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
 
         ' Verificar se o arquivo existe
         If Not File.Exists(filePath) Then

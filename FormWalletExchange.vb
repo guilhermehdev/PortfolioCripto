@@ -1,7 +1,7 @@
 ﻿Public Class FormWalletExchange
     Private Sub FormWalletExchange_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Dim json As New JSON
-        json.loadFromJSON2ComboGrid(Nothing, dgWalletExchange)
+        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", Nothing, dgWalletExchange)
         Me.Icon = FormMain.Icon
 
         dgWalletExchange.Columns(0).HeaderText = "Wallet/Exchange"
@@ -12,7 +12,7 @@
         With dgWalletExchange.ColumnHeadersDefaultCellStyle
             .BackColor = Color.FromArgb(30, 30, 30)
             .ForeColor = Color.Aqua
-            .Font = New Font("Calibri", 14, FontStyle.Regular)
+            .Font = New Font("Calibri", 12, FontStyle.Regular)
         End With
 
         For Each row As DataGridViewRow In dgWalletExchange.Rows
@@ -32,14 +32,15 @@
     End Sub
     Private Sub btSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
         Dim json As New JSON
-        json.AddWalletExchangeToJson(tbWalletExchange.Text)
+        json.AddWalletExchangeSymbolToJson(Application.StartupPath & "\JSON\wallets.json", tbWalletExchange.Text)
         FormWalletExchange_Load(sender, e)
-        json.loadFromJSON2ComboGrid(FormEntradas.cbWallet, Nothing)
+        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", FormEntradas.cbWallet, Nothing)
     End Sub
     Private Sub ExcluirToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
         Dim json As New JSON
-        json.RemoveWalletExchangeFromJson(dgWalletExchange.CurrentRow.Cells(0).Value.ToString)
+        json.RemoveWalletExchangeSymbolFromJson(Application.StartupPath & "\JSON\wallets.json", dgWalletExchange.CurrentRow.Cells(0).Value.ToString)
         FormWalletExchange_Load(sender, e)
-        json.loadFromJSON2ComboGrid(FormEntradas.cbWallet, Nothing)
+        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", FormEntradas.cbWallet, Nothing)
     End Sub
+
 End Class

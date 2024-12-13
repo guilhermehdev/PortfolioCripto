@@ -145,7 +145,7 @@ Partial Class FormEntradas
         GroupBox1.ForeColor = Color.Aqua
         GroupBox1.Location = New Point(12, 105)
         GroupBox1.Name = "GroupBox1"
-        GroupBox1.Size = New Size(432, 262)
+        GroupBox1.Size = New Size(432, 358)
         GroupBox1.TabIndex = 21
         GroupBox1.TabStop = False
         GroupBox1.Text = "Registros"
@@ -197,7 +197,7 @@ Partial Class FormEntradas
         dgCriptos.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgCriptos.ScrollBars = ScrollBars.Vertical
         dgCriptos.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgCriptos.Size = New Size(420, 227)
+        dgCriptos.Size = New Size(420, 323)
         dgCriptos.TabIndex = 12
         ' 
         ' ContextMenuStrip1
@@ -216,7 +216,7 @@ Partial Class FormEntradas
         ' 
         StatusStrip1.BackColor = Color.Black
         StatusStrip1.Items.AddRange(New ToolStripItem() {ToolStripStatusLabel1})
-        StatusStrip1.Location = New Point(0, 370)
+        StatusStrip1.Location = New Point(0, 466)
         StatusStrip1.Name = "StatusStrip1"
         StatusStrip1.Size = New Size(456, 22)
         StatusStrip1.TabIndex = 22
@@ -309,7 +309,7 @@ Partial Class FormEntradas
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        ClientSize = New Size(456, 392)
+        ClientSize = New Size(456, 488)
         Controls.Add(btAddWallet)
         Controls.Add(btAddSymbol)
         Controls.Add(TbPrecoEntrada)

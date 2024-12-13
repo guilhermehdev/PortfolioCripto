@@ -108,12 +108,12 @@ Partial Class FormWalletExchange
         ' 
         ContextMenuStrip1.Items.AddRange(New ToolStripItem() {ExcluirToolStripMenuItem})
         ContextMenuStrip1.Name = "ContextMenuStrip1"
-        ContextMenuStrip1.Size = New Size(181, 48)
+        ContextMenuStrip1.Size = New Size(110, 26)
         ' 
         ' ExcluirToolStripMenuItem
         ' 
         ExcluirToolStripMenuItem.Name = "ExcluirToolStripMenuItem"
-        ExcluirToolStripMenuItem.Size = New Size(180, 22)
+        ExcluirToolStripMenuItem.Size = New Size(109, 22)
         ExcluirToolStripMenuItem.Text = "Excluir"
         ' 
         ' tbWalletExchange
@@ -183,6 +183,7 @@ Partial Class FormWalletExchange
         Controls.Add(tbWalletExchange)
         Controls.Add(Label2)
         Controls.Add(GroupBox1)
+        FormBorderStyle = FormBorderStyle.FixedSingle
         MaximizeBox = False
         MinimizeBox = False
         Name = "FormWalletExchange"
