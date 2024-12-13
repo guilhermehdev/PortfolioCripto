@@ -245,4 +245,9 @@ Public Class FormMain
         End If
 
     End Sub
+
+    Private Sub WalletsAddressToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles WalletsAddressToolStripMenuItem.Click
+        FormWalletExchange.Show()
+    End Sub
+
 End Class

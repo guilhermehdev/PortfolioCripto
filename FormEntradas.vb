@@ -22,10 +22,11 @@ Public Class FormEntradas
     Private Sub FormEntradas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Dim json As New JSON
         cbCripto.SelectedIndex = 0
-        cbWallet.SelectedIndex = 0
+        cbWallet.SelectedItem = 0
         TbPrecoEntrada.Text = 0.00
         tbQtd.Text = 0
         json.LoadJSONtoDataGrid(dgCriptos)
+        json.loadFromJSON2ComboGrid(cbWallet, Nothing)
         FormatGrid(dgCriptos)
     End Sub
 

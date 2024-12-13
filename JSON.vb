@@ -3,6 +3,7 @@ Imports Newtonsoft.Json.Linq
 Imports System.Text.Json
 Imports System.Globalization
 Imports System.IO
+Imports System.Windows.Forms.VisualStyles.VisualStyleElement
 
 
 Public Class JSON
@@ -13,6 +14,49 @@ Public Class JSON
         Dim jsonString As String = File.ReadAllText(pathFile)
         Return jsonString
     End Function
+
+    Public Sub loadFromJSON2ComboGrid(Optional combobox As System.Windows.Forms.ComboBox = Nothing, Optional grid As DataGridView = Nothing)
+
+        Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
+
+        ' Tente ler o arquivo e pegar os dados JSON
+        Dim jsonData As String = String.Empty
+        Try
+            jsonData = File.ReadAllText(filePath)
+        Catch ex As Exception
+            MessageBox.Show("Erro ao ler o arquivo: " & ex.Message)
+            Exit Sub
+        End Try
+
+        ' Verifique se o conteúdo do arquivo JSON está vazio
+        If String.IsNullOrEmpty(jsonData) Then
+            MessageBox.Show("O arquivo JSON está vazio.")
+            Exit Sub
+        End If
+
+        ' Desserializar os dados JSON para uma lista de objetos usando o Newtonsoft.Json
+        Dim exchanges As List(Of Exchange)
+        Try
+            exchanges = JsonConvert.DeserializeObject(Of List(Of Exchange))(jsonData)
+        Catch ex As Exception
+            MessageBox.Show("Erro ao desserializar o JSON: " & ex.Message)
+            Exit Sub
+        End Try
+
+        If Not IsNothing(combobox) Then
+            combobox.DataSource = exchanges
+            combobox.DisplayMember = "Name"
+        End If
+
+        If Not IsNothing(grid) Then
+            grid.DataSource = exchanges
+        End If
+
+    End Sub
+
+    Public Class Exchange
+        Public Property Name As String
+    End Class
 
     Private Function checkJSONfile()
         If Not Directory.Exists(Application.StartupPath & "\JSON") Or Not File.Exists(pathFile) Then
@@ -35,13 +79,9 @@ Public Class JSON
             })
 
             File.WriteAllText(pathFile, jsonString)
-
             Return True
-
         Else
-
             Return True
-
         End If
 
     End Function
@@ -62,8 +102,6 @@ Public Class JSON
         Return False
 
     End Function
-
-
     Public Function FindByJSONkey(ByVal jsonKey As String) As JObject
         Try
             Dim dados As JObject = JObject.Parse(loadJSONfile)
@@ -105,7 +143,6 @@ Public Class JSON
         End Try
 
     End Function
-
     Public Function DeleteJSON(ByVal key As String)
         If File.Exists(pathFile) Then
 
@@ -128,7 +165,6 @@ Public Class JSON
         End If
 
     End Function
-
     Public Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing)
 
         If checkJSONfile() Then
@@ -167,7 +203,6 @@ Public Class JSON
         End If
 
     End Function
-
     Public Function ConvertListToDataTable(Of T)(list As List(Of T)) As DataTable
         Dim table As New DataTable()
         Dim properties = GetType(T).GetProperties()

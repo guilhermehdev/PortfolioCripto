@@ -57,7 +57,6 @@ Partial Class FormEntradas
         cbWallet.FlatStyle = FlatStyle.Flat
         cbWallet.ForeColor = Color.White
         cbWallet.FormattingEnabled = True
-        cbWallet.Items.AddRange(New Object() {"Metamask", "TrustWallet", "Phantom", "Binance", "Bybit", "Gate.io", "MEXC"})
         cbWallet.Location = New Point(184, 71)
         cbWallet.Name = "cbWallet"
         cbWallet.Size = New Size(182, 23)
