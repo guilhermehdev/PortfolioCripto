@@ -147,9 +147,4 @@ Public Class FormEntradas
         End Try
     End Sub
 
-    Private Sub dgCriptos_MouseLeave(sender As Object, e As EventArgs) Handles dgCriptos.MouseLeave
-        dgCriptos.ClearSelection()
-        dgCriptos.CurrentCell = Nothing
-    End Sub
-
 End Class
