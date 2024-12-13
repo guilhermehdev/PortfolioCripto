@@ -248,9 +248,9 @@ Partial Class FormEntradas
         Label3.ForeColor = SystemColors.ButtonHighlight
         Label3.Location = New Point(184, 53)
         Label3.Name = "Label3"
-        Label3.Size = New Size(56, 15)
+        Label3.Size = New Size(96, 15)
         Label3.TabIndex = 24
-        Label3.Text = "Endereço"
+        Label3.Text = "Wallet/Exchange"
         ' 
         ' tbQtd
         ' 

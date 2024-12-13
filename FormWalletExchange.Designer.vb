@@ -22,6 +22,7 @@ Partial Class FormWalletExchange
     'Não o modifique usando o editor de códigos.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
+        components = New ComponentModel.Container()
         Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
@@ -32,9 +33,12 @@ Partial Class FormWalletExchange
         btSalvarEntrada = New Button()
         StatusStrip1 = New StatusStrip()
         ToolStripStatusLabel1 = New ToolStripStatusLabel()
+        ContextMenuStrip1 = New ContextMenuStrip(components)
+        ExcluirToolStripMenuItem = New ToolStripMenuItem()
         GroupBox1.SuspendLayout()
         CType(dgWalletExchange, ComponentModel.ISupportInitialize).BeginInit()
         StatusStrip1.SuspendLayout()
+        ContextMenuStrip1.SuspendLayout()
         SuspendLayout()
         ' 
         ' GroupBox1
@@ -68,6 +72,7 @@ Partial Class FormWalletExchange
         DataGridViewCellStyle1.SelectionForeColor = SystemColors.ButtonHighlight
         DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
         dgWalletExchange.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
+        dgWalletExchange.ContextMenuStrip = ContextMenuStrip1
         DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
         DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         DataGridViewCellStyle2.Font = New Font("Calibri", 14F, FontStyle.Italic)
@@ -147,6 +152,18 @@ Partial Class FormWalletExchange
         ToolStripStatusLabel1.Size = New Size(55, 17)
         ToolStripStatusLabel1.Text = "Registros"
         ' 
+        ' ContextMenuStrip1
+        ' 
+        ContextMenuStrip1.Items.AddRange(New ToolStripItem() {ExcluirToolStripMenuItem})
+        ContextMenuStrip1.Name = "ContextMenuStrip1"
+        ContextMenuStrip1.Size = New Size(181, 48)
+        ' 
+        ' ExcluirToolStripMenuItem
+        ' 
+        ExcluirToolStripMenuItem.Name = "ExcluirToolStripMenuItem"
+        ExcluirToolStripMenuItem.Size = New Size(180, 22)
+        ExcluirToolStripMenuItem.Text = "Excluir"
+        ' 
         ' FormWalletExchange
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
@@ -167,6 +184,7 @@ Partial Class FormWalletExchange
         CType(dgWalletExchange, ComponentModel.ISupportInitialize).EndInit()
         StatusStrip1.ResumeLayout(False)
         StatusStrip1.PerformLayout()
+        ContextMenuStrip1.ResumeLayout(False)
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -178,4 +196,6 @@ Partial Class FormWalletExchange
     Friend WithEvents btSalvarEntrada As Button
     Friend WithEvents StatusStrip1 As StatusStrip
     Friend WithEvents ToolStripStatusLabel1 As ToolStripStatusLabel
+    Friend WithEvents ContextMenuStrip1 As ContextMenuStrip
+    Friend WithEvents ExcluirToolStripMenuItem As ToolStripMenuItem
 End Class

@@ -67,7 +67,6 @@ Partial Class FormMain
         Panel2 = New Panel()
         CadastroToolStripMenuItem = New ToolStripMenuItem()
         WalletsAddressToolStripMenuItem = New ToolStripMenuItem()
-        CriptosToolStripMenuItem = New ToolStripMenuItem()
         CriptoToolStripMenuItem = New ToolStripMenuItem()
         OpçõesToolStripMenuItem = New ToolStripMenuItem()
         IntervaloToolStripMenuItem = New ToolStripMenuItem()
@@ -553,7 +552,7 @@ Partial Class FormMain
         ' 
         ' CadastroToolStripMenuItem
         ' 
-        CadastroToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {WalletsAddressToolStripMenuItem, CriptosToolStripMenuItem, CriptoToolStripMenuItem})
+        CadastroToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {WalletsAddressToolStripMenuItem, CriptoToolStripMenuItem})
         CadastroToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         CadastroToolStripMenuItem.Name = "CadastroToolStripMenuItem"
         CadastroToolStripMenuItem.Size = New Size(66, 20)
@@ -566,14 +565,6 @@ Partial Class FormMain
         WalletsAddressToolStripMenuItem.Name = "WalletsAddressToolStripMenuItem"
         WalletsAddressToolStripMenuItem.Size = New Size(180, 22)
         WalletsAddressToolStripMenuItem.Text = "Wallets / Exchanges"
-        ' 
-        ' CriptosToolStripMenuItem
-        ' 
-        CriptosToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        CriptosToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
-        CriptosToolStripMenuItem.Name = "CriptosToolStripMenuItem"
-        CriptosToolStripMenuItem.Size = New Size(180, 22)
-        CriptosToolStripMenuItem.Text = "Criptos"
         ' 
         ' CriptoToolStripMenuItem
         ' 
@@ -596,7 +587,7 @@ Partial Class FormMain
         IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
-        IntervaloToolStripMenuItem.Size = New Size(180, 22)
+        IntervaloToolStripMenuItem.Size = New Size(120, 22)
         IntervaloToolStripMenuItem.Text = "Intervalo"
         ' 
         ' JSONToolStripMenuItem
@@ -605,7 +596,7 @@ Partial Class FormMain
         JSONToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem, ExportarToolStripMenuItem})
         JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
-        JSONToolStripMenuItem.Size = New Size(180, 22)
+        JSONToolStripMenuItem.Size = New Size(120, 22)
         JSONToolStripMenuItem.Text = "JSON"
         ' 
         ' ImportarToolStripMenuItem
@@ -613,7 +604,7 @@ Partial Class FormMain
         ImportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
-        ImportarToolStripMenuItem.Size = New Size(180, 22)
+        ImportarToolStripMenuItem.Size = New Size(120, 22)
         ImportarToolStripMenuItem.Text = "Importar"
         ' 
         ' ExportarToolStripMenuItem
@@ -621,7 +612,7 @@ Partial Class FormMain
         ExportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        ExportarToolStripMenuItem.Size = New Size(180, 22)
+        ExportarToolStripMenuItem.Size = New Size(120, 22)
         ExportarToolStripMenuItem.Text = "Exportar"
         ' 
         ' FecharToolStripMenuItem
@@ -766,6 +757,5 @@ Partial Class FormMain
     Friend WithEvents OpenFileDialog1 As OpenFileDialog
     Friend WithEvents SaveFileDialog1 As SaveFileDialog
     Friend WithEvents WalletsAddressToolStripMenuItem As ToolStripMenuItem
-    Friend WithEvents CriptosToolStripMenuItem As ToolStripMenuItem
 
 End Class
