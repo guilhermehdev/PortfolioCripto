@@ -25,12 +25,19 @@
 
         dgWalletExchange.ClearSelection()
         dgWalletExchange.CurrentCell = Nothing
-
         ToolStripStatusLabel1.Text = dgWalletExchange.RowCount & " Registros"
+        tbWalletExchange.Clear()
+        tbWalletExchange.Focus()
 
     End Sub
     Private Sub btSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
-
+        Dim json As New JSON
+        json.AddWalletExchangeToJson(tbWalletExchange.Text)
+        FormWalletExchange_Load(sender, e)
     End Sub
-
+    Private Sub ExcluirToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
+        Dim json As New JSON
+        json.RemoveWalletExchangeFromJson(dgWalletExchange.CurrentRow.Cells(0).Value.ToString)
+        FormWalletExchange_Load(sender, e)
+    End Sub
 End Class

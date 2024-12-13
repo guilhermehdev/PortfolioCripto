@@ -30,7 +30,7 @@ Partial Class FormWalletExchange
         dgWalletExchange = New DataGridView()
         ContextMenuStrip1 = New ContextMenuStrip(components)
         ExcluirToolStripMenuItem = New ToolStripMenuItem()
-        tbQtd = New MaskedTextBox()
+        tbWalletExchange = New MaskedTextBox()
         Label2 = New Label()
         btSalvarEntrada = New Button()
         StatusStrip1 = New StatusStrip()
@@ -108,22 +108,22 @@ Partial Class FormWalletExchange
         ' 
         ContextMenuStrip1.Items.AddRange(New ToolStripItem() {ExcluirToolStripMenuItem})
         ContextMenuStrip1.Name = "ContextMenuStrip1"
-        ContextMenuStrip1.Size = New Size(110, 26)
+        ContextMenuStrip1.Size = New Size(181, 48)
         ' 
         ' ExcluirToolStripMenuItem
         ' 
         ExcluirToolStripMenuItem.Name = "ExcluirToolStripMenuItem"
-        ExcluirToolStripMenuItem.Size = New Size(109, 22)
+        ExcluirToolStripMenuItem.Size = New Size(180, 22)
         ExcluirToolStripMenuItem.Text = "Excluir"
         ' 
-        ' tbQtd
+        ' tbWalletExchange
         ' 
-        tbQtd.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
-        tbQtd.ForeColor = Color.Gold
-        tbQtd.Location = New Point(12, 37)
-        tbQtd.Name = "tbQtd"
-        tbQtd.Size = New Size(144, 23)
-        tbQtd.TabIndex = 23
+        tbWalletExchange.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
+        tbWalletExchange.ForeColor = Color.Gold
+        tbWalletExchange.Location = New Point(12, 37)
+        tbWalletExchange.Name = "tbWalletExchange"
+        tbWalletExchange.Size = New Size(144, 23)
+        tbWalletExchange.TabIndex = 23
         ' 
         ' Label2
         ' 
@@ -169,7 +169,7 @@ Partial Class FormWalletExchange
         ' 
         ToolStripStatusLabel2.ForeColor = SystemColors.ButtonHighlight
         ToolStripStatusLabel2.Name = "ToolStripStatusLabel2"
-        ToolStripStatusLabel2.Size = New Size(258, 17)
+        ToolStripStatusLabel2.Size = New Size(258, 15)
         ToolStripStatusLabel2.Text = "Botão direito para excluir o registro selecionado"
         ' 
         ' FormWalletExchange
@@ -180,7 +180,7 @@ Partial Class FormWalletExchange
         ClientSize = New Size(252, 407)
         Controls.Add(StatusStrip1)
         Controls.Add(btSalvarEntrada)
-        Controls.Add(tbQtd)
+        Controls.Add(tbWalletExchange)
         Controls.Add(Label2)
         Controls.Add(GroupBox1)
         MaximizeBox = False
@@ -199,7 +199,7 @@ Partial Class FormWalletExchange
 
     Friend WithEvents GroupBox1 As GroupBox
     Friend WithEvents dgWalletExchange As DataGridView
-    Friend WithEvents tbQtd As MaskedTextBox
+    Friend WithEvents tbWalletExchange As MaskedTextBox
     Friend WithEvents Label2 As Label
     Friend WithEvents btSalvarEntrada As Button
     Friend WithEvents StatusStrip1 As StatusStrip

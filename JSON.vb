@@ -54,6 +54,103 @@ Public Class JSON
 
     End Sub
 
+    Public Sub AddWalletExchangeToJson(newValue As String)
+        ' Caminho do arquivo JSON
+        Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
+
+        ' Verificar se o arquivo existe
+        If Not File.Exists(filePath) Then
+            MessageBox.Show("O arquivo JSON não foi encontrado.")
+            Exit Sub
+        End If
+
+        ' Tente ler o arquivo e pegar os dados JSON
+        Dim jsonData As String = String.Empty
+        Try
+            jsonData = File.ReadAllText(filePath)
+        Catch ex As Exception
+            MessageBox.Show("Erro ao ler o arquivo: " & ex.Message)
+            Exit Sub
+        End Try
+
+        ' Desserializar o JSON para uma lista de objetos
+        Dim exchanges As List(Of Exchange)
+        Try
+            exchanges = JsonConvert.DeserializeObject(Of List(Of Exchange))(jsonData)
+        Catch ex As Newtonsoft.Json.JsonException
+            MessageBox.Show("Erro ao desserializar o JSON: " & ex.Message)
+            Exit Sub
+        End Try
+
+        ' Criar um novo objeto Exchange e adicionar à lista
+        Dim newExchange As New Exchange With {
+            .Name = Char.ToUpper(newValue(0)) & newValue.Substring(1)
+        }
+        exchanges.Add(newExchange)
+
+        ' Serializar a lista de volta para JSON
+        Try
+            Dim updatedJson As String = JsonConvert.SerializeObject(exchanges, Formatting.Indented)
+
+            ' Reescrever o arquivo com os dados atualizados
+            File.WriteAllText(filePath, updatedJson)
+
+            MessageBox.Show("Salvo com sucesso!")
+        Catch ex As Exception
+            MessageBox.Show("Erro ao salvar o arquivo JSON: " & ex.Message)
+        End Try
+
+    End Sub
+
+    Public Sub RemoveWalletExchangeFromJson(valueToRemove As String)
+        ' Caminho do arquivo JSON
+        Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
+
+        ' Verificar se o arquivo existe
+        If Not File.Exists(filePath) Then
+            MessageBox.Show("O arquivo JSON não foi encontrado.")
+            Exit Sub
+        End If
+
+        ' Tente ler o arquivo e pegar os dados JSON
+        Dim jsonData As String = String.Empty
+        Try
+            jsonData = File.ReadAllText(filePath)
+        Catch ex As Exception
+            MessageBox.Show("Erro ao ler o arquivo: " & ex.Message)
+            Exit Sub
+        End Try
+
+        ' Desserializar o JSON para uma lista de objetos
+        Dim exchanges As List(Of Exchange)
+        Try
+            exchanges = JsonConvert.DeserializeObject(Of List(Of Exchange))(jsonData)
+        Catch ex As Newtonsoft.Json.JsonException
+            MessageBox.Show("Erro ao desserializar o JSON: " & ex.Message)
+            Exit Sub
+        End Try
+
+        ' Encontrar e remover o item com o nome correspondente
+        Dim exchangeToRemove As Exchange = exchanges.FirstOrDefault(Function(e) e.Name = valueToRemove)
+        If exchangeToRemove IsNot Nothing Then
+            exchanges.Remove(exchangeToRemove)
+
+            ' Serializar a lista de volta para JSON
+            Try
+                Dim updatedJson As String = JsonConvert.SerializeObject(exchanges, Formatting.Indented)
+
+                ' Reescrever o arquivo com os dados atualizados
+                File.WriteAllText(filePath, updatedJson)
+                MessageBox.Show("Removido com sucesso!")
+            Catch ex As Exception
+                MessageBox.Show("Erro ao salvar o arquivo JSON: " & ex.Message)
+            End Try
+        Else
+            MessageBox.Show("Exchange não encontrado.")
+        End If
+
+    End Sub
+
     Public Class Exchange
         Public Property Name As String
     End Class
