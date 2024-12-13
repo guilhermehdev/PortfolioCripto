@@ -76,6 +76,8 @@ Partial Class FormMain
         MenuStrip1 = New MenuStrip()
         pbBRL = New PictureBox()
         pbUSD = New PictureBox()
+        OpenFileDialog1 = New OpenFileDialog()
+        SaveFileDialog1 = New SaveFileDialog()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
         Panel1.SuspendLayout()
@@ -643,6 +645,17 @@ Partial Class FormMain
         pbUSD.TabIndex = 35
         pbUSD.TabStop = False
         ' 
+        ' OpenFileDialog1
+        ' 
+        OpenFileDialog1.FileName = "OpenFileDialog1"
+        ' 
+        ' SaveFileDialog1
+        ' 
+        SaveFileDialog1.DefaultExt = "json"
+        SaveFileDialog1.FileName = "cripto.json"
+        SaveFileDialog1.Filter = "json files (*.json)|*.json"
+        SaveFileDialog1.RestoreDirectory = True
+        ' 
         ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
@@ -732,5 +745,7 @@ Partial Class FormMain
     Friend WithEvents pbUSD As PictureBox
     Friend WithEvents ImportarToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents ExportarToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents OpenFileDialog1 As OpenFileDialog
+    Friend WithEvents SaveFileDialog1 As SaveFileDialog
 
 End Class

@@ -1,4 +1,5 @@
-﻿Imports System.Windows.Forms.DataVisualization.Charting
+﻿Imports System.IO
+Imports System.Windows.Forms.DataVisualization.Charting
 
 Public Class FormMain
     Public remainingtimeInSeconds As Integer
@@ -206,4 +207,42 @@ Public Class FormMain
 
     End Sub
 
+    Private Sub ImportarToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImportarToolStripMenuItem.Click
+        Dim filePath = Application.StartupPath & "\JSON\criptos.json"
+        OpenFileDialog1.Filter = "json Files (*.json)|*.json"
+        If OpenFileDialog1.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
+            Dim jsonFile = OpenFileDialog1.FileName
+            If File.Exists(filePath) Then
+                If MessageBox.Show("Substituir arquivo existente?", "Atenção", MessageBoxButtons.YesNoCancel) = DialogResult.Yes Then
+                    File.Copy(jsonFile, filePath, True)
+                Else
+                    Exit Sub
+                End If
+            Else
+                File.Copy(jsonFile, filePath, False)
+            End If
+            MessageBox.Show("Importado com sucesso!", "Importar arquivo json", MessageBoxButtons.OK)
+        End If
+
+    End Sub
+    Private Sub ExportarToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExportarToolStripMenuItem.Click
+        Dim filePath = Application.StartupPath & "\JSON\criptos.json"
+
+        SaveFileDialog1.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+
+        If SaveFileDialog1.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
+            Dim jsonDestination = SaveFileDialog1.FileName
+            If File.Exists(jsonDestination) Then
+                If MessageBox.Show("Substituir arquivo existente?", "Atenção", MessageBoxButtons.YesNoCancel) = DialogResult.Yes Then
+                    File.Copy(filePath, jsonDestination, True)
+                Else
+                    Exit Sub
+                End If
+            Else
+                File.Copy(filePath, jsonDestination, False)
+            End If
+            MessageBox.Show("Exportado com sucesso!", "Exportar arquivo json", MessageBoxButtons.OK)
+        End If
+
+    End Sub
 End Class
