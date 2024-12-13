@@ -45,6 +45,8 @@ Partial Class FormEntradas
         Label3 = New Label()
         tbQtd = New MaskedTextBox()
         TbPrecoEntrada = New MaskedTextBox()
+        btAddSymbol = New Button()
+        btAddWallet = New Button()
         GroupBox1.SuspendLayout()
         CType(dgCriptos, ComponentModel.ISupportInitialize).BeginInit()
         ContextMenuStrip1.SuspendLayout()
@@ -57,16 +59,16 @@ Partial Class FormEntradas
         cbWallet.FlatStyle = FlatStyle.Flat
         cbWallet.ForeColor = Color.White
         cbWallet.FormattingEnabled = True
-        cbWallet.Location = New Point(184, 71)
+        cbWallet.Location = New Point(141, 71)
         cbWallet.Name = "cbWallet"
-        cbWallet.Size = New Size(182, 23)
+        cbWallet.Size = New Size(195, 23)
         cbWallet.TabIndex = 12
         ' 
         ' Label2
         ' 
         Label2.AutoSize = True
         Label2.ForeColor = SystemColors.ButtonHighlight
-        Label2.Location = New Point(12, 53)
+        Label2.Location = New Point(11, 53)
         Label2.Name = "Label2"
         Label2.Size = New Size(27, 15)
         Label2.TabIndex = 11
@@ -76,7 +78,7 @@ Partial Class FormEntradas
         ' 
         Label1.AutoSize = True
         Label1.ForeColor = SystemColors.ButtonHighlight
-        Label1.Location = New Point(135, 9)
+        Label1.Location = New Point(141, 9)
         Label1.Name = "Label1"
         Label1.Size = New Size(119, 15)
         Label1.TabIndex = 9
@@ -86,7 +88,7 @@ Partial Class FormEntradas
         ' 
         Label4.AutoSize = True
         Label4.ForeColor = SystemColors.ButtonHighlight
-        Label4.Location = New Point(255, 9)
+        Label4.Location = New Point(262, 9)
         Label4.Name = "Label4"
         Label4.Size = New Size(31, 15)
         Label4.TabIndex = 15
@@ -96,9 +98,9 @@ Partial Class FormEntradas
         ' 
         dtpDataEntrada.CalendarMonthBackground = SystemColors.ControlLightLight
         dtpDataEntrada.Format = DateTimePickerFormat.Short
-        dtpDataEntrada.Location = New Point(255, 27)
+        dtpDataEntrada.Location = New Point(262, 27)
         dtpDataEntrada.Name = "dtpDataEntrada"
-        dtpDataEntrada.Size = New Size(111, 23)
+        dtpDataEntrada.Size = New Size(101, 23)
         dtpDataEntrada.TabIndex = 16
         ' 
         ' btSalvarEntrada
@@ -131,10 +133,9 @@ Partial Class FormEntradas
         cbCripto.FlatStyle = FlatStyle.Flat
         cbCripto.ForeColor = Color.White
         cbCripto.FormattingEnabled = True
-        cbCripto.Items.AddRange(New Object() {"BTC", "ETH", "SOL", "NEAR", "PENDLE", "KSM", "ENA", "DOG", "ATH", "ZRO", "PEPE", "VISTA", "MLC"})
         cbCripto.Location = New Point(12, 27)
         cbCripto.Name = "cbCripto"
-        cbCripto.Size = New Size(116, 23)
+        cbCripto.Size = New Size(96, 23)
         cbCripto.TabIndex = 18
         ' 
         ' GroupBox1
@@ -246,7 +247,7 @@ Partial Class FormEntradas
         ' 
         Label3.AutoSize = True
         Label3.ForeColor = SystemColors.ButtonHighlight
-        Label3.Location = New Point(184, 53)
+        Label3.Location = New Point(141, 53)
         Label3.Name = "Label3"
         Label3.Size = New Size(96, 15)
         Label3.TabIndex = 24
@@ -259,7 +260,7 @@ Partial Class FormEntradas
         tbQtd.Location = New Point(12, 71)
         tbQtd.Name = "tbQtd"
         tbQtd.PromptChar = "0"c
-        tbQtd.Size = New Size(166, 23)
+        tbQtd.Size = New Size(123, 23)
         tbQtd.TabIndex = 1
         tbQtd.Text = "0"
         ' 
@@ -267,11 +268,41 @@ Partial Class FormEntradas
         ' 
         TbPrecoEntrada.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
         TbPrecoEntrada.ForeColor = SystemColors.MenuBar
-        TbPrecoEntrada.Location = New Point(135, 27)
+        TbPrecoEntrada.Location = New Point(141, 27)
         TbPrecoEntrada.Name = "TbPrecoEntrada"
         TbPrecoEntrada.Size = New Size(115, 23)
         TbPrecoEntrada.TabIndex = 25
         TbPrecoEntrada.Text = "$0,00"
+        ' 
+        ' btAddSymbol
+        ' 
+        btAddSymbol.BackColor = Color.DarkGreen
+        btAddSymbol.Cursor = Cursors.Hand
+        btAddSymbol.FlatAppearance.BorderSize = 0
+        btAddSymbol.FlatStyle = FlatStyle.Flat
+        btAddSymbol.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
+        btAddSymbol.ForeColor = SystemColors.ButtonHighlight
+        btAddSymbol.Location = New Point(114, 27)
+        btAddSymbol.Name = "btAddSymbol"
+        btAddSymbol.Size = New Size(21, 23)
+        btAddSymbol.TabIndex = 26
+        btAddSymbol.Text = "+"
+        btAddSymbol.UseVisualStyleBackColor = False
+        ' 
+        ' btAddWallet
+        ' 
+        btAddWallet.BackColor = Color.DarkGreen
+        btAddWallet.Cursor = Cursors.Hand
+        btAddWallet.FlatAppearance.BorderSize = 0
+        btAddWallet.FlatStyle = FlatStyle.Flat
+        btAddWallet.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
+        btAddWallet.ForeColor = SystemColors.ButtonHighlight
+        btAddWallet.Location = New Point(342, 70)
+        btAddWallet.Name = "btAddWallet"
+        btAddWallet.Size = New Size(21, 23)
+        btAddWallet.TabIndex = 27
+        btAddWallet.Text = "+"
+        btAddWallet.UseVisualStyleBackColor = False
         ' 
         ' FormEntradas
         ' 
@@ -279,6 +310,8 @@ Partial Class FormEntradas
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         ClientSize = New Size(456, 392)
+        Controls.Add(btAddWallet)
+        Controls.Add(btAddSymbol)
         Controls.Add(TbPrecoEntrada)
         Controls.Add(tbQtd)
         Controls.Add(Label3)
@@ -326,4 +359,6 @@ Partial Class FormEntradas
     Friend WithEvents tbQtd As MaskedTextBox
     Friend WithEvents TbPrecoEntrada As MaskedTextBox
     Friend WithEvents dgCriptos As DataGridView
+    Friend WithEvents btAddSymbol As Button
+    Friend WithEvents btAddWallet As Button
 End Class

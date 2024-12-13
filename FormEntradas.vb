@@ -21,7 +21,7 @@ Public Class FormEntradas
 
     Private Sub FormEntradas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Dim json As New JSON
-        cbCripto.SelectedIndex = 0
+        cbCripto.SelectedItem = 0
         cbWallet.SelectedItem = 0
         TbPrecoEntrada.Text = 0.00
         tbQtd.Text = 0
@@ -146,6 +146,10 @@ Public Class FormEntradas
         Catch ex As Exception
             ' MsgBox(ex.Message)
         End Try
+    End Sub
+
+    Private Sub btAddWallet_Click(sender As Object, e As EventArgs) Handles btAddWallet.Click
+        FormWalletExchange.Show()
     End Sub
 
 End Class
