@@ -552,7 +552,7 @@ Partial Class FormMain
         ' 
         ' CadastroToolStripMenuItem
         ' 
-        CadastroToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {WalletsAddressToolStripMenuItem, CriptoToolStripMenuItem})
+        CadastroToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {CriptoToolStripMenuItem, WalletsAddressToolStripMenuItem})
         CadastroToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         CadastroToolStripMenuItem.Name = "CadastroToolStripMenuItem"
         CadastroToolStripMenuItem.Size = New Size(66, 20)
@@ -587,7 +587,7 @@ Partial Class FormMain
         IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
-        IntervaloToolStripMenuItem.Size = New Size(120, 22)
+        IntervaloToolStripMenuItem.Size = New Size(180, 22)
         IntervaloToolStripMenuItem.Text = "Intervalo"
         ' 
         ' JSONToolStripMenuItem
@@ -596,7 +596,7 @@ Partial Class FormMain
         JSONToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem, ExportarToolStripMenuItem})
         JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
-        JSONToolStripMenuItem.Size = New Size(120, 22)
+        JSONToolStripMenuItem.Size = New Size(180, 22)
         JSONToolStripMenuItem.Text = "JSON"
         ' 
         ' ImportarToolStripMenuItem

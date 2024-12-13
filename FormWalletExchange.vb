@@ -34,10 +34,12 @@
         Dim json As New JSON
         json.AddWalletExchangeToJson(tbWalletExchange.Text)
         FormWalletExchange_Load(sender, e)
+        json.loadFromJSON2ComboGrid(FormEntradas.cbWallet, Nothing)
     End Sub
     Private Sub ExcluirToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
         Dim json As New JSON
         json.RemoveWalletExchangeFromJson(dgWalletExchange.CurrentRow.Cells(0).Value.ToString)
         FormWalletExchange_Load(sender, e)
+        json.loadFromJSON2ComboGrid(FormEntradas.cbWallet, Nothing)
     End Sub
 End Class
