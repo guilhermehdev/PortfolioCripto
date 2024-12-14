@@ -84,7 +84,7 @@ Public Class JSON
 
         ' Criar um novo objeto Exchange e adicionar à lista
         Dim newExchange As New Exchange With {
-            .Name = Char.ToUpper(newValue(0)) & newValue.Substring(1)
+            .Name = newValue.ToUpper
         }
         exchanges.Add(newExchange)
 

@@ -43,7 +43,7 @@ Public Class Cotacao
             MessageBox.Show("Erro ao chamar a API! Aguarde um momento e tente novamente.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Return False
         Catch ex As Exception
-            MessageBox.Show("Erro ao processar a resposta: " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show($"Erro ao processar a resposta: Verifique o simbolo, talvez {simbolosCripto} não esteja correto. " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Return False
         End Try
 
