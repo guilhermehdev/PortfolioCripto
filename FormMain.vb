@@ -21,9 +21,6 @@ Public Class FormMain
         Dim Cjson As New JSON
         Dim chart As New Charts
 
-        lbAtualizaEm.Text = "Atualizado em:"
-        lbRefresh.Text = My.Settings.lastView
-
         chart.removeCharts()
         lbLoadFromMarket.Visible = True
         TimerBlink.Start()
@@ -33,6 +30,10 @@ Public Class FormMain
         Await Cjson.LoadCriptos(dgPortfolio)
         dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
         Adjust()
+
+        lbAtualizaEm.Text = "Atualizado em:"
+        lbRefresh.Text = My.Settings.lastView
+
     End Sub
 
     Private Sub dgPortfolio_MouseLeave(sender As Object, e As EventArgs) Handles dgPortfolio.MouseLeave
