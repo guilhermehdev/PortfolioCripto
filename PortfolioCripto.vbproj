@@ -6,11 +6,11 @@
     <StartupObject>Sub Main</StartupObject>
     <UseWindowsForms>true</UseWindowsForms>
     <MyType>WindowsForms</MyType>
-    <ApplicationIcon>appicon.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\1490849.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="appicon.ico" />
+    <Content Include="Resources\1490849.ico" />
   </ItemGroup>
 
   <ItemGroup>

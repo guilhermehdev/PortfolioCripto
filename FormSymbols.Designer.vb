@@ -26,6 +26,7 @@ Partial Class FormSymbols
         Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormSymbols))
         StatusStrip1 = New StatusStrip()
         ToolStripStatusLabel1 = New ToolStripStatusLabel()
         ToolStripStatusLabel2 = New ToolStripStatusLabel()
@@ -184,6 +185,7 @@ Partial Class FormSymbols
         Controls.Add(Label2)
         Controls.Add(GroupBox1)
         FormBorderStyle = FormBorderStyle.FixedSingle
+        Icon = CType(resources.GetObject("$this.Icon"), Icon)
         MaximizeBox = False
         MinimizeBox = False
         Name = "FormSymbols"

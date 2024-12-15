@@ -21,9 +21,13 @@ Public Class FormMain
         Dim Cjson As New JSON
         Dim chart As New Charts
 
+        lbAtualizaEm.Text = "Atualizado em:"
+        lbRefresh.Text = My.Settings.lastView
+
         chart.removeCharts()
         lbLoadFromMarket.Visible = True
         TimerBlink.Start()
+
         Cursor = Cursors.WaitCursor
         dgPortfolio.Cursor = Cursors.WaitCursor
         Await Cjson.LoadCriptos(dgPortfolio)
@@ -58,6 +62,8 @@ Public Class FormMain
     Private Sub btRefresh_Click_1(sender As Object, e As EventArgs) Handles btRefresh.Click
         Try
             Setup()
+            TimerCountdown.Stop()
+            TimerRefresh.Stop()
         Catch ex As Exception
 
         End Try
@@ -95,8 +101,7 @@ Public Class FormMain
     End Sub
     Private Sub TimerCountdown_Tick(sender As Object, e As EventArgs) Handles TimerCountdown.Tick
         remainingtimeInSeconds -= 1
-        lbAtualizaEm.Visible = True
-        lbRefresh.Visible = True
+        lbAtualizaEm.Text = "Atualiza em:"
         lbRefresh.Text = $"{(remainingtimeInSeconds \ 60).ToString("D2")}:{(remainingtimeInSeconds Mod 60).ToString("D2")}"
     End Sub
 

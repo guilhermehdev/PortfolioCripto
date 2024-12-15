@@ -472,6 +472,8 @@ Public Class JSON
             FormMain.criptoGraph(criptoDic)
             FormMain.addressGraph(addressDic)
 
+            My.Settings.lastView = Date.Now
+
             Return Nothing
 
         Catch ex As Exception

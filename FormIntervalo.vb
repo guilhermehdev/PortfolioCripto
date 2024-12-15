@@ -26,6 +26,8 @@
         timerRefresh.Start()
         timerCount.Interval = 1000
         timerCount.Start()
+        FormMain.lbAtualizaEm.Text = "Atualizado em:"
+        FormMain.lbRefresh.Text = My.Settings.lastView
 
         FormMain.remainingtimeInSeconds = timerRefresh.Interval / 1000
 
@@ -36,14 +38,12 @@
         timerRefresh.Stop()
         timerCount.Stop()
         cbIntervalo.SelectedIndex = 0
-        FormMain.lbRefresh.Visible = False
-        FormMain.lbAtualizaEm.Visible = False
     End Sub
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles btCancelTimer.Click
         timerRefresh.Stop()
         timerCount.Stop()
-        FormMain.lbRefresh.Visible = False
-        FormMain.lbAtualizaEm.Visible = False
+        FormMain.lbAtualizaEm.Text = "Atualizado em:"
+        FormMain.lbRefresh.Text = My.Settings.lastView
         Me.Close()
     End Sub
 End Class

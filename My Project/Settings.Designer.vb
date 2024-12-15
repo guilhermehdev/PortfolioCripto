@@ -57,12 +57,24 @@ Namespace My
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("")>  _
-        Public Property apiURL() As String
+        Public Property apiJKey() As String
             Get
-                Return CType(Me("apiURL"),String)
+                Return CType(Me("apiJKey"),String)
             End Get
             Set
-                Me("apiURL") = value
+                Me("apiJKey") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+        Public Property lastView() As String
+            Get
+                Return CType(Me("lastView"),String)
+            End Get
+            Set
+                Me("lastView") = value
             End Set
         End Property
     End Class

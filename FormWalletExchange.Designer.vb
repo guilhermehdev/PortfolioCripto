@@ -26,6 +26,7 @@ Partial Class FormWalletExchange
         Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormWalletExchange))
         GroupBox1 = New GroupBox()
         dgWalletExchange = New DataGridView()
         ContextMenuStrip1 = New ContextMenuStrip(components)
@@ -184,6 +185,7 @@ Partial Class FormWalletExchange
         Controls.Add(Label2)
         Controls.Add(GroupBox1)
         FormBorderStyle = FormBorderStyle.FixedSingle
+        Icon = CType(resources.GetObject("$this.Icon"), Icon)
         MaximizeBox = False
         MinimizeBox = False
         Name = "FormWalletExchange"
