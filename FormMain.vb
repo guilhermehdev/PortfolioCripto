@@ -213,9 +213,11 @@ Public Class FormMain
 
     End Sub
 
-    Private Sub ImportarToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImportarToolStripMenuItem.Click
-        Dim filePath = Application.StartupPath & "\JSON\criptos.json"
+    Private Sub PortfolioToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles PortfolioToolStripMenuItem.Click
+        Dim filePath = Application.StartupPath & "\JSON\portfolio.json"
         OpenFileDialog1.Filter = "json Files (*.json)|*.json"
+        OpenFileDialog1.FileName = "portfolio.json"
+
         If OpenFileDialog1.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
             Dim jsonFile = OpenFileDialog1.FileName
             If File.Exists(filePath) Then
@@ -229,12 +231,52 @@ Public Class FormMain
             End If
             MessageBox.Show("Importado com sucesso!", "Importar arquivo json", MessageBoxButtons.OK)
         End If
-
     End Sub
-    Private Sub ExportarToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExportarToolStripMenuItem.Click
+
+    Private Sub ImportarToolStripMenuItem1_Click(sender As Object, e As EventArgs) Handles ImportarToolStripMenuItem1.Click
+        Dim filePath = Application.StartupPath & "\JSON\wallets.json"
+        OpenFileDialog1.Filter = "json Files (*.json)|*.json"
+        OpenFileDialog1.FileName = "wallets.json"
+
+        If OpenFileDialog1.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
+            Dim jsonFile = OpenFileDialog1.FileName
+            If File.Exists(filePath) Then
+                If MessageBox.Show("Substituir arquivo existente?", "Atenção", MessageBoxButtons.YesNoCancel) = DialogResult.Yes Then
+                    File.Copy(jsonFile, filePath, True)
+                Else
+                    Exit Sub
+                End If
+            Else
+                File.Copy(jsonFile, filePath, False)
+            End If
+            MessageBox.Show("Importado com sucesso!", "Importar arquivo json", MessageBoxButtons.OK)
+        End If
+    End Sub
+    Private Sub ImportarToolStripMenuItem2_Click(sender As Object, e As EventArgs) Handles ImportarToolStripMenuItem2.Click
         Dim filePath = Application.StartupPath & "\JSON\criptos.json"
+        OpenFileDialog1.Filter = "json Files (*.json)|*.json"
+        OpenFileDialog1.FileName = "criptos.json"
+
+        If OpenFileDialog1.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
+            Dim jsonFile = OpenFileDialog1.FileName
+            If File.Exists(filePath) Then
+                If MessageBox.Show("Substituir arquivo existente?", "Atenção", MessageBoxButtons.YesNoCancel) = DialogResult.Yes Then
+                    File.Copy(jsonFile, filePath, True)
+                Else
+                    Exit Sub
+                End If
+            Else
+                File.Copy(jsonFile, filePath, False)
+            End If
+            MessageBox.Show("Importado com sucesso!", "Importar arquivo json", MessageBoxButtons.OK)
+        End If
+    End Sub
+
+    Private Sub WalletsExchangeToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles WalletsExchangeToolStripMenuItem.Click
+        Dim filePath = Application.StartupPath & "\JSON\portfolio.json"
 
         SaveFileDialog1.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        SaveFileDialog1.FileName = "portfolio.json"
 
         If SaveFileDialog1.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
             Dim jsonDestination = SaveFileDialog1.FileName
@@ -249,7 +291,48 @@ Public Class FormMain
             End If
             MessageBox.Show("Exportado com sucesso!", "Exportar arquivo json", MessageBoxButtons.OK)
         End If
+    End Sub
 
+    Private Sub ExportarToolStripMenuItem1_Click(sender As Object, e As EventArgs) Handles ExportarToolStripMenuItem1.Click
+        Dim filePath = Application.StartupPath & "\JSON\wallets.json"
+
+        SaveFileDialog1.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        SaveFileDialog1.FileName = "wallets.json"
+
+        If SaveFileDialog1.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
+            Dim jsonDestination = SaveFileDialog1.FileName
+            If File.Exists(jsonDestination) Then
+                If MessageBox.Show("Substituir arquivo existente?", "Atenção", MessageBoxButtons.YesNoCancel) = DialogResult.Yes Then
+                    File.Copy(filePath, jsonDestination, True)
+                Else
+                    Exit Sub
+                End If
+            Else
+                File.Copy(filePath, jsonDestination, False)
+            End If
+            MessageBox.Show("Exportado com sucesso!", "Exportar arquivo json", MessageBoxButtons.OK)
+        End If
+    End Sub
+
+    Private Sub ExportarToolStripMenuItem2_Click(sender As Object, e As EventArgs) Handles ExportarToolStripMenuItem2.Click
+        Dim filePath = Application.StartupPath & "\JSON\criptos.json"
+
+        SaveFileDialog1.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        SaveFileDialog1.FileName = "criptos.json"
+
+        If SaveFileDialog1.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
+            Dim jsonDestination = SaveFileDialog1.FileName
+            If File.Exists(jsonDestination) Then
+                If MessageBox.Show("Substituir arquivo existente?", "Atenção", MessageBoxButtons.YesNoCancel) = DialogResult.Yes Then
+                    File.Copy(filePath, jsonDestination, True)
+                Else
+                    Exit Sub
+                End If
+            Else
+                File.Copy(filePath, jsonDestination, False)
+            End If
+            MessageBox.Show("Exportado com sucesso!", "Exportar arquivo json", MessageBoxButtons.OK)
+        End If
     End Sub
 
 End Class
