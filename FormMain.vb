@@ -110,6 +110,8 @@ Public Class FormMain
         NotifyIcon1.Text = "BTC: " & lbBTC.Text
     End Sub
 
+
+
     Private Sub Adjust()
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
         PanelGraphs.Width = Me.Width

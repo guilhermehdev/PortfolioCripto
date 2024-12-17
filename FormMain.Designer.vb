@@ -70,13 +70,21 @@ Partial Class FormMain
         IntervaloToolStripMenuItem = New ToolStripMenuItem()
         JSONToolStripMenuItem = New ToolStripMenuItem()
         ImportarToolStripMenuItem = New ToolStripMenuItem()
+        PortfolioToolStripMenuItem = New ToolStripMenuItem()
+        WalletsExchangeToolStripMenuItem = New ToolStripMenuItem()
         ExportarToolStripMenuItem = New ToolStripMenuItem()
+        ImportarToolStripMenuItem1 = New ToolStripMenuItem()
+        ExportarToolStripMenuItem1 = New ToolStripMenuItem()
+        CriptoToolStripMenuItem2 = New ToolStripMenuItem()
+        ImportarToolStripMenuItem2 = New ToolStripMenuItem()
+        ExportarToolStripMenuItem2 = New ToolStripMenuItem()
         FecharToolStripMenuItem = New ToolStripMenuItem()
         MenuStrip1 = New MenuStrip()
         pbBRL = New PictureBox()
         pbUSD = New PictureBox()
         OpenFileDialog1 = New OpenFileDialog()
         SaveFileDialog1 = New SaveFileDialog()
+        Label8 = New Label()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
         Panel1.SuspendLayout()
@@ -570,33 +578,92 @@ Partial Class FormMain
         IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
-        IntervaloToolStripMenuItem.Size = New Size(120, 22)
+        IntervaloToolStripMenuItem.Size = New Size(180, 22)
         IntervaloToolStripMenuItem.Text = "Intervalo"
         ' 
         ' JSONToolStripMenuItem
         ' 
         JSONToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        JSONToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem, ExportarToolStripMenuItem})
+        JSONToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem, ExportarToolStripMenuItem, CriptoToolStripMenuItem2})
         JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
-        JSONToolStripMenuItem.Size = New Size(120, 22)
+        JSONToolStripMenuItem.Size = New Size(180, 22)
         JSONToolStripMenuItem.Text = "JSON"
         ' 
         ' ImportarToolStripMenuItem
         ' 
         ImportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ImportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {PortfolioToolStripMenuItem, WalletsExchangeToolStripMenuItem})
         ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
-        ImportarToolStripMenuItem.Size = New Size(120, 22)
-        ImportarToolStripMenuItem.Text = "Importar"
+        ImportarToolStripMenuItem.Size = New Size(180, 22)
+        ImportarToolStripMenuItem.Text = "Portfolio"
+        ' 
+        ' PortfolioToolStripMenuItem
+        ' 
+        PortfolioToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        PortfolioToolStripMenuItem.ForeColor = SystemColors.ControlLightLight
+        PortfolioToolStripMenuItem.Name = "PortfolioToolStripMenuItem"
+        PortfolioToolStripMenuItem.Size = New Size(120, 22)
+        PortfolioToolStripMenuItem.Text = "Importar"
+        ' 
+        ' WalletsExchangeToolStripMenuItem
+        ' 
+        WalletsExchangeToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        WalletsExchangeToolStripMenuItem.ForeColor = SystemColors.ControlLightLight
+        WalletsExchangeToolStripMenuItem.Name = "WalletsExchangeToolStripMenuItem"
+        WalletsExchangeToolStripMenuItem.Size = New Size(120, 22)
+        WalletsExchangeToolStripMenuItem.Text = "Exportar"
         ' 
         ' ExportarToolStripMenuItem
         ' 
         ExportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ExportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem1, ExportarToolStripMenuItem1})
         ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        ExportarToolStripMenuItem.Size = New Size(120, 22)
-        ExportarToolStripMenuItem.Text = "Exportar"
+        ExportarToolStripMenuItem.Size = New Size(180, 22)
+        ExportarToolStripMenuItem.Text = "Wallets/Exchange"
+        ' 
+        ' ImportarToolStripMenuItem1
+        ' 
+        ImportarToolStripMenuItem1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ImportarToolStripMenuItem1.ForeColor = SystemColors.ControlLightLight
+        ImportarToolStripMenuItem1.Name = "ImportarToolStripMenuItem1"
+        ImportarToolStripMenuItem1.Size = New Size(120, 22)
+        ImportarToolStripMenuItem1.Text = "Importar"
+        ' 
+        ' ExportarToolStripMenuItem1
+        ' 
+        ExportarToolStripMenuItem1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ExportarToolStripMenuItem1.ForeColor = SystemColors.ControlLightLight
+        ExportarToolStripMenuItem1.Name = "ExportarToolStripMenuItem1"
+        ExportarToolStripMenuItem1.Size = New Size(120, 22)
+        ExportarToolStripMenuItem1.Text = "Exportar"
+        ' 
+        ' CriptoToolStripMenuItem2
+        ' 
+        CriptoToolStripMenuItem2.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        CriptoToolStripMenuItem2.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem2, ExportarToolStripMenuItem2})
+        CriptoToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
+        CriptoToolStripMenuItem2.Name = "CriptoToolStripMenuItem2"
+        CriptoToolStripMenuItem2.Size = New Size(180, 22)
+        CriptoToolStripMenuItem2.Text = "Cripto"
+        ' 
+        ' ImportarToolStripMenuItem2
+        ' 
+        ImportarToolStripMenuItem2.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ImportarToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
+        ImportarToolStripMenuItem2.Name = "ImportarToolStripMenuItem2"
+        ImportarToolStripMenuItem2.Size = New Size(180, 22)
+        ImportarToolStripMenuItem2.Text = "Importar"
+        ' 
+        ' ExportarToolStripMenuItem2
+        ' 
+        ExportarToolStripMenuItem2.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ExportarToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
+        ExportarToolStripMenuItem2.Name = "ExportarToolStripMenuItem2"
+        ExportarToolStripMenuItem2.Size = New Size(180, 22)
+        ExportarToolStripMenuItem2.Text = "Exportar"
         ' 
         ' FecharToolStripMenuItem
         ' 
@@ -637,16 +704,20 @@ Partial Class FormMain
         pbUSD.TabIndex = 35
         pbUSD.TabStop = False
         ' 
-        ' OpenFileDialog1
-        ' 
-        OpenFileDialog1.FileName = "OpenFileDialog1"
-        ' 
         ' SaveFileDialog1
         ' 
         SaveFileDialog1.DefaultExt = "json"
-        SaveFileDialog1.FileName = "cripto.json"
         SaveFileDialog1.Filter = "json files (*.json)|*.json"
-        SaveFileDialog1.RestoreDirectory = True
+        ' 
+        ' Label8
+        ' 
+        Label8.AutoSize = True
+        Label8.ForeColor = SystemColors.ControlLightLight
+        Label8.Location = New Point(370, 7)
+        Label8.Name = "Label8"
+        Label8.Size = New Size(47, 15)
+        Label8.TabIndex = 36
+        Label8.Text = "Moeda:"
         ' 
         ' FormMain
         ' 
@@ -654,6 +725,7 @@ Partial Class FormMain
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         ClientSize = New Size(1154, 617)
+        Controls.Add(Label8)
         Controls.Add(pbUSD)
         Controls.Add(pbBRL)
         Controls.Add(Panel2)
@@ -735,8 +807,16 @@ Partial Class FormMain
     Friend WithEvents pbBRL As PictureBox
     Friend WithEvents pbUSD As PictureBox
     Friend WithEvents ImportarToolStripMenuItem As ToolStripMenuItem
-    Friend WithEvents ExportarToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents OpenFileDialog1 As OpenFileDialog
     Friend WithEvents SaveFileDialog1 As SaveFileDialog
+    Friend WithEvents Label8 As Label
+    Friend WithEvents PortfolioToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents WalletsExchangeToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents CriptoToolStripMenuItem2 As ToolStripMenuItem
+    Friend WithEvents ImportarToolStripMenuItem2 As ToolStripMenuItem
+    Friend WithEvents ExportarToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents ImportarToolStripMenuItem1 As ToolStripMenuItem
+    Friend WithEvents ExportarToolStripMenuItem1 As ToolStripMenuItem
+    Friend WithEvents ExportarToolStripMenuItem2 As ToolStripMenuItem
 
 End Class

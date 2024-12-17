@@ -27,7 +27,7 @@ Public Class FormEntradas
         tbQtd.Text = 0
         json.LoadJSONtoDataGrid(dgCriptos)
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", cbWallet, Nothing)
-        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\symbols.json", cbCripto, Nothing)
+        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\criptos.json", cbCripto, Nothing)
         FormatGrid(dgCriptos)
     End Sub
 

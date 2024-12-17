@@ -7,7 +7,7 @@ Imports System.Windows.Forms.VisualStyles.VisualStyleElement
 
 
 Public Class JSON
-    Private pathFile As String = Application.StartupPath & "\JSON\criptos.json"
+    Private pathFile As String = Application.StartupPath & "\JSON\portfolio.json"
     Private bindingSource As New BindingSource()
 
     Private Function loadJSONfile()
