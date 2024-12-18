@@ -397,9 +397,12 @@ Public Class JSON
                 Dim priceAction As Decimal
                 Dim op As String
 
-                If difPrice > 0.00 Then
+                If difPrice > 0 Then
                     priceAction = $"{(difPrice / lastPrice) * 100}"
                     op = "+"
+                ElseIf difPrice = 0 Then
+                    priceAction = "0"
+                    op = ""
                 Else
                     priceAction = $"{(difPrice / lastPrice) * 100}"
                     op = "-"
@@ -409,7 +412,7 @@ Public Class JSON
                 newRow("vlEntradaBRL") = initialValueBRL
                 newRow("precoMedio") = initialPrice
                 newRow("precoAtual") = currPrice
-                newRow("lastPrice") = op & priceAction.ToString("F2") & "%"
+                newRow("lastPrice") = op & priceAction.ToString("F2").Replace("--", "-") & "%"
                 newRow("vlAtualUSD") = (currValueUSD)
                 newRow("vlAtualBRL") = (currValueBRL)
                 newRow("ROIusd") = (roi)
@@ -731,13 +734,19 @@ Public Class JSON
                 End With
             End If
 
-            If row.Cells(8).Value.ToString.Replace("%", "").Replace("+", "").Replace("-", "") > 0.00 Then
+            Dim cellValue = row.Cells(8).Value
+
+            If cellValue.Contains("+") Then
                 With row.Cells(8)
                     .Style.ForeColor = Color.LimeGreen
                 End With
+            ElseIf cellValue.Contains("-") Then
+                With row.Cells(8)
+                    .Style.ForeColor = Color.Red
+                End With
             Else
                 With row.Cells(8)
-                    .Style.ForeColor = Color.IndianRed
+                    .Style.ForeColor = Color.LightGray
                 End With
             End If
 
@@ -770,6 +779,9 @@ Public Class JSON
             If row.Cells(7).Value < row.Cells(6).Value Then
                 With row.Cells(7)
                     .Style.ForeColor = Color.IndianRed
+                    .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(8)
                     .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(9)
