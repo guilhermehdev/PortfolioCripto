@@ -9,7 +9,7 @@ Public Class FormEntradas
         If (IsNothing(tbQtd.Text) Or tbQtd.Text = 0) Or (Not IsNumeric(TbPrecoEntrada.Text) Or TbPrecoEntrada.Text = 0 Or IsNothing(TbPrecoEntrada)) Then
             MsgBox("Preencha todos os campos!")
         Else
-            If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text) Then
+            If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 0.00) Then
                 MsgBox("Salvo!")
                 FormEntradas_Load(sender, e)
                 FormMain.Setup()

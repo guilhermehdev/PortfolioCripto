@@ -165,7 +165,8 @@ Public Class JSON
                         {"InitialPrice", 10000.0},
                         {"Qtd", 2},
                         {"Data", "01/01/2000"},
-                        {"Wallet", "Binance"}
+                        {"Wallet", "Binance"},
+                        {"LastPrice", 0.00}
                     }
                 }
             }
@@ -213,7 +214,7 @@ Public Class JSON
         Return Nothing
     End Function
 
-    Function AppendJSON(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String)
+    Function AppendJSON(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String, ByVal lastPrice As Decimal)
         Try
             Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
             Dim newObject As New JObject()
@@ -222,6 +223,7 @@ Public Class JSON
             newObject("Qtd") = Qtd
             newObject("Data") = Data
             newObject("Wallet") = Wallet
+            newObject("LastPrice") = lastPrice
             jsonObject(chave) = New JArray()
 
             Dim itemsArray As JArray = CType(jsonObject(chave), JArray)
@@ -280,7 +282,8 @@ Public Class JSON
                             .InitialPrice = item.InitialPrice,
                             .Qtd = item.Qtd,
                             .Data = item.Data,
-                            .Wallet = item.Wallet
+                            .Wallet = item.Wallet,
+                            .LastPrice = item.LastPrice
                         }
                         allItems.Add(itemkey)
                     Next
@@ -350,6 +353,7 @@ Public Class JSON
         newDT.Columns.Add("vlEntradaBRL", GetType(Decimal))
         newDT.Columns.Add("precoMedio", GetType(Decimal))
         newDT.Columns.Add("precoAtual", GetType(Decimal))
+        newDT.Columns.Add("priceAction", GetType(Decimal))
         newDT.Columns.Add("vlAtualUSD", GetType(Decimal))
         newDT.Columns.Add("vlAtualBRL", GetType(Decimal))
         newDT.Columns.Add("ROIusd", GetType(Decimal))
@@ -380,16 +384,21 @@ Public Class JSON
                 newRow("Perf") = $"{perform.Value:F2}%"
                 newRow("Wallet") = wallet
 
+                Dim qtd As Decimal
                 If row("Qtd").ToString.Contains(".") Then
-                    newRow("Qtd") = row("Qtd").ToString.Replace(".", ",")
+                    qtd = row("Qtd").ToString.Replace(".", ",")
                 Else
-                    newRow("Qtd") = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
+                    qtd = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
                 End If
+                newRow("Qtd") = qtd
+
+
 
                 newRow("vlEntradaUSD") = initialValueUSD
                 newRow("vlEntradaBRL") = initialValueBRL
                 newRow("precoMedio") = initialPrice
                 newRow("precoAtual") = currPrice
+                newRow("priceAction") =
                 newRow("vlAtualUSD") = (currValueUSD)
                 newRow("vlAtualBRL") = (currValueBRL)
                 newRow("ROIusd") = (roi)
@@ -401,13 +410,14 @@ Public Class JSON
                     newRow("X") = $"{x} X"
                 End If
 
-
                 newDT.Rows.Add(newRow)
 
                 criptoDic.Add(row("Cripto"), currValueUSD)
 
                 listAddress.Add(wallet)
                 listInitValue.Add(initialValueUSD)
+
+                AppendJSON(newRow("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"))
             Next
 
             Dim arrayInitValue() As Decimal = listInitValue.ToArray
@@ -534,6 +544,7 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
+        datagrid.Columns(2).HeaderText = "Wallet/Exchange"
         datagrid.Columns(2).Width = 85
         With datagrid.Columns(2).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
@@ -571,7 +582,7 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(6).HeaderText = "Preço entrada"
+        datagrid.Columns(6).HeaderText = "Preço médio"
         datagrid.Columns(6).Width = 95
         With datagrid.Columns(6).DefaultCellStyle
             .BackColor = Color.FromArgb(30, 78, 121)
@@ -817,6 +828,7 @@ Public Class Item
     Public Property Qtd As String
     Public Property Data As String
     Public Property Wallet As String
+    Public Property LastPrice As String
 End Class
 
 Public Class ItemKey
@@ -825,4 +837,5 @@ Public Class ItemKey
     Public Property Qtd As String
     Public Property Data As String
     Public Property Wallet As String
+    Public Property LastPrice As String
 End Class
