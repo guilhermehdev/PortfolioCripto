@@ -74,7 +74,6 @@ Public Class Cotacao
                         .GetProperty("BRL") _
                         .GetProperty("price") _
                         .GetDecimal()
-
                 Return preco
 
             End Using

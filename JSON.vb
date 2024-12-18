@@ -166,7 +166,7 @@ Public Class JSON
                         {"Qtd", 2},
                         {"Data", "01/01/2000"},
                         {"Wallet", "Binance"},
-                        {"LastPrice", 0.00}
+                        {"LastPrice", 1}
                     }
                 }
             }
@@ -342,7 +342,7 @@ Public Class JSON
         Dim listAddress As New List(Of String)
         Dim listInitValue As New List(Of Decimal)
         Dim addressDic As New Dictionary(Of String, Decimal)
-
+        Dim difPrice As Decimal = 0
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
@@ -353,7 +353,7 @@ Public Class JSON
         newDT.Columns.Add("vlEntradaBRL", GetType(Decimal))
         newDT.Columns.Add("precoMedio", GetType(Decimal))
         newDT.Columns.Add("precoAtual", GetType(Decimal))
-        newDT.Columns.Add("priceAction", GetType(Decimal))
+        newDT.Columns.Add("lastPrice", GetType(String))
         newDT.Columns.Add("vlAtualUSD", GetType(Decimal))
         newDT.Columns.Add("vlAtualBRL", GetType(Decimal))
         newDT.Columns.Add("ROIusd", GetType(Decimal))
@@ -392,13 +392,24 @@ Public Class JSON
                 End If
                 newRow("Qtd") = qtd
 
+                Dim lastPrice As Decimal = row("LastPrice").ToString.Replace(".", ",")
+                difPrice = CDec(currPrice.ToString("N2")) - CDec(lastPrice.ToString("N2"))
+                Dim priceAction As Decimal
+                Dim op As String
 
+                If difPrice > 0.00 Then
+                    priceAction = $"{(difPrice / lastPrice) * 100}"
+                    op = "+"
+                Else
+                    priceAction = $"{(difPrice / lastPrice) * 100}"
+                    op = "-"
+                End If
 
                 newRow("vlEntradaUSD") = initialValueUSD
                 newRow("vlEntradaBRL") = initialValueBRL
                 newRow("precoMedio") = initialPrice
                 newRow("precoAtual") = currPrice
-                newRow("priceAction") =
+                newRow("lastPrice") = op & priceAction.ToString("F2") & "%"
                 newRow("vlAtualUSD") = (currValueUSD)
                 newRow("vlAtualBRL") = (currValueBRL)
                 newRow("ROIusd") = (roi)
@@ -418,6 +429,7 @@ Public Class JSON
                 listInitValue.Add(initialValueUSD)
 
                 AppendJSON(newRow("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"))
+
             Next
 
             Dim arrayInitValue() As Decimal = listInitValue.ToArray
@@ -600,12 +612,11 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(8).HeaderText = "Valor atual"
-        datagrid.Columns(8).Width = 95
+        datagrid.Columns(8).HeaderText = "Última atualização"
+        datagrid.Columns(8).Width = 70
         With datagrid.Columns(8).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
-            .ForeColor = Color.Lime
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
+            .BackColor = Color.FromArgb(30, 78, 121)
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
@@ -613,17 +624,16 @@ Public Class JSON
         datagrid.Columns(9).Width = 95
         With datagrid.Columns(9).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
-            .ForeColor = Color.DeepSkyBlue
+            .ForeColor = Color.Lime
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(10).HeaderText = "ROI"
+        datagrid.Columns(10).HeaderText = "Valor atual"
         datagrid.Columns(10).Width = 95
         With datagrid.Columns(10).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
-            .Format = "C2"
-            .FormatProvider = New CultureInfo("en-US")
+            .ForeColor = Color.DeepSkyBlue
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
@@ -632,6 +642,16 @@ Public Class JSON
         datagrid.Columns(11).Width = 95
         With datagrid.Columns(11).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
+            .Format = "C2"
+            .FormatProvider = New CultureInfo("en-US")
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
+        End With
+
+        datagrid.Columns(12).HeaderText = "ROI"
+        datagrid.Columns(12).Width = 95
+        With datagrid.Columns(12).DefaultCellStyle
+            .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.IndianRed
             .Format = "C2"
             .FormatProvider = New CultureInfo("pt-BR")
@@ -639,9 +659,9 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(12).HeaderText = "X"
-        datagrid.Columns(12).Width = 60
-        With datagrid.Columns(12).DefaultCellStyle
+        datagrid.Columns(13).HeaderText = "X"
+        datagrid.Columns(13).Width = 60
+        With datagrid.Columns(13).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.Red
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
@@ -672,18 +692,18 @@ Public Class JSON
                     row.Cells(2).Style.ForeColor = Color.White
             End Select
 
-            Select Case CDec(row.Cells(10).Value)
-                Case > 0
-                    row.Cells(10).Style.ForeColor = Color.Aquamarine
-                Case < 0
-                    row.Cells(10).Style.ForeColor = Color.LightCoral
-            End Select
-
             Select Case CDec(row.Cells(11).Value)
                 Case > 0
-                    row.Cells(11).Style.ForeColor = Color.Aqua
+                    row.Cells(11).Style.ForeColor = Color.Aquamarine
                 Case < 0
                     row.Cells(11).Style.ForeColor = Color.LightCoral
+            End Select
+
+            Select Case CDec(row.Cells(12).Value)
+                Case > 0
+                    row.Cells(12).Style.ForeColor = Color.Aqua
+                Case < 0
+                    row.Cells(12).Style.ForeColor = Color.LightCoral
             End Select
 
 
@@ -711,25 +731,35 @@ Public Class JSON
                 End With
             End If
 
-            If row.Cells(8).Value > 1 Then
+            If row.Cells(8).Value.ToString.Replace("%", "").Replace("+", "").Replace("-", "") > 0.00 Then
                 With row.Cells(8)
-                    .Style.Format = "C2"
-                    .Style.FormatProvider = New CultureInfo("en-US")
+                    .Style.ForeColor = Color.LimeGreen
                 End With
             Else
                 With row.Cells(8)
-                    .Style.Format = "C8"
-                    .Style.FormatProvider = New CultureInfo("en-US")
+                    .Style.ForeColor = Color.IndianRed
                 End With
             End If
 
             If row.Cells(9).Value > 1 Then
                 With row.Cells(9)
                     .Style.Format = "C2"
-                    .Style.FormatProvider = New CultureInfo("pt-BR")
+                    .Style.FormatProvider = New CultureInfo("en-US")
                 End With
             Else
                 With row.Cells(9)
+                    .Style.Format = "C8"
+                    .Style.FormatProvider = New CultureInfo("en-US")
+                End With
+            End If
+
+            If row.Cells(10).Value > 1 Then
+                With row.Cells(10)
+                    .Style.Format = "C2"
+                    .Style.FormatProvider = New CultureInfo("pt-BR")
+                End With
+            Else
+                With row.Cells(10)
                     .Style.Format = "C8"
                     .Style.FormatProvider = New CultureInfo("pt-BR")
                 End With
@@ -742,11 +772,11 @@ Public Class JSON
                     .Style.ForeColor = Color.IndianRed
                     .Style.BackColor = rowBackColor
                 End With
-                With row.Cells(8)
+                With row.Cells(9)
                     .Style.ForeColor = Color.Orange
                     .Style.BackColor = rowBackColor
                 End With
-                With row.Cells(9)
+                With row.Cells(10)
                     .Style.ForeColor = Color.DarkOrange
                     .Style.BackColor = rowBackColor
                 End With
@@ -772,10 +802,10 @@ Public Class JSON
                 With row.Cells(6)
                     .Style.BackColor = rowBackColor
                 End With
-                With row.Cells(10)
+                With row.Cells(11)
                     .Style.BackColor = rowBackColor
                 End With
-                With row.Cells(11)
+                With row.Cells(12)
                     .Style.BackColor = rowBackColor
                 End With
 
@@ -786,12 +816,12 @@ Public Class JSON
             datagrid.CurrentCell = Nothing
 
             datagrid.Columns(4).Visible = True
-            datagrid.Columns(8).Visible = True
-            datagrid.Columns(10).Visible = True
+            datagrid.Columns(9).Visible = True
+            datagrid.Columns(11).Visible = True
 
             datagrid.Columns(5).Visible = False
-            datagrid.Columns(9).Visible = False
-            datagrid.Columns(11).Visible = False
+            datagrid.Columns(10).Visible = False
+            datagrid.Columns(12).Visible = False
 
         Next
 
