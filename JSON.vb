@@ -736,11 +736,11 @@ Public Class JSON
 
             Dim cellValue = row.Cells(8).Value
 
-            If cellValue.Contains("+") Then
+            If cellValue.ToString.Contains("+") Then
                 With row.Cells(8)
                     .Style.ForeColor = Color.LimeGreen
                 End With
-            ElseIf cellValue.Contains("-") Then
+            ElseIf cellValue.ToString.Contains("-") Then
                 With row.Cells(8)
                     .Style.ForeColor = Color.Red
                 End With
