@@ -412,7 +412,7 @@ Public Class JSON
                 newRow("vlEntradaBRL") = initialValueBRL
                 newRow("precoMedio") = initialPrice
                 newRow("precoAtual") = currPrice
-                newRow("lastPrice") = op & priceAction.ToString("F2").Replace("--", "-") & "%"
+                newRow("lastPrice") = op & priceAction.ToString("F2").Replace("-", "") & "%"
                 newRow("vlAtualUSD") = (currValueUSD)
                 newRow("vlAtualBRL") = (currValueBRL)
                 newRow("ROIusd") = (roi)
