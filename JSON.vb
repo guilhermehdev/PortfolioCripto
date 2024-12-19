@@ -618,7 +618,7 @@ Public Class JSON
         datagrid.Columns(8).HeaderText = "Última atualização"
         datagrid.Columns(8).Width = 70
         With datagrid.Columns(8).DefaultCellStyle
-            .BackColor = Color.FromArgb(30, 78, 121)
+            .BackColor = Color.FromArgb(20, 20, 20)
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
@@ -746,7 +746,7 @@ Public Class JSON
                 End With
             Else
                 With row.Cells(8)
-                    .Style.ForeColor = Color.LightGray
+                    .Style.ForeColor = Color.FromArgb(20, 20, 20)
                 End With
             End If
 
@@ -782,6 +782,7 @@ Public Class JSON
                     .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(8)
+                    .Style.ForeColor = rowBackColor
                     .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(9)
