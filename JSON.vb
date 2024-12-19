@@ -394,17 +394,17 @@ Public Class JSON
 
                 Dim lastPrice As Decimal = row("LastPrice").ToString.Replace(".", ",")
                 difPrice = CDec(currPrice.ToString("N2")) - CDec(lastPrice.ToString("N2"))
-                Dim priceAction As Decimal
+                Dim priceAction As String
                 Dim op As String
 
                 If difPrice > 0 Then
-                    priceAction = $"{(difPrice / lastPrice) * 100}"
+                    priceAction = $"{((difPrice / lastPrice) * 100):F2}%"
                     op = "+"
                 ElseIf difPrice = 0 Then
-                    priceAction = "0"
+                    priceAction = "--"
                     op = ""
                 Else
-                    priceAction = $"{(difPrice / lastPrice) * 100}"
+                    priceAction = $"{((difPrice / lastPrice) * 100):F2}%"
                     op = "-"
                 End If
 
@@ -412,7 +412,7 @@ Public Class JSON
                 newRow("vlEntradaBRL") = initialValueBRL
                 newRow("precoMedio") = initialPrice
                 newRow("precoAtual") = currPrice
-                newRow("lastPrice") = op & priceAction.ToString("F2").Replace("-", "") & "%"
+                newRow("lastPrice") = op & priceAction.ToString().Replace("-", "")
                 newRow("vlAtualUSD") = (currValueUSD)
                 newRow("vlAtualBRL") = (currValueBRL)
                 newRow("ROIusd") = (roi)
@@ -782,7 +782,6 @@ Public Class JSON
                     .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(8)
-                    .Style.ForeColor = rowBackColor
                     .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(9)
