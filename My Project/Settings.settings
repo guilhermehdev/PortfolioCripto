@@ -2,10 +2,22 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="My" GeneratedClassName="MySettings" UseMySettingsClassName="true">
   <Profiles />
   <Settings>
-    <Setting Name="apiJKey" Type="System.String" Scope="User">
+    <Setting Name="apiCMCKey" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="apiUrlHistorical" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest</Value>
+    </Setting>
+    <Setting Name="apiUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest</Value>
+    </Setting>
+    <Setting Name="apiUrlSandbox" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://sandbox-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest</Value>
+    </Setting>
     <Setting Name="lastView" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="activeAPI" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
   </Settings>

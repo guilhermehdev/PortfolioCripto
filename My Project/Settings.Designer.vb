@@ -57,12 +57,48 @@ Namespace My
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("")>  _
-        Public Property apiJKey() As String
+        Public Property apiCMCKey() As String
             Get
-                Return CType(Me("apiJKey"),String)
+                Return CType(Me("apiCMCKey"),String)
             End Get
             Set
-                Me("apiJKey") = value
+                Me("apiCMCKey") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest")>  _
+        Public Property apiUrlHistorical() As String
+            Get
+                Return CType(Me("apiUrlHistorical"),String)
+            End Get
+            Set
+                Me("apiUrlHistorical") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest")>  _
+        Public Property apiUrl() As String
+            Get
+                Return CType(Me("apiUrl"),String)
+            End Get
+            Set
+                Me("apiUrl") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("https://sandbox-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest")>  _
+        Public Property apiUrlSandbox() As String
+            Get
+                Return CType(Me("apiUrlSandbox"),String)
+            End Get
+            Set
+                Me("apiUrlSandbox") = value
             End Set
         End Property
         
@@ -75,6 +111,18 @@ Namespace My
             End Get
             Set
                 Me("lastView") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+        Public Property activeAPI() As String
+            Get
+                Return CType(Me("activeAPI"),String)
+            End Get
+            Set
+                Me("activeAPI") = value
             End Set
         End Property
     End Class

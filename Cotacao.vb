@@ -4,11 +4,9 @@ Imports System.Net.Http.Headers
 Imports System.Text.Json
 
 Public Class Cotacao
-    Private Shared ReadOnly apiKey As String = "803eb0bd-7743-468d-869a-f5b4914e4f29"
-    Private Shared ReadOnly apiUrlHistorical As String = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
-
-    Private Shared ReadOnly apiUrl As String = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
-    'Private Shared ReadOnly apiUrl As String = "https://sandbox-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
+    Private Shared ReadOnly apiKey As String = My.Settings.apiCMCKey
+    Private Shared ReadOnly apiUrlHistorical As String = My.Settings.apiUrlHistorical
+    Private Shared ReadOnly apiUrl As String = My.Settings.activeAPI
 
     Public Async Function GetCriptoPrices(simbolosCripto As String) As Task(Of String)
 
@@ -35,15 +33,16 @@ Public Class Cotacao
                         .GetProperty("USD") _
                         .GetProperty("price") _
                         .GetDecimal()
-
                 Return preco
 
             End Using
         Catch e As HttpRequestException
-            MessageBox.Show("Erro ao chamar a API! Aguarde um momento e tente novamente.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            'Application.Exit()
             Return False
         Catch ex As Exception
             MessageBox.Show($"Erro ao processar a resposta: Verifique o simbolo, talvez {simbolosCripto} não esteja correto. " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            ' Application.Exit()
             Return False
         End Try
 
@@ -78,9 +77,13 @@ Public Class Cotacao
 
             End Using
         Catch e As HttpRequestException
-            Return "Erro ao chamar a API: " & e.Message
+            MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            'Application.Exit()
+            Return False
         Catch ex As Exception
-            Return "Erro ao processar a resposta: " & ex.Message
+            MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            ' Application.Exit()
+            Return False
         End Try
     End Function
 
@@ -141,21 +144,18 @@ Public Class Cotacao
             End Using
 
         Catch e As HttpRequestException
-            WriteLine($"Erro de requisição: {e.Message}")
+            MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            'Application.Exit()
+            Return False
         Catch ex As Exception
-            WriteLine($"Erro: {ex.Message}")
+            MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            ' Application.Exit()
+            Return False
         End Try
 
         ' Retorna Nothing em caso de falha
         Return Nothing
     End Function
 
-
 End Class
-Public Class TransparentPictureBox
-    Inherits PictureBox
 
-    Protected Overrides Sub OnPaintBackground(pevent As PaintEventArgs)
-        ' Não pinta o fundo, preservando a transparência
-    End Sub
-End Class

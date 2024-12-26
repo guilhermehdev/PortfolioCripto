@@ -21,6 +21,10 @@ Public Class FormMain
         Dim Cjson As New JSON
         Dim chart As New Charts
 
+        If My.Settings.apiCMCKey = Nothing Then
+
+        End If
+
         chart.removeCharts()
         lbLoadFromMarket.Visible = True
         TimerBlink.Start()
@@ -335,6 +339,10 @@ Public Class FormMain
             End If
             MessageBox.Show("Exportado com sucesso!", "Exportar arquivo json", MessageBoxButtons.OK)
         End If
+    End Sub
+
+    Private Sub APIToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles APIToolStripMenuItem.Click
+        FormAPI.ShowDialog()
     End Sub
 
 End Class
