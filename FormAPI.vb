@@ -51,6 +51,7 @@
     End Sub
 
     Private Sub loadApi()
+        cbAPIActive.Items.Clear()
         cbAPIActive.Items.Add(My.Settings.apiUrl)
         cbAPIActive.Items.Add(My.Settings.apiUrlSandbox)
     End Sub
