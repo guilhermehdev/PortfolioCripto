@@ -38,12 +38,12 @@ Public Class Cotacao
             End Using
         Catch e As HttpRequestException
             MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            'Application.Exit()
             Return False
+            Exit Function
         Catch ex As Exception
             MessageBox.Show($"Erro ao processar a resposta: Verifique o simbolo, talvez {simbolosCripto} não esteja correto. " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            ' Application.Exit()
             Return False
+            Exit Function
         End Try
 
     End Function
@@ -78,11 +78,9 @@ Public Class Cotacao
             End Using
         Catch e As HttpRequestException
             MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            'Application.Exit()
             Return False
         Catch ex As Exception
             MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            ' Application.Exit()
             Return False
         End Try
     End Function

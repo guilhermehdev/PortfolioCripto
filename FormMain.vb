@@ -21,22 +21,28 @@ Public Class FormMain
         Dim Cjson As New JSON
         Dim chart As New Charts
 
-        If My.Settings.apiCMCKey = Nothing Then
+        If My.Settings.activeAPI = Nothing Then
+            FormAPI.ShowDialog()
+        Else
+            Try
 
+                chart.removeCharts()
+                lbLoadFromMarket.Visible = True
+                TimerBlink.Start()
+
+                Cursor = Cursors.WaitCursor
+                dgPortfolio.Cursor = Cursors.WaitCursor
+                Await Cjson.LoadCriptos(dgPortfolio)
+                dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
+                Adjust()
+
+                lbAtualizaEm.Text = "Atualizado em:"
+                lbRefresh.Text = My.Settings.lastView
+
+            Catch ex As Exception
+
+            End Try
         End If
-
-        chart.removeCharts()
-        lbLoadFromMarket.Visible = True
-        TimerBlink.Start()
-
-        Cursor = Cursors.WaitCursor
-        dgPortfolio.Cursor = Cursors.WaitCursor
-        Await Cjson.LoadCriptos(dgPortfolio)
-        dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
-        Adjust()
-
-        lbAtualizaEm.Text = "Atualizado em:"
-        lbRefresh.Text = My.Settings.lastView
 
     End Sub
 

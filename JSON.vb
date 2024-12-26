@@ -325,7 +325,14 @@ Public Class JSON
     Public Async Function LoadCriptos(datagrid As DataGridView) As Task(Of Dictionary(Of String, Decimal))
         Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
         Dim getCriptoData As New Cotacao
-        Dim USDBRLprice = Await getCriptoData.GetUSDBRL
+        Dim USDBRLprice
+
+        If Await getCriptoData.GetUSDBRL = False Then
+            Exit Function
+        Else
+            USDBRLprice = Await getCriptoData.GetUSDBRL
+        End If
+
         Dim json As New JSON
         Dim dom As Decimal? = Await Task.Run(Async Function() Await getCriptoData.GetBTCDOM())
         Dim profit As Decimal
