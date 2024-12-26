@@ -328,6 +328,10 @@ Public Class JSON
         Dim USDBRLprice
 
         If Await getCriptoData.GetUSDBRL = False Then
+            FormMain.lbLoadFromMarket.Visible = False
+            FormMain.TimerBlink.Stop()
+            FormMain.Cursor = Cursors.Default
+            FormMain.dgPortfolio.Cursor = Cursors.Default
             Exit Function
         Else
             USDBRLprice = Await getCriptoData.GetUSDBRL
@@ -497,7 +501,6 @@ Public Class JSON
 
             FormMain.lbLoadFromMarket.Visible = False
             FormMain.TimerBlink.Stop()
-
             FormMain.Cursor = Cursors.Default
             FormMain.dgPortfolio.Cursor = Cursors.Default
 

@@ -204,24 +204,35 @@ Public Class FormMain
     End Sub
 
     Private Sub pbUSD_Click(sender As Object, e As EventArgs) Handles pbUSD.Click
-        dgPortfolio.Columns(4).Visible = True
-        dgPortfolio.Columns(8).Visible = True
-        dgPortfolio.Columns(10).Visible = True
+        Try
 
-        dgPortfolio.Columns(5).Visible = False
-        dgPortfolio.Columns(9).Visible = False
-        dgPortfolio.Columns(11).Visible = False
+            dgPortfolio.Columns(4).Visible = True
+            dgPortfolio.Columns(8).Visible = True
+            dgPortfolio.Columns(10).Visible = True
+
+            dgPortfolio.Columns(5).Visible = False
+            dgPortfolio.Columns(9).Visible = False
+            dgPortfolio.Columns(11).Visible = False
+
+        Catch ex As Exception
+
+        End Try
 
     End Sub
 
     Private Sub pbBRL_Click(sender As Object, e As EventArgs) Handles pbBRL.Click
-        dgPortfolio.Columns(4).Visible = False
-        dgPortfolio.Columns(8).Visible = False
-        dgPortfolio.Columns(10).Visible = False
+        Try
 
-        dgPortfolio.Columns(5).Visible = True
-        dgPortfolio.Columns(9).Visible = True
-        dgPortfolio.Columns(11).Visible = True
+            dgPortfolio.Columns(4).Visible = False
+            dgPortfolio.Columns(8).Visible = False
+            dgPortfolio.Columns(10).Visible = False
+
+            dgPortfolio.Columns(5).Visible = True
+            dgPortfolio.Columns(9).Visible = True
+            dgPortfolio.Columns(11).Visible = True
+        Catch ex As Exception
+
+        End Try
 
     End Sub
 
