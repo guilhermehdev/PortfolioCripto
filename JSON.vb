@@ -577,7 +577,7 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
-        datagrid.Columns(3).Width = 95
+        datagrid.Columns(3).Width = 80
         With datagrid.Columns(3).DefaultCellStyle
             .BackColor = Color.MidnightBlue
             .ForeColor = Color.Gold
@@ -652,7 +652,7 @@ Public Class JSON
         End With
 
         datagrid.Columns(11).HeaderText = "ROI"
-        datagrid.Columns(11).Width = 95
+        datagrid.Columns(11).Width = 120
         With datagrid.Columns(11).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
             .Format = "C2"
@@ -662,7 +662,7 @@ Public Class JSON
         End With
 
         datagrid.Columns(12).HeaderText = "ROI"
-        datagrid.Columns(12).Width = 95
+        datagrid.Columns(12).Width = 120
         With datagrid.Columns(12).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.IndianRed

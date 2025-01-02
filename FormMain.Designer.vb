@@ -128,6 +128,7 @@ Partial Class FormMain
         dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
         dgPortfolio.EnableHeadersVisualStyles = False
         dgPortfolio.Location = New Point(0, 27)
+        dgPortfolio.MinimumSize = New Size(0, 350)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
@@ -579,7 +580,7 @@ Partial Class FormMain
         IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
-        IntervaloToolStripMenuItem.Size = New Size(180, 22)
+        IntervaloToolStripMenuItem.Size = New Size(120, 22)
         IntervaloToolStripMenuItem.Text = "Intervalo"
         ' 
         ' JSONToolStripMenuItem
@@ -588,7 +589,7 @@ Partial Class FormMain
         JSONToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem, ExportarToolStripMenuItem, CriptoToolStripMenuItem2})
         JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
-        JSONToolStripMenuItem.Size = New Size(180, 22)
+        JSONToolStripMenuItem.Size = New Size(120, 22)
         JSONToolStripMenuItem.Text = "JSON"
         ' 
         ' ImportarToolStripMenuItem
@@ -671,7 +672,7 @@ Partial Class FormMain
         APIToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         APIToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         APIToolStripMenuItem.Name = "APIToolStripMenuItem"
-        APIToolStripMenuItem.Size = New Size(180, 22)
+        APIToolStripMenuItem.Size = New Size(120, 22)
         APIToolStripMenuItem.Text = "API"
         ' 
         ' FecharToolStripMenuItem

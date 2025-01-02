@@ -205,12 +205,12 @@ Public Class FormMain
         Try
 
             dgPortfolio.Columns(4).Visible = True
-            dgPortfolio.Columns(8).Visible = True
-            dgPortfolio.Columns(10).Visible = True
+            dgPortfolio.Columns(9).Visible = True
+            dgPortfolio.Columns(11).Visible = True
 
             dgPortfolio.Columns(5).Visible = False
-            dgPortfolio.Columns(9).Visible = False
-            dgPortfolio.Columns(11).Visible = False
+            dgPortfolio.Columns(10).Visible = False
+            dgPortfolio.Columns(12).Visible = False
 
         Catch ex As Exception
 
@@ -220,14 +220,13 @@ Public Class FormMain
 
     Private Sub pbBRL_Click(sender As Object, e As EventArgs) Handles pbBRL.Click
         Try
-
             dgPortfolio.Columns(4).Visible = False
-            dgPortfolio.Columns(8).Visible = False
-            dgPortfolio.Columns(10).Visible = False
+            dgPortfolio.Columns(9).Visible = False
+            dgPortfolio.Columns(11).Visible = False
 
             dgPortfolio.Columns(5).Visible = True
-            dgPortfolio.Columns(9).Visible = True
-            dgPortfolio.Columns(11).Visible = True
+            dgPortfolio.Columns(10).Visible = True
+            dgPortfolio.Columns(12).Visible = True
         Catch ex As Exception
 
         End Try
