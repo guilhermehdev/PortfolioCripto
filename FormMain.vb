@@ -15,7 +15,6 @@ Public Class FormMain
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
-
     End Sub
 
     Public Async Sub Setup()
@@ -201,7 +200,7 @@ Public Class FormMain
 
     End Sub
 
-    Private Sub pbUSD_Click(sender As Object, e As EventArgs) Handles pbUSD.Click
+    Public Sub showUSDCollumns()
         Dim json As New JSON
         Try
 
@@ -218,10 +217,9 @@ Public Class FormMain
         Catch ex As Exception
 
         End Try
-
     End Sub
 
-    Private Sub pbBRL_Click(sender As Object, e As EventArgs) Handles pbBRL.Click
+    Public Sub showBRLCollumns()
         Dim json As New JSON
         Try
             dgPortfolio.Columns(4).Visible = False
@@ -232,12 +230,20 @@ Public Class FormMain
             dgPortfolio.Columns(10).Visible = True
             dgPortfolio.Columns(12).Visible = True
 
-            JSON.FormatGrid(dgPortfolio)
+            json.FormatGrid(dgPortfolio)
 
         Catch ex As Exception
 
         End Try
 
+    End Sub
+
+    Private Sub pbUSD_Click(sender As Object, e As EventArgs) Handles pbUSD.Click
+        showUSDCollumns()
+    End Sub
+
+    Private Sub pbBRL_Click(sender As Object, e As EventArgs) Handles pbBRL.Click
+        showBRLCollumns()
     End Sub
 
     Private Sub PortfolioToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles PortfolioToolStripMenuItem.Click

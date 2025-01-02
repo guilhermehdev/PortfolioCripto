@@ -322,7 +322,7 @@ Public Class JSON
         Return table
 
     End Function
-    Public Async Function LoadCriptos(datagrid As DataGridView) As Task(Of Dictionary(Of String, Decimal))
+    Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task(Of Dictionary(Of String, Decimal))
         Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
         Dim getCriptoData As New Cotacao
         Dim USDBRLprice
@@ -509,14 +509,18 @@ Public Class JSON
 
             My.Settings.lastView = Date.Now
 
+            If currencyCollum = "USD" Then
+                FormMain.showUSDCollumns()
+            ElseIf currencyCollum = "BRL" Then
+                FormMain.showBRLCollumns()
+            End If
+
             Return Nothing
 
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Alert")
             Return Nothing
         End Try
-
-        Return Nothing
 
     End Function
 
