@@ -15,6 +15,7 @@ Public Class FormMain
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
+
     End Sub
 
     Public Async Sub Setup()
@@ -25,7 +26,6 @@ Public Class FormMain
             FormAPI.ShowDialog()
         Else
             Try
-
                 chart.removeCharts()
                 lbLoadFromMarket.Visible = True
                 TimerBlink.Start()
@@ -202,6 +202,7 @@ Public Class FormMain
     End Sub
 
     Private Sub pbUSD_Click(sender As Object, e As EventArgs) Handles pbUSD.Click
+        Dim json As New JSON
         Try
 
             dgPortfolio.Columns(4).Visible = True
@@ -212,6 +213,8 @@ Public Class FormMain
             dgPortfolio.Columns(10).Visible = False
             dgPortfolio.Columns(12).Visible = False
 
+            json.FormatGrid(dgPortfolio)
+
         Catch ex As Exception
 
         End Try
@@ -219,6 +222,7 @@ Public Class FormMain
     End Sub
 
     Private Sub pbBRL_Click(sender As Object, e As EventArgs) Handles pbBRL.Click
+        Dim json As New JSON
         Try
             dgPortfolio.Columns(4).Visible = False
             dgPortfolio.Columns(9).Visible = False
@@ -227,6 +231,9 @@ Public Class FormMain
             dgPortfolio.Columns(5).Visible = True
             dgPortfolio.Columns(10).Visible = True
             dgPortfolio.Columns(12).Visible = True
+
+            JSON.FormatGrid(dgPortfolio)
+
         Catch ex As Exception
 
         End Try

@@ -516,6 +516,8 @@ Public Class JSON
             Return Nothing
         End Try
 
+        Return Nothing
+
     End Function
 
     Public Function SomaSe(ByVal valores() As Decimal, ByVal criterios() As String, ByVal criterio As String) As Double
@@ -652,7 +654,7 @@ Public Class JSON
         End With
 
         datagrid.Columns(11).HeaderText = "ROI"
-        datagrid.Columns(11).Width = 120
+        datagrid.Columns(11).Width = 130
         With datagrid.Columns(11).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
             .Format = "C2"
@@ -662,7 +664,7 @@ Public Class JSON
         End With
 
         datagrid.Columns(12).HeaderText = "ROI"
-        datagrid.Columns(12).Width = 120
+        datagrid.Columns(12).Width = 130
         With datagrid.Columns(12).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.IndianRed
@@ -673,7 +675,7 @@ Public Class JSON
         End With
 
         datagrid.Columns(13).HeaderText = "X"
-        datagrid.Columns(13).Width = 60
+        datagrid.Columns(13).Width = 50
         With datagrid.Columns(13).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.Red
@@ -836,15 +838,6 @@ Public Class JSON
             row.Height = 35
             datagrid.ClearSelection()
             datagrid.CurrentCell = Nothing
-
-            datagrid.Columns(4).Visible = True
-            datagrid.Columns(9).Visible = True
-            datagrid.Columns(11).Visible = True
-
-            datagrid.Columns(5).Visible = False
-            datagrid.Columns(10).Visible = False
-            datagrid.Columns(12).Visible = False
-
         Next
 
     End Sub
