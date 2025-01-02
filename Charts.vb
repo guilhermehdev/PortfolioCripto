@@ -21,7 +21,7 @@ Public Class Charts
 
         legend.Title = "Legenda do Gráfico"
         legend.BackColor = Color.LightGray ' Fundo da legenda
-        legend.Font = New Font("Arial", 10, FontStyle.Bold) ' Fonte da legenda
+        legend.Font = New Font("Arial", 10, FontStyle.Regular) ' Fonte da legenda
         legend.ForeColor = Color.Black ' Cor do texto da legenda
         'myChart.Legends.Add(legend)
 
@@ -29,7 +29,7 @@ Public Class Charts
         With myChart.ChartAreas("MainArea")
             .BackColor = backgroundColor
             .AxisX.LabelStyle.ForeColor = Color.White
-            .AxisX.LabelStyle.Font = New Font("Calibri", 7, FontStyle.Italic)
+            .AxisX.LabelStyle.Font = New Font("Calibri", 5, FontStyle.Italic)
         End With
 
         With chartArea.AxisY

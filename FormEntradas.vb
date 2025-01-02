@@ -12,7 +12,7 @@ Public Class FormEntradas
             If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1) Then
                 MsgBox("Salvo!")
                 FormEntradas_Load(sender, e)
-                FormMain.Setup()
+                'FormMain.Setup()
             End If
         End If
 
@@ -156,6 +156,9 @@ Public Class FormEntradas
     Private Sub dgCriptos_MouseDown(sender As Object, e As MouseEventArgs) Handles dgCriptos.MouseDown
         Dim json As New JSON
         json.captureRightClick(dgCriptos, e)
+    End Sub
+    Private Sub FormEntradas_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed
+        FormMain.Setup()
     End Sub
 
 End Class
