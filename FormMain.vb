@@ -205,12 +205,12 @@ Public Class FormMain
         Try
 
             dgPortfolio.Columns(4).Visible = True
-            dgPortfolio.Columns(9).Visible = True
-            dgPortfolio.Columns(11).Visible = True
+            dgPortfolio.Columns(10).Visible = True
+            dgPortfolio.Columns(12).Visible = True
 
             dgPortfolio.Columns(5).Visible = False
-            dgPortfolio.Columns(10).Visible = False
-            dgPortfolio.Columns(12).Visible = False
+            dgPortfolio.Columns(11).Visible = False
+            dgPortfolio.Columns(13).Visible = False
 
             json.FormatGrid(dgPortfolio)
 
@@ -223,12 +223,12 @@ Public Class FormMain
         Dim json As New JSON
         Try
             dgPortfolio.Columns(4).Visible = False
-            dgPortfolio.Columns(9).Visible = False
-            dgPortfolio.Columns(11).Visible = False
+            dgPortfolio.Columns(10).Visible = False
+            dgPortfolio.Columns(12).Visible = False
 
             dgPortfolio.Columns(5).Visible = True
-            dgPortfolio.Columns(10).Visible = True
-            dgPortfolio.Columns(12).Visible = True
+            dgPortfolio.Columns(11).Visible = True
+            dgPortfolio.Columns(13).Visible = True
 
             json.FormatGrid(dgPortfolio)
 

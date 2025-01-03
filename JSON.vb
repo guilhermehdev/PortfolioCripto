@@ -365,6 +365,7 @@ Public Class JSON
         newDT.Columns.Add("precoMedio", GetType(Decimal))
         newDT.Columns.Add("precoAtual", GetType(Decimal))
         newDT.Columns.Add("lastPrice", GetType(String))
+        newDT.Columns.Add("marketcap", GetType(Decimal))
         newDT.Columns.Add("vlAtualUSD", GetType(Decimal))
         newDT.Columns.Add("vlAtualBRL", GetType(Decimal))
         newDT.Columns.Add("ROIusd", GetType(Decimal))
@@ -429,6 +430,7 @@ Public Class JSON
                 newRow("precoMedio") = initialPrice
                 newRow("precoAtual") = currPrice
                 newRow("lastPrice") = op & priceAction.ToString().Replace("-", "")
+                newRow("marketcap") = marketcap
                 newRow("vlAtualUSD") = (currValueUSD)
                 newRow("vlAtualBRL") = (currValueBRL)
                 newRow("ROIusd") = (roi)
@@ -625,7 +627,7 @@ Public Class JSON
         datagrid.Columns(6).HeaderText = "Preço médio"
         datagrid.Columns(6).Width = 95
         With datagrid.Columns(6).DefaultCellStyle
-            .BackColor = Color.FromArgb(30, 78, 121)
+            .BackColor = Color.FromArgb(75, 0, 130)
             .ForeColor = Color.LightYellow
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -634,7 +636,7 @@ Public Class JSON
         datagrid.Columns(7).HeaderText = "Preço atual"
         datagrid.Columns(7).Width = 95
         With datagrid.Columns(7).DefaultCellStyle
-            .BackColor = Color.FromArgb(30, 78, 121)
+            .BackColor = Color.FromArgb(75, 0, 130)
             .ForeColor = Color.Yellow
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -648,30 +650,31 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(9).HeaderText = "Valor atual"
-        datagrid.Columns(9).Width = 95
+        datagrid.Columns(9).HeaderText = "Capitalização de mercado"
+        datagrid.Columns(9).Width = 150
         With datagrid.Columns(9).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
-            .ForeColor = Color.Lime
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
+            .ForeColor = Color.Orange
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleLeft
+            .Format = "C2"
+            .FormatProvider = New CultureInfo("en-US")
         End With
 
         datagrid.Columns(10).HeaderText = "Valor atual"
         datagrid.Columns(10).Width = 95
         With datagrid.Columns(10).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
-            .ForeColor = Color.DeepSkyBlue
+            .ForeColor = Color.Lime
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(11).HeaderText = "ROI"
-        datagrid.Columns(11).Width = 130
+        datagrid.Columns(11).HeaderText = "Valor atual"
+        datagrid.Columns(11).Width = 95
         With datagrid.Columns(11).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
-            .Format = "C2"
-            .FormatProvider = New CultureInfo("en-US")
+            .ForeColor = Color.DeepSkyBlue
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
@@ -680,6 +683,16 @@ Public Class JSON
         datagrid.Columns(12).Width = 130
         With datagrid.Columns(12).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
+            .Format = "C2"
+            .FormatProvider = New CultureInfo("en-US")
+            .Font = New Font(fontname, fontsize, FontStyle.Regular)
+            .Alignment = DataGridViewContentAlignment.MiddleCenter
+        End With
+
+        datagrid.Columns(13).HeaderText = "ROI"
+        datagrid.Columns(13).Width = 130
+        With datagrid.Columns(13).DefaultCellStyle
+            .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.IndianRed
             .Format = "C2"
             .FormatProvider = New CultureInfo("pt-BR")
@@ -687,9 +700,9 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(13).HeaderText = "X"
-        datagrid.Columns(13).Width = 50
-        With datagrid.Columns(13).DefaultCellStyle
+        datagrid.Columns(14).HeaderText = "X"
+        datagrid.Columns(14).Width = 50
+        With datagrid.Columns(14).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
             .ForeColor = Color.Red
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
@@ -720,18 +733,18 @@ Public Class JSON
                     row.Cells(2).Style.ForeColor = Color.White
             End Select
 
-            Select Case CDec(row.Cells(11).Value)
-                Case > 0
-                    row.Cells(11).Style.ForeColor = Color.Aquamarine
-                Case < 0
-                    row.Cells(11).Style.ForeColor = Color.LightCoral
-            End Select
-
             Select Case CDec(row.Cells(12).Value)
                 Case > 0
-                    row.Cells(12).Style.ForeColor = Color.Aqua
+                    row.Cells(12).Style.ForeColor = Color.Aquamarine
                 Case < 0
                     row.Cells(12).Style.ForeColor = Color.LightCoral
+            End Select
+
+            Select Case CDec(row.Cells(13).Value)
+                Case > 0
+                    row.Cells(13).Style.ForeColor = Color.Aqua
+                Case < 0
+                    row.Cells(13).Style.ForeColor = Color.LightCoral
             End Select
 
 
@@ -775,25 +788,25 @@ Public Class JSON
                 End With
             End If
 
-            If row.Cells(9).Value > 1 Then
-                With row.Cells(9)
+            If row.Cells(10).Value > 1 Then
+                With row.Cells(10)
                     .Style.Format = "C2"
                     .Style.FormatProvider = New CultureInfo("en-US")
                 End With
             Else
-                With row.Cells(9)
+                With row.Cells(10)
                     .Style.Format = "C8"
                     .Style.FormatProvider = New CultureInfo("en-US")
                 End With
             End If
 
-            If row.Cells(10).Value > 1 Then
-                With row.Cells(10)
+            If row.Cells(11).Value > 1 Then
+                With row.Cells(11)
                     .Style.Format = "C2"
                     .Style.FormatProvider = New CultureInfo("pt-BR")
                 End With
             Else
-                With row.Cells(10)
+                With row.Cells(11)
                     .Style.Format = "C8"
                     .Style.FormatProvider = New CultureInfo("pt-BR")
                 End With
@@ -814,6 +827,10 @@ Public Class JSON
                     .Style.BackColor = rowBackColor
                 End With
                 With row.Cells(10)
+                    .Style.ForeColor = Color.Orange
+                    .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(11)
                     .Style.ForeColor = Color.DarkOrange
                     .Style.BackColor = rowBackColor
                 End With
@@ -839,11 +856,15 @@ Public Class JSON
                 With row.Cells(6)
                     .Style.BackColor = rowBackColor
                 End With
-                With row.Cells(11)
-                    .Style.BackColor = rowBackColor
-                End With
                 With row.Cells(12)
                     .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(13)
+                    .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(14)
+                    .Style.BackColor = rowBackColor
+                    .Style.ForeColor = rowBackColor
                 End With
 
             End If
