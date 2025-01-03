@@ -375,8 +375,13 @@ Public Class JSON
             ' Adicionar dados do DataTable original ao novo
             For Each row As DataRow In originalDT.Rows
                 Dim newRow As DataRow = newDT.NewRow()
-                Dim critoPriceTask As Task(Of String) = getCriptoData.GetCriptoPrices(row("Cripto"))
-                Dim currPrice As Decimal = Await critoPriceTask
+                Dim critoPriceTask As String = Await getCriptoData.GetCriptoPrices(row("Cripto"))
+
+                Dim valores() As String = critoPriceTask.Split("|"c)
+                Dim preco As String = valores(0)
+                Dim marketcap As String = valores(1)
+
+                Dim currPrice As Decimal = preco
                 Dim initialPrice As Decimal = row("InitialPrice").ToString.Replace(".", ",")
                 Dim initialValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * row("InitialPrice").ToString.Replace(".", ",")
                 Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
@@ -471,8 +476,12 @@ Public Class JSON
                 FormMain.lbTotalBRL.ForeColor = Color.FromArgb(255, 73, 73)
             End If
 
+            Dim task As String = Await getCriptoData.GetCriptoPrices("BTC")
+            Dim res() As String = task.Split("|"c)
+            Dim btcPrice As String = res(0)
+
             FormMain.lbDolar.Text = BRLformat(USDBRLprice)
-            FormMain.lbBTC.Text = USDformat(Await getCriptoData.GetCriptoPrices("BTC"))
+            FormMain.lbBTC.Text = USDformat(btcPrice)
             FormMain.lbDom.Text = $"{dom.Value:F2}%"
             FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
             FormMain.lbTotalEntradaUSD.Text = USDformat(initialValue)

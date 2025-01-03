@@ -26,14 +26,12 @@ Public Class Cotacao
 
                 ' Processa o JSON para extrair o preço da criptomoeda
                 Dim json = JsonDocument.Parse(responseBody)
-                Dim preco As Decimal = json.RootElement _
-                        .GetProperty("data") _
-                        .GetProperty(simbolosCripto.ToUpper()) _
-                        .GetProperty("quote") _
-                        .GetProperty("USD") _
-                        .GetProperty("price") _
-                        .GetDecimal()
-                Return preco
+                Dim data = json.RootElement.GetProperty("data").GetProperty(simbolosCripto.ToUpper()).GetProperty("quote").GetProperty("USD")
+
+                Dim preco As Decimal = data.GetProperty("price").GetDecimal()
+                Dim marketcap As Decimal = data.GetProperty("market_cap").GetDecimal()
+
+                Return $"{preco}|{marketcap.ToString("F2")}"
 
             End Using
         Catch e As HttpRequestException
