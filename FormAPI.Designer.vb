@@ -35,6 +35,7 @@ Partial Class FormAPI
         cbAPIActive = New ComboBox()
         Label4 = New Label()
         btSaveActiveAPI = New Button()
+        btCancelar = New Button()
         SuspendLayout()
         ' 
         ' Label1
@@ -56,30 +57,30 @@ Partial Class FormAPI
         ' 
         ' btSalvarAPIKey
         ' 
-        btSalvarAPIKey.BackColor = Color.ForestGreen
+        btSalvarAPIKey.BackColor = Color.SteelBlue
         btSalvarAPIKey.Cursor = Cursors.Hand
         btSalvarAPIKey.FlatAppearance.BorderSize = 0
         btSalvarAPIKey.FlatStyle = FlatStyle.Flat
         btSalvarAPIKey.ForeColor = SystemColors.ButtonHighlight
         btSalvarAPIKey.Location = New Point(476, 45)
         btSalvarAPIKey.Name = "btSalvarAPIKey"
-        btSalvarAPIKey.Size = New Size(53, 23)
+        btSalvarAPIKey.Size = New Size(58, 23)
         btSalvarAPIKey.TabIndex = 18
-        btSalvarAPIKey.Text = "Salvar"
+        btSalvarAPIKey.Text = "Gravar"
         btSalvarAPIKey.UseVisualStyleBackColor = False
         ' 
         ' btSalvarURLPro
         ' 
-        btSalvarURLPro.BackColor = Color.ForestGreen
+        btSalvarURLPro.BackColor = Color.SteelBlue
         btSalvarURLPro.Cursor = Cursors.Hand
         btSalvarURLPro.FlatAppearance.BorderSize = 0
         btSalvarURLPro.FlatStyle = FlatStyle.Flat
         btSalvarURLPro.ForeColor = SystemColors.ButtonHighlight
         btSalvarURLPro.Location = New Point(476, 89)
         btSalvarURLPro.Name = "btSalvarURLPro"
-        btSalvarURLPro.Size = New Size(53, 23)
+        btSalvarURLPro.Size = New Size(58, 23)
         btSalvarURLPro.TabIndex = 21
-        btSalvarURLPro.Text = "Salvar"
+        btSalvarURLPro.Text = "Gravar"
         btSalvarURLPro.UseVisualStyleBackColor = False
         ' 
         ' tbAPIURLPro
@@ -101,16 +102,16 @@ Partial Class FormAPI
         ' 
         ' btSalvarURLSandbox
         ' 
-        btSalvarURLSandbox.BackColor = Color.ForestGreen
+        btSalvarURLSandbox.BackColor = Color.SteelBlue
         btSalvarURLSandbox.Cursor = Cursors.Hand
         btSalvarURLSandbox.FlatAppearance.BorderSize = 0
         btSalvarURLSandbox.FlatStyle = FlatStyle.Flat
         btSalvarURLSandbox.ForeColor = SystemColors.ButtonHighlight
         btSalvarURLSandbox.Location = New Point(476, 133)
         btSalvarURLSandbox.Name = "btSalvarURLSandbox"
-        btSalvarURLSandbox.Size = New Size(53, 23)
+        btSalvarURLSandbox.Size = New Size(58, 23)
         btSalvarURLSandbox.TabIndex = 24
-        btSalvarURLSandbox.Text = "Salvar"
+        btSalvarURLSandbox.Text = "Gravar"
         btSalvarURLSandbox.UseVisualStyleBackColor = False
         ' 
         ' tbURLSandbox
@@ -135,7 +136,7 @@ Partial Class FormAPI
         cbAPIActive.FormattingEnabled = True
         cbAPIActive.Location = New Point(35, 177)
         cbAPIActive.Name = "cbAPIActive"
-        cbAPIActive.Size = New Size(435, 23)
+        cbAPIActive.Size = New Size(499, 23)
         cbAPIActive.TabIndex = 25
         ' 
         ' Label4
@@ -155,19 +156,34 @@ Partial Class FormAPI
         btSaveActiveAPI.FlatAppearance.BorderSize = 0
         btSaveActiveAPI.FlatStyle = FlatStyle.Flat
         btSaveActiveAPI.ForeColor = SystemColors.ButtonHighlight
-        btSaveActiveAPI.Location = New Point(476, 177)
+        btSaveActiveAPI.Location = New Point(35, 206)
         btSaveActiveAPI.Name = "btSaveActiveAPI"
-        btSaveActiveAPI.Size = New Size(53, 23)
+        btSaveActiveAPI.Size = New Size(107, 31)
         btSaveActiveAPI.TabIndex = 27
-        btSaveActiveAPI.Text = "Salvar"
+        btSaveActiveAPI.Text = "Salvar e reiniciar"
         btSaveActiveAPI.UseVisualStyleBackColor = False
+        ' 
+        ' btCancelar
+        ' 
+        btCancelar.BackColor = Color.IndianRed
+        btCancelar.Cursor = Cursors.Hand
+        btCancelar.FlatAppearance.BorderSize = 0
+        btCancelar.FlatStyle = FlatStyle.Flat
+        btCancelar.ForeColor = SystemColors.ButtonHighlight
+        btCancelar.Location = New Point(148, 206)
+        btCancelar.Name = "btCancelar"
+        btCancelar.Size = New Size(66, 31)
+        btCancelar.TabIndex = 28
+        btCancelar.Text = "Cancelar"
+        btCancelar.UseVisualStyleBackColor = False
         ' 
         ' FormAPI
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        ClientSize = New Size(569, 234)
+        ClientSize = New Size(569, 248)
+        Controls.Add(btCancelar)
         Controls.Add(btSaveActiveAPI)
         Controls.Add(Label4)
         Controls.Add(cbAPIActive)
@@ -180,6 +196,7 @@ Partial Class FormAPI
         Controls.Add(btSalvarAPIKey)
         Controls.Add(tbAPIKey)
         Controls.Add(Label1)
+        FormBorderStyle = FormBorderStyle.FixedSingle
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
         MaximizeBox = False
         MinimizeBox = False
@@ -202,4 +219,5 @@ Partial Class FormAPI
     Friend WithEvents cbAPIActive As ComboBox
     Friend WithEvents Label4 As Label
     Friend WithEvents btSaveActiveAPI As Button
+    Friend WithEvents btCancelar As Button
 End Class

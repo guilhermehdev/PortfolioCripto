@@ -58,12 +58,17 @@
     Private Sub btSaveActiveAPI_Click(sender As Object, e As EventArgs) Handles btSaveActiveAPI.Click
         If Not cbAPIActive.Text = "" Then
             My.Settings.activeAPI = cbAPIActive.Text
-            MessageBox.Show("Salvo com sucesso!")
+            MessageBox.Show("Salvo com sucesso! Reiniciando...")
             My.Settings.Save()
+            Application.Restart()
         Else
             MessageBox.Show("Não pode ser vazio!")
             cbAPIActive.Focus()
         End If
+    End Sub
+
+    Private Sub btCancelar_Click(sender As Object, e As EventArgs) Handles btCancelar.Click
+        Me.Close()
     End Sub
 
 End Class

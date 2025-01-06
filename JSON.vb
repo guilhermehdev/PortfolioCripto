@@ -342,6 +342,7 @@ Public Class JSON
         Dim profit As Decimal
         Dim initialValue As Decimal
         Dim currValueTotal As Decimal
+        Dim cashflow As Decimal
         Dim wallet As String = ""
         Dim currValueUSD As Decimal
         Dim currValueBRL As Decimal
@@ -392,9 +393,16 @@ Public Class JSON
                 currValueBRL = currValueUSD * USDBRLprice
                 roi = currValueUSD - initialValueUSD
                 perform = (roi / initialValueUSD) * 100
-                initialValue += initialValueUSD
-                currValueTotal += currValueUSD
-                profit += roi
+
+
+                If row("Cripto") = "USDT" Or row("Cripto") = "USDC" Then
+                    cashflow += currValueUSD
+                Else
+                    currValueTotal += currValueUSD
+                    profit += roi
+                    initialValue += initialValueUSD
+                End If
+
                 x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
 
                 newRow("Cripto") = row("Cripto")
@@ -482,16 +490,6 @@ Public Class JSON
             Dim res() As String = task.Split("|"c)
             Dim btcPrice As String = res(0)
 
-            FormMain.lbDolar.Text = BRLformat(USDBRLprice)
-            FormMain.lbBTC.Text = USDformat(btcPrice)
-            FormMain.lbDom.Text = $"{dom.Value:F2}%"
-            FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
-            FormMain.lbTotalEntradaUSD.Text = USDformat(initialValue)
-            FormMain.lbTotalEntradaBRL.Text = BRLformat(initialValue * USDBRLprice)
-            FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal)
-            FormMain.lbValoresHojeBRL.Text = BRLformat(currValueTotal * USDBRLprice)
-            FormMain.lbRoiUSD.Text = USDformat(profit)
-
             If currValueTotal < initialValue Then
                 FormMain.lbValoresHojeUSD.ForeColor = Color.IndianRed
                 FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal * -1)
@@ -506,6 +504,22 @@ Public Class JSON
                 FormMain.lbRoiUSD.ForeColor = Color.Red
                 FormMain.lbRoiUSD.Text = USDformat(profit * -1)
             End If
+
+            FormMain.lbDolar.Text = BRLformat(USDBRLprice)
+            FormMain.lbBTC.Text = USDformat(btcPrice)
+            FormMain.lbDom.Text = $"{dom.Value:F2}%"
+            If performWallet < 0 Then
+                FormMain.lbPerformWallet.ForeColor = Color.Red
+                FormMain.lbPerformWallet.Text = performWallet * -1
+            End If
+            FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
+            FormMain.lbTotalEntradaUSD.Text = USDformat(initialValue)
+            FormMain.lbTotalEntradaBRL.Text = BRLformat(initialValue * USDBRLprice)
+            FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal)
+            FormMain.lbValoresHojeBRL.Text = BRLformat(currValueTotal * USDBRLprice)
+            FormMain.lbRoiUSD.Text = USDformat(profit)
+            FormMain.lbCaixa.Text = USDformat(cashflow)
+            FormMain.lbCaixaBRL.Text = USDformat(cashflow * USDBRLprice)
 
             datagrid.DataSource = newDT
             FormatGrid(datagrid)
@@ -586,7 +600,7 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
 
-        datagrid.Columns(2).HeaderText = "Wallet/Exchange"
+        datagrid.Columns(2).HeaderText = "Wallet/Cex"
         datagrid.Columns(2).Width = 85
         With datagrid.Columns(2).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
