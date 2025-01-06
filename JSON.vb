@@ -724,7 +724,7 @@ Public Class JSON
 
         For Each row As DataGridViewRow In datagrid.Rows
 
-            Select Case CInt(row.Cells(1).Value.ToString.Replace("%", ""))
+            Select Case CDec(row.Cells(1).Value.ToString.Replace("%", ""))
                 Case > 0
                     row.Cells(1).Style.ForeColor = Color.LawnGreen
             End Select
