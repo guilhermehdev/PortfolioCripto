@@ -29,7 +29,13 @@ Public Class Charts
         With myChart.ChartAreas("MainArea")
             .BackColor = backgroundColor
             .AxisX.LabelStyle.ForeColor = Color.White
-            .AxisX.LabelStyle.Font = New Font("Calibri", 5, FontStyle.Italic)
+            .AxisX.LabelStyle.Font = New Font("Calibri", 8, FontStyle.Italic)
+        End With
+
+        With myChart.ChartAreas("MainArea").AxisX
+            .Interval = 1 ' Garante que cada ponto terá uma etiqueta no eixo X
+            ' .LabelStyle.IsLabelAutoFit = True ' Permite ajuste automático de tamanho e rotação
+            .LabelStyle.Angle = -45 ' Opcional: gira as etiquetas para evitar sobreposição
         End With
 
         With chartArea.AxisY
@@ -56,9 +62,10 @@ Public Class Charts
 
         series.ChartType = chartType
         series.Color = Color.Purple
-        series.IsValueShownAsLabel = True
+        series.IsValueShownAsLabel = False
         series.LabelForeColor = Color.Gold
-        series.Font = New Font("Arial", 8, FontStyle.Italic)
+        series.Font = New Font("Arial", 7, FontStyle.Italic)
+
 
         For Each item As KeyValuePair(Of String, Decimal) In seriesItens
             series.Points.AddXY(item.Key, item.Value)
@@ -70,7 +77,7 @@ Public Class Charts
 
         myChart.Series.Add(series)
         myChart.Titles.Add(chartTitle)
-        myChart.ChartAreas("MainArea").RecalculateAxesScale()
+        'myChart.ChartAreas("MainArea").RecalculateAxesScale()
         container.Controls.Add(myChart)
 
     End Sub

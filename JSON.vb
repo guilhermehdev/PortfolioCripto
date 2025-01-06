@@ -378,7 +378,6 @@ Public Class JSON
             For Each row As DataRow In originalDT.Rows
                 Dim newRow As DataRow = newDT.NewRow()
                 Dim critoPriceTask As String = Await getCriptoData.GetCriptoPrices(row("Cripto"))
-
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
                 Dim marketcap As String = valores(1)
@@ -519,7 +518,7 @@ Public Class JSON
             FormMain.lbValoresHojeBRL.Text = BRLformat(currValueTotal * USDBRLprice)
             FormMain.lbRoiUSD.Text = USDformat(profit)
             FormMain.lbCaixa.Text = USDformat(cashflow)
-            FormMain.lbCaixaBRL.Text = USDformat(cashflow * USDBRLprice)
+            FormMain.lbCaixaBRL.Text = BRLformat(cashflow * USDBRLprice)
 
             datagrid.DataSource = newDT
             FormatGrid(datagrid)

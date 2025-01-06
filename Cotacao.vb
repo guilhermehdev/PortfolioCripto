@@ -36,10 +36,18 @@ Public Class Cotacao
             End Using
         Catch e As HttpRequestException
             MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            FormMain.lbLoadFromMarket.Visible = False
+            FormMain.TimerBlink.Stop()
+            FormMain.Cursor = Cursors.Default
+            FormMain.dgPortfolio.Cursor = Cursors.Default
             Return False
             Exit Function
         Catch ex As Exception
             MessageBox.Show($"Erro ao processar a resposta: Verifique o simbolo, talvez {simbolosCripto} não esteja correto. " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            FormMain.lbLoadFromMarket.Visible = False
+            FormMain.TimerBlink.Stop()
+            FormMain.Cursor = Cursors.Default
+            FormMain.dgPortfolio.Cursor = Cursors.Default
             Return False
             Exit Function
         End Try

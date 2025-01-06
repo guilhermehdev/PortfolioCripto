@@ -163,7 +163,7 @@ Public Class FormMain
     Public Sub criptoGraph(criptoDic As Dictionary(Of String, Decimal))
         Dim gCriptos As New Charts
 
-        gCriptos.collumGraph(480, 190, -2, 360, "Criptos", "Criptos", 10, Color.Aqua, Color.FromArgb(30, 30, 30), SeriesChartType.Column, criptoDic, PanelGraphs)
+        gCriptos.collumGraph(500, 185, -2, 360, "Criptos", "Criptos", 10, Color.Aqua, Color.FromArgb(30, 30, 30), SeriesChartType.Column, criptoDic, PanelGraphs)
     End Sub
 
     Public Sub addressGraph(criptoDic As Dictionary(Of String, Decimal))
