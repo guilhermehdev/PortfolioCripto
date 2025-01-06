@@ -869,6 +869,21 @@ Public Class JSON
 
             End If
 
+            Dim mcap = row.Cells(9).Value
+            If mcap <= 100000000 Then
+                row.Cells(9).Style.ForeColor = Color.DeepSkyBlue
+            ElseIf mcap > 100000000 And mcap <= 300000000 Then
+                row.Cells(9).Style.ForeColor = Color.LimeGreen
+            ElseIf mcap > 300000000 And mcap <= 600000000 Then
+                row.Cells(9).Style.ForeColor = Color.YellowGreen
+            ElseIf mcap > 600000000 And mcap <= 1000000000 Then
+                row.Cells(9).Style.ForeColor = Color.Yellow
+            ElseIf mcap > 1000000000 And mcap <= 10000000000 Then
+                row.Cells(9).Style.ForeColor = Color.DarkOrange
+            ElseIf mcap > 10000000000 Then
+                row.Cells(9).Style.ForeColor = Color.Red
+            End If
+
             row.Height = 35
             datagrid.ClearSelection()
             datagrid.CurrentCell = Nothing
