@@ -522,8 +522,8 @@ Public Class JSON
             FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
             FormMain.lbTotalEntradaUSD.Text = USDformat(initialValue)
             FormMain.lbTotalEntradaBRL.Text = BRLformat(initialValue * USDBRLprice)
-            FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal)
-            FormMain.lbValoresHojeBRL.Text = BRLformat(currValueTotal * USDBRLprice)
+            FormMain.lbValoresHojeUSD.Text = USDformat(total)
+            FormMain.lbValoresHojeBRL.Text = BRLformat(total * USDBRLprice)
             FormMain.lbRoiUSD.Text = USDformat(profit)
             FormMain.lbCaixa.Text = USDformat(cashflow)
             FormMain.lbCaixaBRL.Text = BRLformat(cashflow * USDBRLprice)
