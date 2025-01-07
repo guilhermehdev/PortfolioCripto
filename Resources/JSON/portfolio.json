@@ -5,7 +5,7 @@
       "Qtd": 1.23,
       "Data": "26/11/2024",
       "Wallet": "Phantom",
-      "LastPrice": 193.97910633
+      "LastPrice": 206.82499422
     }
   ],
   "PENDLE": [
@@ -14,7 +14,7 @@
       "Qtd": 44.35,
       "Data": "01/08/2024",
       "Wallet": "TrustWallet",
-      "LastPrice": 5.06973395
+      "LastPrice": 4.90239067
     }
   ],
   "NEAR": [
@@ -23,25 +23,7 @@
       "Qtd": 19.61,
       "Data": "22/08/2024",
       "Wallet": "TrustWallet",
-      "LastPrice": 5.28500556
-    }
-  ],
-  "ENA": [
-    {
-      "InitialPrice": 0.9393,
-      "Qtd": 108.64,
-      "Data": "22/11/2024",
-      "Wallet": "Binance",
-      "LastPrice": 0.96035065
-    }
-  ],
-  "VISTA": [
-    {
-      "InitialPrice": 31.49,
-      "Qtd": 1.05,
-      "Data": "22/11/2024",
-      "Wallet": "Gate.io",
-      "LastPrice": 31.32032094
+      "LastPrice": 5.52876941
     }
   ],
   "ATH": [
@@ -50,43 +32,43 @@
       "Qtd": 174.29,
       "Data": "13/12/2024",
       "Wallet": "MEXC",
-      "LastPrice": 0.06322538
+      "LastPrice": 0.07118427
     }
   ],
   "DOG": [
     {
-      "InitialPrice": 0.00505,
-      "Qtd": 23250.0,
+      "InitialPrice": 0.006737,
+      "Qtd": 27720.3,
       "Data": "18/12/2024",
       "Wallet": "Gate.io",
-      "LastPrice": 0.00645519
+      "LastPrice": 0.00623741
     }
   ],
   "ONDO": [
     {
-      "InitialPrice": 1.61,
-      "Qtd": 63.87,
+      "InitialPrice": 1.6,
+      "Qtd": 70.62,
       "Data": "22/11/2024",
       "Wallet": "Gate.io",
-      "LastPrice": 1.45221921
+      "LastPrice": 1.41834204
     }
   ],
   "AURORA": [
     {
-      "InitialPrice": 0.2265,
-      "Qtd": 19.4,
+      "InitialPrice": 0.2134,
+      "Qtd": 235.32,
       "Data": "18/12/2024",
       "Wallet": "Gate.io",
-      "LastPrice": 0.21152197
+      "LastPrice": 0.20027571
     }
   ],
   "USUAL": [
     {
       "InitialPrice": 1.04,
-      "Qtd": 41.94,
+      "Qtd": 51.73,
       "Data": "18/12/2024",
       "Wallet": "Binance",
-      "LastPrice": 0.94198076
+      "LastPrice": 0.83272608
     }
   ],
   "ETC": [
@@ -95,16 +77,16 @@
       "Qtd": 0.198,
       "Data": "18/12/2024",
       "Wallet": "Metamask",
-      "LastPrice": 25.78457499
+      "LastPrice": 26.59858912
     }
   ],
   "USDT": [
     {
-      "InitialPrice": 1.0,
-      "Qtd": 50.0,
+      "InitialPrice": 0.999,
+      "Qtd": 124.32,
       "Data": "01/01/2025",
       "Wallet": "Binance",
-      "LastPrice": 0.9981114
+      "LastPrice": 0.99971516
     }
   ],
   "ETH": [
@@ -113,7 +95,7 @@
       "Qtd": 0.000765,
       "Data": "01/01/2025",
       "Wallet": "ATOMIC",
-      "LastPrice": 3349.74224343
+      "LastPrice": 3449.94275746
     }
   ]
 }
