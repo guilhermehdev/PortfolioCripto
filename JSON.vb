@@ -497,12 +497,12 @@ Public Class JSON
                 FormMain.lbTotalBRL.ForeColor = Color.FromArgb(255, 73, 73)
             End If
 
-            If currValueTotal < initialValue Then
+            If total < initialValue Then
                 FormMain.lbValoresHojeUSD.ForeColor = Color.IndianRed
                 FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal * -1)
             End If
 
-            If (currValueTotal * USDBRLprice) < (initialValue * USDBRLprice) Then
+            If (total * USDBRLprice) < (initialValue * USDBRLprice) Then
                 FormMain.lbValoresHojeBRL.ForeColor = Color.IndianRed
                 FormMain.lbValoresHojeBRL.Text = BRLformat((currValueTotal * USDBRLprice) * -1)
             End If
