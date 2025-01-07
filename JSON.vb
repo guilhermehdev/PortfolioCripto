@@ -644,7 +644,7 @@ Public Class JSON
         datagrid.Columns(6).HeaderText = "Preço médio"
         datagrid.Columns(6).Width = 95
         With datagrid.Columns(6).DefaultCellStyle
-            .BackColor = Color.FromArgb(75, 0, 130)
+            .BackColor = Color.FromArgb(50, 50, 50)
             .ForeColor = Color.LightYellow
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -653,7 +653,7 @@ Public Class JSON
         datagrid.Columns(7).HeaderText = "Preço atual"
         datagrid.Columns(7).Width = 95
         With datagrid.Columns(7).DefaultCellStyle
-            .BackColor = Color.FromArgb(75, 0, 130)
+            .BackColor = Color.FromArgb(50, 50, 50)
             .ForeColor = Color.Yellow
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
