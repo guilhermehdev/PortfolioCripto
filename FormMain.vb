@@ -179,15 +179,15 @@ Public Class FormMain
             e.PaintBackground(e.CellBounds, True)
             e.PaintContent(e.CellBounds)
 
-            Using pen As New Pen(Color.FromArgb(50, 50, 50), 0.5)
+            Using pen As New Pen(Color.FromArgb(70, 70, 70), 1)
                 Dim rect = e.CellBounds
                 Dim y = rect.Bottom - 1 ' Posição da linha inferior da célula
                 e.Graphics.DrawLine(pen, rect.Left, y, rect.Right, y)
             End Using
 
-            Dim colunasComLinhasVerticais As Integer() = {0} ' Índices das colunas que terão linhas verticais
+            Dim colunasComLinhasVerticais As Integer() = {6} ' Índices das colunas que terão linhas verticais
             If colunasComLinhasVerticais.Contains(e.ColumnIndex) Then
-                Using pen As New Pen(Color.FromArgb(65, 65, 65), 1)
+                Using pen As New Pen(Color.FromArgb(3, 3, 3), 1)
                     Dim rect = e.CellBounds
                     Dim x = rect.Right - 1 ' Posição da borda direita da célula
                     e.Graphics.DrawLine(pen, x, rect.Top, x, rect.Bottom)
