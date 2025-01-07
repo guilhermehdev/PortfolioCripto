@@ -39,7 +39,7 @@ Public Class Charts
         End With
 
         With chartArea.AxisY
-            .Title = "(Dolar $)"
+            .Title = ""
             .TitleFont = New Font("Arial", 8, FontStyle.Regular)
             .TitleForeColor = Color.Aquamarine
             .LabelStyle.ForeColor = Color.IndianRed
@@ -72,7 +72,8 @@ Public Class Charts
         Next
 
         For Each point In series.Points
-            point.Label = "$" & point.YValues(0).ToString("N2")
+            'point.Label = "$" & point.YValues(0).ToString("N2")
+            point.Label = point.YValues(0).ToString("F2") & "%"
         Next
 
         myChart.Series.Add(series)

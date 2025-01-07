@@ -352,7 +352,9 @@ Public Class JSON
         Dim performWallet As Decimal?
         Dim criptoDic As New Dictionary(Of String, Decimal)
         Dim listAddress As New List(Of String)
+        Dim listCriptos As New List(Of String)
         Dim listInitValue As New List(Of Decimal)
+        Dim listCurrValue As New List(Of Decimal)
         Dim addressDic As New Dictionary(Of String, Decimal)
         Dim difPrice As Decimal = 0
         Dim total As Decimal
@@ -451,11 +453,11 @@ Public Class JSON
                 End If
 
                 newDT.Rows.Add(newRow)
-
-                criptoDic.Add(row("Cripto"), currValueUSD)
-
+                'criptoDic.Add(row("Cripto"), (currValueUSD / total) * 100)
+                listCriptos.Add(row("Cripto"))
                 listAddress.Add(wallet)
                 listInitValue.Add(initialValueUSD)
+                listCurrValue.Add(currValueUSD)
 
                 AppendJSON(newRow("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"))
 
@@ -470,6 +472,10 @@ Public Class JSON
             Dim btcPrice As String = res(0)
             Dim percentCashFlow As Decimal? = (cashflow / total) * 100
             Dim percentInvest As Decimal? = (currValueTotal / total) * 100
+
+            For i = 0 To listCriptos.Count - 1
+                criptoDic.Add(listCriptos(i), (listCurrValue(i) / total) * 100)
+            Next
 
             For i = 0 To listAddress.Count - 1
                 listSum.Add(New KeyValuePair(Of String, Decimal)(listAddress(i), SomaSe(arrayInitValue, arrayAddress, listAddress(i))))
