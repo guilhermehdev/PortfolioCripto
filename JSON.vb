@@ -355,6 +355,7 @@ Public Class JSON
         Dim listInitValue As New List(Of Decimal)
         Dim addressDic As New Dictionary(Of String, Decimal)
         Dim difPrice As Decimal = 0
+        Dim total As Decimal
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
@@ -381,7 +382,6 @@ Public Class JSON
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
                 Dim marketcap As String = valores(1)
-
                 Dim currPrice As Decimal = preco
                 Dim initialPrice As Decimal = row("InitialPrice").ToString.Replace(".", ",")
                 Dim initialValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * row("InitialPrice").ToString.Replace(".", ",")
@@ -392,15 +392,16 @@ Public Class JSON
                 currValueBRL = currValueUSD * USDBRLprice
                 roi = currValueUSD - initialValueUSD
                 perform = (roi / initialValueUSD) * 100
-
+                initialValue += initialValueUSD
 
                 If row("Cripto") = "USDT" Or row("Cripto") = "USDC" Then
                     cashflow += currValueUSD
                 Else
                     currValueTotal += currValueUSD
                     profit += roi
-                    initialValue += initialValueUSD
                 End If
+
+                total = cashflow + currValueTotal
 
                 x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
 
@@ -464,6 +465,11 @@ Public Class JSON
             Dim arrayAddress() As String = listAddress.ToArray
             Dim arraySum() = Array.Empty(Of Object)()
             Dim listSum As New List(Of KeyValuePair(Of String, Decimal))
+            Dim task As String = Await getCriptoData.GetCriptoPrices("BTC")
+            Dim res() As String = task.Split("|"c)
+            Dim btcPrice As String = res(0)
+            Dim percentCashFlow As Decimal? = (cashflow / total) * 100
+            Dim percentInvest As Decimal? = (currValueTotal / total) * 100
 
             For i = 0 To listAddress.Count - 1
                 listSum.Add(New KeyValuePair(Of String, Decimal)(listAddress(i), SomaSe(arrayInitValue, arrayAddress, listAddress(i))))
@@ -484,10 +490,6 @@ Public Class JSON
             Else
                 FormMain.lbTotalBRL.ForeColor = Color.FromArgb(255, 73, 73)
             End If
-
-            Dim task As String = Await getCriptoData.GetCriptoPrices("BTC")
-            Dim res() As String = task.Split("|"c)
-            Dim btcPrice As String = res(0)
 
             If currValueTotal < initialValue Then
                 FormMain.lbValoresHojeUSD.ForeColor = Color.IndianRed
@@ -519,6 +521,8 @@ Public Class JSON
             FormMain.lbRoiUSD.Text = USDformat(profit)
             FormMain.lbCaixa.Text = USDformat(cashflow)
             FormMain.lbCaixaBRL.Text = BRLformat(cashflow * USDBRLprice)
+            FormMain.lbPercentCaixa.Text = $"{percentCashFlow.Value:F2}%"
+            FormMain.lbPercentInvestido.Text = $"{percentInvest.Value:F2}%"
 
             datagrid.DataSource = newDT
             FormatGrid(datagrid)
@@ -590,7 +594,7 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
-        datagrid.Columns(1).HeaderText = "%"
+        datagrid.Columns(1).HeaderText = "Desempenho"
         datagrid.Columns(1).Width = 80
         With datagrid.Columns(1).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)

@@ -51,6 +51,8 @@ Partial Class FormMain
         PictureBox2 = New PictureBox()
         PictureBox1 = New PictureBox()
         PanelPerformance = New Panel()
+        lbPercentInvestido = New Label()
+        lbPercentCaixa = New Label()
         Label9 = New Label()
         Label16 = New Label()
         lbPerformWallet = New Label()
@@ -375,7 +377,7 @@ Partial Class FormMain
         ' PictureBox2
         ' 
         PictureBox2.Image = CType(resources.GetObject("PictureBox2.Image"), Image)
-        PictureBox2.Location = New Point(275, 55)
+        PictureBox2.Location = New Point(275, 60)
         PictureBox2.Name = "PictureBox2"
         PictureBox2.Size = New Size(35, 25)
         PictureBox2.SizeMode = PictureBoxSizeMode.StretchImage
@@ -385,7 +387,7 @@ Partial Class FormMain
         ' PictureBox1
         ' 
         PictureBox1.Image = CType(resources.GetObject("PictureBox1.Image"), Image)
-        PictureBox1.Location = New Point(168, 55)
+        PictureBox1.Location = New Point(168, 60)
         PictureBox1.Name = "PictureBox1"
         PictureBox1.Size = New Size(35, 25)
         PictureBox1.SizeMode = PictureBoxSizeMode.StretchImage
@@ -394,6 +396,8 @@ Partial Class FormMain
         ' 
         ' PanelPerformance
         ' 
+        PanelPerformance.Controls.Add(lbPercentInvestido)
+        PanelPerformance.Controls.Add(lbPercentCaixa)
         PanelPerformance.Controls.Add(Label9)
         PanelPerformance.Controls.Add(Label16)
         PanelPerformance.Controls.Add(lbPerformWallet)
@@ -405,12 +409,34 @@ Partial Class FormMain
         PanelPerformance.Size = New Size(159, 153)
         PanelPerformance.TabIndex = 29
         ' 
+        ' lbPercentInvestido
+        ' 
+        lbPercentInvestido.AutoSize = True
+        lbPercentInvestido.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        lbPercentInvestido.ForeColor = Color.Gold
+        lbPercentInvestido.Location = New Point(15, 88)
+        lbPercentInvestido.Name = "lbPercentInvestido"
+        lbPercentInvestido.Size = New Size(28, 19)
+        lbPercentInvestido.TabIndex = 16
+        lbPercentInvestido.Text = "0%"
+        ' 
+        ' lbPercentCaixa
+        ' 
+        lbPercentCaixa.AutoSize = True
+        lbPercentCaixa.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        lbPercentCaixa.ForeColor = Color.Gold
+        lbPercentCaixa.Location = New Point(15, 66)
+        lbPercentCaixa.Name = "lbPercentCaixa"
+        lbPercentCaixa.Size = New Size(28, 19)
+        lbPercentCaixa.TabIndex = 15
+        lbPercentCaixa.Text = "0%"
+        ' 
         ' Label9
         ' 
         Label9.AutoSize = True
         Label9.Font = New Font("Calibri", 12F, FontStyle.Italic)
         Label9.ForeColor = Color.White
-        Label9.Location = New Point(115, 59)
+        Label9.Location = New Point(115, 66)
         Label9.Name = "Label9"
         Label9.Size = New Size(48, 19)
         Label9.TabIndex = 14
@@ -443,7 +469,7 @@ Partial Class FormMain
         Label6.AutoSize = True
         Label6.Font = New Font("Calibri", 12F, FontStyle.Italic)
         Label6.ForeColor = Color.White
-        Label6.Location = New Point(66, 83)
+        Label6.Location = New Point(66, 88)
         Label6.Name = "Label6"
         Label6.Size = New Size(97, 19)
         Label6.TabIndex = 0
@@ -454,7 +480,7 @@ Partial Class FormMain
         lbDataTotalToday.AutoSize = True
         lbDataTotalToday.Font = New Font("Calibri", 12F, FontStyle.Italic)
         lbDataTotalToday.ForeColor = Color.DarkOrange
-        lbDataTotalToday.Location = New Point(74, 102)
+        lbDataTotalToday.Location = New Point(74, 107)
         lbDataTotalToday.Name = "lbDataTotalToday"
         lbDataTotalToday.Size = New Size(85, 19)
         lbDataTotalToday.TabIndex = 9
@@ -465,7 +491,7 @@ Partial Class FormMain
         Label7.AutoSize = True
         Label7.Font = New Font("Calibri", 12F, FontStyle.Italic)
         Label7.ForeColor = Color.White
-        Label7.Location = New Point(127, 125)
+        Label7.Location = New Point(127, 130)
         Label7.Name = "Label7"
         Label7.Size = New Size(36, 19)
         Label7.TabIndex = 3
@@ -476,7 +502,7 @@ Partial Class FormMain
         lbValoresHojeBRL.AutoSize = True
         lbValoresHojeBRL.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbValoresHojeBRL.ForeColor = Color.DeepSkyBlue
-        lbValoresHojeBRL.Location = New Point(272, 131)
+        lbValoresHojeBRL.Location = New Point(272, 136)
         lbValoresHojeBRL.Name = "lbValoresHojeBRL"
         lbValoresHojeBRL.Size = New Size(37, 19)
         lbValoresHojeBRL.TabIndex = 28
@@ -487,7 +513,7 @@ Partial Class FormMain
         lbValoresHojeUSD.AutoSize = True
         lbValoresHojeUSD.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbValoresHojeUSD.ForeColor = Color.LimeGreen
-        lbValoresHojeUSD.Location = New Point(165, 131)
+        lbValoresHojeUSD.Location = New Point(165, 136)
         lbValoresHojeUSD.Name = "lbValoresHojeUSD"
         lbValoresHojeUSD.Size = New Size(37, 19)
         lbValoresHojeUSD.TabIndex = 27
@@ -498,7 +524,7 @@ Partial Class FormMain
         lbRoiUSD.AutoSize = True
         lbRoiUSD.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbRoiUSD.ForeColor = Color.Lime
-        lbRoiUSD.Location = New Point(165, 154)
+        lbRoiUSD.Location = New Point(165, 159)
         lbRoiUSD.Name = "lbRoiUSD"
         lbRoiUSD.Size = New Size(37, 19)
         lbRoiUSD.TabIndex = 26
@@ -509,7 +535,7 @@ Partial Class FormMain
         lbTotalEntradaBRL.AutoSize = True
         lbTotalEntradaBRL.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbTotalEntradaBRL.ForeColor = Color.DeepSkyBlue
-        lbTotalEntradaBRL.Location = New Point(272, 112)
+        lbTotalEntradaBRL.Location = New Point(272, 117)
         lbTotalEntradaBRL.Name = "lbTotalEntradaBRL"
         lbTotalEntradaBRL.Size = New Size(37, 19)
         lbTotalEntradaBRL.TabIndex = 25
@@ -520,7 +546,7 @@ Partial Class FormMain
         lbTotalEntradaUSD.AutoSize = True
         lbTotalEntradaUSD.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbTotalEntradaUSD.ForeColor = Color.LimeGreen
-        lbTotalEntradaUSD.Location = New Point(165, 112)
+        lbTotalEntradaUSD.Location = New Point(165, 117)
         lbTotalEntradaUSD.Name = "lbTotalEntradaUSD"
         lbTotalEntradaUSD.Size = New Size(37, 19)
         lbTotalEntradaUSD.TabIndex = 24
@@ -551,7 +577,7 @@ Partial Class FormMain
         lbCaixaBRL.AutoSize = True
         lbCaixaBRL.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbCaixaBRL.ForeColor = Color.Ivory
-        lbCaixaBRL.Location = New Point(272, 88)
+        lbCaixaBRL.Location = New Point(272, 95)
         lbCaixaBRL.Name = "lbCaixaBRL"
         lbCaixaBRL.Size = New Size(37, 19)
         lbCaixaBRL.TabIndex = 33
@@ -562,7 +588,7 @@ Partial Class FormMain
         lbCaixa.AutoSize = True
         lbCaixa.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
         lbCaixa.ForeColor = Color.Ivory
-        lbCaixa.Location = New Point(165, 88)
+        lbCaixa.Location = New Point(165, 95)
         lbCaixa.Name = "lbCaixa"
         lbCaixa.Size = New Size(37, 19)
         lbCaixa.TabIndex = 32
@@ -857,5 +883,7 @@ Partial Class FormMain
     Friend WithEvents lbCaixa As Label
     Friend WithEvents Label9 As Label
     Friend WithEvents lbCaixaBRL As Label
+    Friend WithEvents lbPercentInvestido As Label
+    Friend WithEvents lbPercentCaixa As Label
 
 End Class
