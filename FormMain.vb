@@ -169,7 +169,7 @@ Public Class FormMain
     Public Sub addressGraph(criptoDic As Dictionary(Of String, Decimal))
         Dim gCriptos As New Charts
 
-        gCriptos.pieGraph(350, 190, -2, 830, "Custódia", 10, Color.Aqua, Color.FromArgb(30, 30, 30), criptoDic, 7.5, Color.White, PanelGraphs)
+        gCriptos.pieGraph(330, 190, -2, 850, "Custódia", 10, Color.Aqua, Color.FromArgb(30, 30, 30), criptoDic, 7.5, Color.White, PanelGraphs)
     End Sub
 
     Private Sub dgPortfolio_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles dgPortfolio.CellPainting

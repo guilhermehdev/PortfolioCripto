@@ -18,7 +18,6 @@ Public Class FormEntradas
 
     End Sub
 
-
     Private Sub FormEntradas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Dim json As New JSON
         cbCripto.SelectedItem = 0
@@ -126,7 +125,7 @@ Public Class FormEntradas
         If json.DeleteJSON(key) Then
             dgCriptos.Rows.Remove(row)
             FormEntradas_Load(sender, e)
-            FormMain.Setup()
+            'FormMain.Setup()
         End If
 
     End Sub

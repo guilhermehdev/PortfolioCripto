@@ -240,7 +240,7 @@ Partial Class FormEntradas
         ButtonCancel.Name = "ButtonCancel"
         ButtonCancel.Size = New Size(72, 23)
         ButtonCancel.TabIndex = 23
-        ButtonCancel.Text = "Cancelar"
+        ButtonCancel.Text = "Fechar"
         ButtonCancel.UseVisualStyleBackColor = False
         ' 
         ' Label3
