@@ -63,6 +63,8 @@ Public Class FormMain
 
             Adjust()
 
+            Me.CenterToScreen()
+
         Catch ex As Exception
 
         End Try
@@ -92,6 +94,7 @@ Public Class FormMain
         Me.Show()
         Me.WindowState = FormWindowState.Normal
         NotifyIcon1.Visible = False
+        Me.CenterToScreen()
     End Sub
 
     Private Sub IntervaloToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles IntervaloToolStripMenuItem.Click
@@ -128,7 +131,7 @@ Public Class FormMain
         'dgPortfolio.Height = 350
         'End If
         Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + 60
-        Me.CenterToScreen()
+
     End Sub
 
     Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter
