@@ -2,28 +2,28 @@
   "SOL": [
     {
       "InitialPrice": 155.0,
-      "Qtd": 1.17,
+      "Qtd": 1.22,
       "Data": "26/11/2024",
       "Wallet": "Phantom",
-      "LastPrice": 217.62897865
+      "LastPrice": 244.10583254
     }
   ],
   "PENDLE": [
     {
-      "InitialPrice": 3.61,
-      "Qtd": 8.21,
+      "InitialPrice": 3.62,
+      "Qtd": 29.78,
       "Data": "01/08/2024",
       "Wallet": "Binance",
-      "LastPrice": 4.26022117
+      "LastPrice": 3.726907
     }
   ],
   "NEAR": [
     {
-      "InitialPrice": 4.66,
-      "Qtd": 6.0,
+      "InitialPrice": 4.71,
+      "Qtd": 13.97,
       "Data": "22/08/2024",
       "Wallet": "Binance",
-      "LastPrice": 5.55394625
+      "LastPrice": 5.18772421
     }
   ],
   "ATH": [
@@ -32,52 +32,79 @@
       "Qtd": 174.29,
       "Data": "13/12/2024",
       "Wallet": "MEXC",
-      "LastPrice": 0.06682741
+      "LastPrice": 0.05985972
     }
   ],
   "DOG": [
     {
-      "InitialPrice": 0.0051,
-      "Qtd": 3910.0,
+      "InitialPrice": 0.004932,
+      "Qtd": 16632.0,
       "Data": "18/12/2024",
       "Wallet": "Gate.io",
-      "LastPrice": 0.00593719
+      "LastPrice": 0.0048647
     }
   ],
   "USDT": [
     {
-      "InitialPrice": 0.999,
-      "Qtd": 546.88,
+      "InitialPrice": 0.998,
+      "Qtd": 138.79,
       "Data": "01/01/2025",
-      "Wallet": "Binance",
-      "LastPrice": 1.00020863
+      "Wallet": "OUTROS",
+      "LastPrice": 0.99961989
     }
   ],
   "VISTA": [
     {
-      "InitialPrice": 37.63,
-      "Qtd": 0.999,
+      "InitialPrice": 35.0,
+      "Qtd": 1.41,
       "Data": "17/01/2025",
       "Wallet": "Gate.io",
-      "LastPrice": 29.63030603
+      "LastPrice": 22.40552199
     }
   ],
   "AURORA": [
     {
-      "InitialPrice": 0.205,
-      "Qtd": 97.04,
+      "InitialPrice": 0.206,
+      "Qtd": 244.0,
       "Data": "17/01/2025",
       "Wallet": "Gate.io",
-      "LastPrice": 0.20758382
+      "LastPrice": 0.18603835
     }
   ],
   "SEND": [
     {
-      "InitialPrice": 2.39,
-      "Qtd": 8.34,
+      "InitialPrice": 2.21,
+      "Qtd": 43.42,
       "Data": "17/01/2025",
       "Wallet": "Gate.io",
-      "LastPrice": 2.40462818
+      "LastPrice": 2.0658141
+    }
+  ],
+  "MELANIA": [
+    {
+      "InitialPrice": 11.25,
+      "Qtd": 1.0,
+      "Data": "17/01/2025",
+      "Wallet": "Phantom",
+      "LastPrice": 3.96715081
+    }
+  ],
+  "TRUMP": [
+    {
+      "InitialPrice": 33.4,
+      "Qtd": 1.0,
+      "Data": "20/01/2025",
+      "Wallet": "Bybit",
+      "LastPrice": 38.89019092
+    }
+  ],
+  "XRP": [
+    {
+      "InitialPrice": 3.1,
+      "Qtd": 10.00,
+      "Data": "17/01/2025",
+      "Wallet": "Binance",
+      "LastPrice": 3.17571167
     }
   ]
 }
