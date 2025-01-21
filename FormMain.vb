@@ -122,12 +122,13 @@ Public Class FormMain
     Private Sub Adjust()
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
         PanelGraphs.Width = Me.Width
-        If dgPortfolio.RowCount < 10 Then
-            dgPortfolio.Height = (dgPortfolio.RowCount * 35) + 43
-        Else
-            'dgPortfolio.Height = 350
-        End If
+        'If dgPortfolio.RowCount < 10 Then
+        dgPortfolio.Height = (dgPortfolio.RowCount * 35) + 43
+        'Else
+        'dgPortfolio.Height = 350
+        'End If
         Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + 60
+        Me.CenterToScreen()
     End Sub
 
     Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter
