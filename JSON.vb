@@ -756,6 +756,7 @@ Public Class JSON
                     row.Cells(2).Style.ForeColor = Color.DodgerBlue
                 Case "MEXC"
                     row.Cells(2).Style.ForeColor = Color.White
+
             End Select
 
             Select Case CDec(row.Cells(12).Value)
