@@ -2,10 +2,10 @@
   "SOL": [
     {
       "InitialPrice": 167.0,
-      "Qtd": 1.4,
+      "Qtd": 1.15,
       "Data": "26/11/2024",
       "Wallet": "Phantom",
-      "LastPrice": 226.3570469
+      "LastPrice": 225.6163941
     }
   ],
   "ATH": [
@@ -14,16 +14,16 @@
       "Qtd": 174.29,
       "Data": "13/12/2024",
       "Wallet": "MEXC",
-      "LastPrice": 0.05188087
+      "LastPrice": 0.05169021
     }
   ],
   "USDT": [
     {
       "InitialPrice": 0.998,
-      "Qtd": 431.0,
+      "Qtd": 506.0,
       "Data": "01/01/2025",
       "Wallet": "OUTROS",
-      "LastPrice": 0.99960738
+      "LastPrice": 0.99968544
     }
   ],
   "XRP": [
@@ -32,7 +32,7 @@
       "Qtd": 21.98,
       "Data": "17/01/2025",
       "Wallet": "TrustWallet",
-      "LastPrice": 2.90368443
+      "LastPrice": 2.89486406
     }
   ],
   "BTC": [
@@ -41,7 +41,7 @@
       "Qtd": 0.0002,
       "Data": "27/01/2025",
       "Wallet": "Binance",
-      "LastPrice": 99240.53438951
+      "LastPrice": 99173.49597281
     }
   ]
 }
