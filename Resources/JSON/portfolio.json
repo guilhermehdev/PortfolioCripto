@@ -2,10 +2,10 @@
   "SOL": [
     {
       "InitialPrice": 167.0,
-      "Qtd": 1.15,
+      "Qtd": 1.39,
       "Data": "26/11/2024",
       "Wallet": "Phantom",
-      "LastPrice": 225.6163941
+      "LastPrice": 233.18529723
     }
   ],
   "ATH": [
@@ -14,25 +14,25 @@
       "Qtd": 174.29,
       "Data": "13/12/2024",
       "Wallet": "MEXC",
-      "LastPrice": 0.05169021
+      "LastPrice": 0.05478407
     }
   ],
   "USDT": [
     {
       "InitialPrice": 0.998,
-      "Qtd": 506.0,
+      "Qtd": 369.88,
       "Data": "01/01/2025",
       "Wallet": "OUTROS",
-      "LastPrice": 0.99968544
+      "LastPrice": 1.00031173
     }
   ],
   "XRP": [
     {
       "InitialPrice": 2.97,
-      "Qtd": 21.98,
+      "Qtd": 28.77,
       "Data": "17/01/2025",
       "Wallet": "TrustWallet",
-      "LastPrice": 2.89486406
+      "LastPrice": 3.05594429
     }
   ],
   "BTC": [
@@ -41,7 +41,43 @@
       "Qtd": 0.0002,
       "Data": "27/01/2025",
       "Wallet": "Binance",
-      "LastPrice": 99173.49597281
+      "LastPrice": 103990.62798985
+    }
+  ],
+  "NEAR": [
+    {
+      "InitialPrice": 4.69,
+      "Qtd": 4.95,
+      "Data": "28/01/2025",
+      "Wallet": "Binance",
+      "LastPrice": 4.7147743
+    }
+  ],
+  "PENDLE": [
+    {
+      "InitialPrice": 3.6,
+      "Qtd": 3.56,
+      "Data": "28/01/2025",
+      "Wallet": "Binance",
+      "LastPrice": 3.81865096
+    }
+  ],
+  "FET": [
+    {
+      "InitialPrice": 1.07,
+      "Qtd": 14.47,
+      "Data": "28/01/2025",
+      "Wallet": "Binance",
+      "LastPrice": 1.04901741
+    }
+  ],
+  "DOG": [
+    {
+      "InitialPrice": 0.00381,
+      "Qtd": 2320.00,
+      "Data": "28/01/2025",
+      "Wallet": "Gate.io",
+      "LastPrice": 0.00421038
     }
   ]
 }
