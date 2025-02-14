@@ -5,7 +5,7 @@
       "Qtd": 1.05,
       "Data": "26/11/2024",
       "Wallet": "Binance",
-      "LastPrice": 203.33167325
+      "LastPrice": 203.39427324
     }
   ],
   "ATH": [
@@ -14,16 +14,16 @@
       "Qtd": 174.29,
       "Data": "13/12/2024",
       "Wallet": "MEXC",
-      "LastPrice": 0.03872637
+      "LastPrice": 0.03943041
     }
   ],
   "USDT": [
     {
       "InitialPrice": 0.998,
-      "Qtd": 140.0,
+      "Qtd": 156.31,
       "Data": "01/01/2025",
       "Wallet": "OUTROS",
-      "LastPrice": 1.00038246
+      "LastPrice": 1.00025278
     }
   ],
   "XRP": [
@@ -32,70 +32,61 @@
       "Qtd": 40.55,
       "Data": "17/01/2025",
       "Wallet": "TrustWallet",
-      "LastPrice": 2.43772376
+      "LastPrice": 2.75799444
     }
   ],
   "BTC": [
     {
       "InitialPrice": 97949.0,
-      "Qtd": 0.0005994,
+      "Qtd": 0.00086855,
       "Data": "27/01/2025",
       "Wallet": "Binance",
-      "LastPrice": 97512.74439764
+      "LastPrice": 98278.20369024
     }
   ],
   "NEAR": [
     {
-      "InitialPrice": 4.38,
-      "Qtd": 20.43,
+      "InitialPrice": 4.27,
+      "Qtd": 23.23,
       "Data": "28/01/2025",
       "Wallet": "Binance",
-      "LastPrice": 3.23740703
-    }
-  ],
-  "RON": [
-    {
-      "InitialPrice": 1.21,
-      "Qtd": 28.91,
-      "Data": "28/01/2025",
-      "Wallet": "Binance",
-      "LastPrice": 1.12684443
+      "LastPrice": 3.58658221
     }
   ],
   "VIRTUAL": [
     {
       "InitialPrice": 1.41,
-      "Qtd": 39.64,
+      "Qtd": 19.83,
       "Data": "28/01/2025",
       "Wallet": "Gate.io",
-      "LastPrice": 1.23944873
+      "LastPrice": 1.44744927
     }
   ],
   "DOG": [
     {
-      "InitialPrice": 0.003079,
-      "Qtd": 11331.0,
+      "InitialPrice": 0.00303,
+      "Qtd": 14801.0,
       "Data": "28/01/2025",
       "Wallet": "Gate.io",
-      "LastPrice": 0.00306815
+      "LastPrice": 0.00295483
     }
   ],
   "ETH": [
     {
       "InitialPrice": 2751.0,
-      "Qtd": 0.0218,
+      "Qtd": 0.01179,
       "Data": "05/02/2025",
       "Wallet": "Binance",
-      "LastPrice": 2682.57264642
+      "LastPrice": 2762.48625823
     }
   ],
   "PENDLE": [
     {
-      "InitialPrice": 3.46,
-      "Qtd": 9.43,
+      "InitialPrice": 3.42,
+      "Qtd": 15.23,
       "Data": "07/02/2025",
       "Wallet": "Binance",
-      "LastPrice": 3.46325212
+      "LastPrice": 3.62903514
     }
   ]
 }
