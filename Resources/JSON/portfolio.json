@@ -5,43 +5,43 @@
       "Qtd": 174.29,
       "Data": "13/12/2024",
       "Wallet": "MEXC",
-      "LastPrice": 0.03235001
+      "LastPrice": 0.03703397
     }
   ],
   "USDT": [
     {
       "InitialPrice": 0.998,
-      "Qtd": 158.0,
+      "Qtd": 53.0,
       "Data": "01/01/2025",
       "Wallet": "OUTROS",
-      "LastPrice": 0.99894099
+      "LastPrice": 0.99964725
     }
   ],
   "XRP": [
     {
-      "InitialPrice": 2.56,
-      "Qtd": 41.54,
+      "InitialPrice": 2.5,
+      "Qtd": 48.35,
       "Data": "17/01/2025",
       "Wallet": "TrustWallet",
-      "LastPrice": 2.25840492
+      "LastPrice": 2.14255986
     }
   ],
   "BTC": [
     {
-      "InitialPrice": 93835.0,
-      "Qtd": 0.001758,
+      "InitialPrice": 91543.0,
+      "Qtd": 0.0020079,
       "Data": "27/01/2025",
       "Wallet": "TrustWallet",
-      "LastPrice": 86727.19507811
+      "LastPrice": 84481.0473627
     }
   ],
   "NEAR": [
     {
-      "InitialPrice": 3.99,
-      "Qtd": 23.23,
+      "InitialPrice": 3.57,
+      "Qtd": 26.71,
       "Data": "28/01/2025",
       "Wallet": "TrustWallet",
-      "LastPrice": 3.05619278
+      "LastPrice": 3.07556173
     }
   ],
   "VIRTUAL": [
@@ -50,25 +50,34 @@
       "Qtd": 42.2,
       "Data": "28/01/2025",
       "Wallet": "Gate.io",
-      "LastPrice": 1.17139105
+      "LastPrice": 1.0575524
     }
   ],
   "ETH": [
     {
-      "InitialPrice": 2640.0,
-      "Qtd": 0.0324,
+      "InitialPrice": 2584.0,
+      "Qtd": 0.0394,
       "Data": "05/02/2025",
       "Wallet": "TrustWallet",
-      "LastPrice": 2400.74311032
+      "LastPrice": 2233.93602201
     }
   ],
   "PENDLE": [
     {
-      "InitialPrice": 3.15,
-      "Qtd": 27.9,
+      "InitialPrice": 3.09,
+      "Qtd": 31.5,
       "Data": "24/02/2025",
       "Wallet": "Binance",
-      "LastPrice": 2.83446831
+      "LastPrice": 2.87475254
+    }
+  ],
+  "DOG": [
+    {
+      "InitialPrice": 0.002053,
+      "Qtd": 12166.8,
+      "Data": "28/02/2025",
+      "Wallet": "Gate.io",
+      "LastPrice": 0.00216872
     }
   ]
 }
