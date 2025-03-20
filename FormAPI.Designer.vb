@@ -25,11 +25,8 @@ Partial Class FormAPI
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormAPI))
         Label1 = New Label()
         tbAPIKey = New TextBox()
-        btSalvarAPIKey = New Button()
-        btSalvarURLPro = New Button()
         tbAPIURLPro = New TextBox()
         Label2 = New Label()
-        btSalvarURLSandbox = New Button()
         tbURLSandbox = New TextBox()
         Label3 = New Label()
         cbAPIActive = New ComboBox()
@@ -55,34 +52,6 @@ Partial Class FormAPI
         tbAPIKey.Size = New Size(435, 23)
         tbAPIKey.TabIndex = 1
         ' 
-        ' btSalvarAPIKey
-        ' 
-        btSalvarAPIKey.BackColor = Color.SteelBlue
-        btSalvarAPIKey.Cursor = Cursors.Hand
-        btSalvarAPIKey.FlatAppearance.BorderSize = 0
-        btSalvarAPIKey.FlatStyle = FlatStyle.Flat
-        btSalvarAPIKey.ForeColor = SystemColors.ButtonHighlight
-        btSalvarAPIKey.Location = New Point(476, 45)
-        btSalvarAPIKey.Name = "btSalvarAPIKey"
-        btSalvarAPIKey.Size = New Size(58, 23)
-        btSalvarAPIKey.TabIndex = 18
-        btSalvarAPIKey.Text = "Gravar"
-        btSalvarAPIKey.UseVisualStyleBackColor = False
-        ' 
-        ' btSalvarURLPro
-        ' 
-        btSalvarURLPro.BackColor = Color.SteelBlue
-        btSalvarURLPro.Cursor = Cursors.Hand
-        btSalvarURLPro.FlatAppearance.BorderSize = 0
-        btSalvarURLPro.FlatStyle = FlatStyle.Flat
-        btSalvarURLPro.ForeColor = SystemColors.ButtonHighlight
-        btSalvarURLPro.Location = New Point(476, 89)
-        btSalvarURLPro.Name = "btSalvarURLPro"
-        btSalvarURLPro.Size = New Size(58, 23)
-        btSalvarURLPro.TabIndex = 21
-        btSalvarURLPro.Text = "Gravar"
-        btSalvarURLPro.UseVisualStyleBackColor = False
-        ' 
         ' tbAPIURLPro
         ' 
         tbAPIURLPro.Location = New Point(35, 89)
@@ -99,20 +68,6 @@ Partial Class FormAPI
         Label2.Size = New Size(70, 15)
         Label2.TabIndex = 19
         Label2.Text = "API URL Pro"
-        ' 
-        ' btSalvarURLSandbox
-        ' 
-        btSalvarURLSandbox.BackColor = Color.SteelBlue
-        btSalvarURLSandbox.Cursor = Cursors.Hand
-        btSalvarURLSandbox.FlatAppearance.BorderSize = 0
-        btSalvarURLSandbox.FlatStyle = FlatStyle.Flat
-        btSalvarURLSandbox.ForeColor = SystemColors.ButtonHighlight
-        btSalvarURLSandbox.Location = New Point(476, 133)
-        btSalvarURLSandbox.Name = "btSalvarURLSandbox"
-        btSalvarURLSandbox.Size = New Size(58, 23)
-        btSalvarURLSandbox.TabIndex = 24
-        btSalvarURLSandbox.Text = "Gravar"
-        btSalvarURLSandbox.UseVisualStyleBackColor = False
         ' 
         ' tbURLSandbox
         ' 
@@ -136,7 +91,7 @@ Partial Class FormAPI
         cbAPIActive.FormattingEnabled = True
         cbAPIActive.Location = New Point(35, 177)
         cbAPIActive.Name = "cbAPIActive"
-        cbAPIActive.Size = New Size(499, 23)
+        cbAPIActive.Size = New Size(435, 23)
         cbAPIActive.TabIndex = 25
         ' 
         ' Label4
@@ -182,18 +137,15 @@ Partial Class FormAPI
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        ClientSize = New Size(569, 248)
+        ClientSize = New Size(506, 248)
         Controls.Add(btCancelar)
         Controls.Add(btSaveActiveAPI)
         Controls.Add(Label4)
         Controls.Add(cbAPIActive)
-        Controls.Add(btSalvarURLSandbox)
         Controls.Add(tbURLSandbox)
         Controls.Add(Label3)
-        Controls.Add(btSalvarURLPro)
         Controls.Add(tbAPIURLPro)
         Controls.Add(Label2)
-        Controls.Add(btSalvarAPIKey)
         Controls.Add(tbAPIKey)
         Controls.Add(Label1)
         FormBorderStyle = FormBorderStyle.FixedSingle
@@ -209,11 +161,8 @@ Partial Class FormAPI
 
     Friend WithEvents Label1 As Label
     Friend WithEvents tbAPIKey As TextBox
-    Friend WithEvents btSalvarAPIKey As Button
-    Friend WithEvents btSalvarURLPro As Button
     Friend WithEvents tbAPIURLPro As TextBox
     Friend WithEvents Label2 As Label
-    Friend WithEvents btSalvarURLSandbox As Button
     Friend WithEvents tbURLSandbox As TextBox
     Friend WithEvents Label3 As Label
     Friend WithEvents cbAPIActive As ComboBox
