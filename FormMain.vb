@@ -21,7 +21,7 @@ Public Class FormMain
         Dim Cjson As New JSON
         Dim chart As New Charts
 
-        If My.Settings.activeAPI = Nothing Then
+        If My.Settings.apiUrl = Nothing Or My.Settings.activeAPI = Nothing Or My.Settings.apiCMCKey = Nothing Then
             FormAPI.ShowDialog()
         Else
             Try
