@@ -5,70 +5,52 @@
       "Qtd": 174.29,
       "Data": "13/12/2024",
       "Wallet": "MEXC",
-      "LastPrice": 0.03590226
+      "LastPrice": 0.03521326
     }
   ],
   "USDT": [
     {
       "InitialPrice": 0.998,
-      "Qtd": 125.0,
+      "Qtd": 281.0,
       "Data": "01/01/2025",
       "Wallet": "OUTROS",
-      "LastPrice": 1.00003914
+      "LastPrice": 0.99996099
     }
   ],
   "BTC": [
     {
-      "InitialPrice": 91543.0,
-      "Qtd": 0.0020079,
+      "InitialPrice": 88231.24,
+      "Qtd": 0.00227929,
       "Data": "27/01/2025",
       "Wallet": "TrustWallet",
-      "LastPrice": 91108.43548992
-    }
-  ],
-  "NEAR": [
-    {
-      "InitialPrice": 3.14,
-      "Qtd": 32.41,
-      "Data": "28/01/2025",
-      "Wallet": "TrustWallet",
-      "LastPrice": 3.08089982
+      "LastPrice": 87415.30607259
     }
   ],
   "VIRTUAL": [
     {
-      "InitialPrice": 1.327,
-      "Qtd": 48.97,
+      "InitialPrice": 1.146,
+      "Qtd": 78.09,
       "Data": "28/01/2025",
       "Wallet": "Gate.io",
-      "LastPrice": 0.84265217
+      "LastPrice": 0.8094453
     }
   ],
   "ETH": [
     {
-      "InitialPrice": 2584.0,
-      "Qtd": 0.0394,
+      "InitialPrice": 2241.0,
+      "Qtd": 0.06112044,
       "Data": "05/02/2025",
       "Wallet": "TrustWallet",
-      "LastPrice": 2289.45355794
-    }
-  ],
-  "PENDLE": [
-    {
-      "InitialPrice": 2.97,
-      "Qtd": 45.98,
-      "Data": "24/02/2025",
-      "Wallet": "Binance",
-      "LastPrice": 2.61767428
+      "LastPrice": 2091.83453827
     }
   ],
   "TOMI": [
     {
-      "InitialPrice": 0.005,
-      "Qtd": 4073.00,
+      "InitialPrice": 0.003645,
+      "Qtd": 5480.00,
       "Data": "28/02/2025",
       "Wallet": "Gate.io",
-      "LastPrice": 0.00544929
+      "LastPrice": 0.00313257
     }
   ]
 }
