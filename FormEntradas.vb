@@ -9,7 +9,8 @@ Public Class FormEntradas
         If (IsNothing(tbQtd.Text) Or tbQtd.Text = 0) Or (Not IsNumeric(TbPrecoEntrada.Text) Or TbPrecoEntrada.Text = 0 Or IsNothing(TbPrecoEntrada)) Then
             MsgBox("Preencha todos os campos!")
         Else
-            If json.AppendJSON(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1) Then
+            'If json.AppendJSONLocal(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1) Then
+            If json.AppendJSONToBin(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1) Then
                 MsgBox("Salvo!")
                 FormEntradas_Load(sender, e)
                 'FormMain.Setup()
@@ -122,7 +123,7 @@ Public Class FormEntradas
         Dim row As DataGridViewRow = dgCriptos.SelectedRows.Item(0)
 
         Dim key As String = dgCriptos.SelectedRows.Item(0).Cells(0).Value.ToString()
-        If json.DeleteJSON(key) Then
+        If json.DeleteJSONLocal(key) Then
             dgCriptos.Rows.Remove(row)
             FormEntradas_Load(sender, e)
             'FormMain.Setup()

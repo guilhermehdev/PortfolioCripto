@@ -5,6 +5,7 @@ Imports System.Globalization
 Imports System.IO
 Imports System.Windows.Forms.VisualStyles.VisualStyleElement
 Imports System.Net.Http
+Imports System.Text
 
 
 Public Class JSON
@@ -18,7 +19,7 @@ Public Class JSON
         Return jsonString
     End Function
 
-    Async Function BaixarJSONPublico() As Task
+    Async Function loadJSONfromJSONBIN() As Task
         Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}/latest"
 
         Using client As New HttpClient()
@@ -48,7 +49,7 @@ Public Class JSON
             Directory.CreateDirectory(Application.StartupPath & "\JSON")
 
             Try
-                Await BaixarJSONPublico()
+                Await loadJSONfromJSONBIN()
                 Return True
 
             Catch ex As Exception
@@ -81,47 +82,113 @@ Public Class JSON
 
     End Function
 
-    Public Async Function VerificarAlteracaoJSON(localFilePath As String) As Task(Of Boolean)
-        Dim client As New HttpClient()
-
-        ' client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
-        ' client.DefaultRequestHeaders.Add("X-Bin-Meta", True)
-
-        client.DefaultRequestHeaders.TryAddWithoutValidation("X-Master-Key", apiKey)
-
-
+    Async Function VerificarAlteracaoJSON() As Task(Of Boolean)
         Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}/latest"
+        Using client As New HttpClient()
+            Try
+                Dim response As HttpResponseMessage = Await client.GetAsync(url)
+                If response.IsSuccessStatusCode Then
+                    Dim json As String = Await response.Content.ReadAsStringAsync()
+                    Dim jObj As JObject = JObject.Parse(json)
 
+                    ' Obtém a data do JSON remoto
+                    Dim ultimaAtualizacaoOnline As String = jObj("record")("ultimaAtualizacao").ToString()
+                    Dim dataOnline As DateTime = DateTime.Parse(ultimaAtualizacaoOnline)
 
-        Dim response As HttpResponseMessage = Await client.GetAsync(url)
+                    ' Obtém a data do JSON local (se existir)
+                    If File.Exists(portfolioPathFile) Then
+                        Dim jsonLocal As String = File.ReadAllText(portfolioPathFile)
+                        Dim jObjLocal As JObject = JObject.Parse(jsonLocal)
+                        Dim ultimaAtualizacaoLocal As String = jObjLocal("ultimaAtualizacao").ToString()
+                        Dim dataLocal As DateTime = DateTime.Parse(ultimaAtualizacaoLocal)
 
-        If response.IsSuccessStatusCode Then
-            Dim responseBody As String = Await response.Content.ReadAsStringAsync()
-            Dim json As JObject = JObject.Parse(responseBody)
+                        ' Compara as datas
+                        If dataOnline <= dataLocal Then
+                            Return False ' JSON não mudou
+                        End If
+                    End If
 
-            Debug.Write(json.ToString())
-
-            Dim updatedOnline As DateTime = DateTime.Parse(json("metadata")("updatedAt").ToString())
-
-            If File.Exists(localFilePath) Then
-                Dim lastModifiedLocal As DateTime = File.GetLastWriteTime(localFilePath)
-
-                ' Se o arquivo remoto é mais novo
-                If updatedOnline > lastModifiedLocal Then
-                    MsgBox("Arquivo JSON local desatualizado! " & vbCrLf & "Baixando nova versão do JSONBin.")
-                    Return True ' precisa atualizar
+                    Return True ' JSON mudou
                 Else
-                    Return False ' está atualizado
+                    Console.WriteLine("Erro ao acessar JSONBin: " & response.StatusCode)
+                    Return False
                 End If
-            Else
-                MsgBox("Arquivo JSON local inexistente! " & vbCrLf & "Baixando nova versão do JSONBin.")
-                Return True ' arquivo local não existe, precisa baixar
-            End If
-        Else
-            Throw New Exception("Erro ao acessar JSONBin: " & response.StatusCode.ToString())
-        End If
+            Catch ex As Exception
+                Console.WriteLine("Exceção: " & ex.Message)
+                Return False
+            End Try
+        End Using
     End Function
 
+    Async Function AppendJSONToBin(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String, ByVal lastPrice As Decimal) As Task(Of Boolean)
+        Try
+            ' 1. Baixa JSON atual do bin
+            Dim jsonAtual As String = loadJSONfile()
+            Dim jsonObject As JObject = JObject.Parse(jsonAtual)
+
+            ' 2. Cria novo item
+            Dim novoItem As New JObject()
+            novoItem("InitialPrice") = InitialPrice
+            novoItem("Qtd") = Qtd
+            novoItem("Data") = Data
+            novoItem("Wallet") = Wallet
+            novoItem("LastPrice") = lastPrice
+
+            ' 3. Adiciona ou cria chave
+            If jsonObject(chave) Is Nothing Then
+                jsonObject(chave) = New JArray()
+            End If
+            Dim arrayDeItens As JArray = CType(jsonObject(chave), JArray)
+            arrayDeItens.Add(novoItem)
+
+            ' 4. Adiciona/atualiza data de modificação manual
+            jsonObject("ultimaAtualizacao") = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss")
+
+            ' 5. Salva de volta no JSONBin
+            Await AtualizarJSONBin(jsonObject)
+
+            ' 6. Atualiza grid (opcional)
+            bindingSource.DataSource = arrayDeItens
+
+            Return True
+
+        Catch ex As Exception
+            MsgBox("Erro ao salvar no JSONBin: " & ex.Message)
+            Return False
+        End Try
+    End Function
+
+    ' ✅ Baixar conteúdo do JSONBin
+    Async Function BaixarJSONDoBin() As Task(Of String)
+        Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}/latest"
+        Using client As New HttpClient()
+            client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
+            Dim response As HttpResponseMessage = Await client.GetAsync(url)
+
+            If response.IsSuccessStatusCode Then
+                Dim json As String = Await response.Content.ReadAsStringAsync()
+                Dim jObj As JObject = JObject.Parse(json)
+                Return jObj("record").ToString()
+            Else
+                Throw New Exception("Erro ao buscar JSONBin: " & response.StatusCode)
+            End If
+        End Using
+
+    End Function
+
+    ' ✅ Enviar JSON atualizado de volta para o bin
+    Async Function AtualizarJSONBin(jsonObject As JObject) As Task
+        Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}"
+        Using client As New HttpClient()
+            client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
+            Dim content As New StringContent(jsonObject.ToString(), Encoding.UTF8, "application/json")
+            Dim response As HttpResponseMessage = Await client.PutAsync(url, content)
+
+            If Not response.IsSuccessStatusCode Then
+                Throw New Exception("Erro ao atualizar JSONBin: " & response.StatusCode)
+            End If
+        End Using
+    End Function
 
     Public Sub loadFromJSON2ComboGrid(filePath As String, Optional combobox As System.Windows.Forms.ComboBox = Nothing, Optional grid As DataGridView = Nothing)
 
@@ -293,7 +360,7 @@ Public Class JSON
         Return Nothing
     End Function
 
-    Function AppendJSON(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String, ByVal lastPrice As Decimal)
+    Function AppendJSONLocal(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String, ByVal lastPrice As Decimal)
         Try
             Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
             Dim newObject As New JObject()
@@ -321,7 +388,7 @@ Public Class JSON
         End Try
 
     End Function
-    Public Function DeleteJSON(ByVal key As String)
+    Public Function DeleteJSONLocal(ByVal key As String)
         If File.Exists(portfolioPathFile) Then
 
             Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
@@ -577,7 +644,7 @@ Public Class JSON
                 listInitValue.Add(initialValueUSD)
                 listCurrValue.Add(currValueUSD)
 
-                AppendJSON(newRow("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"))
+                AppendJSONLocal(newRow("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"))
 
             Next
 
