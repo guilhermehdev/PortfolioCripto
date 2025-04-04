@@ -4,16 +4,124 @@ Imports System.Text.Json
 Imports System.Globalization
 Imports System.IO
 Imports System.Windows.Forms.VisualStyles.VisualStyleElement
+Imports System.Net.Http
 
 
 Public Class JSON
-    Private pathFile As String = Application.StartupPath & "\JSON\portfolio.json"
+    Private portfolioPathFile As String = Application.StartupPath & "\JSON\portfolio.json"
     Private bindingSource As New BindingSource()
+    Dim jsonbin = "67f018608561e97a50f8c330"
+    Dim apiKey As String = "$2a$10$rpXMW77wJUW72Cly.mPCiuBQBGmxpaunjMcsljDdGs/0TIXox/TGG"
 
     Private Function loadJSONfile()
-        Dim jsonString As String = File.ReadAllText(pathFile)
+        Dim jsonString As String = File.ReadAllText(portfolioPathFile)
         Return jsonString
     End Function
+
+    Async Function BaixarJSONPublico() As Task
+        Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}/latest"
+
+        Using client As New HttpClient()
+            Try
+                client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
+                Dim response As HttpResponseMessage = Await client.GetAsync(url)
+
+                If response.IsSuccessStatusCode Then
+                    Dim json As String = Await response.Content.ReadAsStringAsync()
+                    Dim jObj As JObject = JObject.Parse(json)
+                    Dim conteudoLimpo As String = jObj("record").ToString()
+                    File.WriteAllText(portfolioPathFile, conteudoLimpo)
+
+                Else
+                    Console.WriteLine("Erro: " & response.StatusCode)
+
+                End If
+            Catch ex As Exception
+                Console.WriteLine("Exceção: " & ex.Message)
+
+            End Try
+        End Using
+    End Function
+
+    Private Async Function checkJSONfile() As Task(Of Boolean)
+        If Not Directory.Exists(Application.StartupPath & "\JSON") Or Not File.Exists(portfolioPathFile) Then
+            Directory.CreateDirectory(Application.StartupPath & "\JSON")
+
+            Try
+                Await BaixarJSONPublico()
+                Return True
+
+            Catch ex As Exception
+                Dim criptos As New Dictionary(Of String, List(Of Dictionary(Of String, Object))) From {
+                {"BTC", New List(Of Dictionary(Of String, Object)) From {
+                    New Dictionary(Of String, Object) From {
+                        {"InitialPrice", 10000.0},
+                        {"Qtd", 2},
+                        {"Data", "01/01/2000"},
+                        {"Wallet", "Binance"},
+                        {"LastPrice", 1}
+                    }
+                }}
+            }
+
+                Dim jsonString As String = System.Text.Json.JsonSerializer.Serialize(criptos, New JsonSerializerOptions With {
+                .WriteIndented = True
+            })
+
+                File.WriteAllText(portfolioPathFile, jsonString)
+                Return True
+            End Try
+        Else
+            '  If Await VerificarAlteracaoJSON(portfolioPathFile) Then
+            ' Await BaixarJSONPublico()
+            ' End If
+
+            Return True
+        End If
+
+    End Function
+
+    Public Async Function VerificarAlteracaoJSON(localFilePath As String) As Task(Of Boolean)
+        Dim client As New HttpClient()
+
+        ' client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
+        ' client.DefaultRequestHeaders.Add("X-Bin-Meta", True)
+
+        client.DefaultRequestHeaders.TryAddWithoutValidation("X-Master-Key", apiKey)
+
+
+        Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}/latest"
+
+
+        Dim response As HttpResponseMessage = Await client.GetAsync(url)
+
+        If response.IsSuccessStatusCode Then
+            Dim responseBody As String = Await response.Content.ReadAsStringAsync()
+            Dim json As JObject = JObject.Parse(responseBody)
+
+            Debug.Write(json.ToString())
+
+            Dim updatedOnline As DateTime = DateTime.Parse(json("metadata")("updatedAt").ToString())
+
+            If File.Exists(localFilePath) Then
+                Dim lastModifiedLocal As DateTime = File.GetLastWriteTime(localFilePath)
+
+                ' Se o arquivo remoto é mais novo
+                If updatedOnline > lastModifiedLocal Then
+                    MsgBox("Arquivo JSON local desatualizado! " & vbCrLf & "Baixando nova versão do JSONBin.")
+                    Return True ' precisa atualizar
+                Else
+                    Return False ' está atualizado
+                End If
+            Else
+                MsgBox("Arquivo JSON local inexistente! " & vbCrLf & "Baixando nova versão do JSONBin.")
+                Return True ' arquivo local não existe, precisa baixar
+            End If
+        Else
+            Throw New Exception("Erro ao acessar JSONBin: " & response.StatusCode.ToString())
+        End If
+    End Function
+
 
     Public Sub loadFromJSON2ComboGrid(filePath As String, Optional combobox As System.Windows.Forms.ComboBox = Nothing, Optional grid As DataGridView = Nothing)
 
@@ -155,35 +263,6 @@ Public Class JSON
         Public Property Name As String
     End Class
 
-    Private Function checkJSONfile()
-        If Not Directory.Exists(Application.StartupPath & "\JSON") Or Not File.Exists(pathFile) Then
-            Directory.CreateDirectory(Application.StartupPath & "\JSON")
-
-            Dim criptos As New Dictionary(Of String, List(Of Dictionary(Of String, Object))) From {
-            {"BTC", New List(Of Dictionary(Of String, Object)) From {
-                New Dictionary(Of String, Object) From {
-                        {"InitialPrice", 10000.0},
-                        {"Qtd", 2},
-                        {"Data", "01/01/2000"},
-                        {"Wallet", "Binance"},
-                        {"LastPrice", 1}
-                    }
-                }
-            }
-        }
-
-            Dim jsonString As String = System.Text.Json.JsonSerializer.Serialize(criptos, New JsonSerializerOptions With {
-            .WriteIndented = True ' Para deixar o JSON formatado
-            })
-
-            File.WriteAllText(pathFile, jsonString)
-            Return True
-        Else
-            Return True
-        End If
-
-    End Function
-
     Public Function CheckJSONKey(ByVal jsonKey As String)
         Try
             Dim dados As JObject = JObject.Parse(loadJSONfile)
@@ -232,7 +311,7 @@ Public Class JSON
 
             bindingSource.DataSource = itemsArray
 
-            File.WriteAllText(pathFile, jsonObject.ToString())
+            File.WriteAllText(portfolioPathFile, jsonObject.ToString())
 
             Return True
 
@@ -243,7 +322,7 @@ Public Class JSON
 
     End Function
     Public Function DeleteJSON(ByVal key As String)
-        If File.Exists(pathFile) Then
+        If File.Exists(portfolioPathFile) Then
 
             Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
             Dim chaveParaExcluir As String = key
@@ -256,7 +335,7 @@ Public Class JSON
                 Return False
             End If
             ' Salva o JSON modificado de volta no arquivo
-            File.WriteAllText(pathFile, jsonObject.ToString())
+            File.WriteAllText(portfolioPathFile, jsonObject.ToString())
             Return True
         Else
             MessageBox.Show("O arquivo JSON não foi encontrado.")
@@ -264,30 +343,26 @@ Public Class JSON
         End If
 
     End Function
-    Public Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing)
-
-        If checkJSONfile() Then
+    Public Async Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing) As Task(Of Object)
+        If Await checkJSONfile() Then
             Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
             Dim allItems As New List(Of ItemKey)()
 
             For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
-
                 If propertyPair.Value.Type = JTokenType.Array Then
-
                     Dim items As List(Of Item) = propertyPair.Value.ToObject(Of List(Of Item))()
 
                     For Each item As Item In items
                         Dim itemkey As New ItemKey() With {
-                            .Cripto = propertyPair.Key,
-                            .InitialPrice = item.InitialPrice,
-                            .Qtd = item.Qtd,
-                            .Data = item.Data,
-                            .Wallet = item.Wallet,
-                            .LastPrice = item.LastPrice
-                        }
+                        .Cripto = propertyPair.Key,
+                        .InitialPrice = item.InitialPrice,
+                        .Qtd = item.Qtd,
+                        .Data = item.Data,
+                        .Wallet = item.Wallet,
+                        .LastPrice = item.LastPrice
+                    }
                         allItems.Add(itemkey)
                     Next
-
                 End If
             Next
 
@@ -301,8 +376,48 @@ Public Class JSON
         Else
             Return False
         End If
-
     End Function
+
+
+    'Public Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing)
+
+    '    If checkJSONfile() Then
+    '        Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
+    '        Dim allItems As New List(Of ItemKey)()
+
+    '        For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
+
+    '            If propertyPair.Value.Type = JTokenType.Array Then
+
+    '                Dim items As List(Of Item) = propertyPair.Value.ToObject(Of List(Of Item))()
+
+    '                For Each item As Item In items
+    '                    Dim itemkey As New ItemKey() With {
+    '                        .Cripto = propertyPair.Key,
+    '                        .InitialPrice = item.InitialPrice,
+    '                        .Qtd = item.Qtd,
+    '                        .Data = item.Data,
+    '                        .Wallet = item.Wallet,
+    '                        .LastPrice = item.LastPrice
+    '                    }
+    '                    allItems.Add(itemkey)
+    '                Next
+
+    '            End If
+    '        Next
+
+    '        bindingSource.DataSource = allItems
+
+    '        If datagrid IsNot Nothing Then
+    '            datagrid.DataSource = bindingSource
+    '        End If
+
+    '        Return allItems
+    '    Else
+    '        Return False
+    '    End If
+
+    'End Function
     Public Function ConvertListToDataTable(Of T)(list As List(Of T)) As DataTable
         Dim table As New DataTable()
         Dim properties = GetType(T).GetProperties()
@@ -323,7 +438,10 @@ Public Class JSON
 
     End Function
     Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task(Of Dictionary(Of String, Decimal))
-        Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
+        ' Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
+        Dim result = Await LoadJSONtoDataGrid()
+        Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
+
         Dim getCriptoData As New Cotacao
         Dim USDBRLprice
 
@@ -924,10 +1042,6 @@ Public Class JSON
     Public Function BRLformat(ByVal value As Decimal)
         Return value.ToString("C", New CultureInfo("pt-BR"))
     End Function
-
-    Public Sub Console(debug As String)
-        System.Diagnostics.Debug.WriteLine(debug)
-    End Sub
 
     Public Sub captureRightClick(datagrid As DataGridView, e As MouseEventArgs)
         If e.Button = MouseButtons.Right Then

@@ -3,6 +3,8 @@ Imports System.Windows.Forms.DataVisualization.Charting
 
 Public Class FormMain
     Public remainingtimeInSeconds As Integer
+    Dim Cjson As New JSON
+    Dim chart As New Charts
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -18,8 +20,6 @@ Public Class FormMain
     End Sub
 
     Public Async Sub Setup()
-        Dim Cjson As New JSON
-        Dim chart As New Charts
 
         If My.Settings.apiUrl = Nothing Or My.Settings.activeAPI = Nothing Or My.Settings.apiCMCKey = Nothing Then
             FormAPI.ShowDialog()
