@@ -14,7 +14,7 @@ Public Class JSON
     Dim jsonbin = "67f018608561e97a50f8c330"
     Dim apiKey As String = "$2a$10$rpXMW77wJUW72Cly.mPCiuBQBGmxpaunjMcsljDdGs/0TIXox/TGG"
 
-    Private Function loadJSONfile()
+    Public Function loadJSONfile()
         Dim jsonString As String = File.ReadAllText(portfolioPathFile)
         Return jsonString
     End Function
@@ -51,8 +51,9 @@ Public Class JSON
             Try
                 Await loadJSONfromJSONBIN()
                 Return True
-
+                MsgBox("loadjson")
             Catch ex As Exception
+                MsgBox("exception")
                 Dim criptos As New Dictionary(Of String, List(Of Dictionary(Of String, Object))) From {
                 {"BTC", New List(Of Dictionary(Of String, Object)) From {
                     New Dictionary(Of String, Object) From {
@@ -73,90 +74,115 @@ Public Class JSON
                 Return True
             End Try
         Else
-            '  If Await VerificarAlteracaoJSON(portfolioPathFile) Then
-            ' Await BaixarJSONPublico()
-            ' End If
-
+            Await loadJSONfromJSONBIN()
             Return True
         End If
 
     End Function
 
-    Async Function VerificarAlteracaoJSON() As Task(Of Boolean)
-        Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}/latest"
+    Public Async Function AppendJSONToBin(chave As String, InitialPrice As Decimal, Qtd As Decimal, Data As String, Wallet As String, lastPrice As Decimal) As Task(Of Boolean)
+        Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}"
+        Dim jsonAtual As JObject = Nothing
+
         Using client As New HttpClient()
+            client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
+
             Try
+                ' 1. Obter o JSON atual do bin
                 Dim response As HttpResponseMessage = Await client.GetAsync(url)
                 If response.IsSuccessStatusCode Then
-                    Dim json As String = Await response.Content.ReadAsStringAsync()
-                    Dim jObj As JObject = JObject.Parse(json)
-
-                    ' Obtém a data do JSON remoto
-                    Dim ultimaAtualizacaoOnline As String = jObj("record")("ultimaAtualizacao").ToString()
-                    Dim dataOnline As DateTime = DateTime.Parse(ultimaAtualizacaoOnline)
-
-                    ' Obtém a data do JSON local (se existir)
-                    If File.Exists(portfolioPathFile) Then
-                        Dim jsonLocal As String = File.ReadAllText(portfolioPathFile)
-                        Dim jObjLocal As JObject = JObject.Parse(jsonLocal)
-                        Dim ultimaAtualizacaoLocal As String = jObjLocal("ultimaAtualizacao").ToString()
-                        Dim dataLocal As DateTime = DateTime.Parse(ultimaAtualizacaoLocal)
-
-                        ' Compara as datas
-                        If dataOnline <= dataLocal Then
-                            Return False ' JSON não mudou
-                        End If
-                    End If
-
-                    Return True ' JSON mudou
+                    Dim content As String = Await response.Content.ReadAsStringAsync()
+                    jsonAtual = JObject.Parse(content)("record")
                 Else
-                    Console.WriteLine("Erro ao acessar JSONBin: " & response.StatusCode)
+                    MsgBox("Erro ao carregar JSON atual: " & response.StatusCode)
                     Return False
                 End If
+
+                ' 2. Atualizar ou adicionar item na chave correspondente
+                If jsonAtual(chave) Is Nothing Then
+                    jsonAtual(chave) = New JArray()
+                End If
+
+                Dim itemsArray As JArray = CType(jsonAtual(chave), JArray)
+                Dim atualizado As Boolean = False
+
+                For Each item As JObject In itemsArray
+                    If item("Data") = Data AndAlso item("Wallet") = Wallet Then
+                        item("InitialPrice") = InitialPrice
+                        item("Qtd") = Qtd
+                        item("LastPrice") = lastPrice
+                        atualizado = True
+                        Exit For
+                    End If
+                Next
+
+                If Not atualizado Then
+                    Dim novoItem As New JObject()
+                    novoItem("InitialPrice") = InitialPrice
+                    novoItem("Qtd") = Qtd
+                    novoItem("Data") = Data
+                    novoItem("Wallet") = Wallet
+                    novoItem("LastPrice") = lastPrice
+                    itemsArray.Add(novoItem)
+                End If
+
+                ' 3. Serializar o novo JSON e enviar via PUT
+                Dim body As String = JsonConvert.SerializeObject(jsonAtual, Formatting.Indented)
+                Dim stringContent As New StringContent(body, Encoding.UTF8, "application/json")
+                Dim putResponse = Await client.PutAsync(url, stringContent)
+
+                If putResponse.IsSuccessStatusCode Then
+                    Return True
+                Else
+                    MsgBox("Erro ao salvar no JSONBin: " & putResponse.StatusCode)
+                    Return False
+                End If
+
             Catch ex As Exception
-                Console.WriteLine("Exceção: " & ex.Message)
+                MsgBox("Erro: " & ex.Message)
                 Return False
             End Try
         End Using
     End Function
 
-    Async Function AppendJSONToBin(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String, ByVal lastPrice As Decimal) As Task(Of Boolean)
-        Try
-            ' 1. Baixa JSON atual do bin
-            Dim jsonAtual As String = loadJSONfile()
-            Dim jsonObject As JObject = JObject.Parse(jsonAtual)
 
-            ' 2. Cria novo item
-            Dim novoItem As New JObject()
-            novoItem("InitialPrice") = InitialPrice
-            novoItem("Qtd") = Qtd
-            novoItem("Data") = Data
-            novoItem("Wallet") = Wallet
-            novoItem("LastPrice") = lastPrice
+    'Async Function AppendJSONToBin(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String, ByVal lastPrice As Decimal) As Task(Of Boolean)
+    '    Try
+    '        ' 1. Baixa JSON atual do bin
+    '        Dim jsonAtual As String = loadJSONfile()
+    '        Dim jsonObject As JObject = JObject.Parse(jsonAtual)
 
-            ' 3. Adiciona ou cria chave
-            If jsonObject(chave) Is Nothing Then
-                jsonObject(chave) = New JArray()
-            End If
-            Dim arrayDeItens As JArray = CType(jsonObject(chave), JArray)
-            arrayDeItens.Add(novoItem)
+    '        ' 2. Cria novo item
+    '        Dim novoItem As New JObject()
+    '        novoItem("InitialPrice") = InitialPrice
+    '        novoItem("Qtd") = Qtd
+    '        novoItem("Data") = Data
+    '        novoItem("Wallet") = Wallet
+    '        novoItem("LastPrice") = lastPrice
 
-            ' 4. Adiciona/atualiza data de modificação manual
-            jsonObject("ultimaAtualizacao") = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss")
+    '        ' 3. Adiciona ou cria chave
+    '        If jsonObject(chave) Is Nothing Then
+    '            jsonObject(chave) = New JArray()
+    '        End If
+    '        Dim arrayDeItens As JArray = CType(jsonObject(chave), JArray)
+    '        arrayDeItens.Add(novoItem)
 
-            ' 5. Salva de volta no JSONBin
-            Await AtualizarJSONBin(jsonObject)
+    '        ' 4. Adiciona/atualiza data de modificação manual
+    '        jsonObject("ultimaAtualizacao") = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss")
 
-            ' 6. Atualiza grid (opcional)
-            bindingSource.DataSource = arrayDeItens
+    '        ' 5. Salva de volta no JSONBin
+    '        Await AtualizarJSONBin(jsonObject)
 
-            Return True
+    '        ' 6. Atualiza grid (opcional)
+    '        bindingSource.DataSource = arrayDeItens
 
-        Catch ex As Exception
-            MsgBox("Erro ao salvar no JSONBin: " & ex.Message)
-            Return False
-        End Try
-    End Function
+    '        Return True
+
+    '    Catch ex As Exception
+    '        MsgBox("Erro ao salvar no JSONBin: " & ex.Message)
+    '        Return False
+    '    End Try
+    'End Function
 
     ' ✅ Baixar conteúdo do JSONBin
     Async Function BaixarJSONDoBin() As Task(Of String)

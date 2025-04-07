@@ -1,35 +1,84 @@
 ﻿Imports System.Globalization
+Imports Newtonsoft.Json.Linq
 
 Public Class FormEntradas
     Dim charts As New Charts
+    Dim json As New JSON
 
-    Private Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
-        Dim json As New JSON
+    'Private Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
+    '    Dim json As New JSON
+    '    Dim key = cbCripto.Text
+    '    If (IsNothing(tbQtd.Text) Or tbQtd.Text = 0) Or (Not IsNumeric(TbPrecoEntrada.Text) Or TbPrecoEntrada.Text = 0 Or IsNothing(TbPrecoEntrada)) Then
+    '        MsgBox("Preencha todos os campos!")
+    '    Else
+    '        'If json.AppendJSONLocal(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1) Then
+    '        If json.AppendJSONToBin(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1) Then
+    '            MsgBox("Salvo!")
+    '            FormEntradas_Load(sender, e)
+    '            'FormMain.Setup()
+    '        End If
+    '    End If
+
+    'End Sub
+
+    Private Async Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
         Dim key = cbCripto.Text
-        If (IsNothing(tbQtd.Text) Or tbQtd.Text = 0) Or (Not IsNumeric(TbPrecoEntrada.Text) Or TbPrecoEntrada.Text = 0 Or IsNothing(TbPrecoEntrada)) Then
+
+        If (String.IsNullOrWhiteSpace(tbQtd.Text) OrElse tbQtd.Text = "0") OrElse
+       (Not IsNumeric(TbPrecoEntrada.Text) OrElse TbPrecoEntrada.Text = "0") Then
             MsgBox("Preencha todos os campos!")
         Else
-            'If json.AppendJSONLocal(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1) Then
-            If json.AppendJSONToBin(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1) Then
+            Dim sucesso As Boolean = Await json.AppendJSONToBin(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1)
+
+            If sucesso Then
                 MsgBox("Salvo!")
                 FormEntradas_Load(sender, e)
-                'FormMain.Setup()
             End If
         End If
-
     End Sub
 
     Private Sub FormEntradas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Dim json As New JSON
+
         cbCripto.SelectedItem = 0
         cbWallet.SelectedItem = 0
         TbPrecoEntrada.Text = 0.00
         tbQtd.Text = 0
-        json.LoadJSONtoDataGrid(dgCriptos)
+        loadJSONtoDatagridLocal(dgCriptos)
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", cbWallet, Nothing)
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\criptos.json", cbCripto, Nothing)
         FormatGrid(dgCriptos)
     End Sub
+
+    Private Function loadJSONtoDatagridLocal(Optional ByVal datagrid As DataGridView = Nothing)
+        Dim jsonObject As JObject = JObject.Parse(json.loadJSONfile)
+        Dim allItems As New List(Of ItemKey)()
+
+        For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
+            If propertyPair.Value.Type = JTokenType.Array Then
+                Dim items As List(Of Item) = propertyPair.Value.ToObject(Of List(Of Item))()
+
+                For Each item As Item In items
+                    Dim itemkey As New ItemKey() With {
+                    .Cripto = propertyPair.Key,
+                    .InitialPrice = item.InitialPrice,
+                    .Qtd = item.Qtd,
+                    .Data = item.Data,
+                    .Wallet = item.Wallet,
+                    .LastPrice = item.LastPrice
+                }
+                    allItems.Add(itemkey)
+                Next
+            End If
+        Next
+
+        If datagrid IsNot Nothing Then
+            datagrid.DataSource = allItems
+        End If
+
+        Return allItems
+
+    End Function
+
 
     Private Sub FormatGrid(datagrid As DataGridView)
         Dim fontsize As Int16 = 10
@@ -119,7 +168,6 @@ Public Class FormEntradas
     End Sub
 
     Private Sub ExcluirToolStripMenuItem_Click_1(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
-        Dim json As New JSON
         Dim row As DataGridViewRow = dgCriptos.SelectedRows.Item(0)
 
         Dim key As String = dgCriptos.SelectedRows.Item(0).Cells(0).Value.ToString()
@@ -154,7 +202,6 @@ Public Class FormEntradas
     End Sub
 
     Private Sub dgCriptos_MouseDown(sender As Object, e As MouseEventArgs) Handles dgCriptos.MouseDown
-        Dim json As New JSON
         json.captureRightClick(dgCriptos, e)
     End Sub
     Private Sub FormEntradas_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed
