@@ -4,6 +4,7 @@ Imports Newtonsoft.Json.Linq
 Public Class FormEntradas
     Dim charts As New Charts
     Dim json As New JSON
+    Dim bs As New BindingSource()
 
     'Private Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
     '    Dim json As New JSON
@@ -32,13 +33,15 @@ Public Class FormEntradas
 
             If sucesso Then
                 MsgBox("Salvo!")
-                FormEntradas_Load(sender, e)
+                'FormEntradas_Load(sender, e)
+
+                loadJSONtoDatagridLocal(dgCriptos)
+                FormatGrid(dgCriptos)
             End If
         End If
     End Sub
 
     Private Sub FormEntradas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-
         cbCripto.SelectedItem = 0
         cbWallet.SelectedItem = 0
         TbPrecoEntrada.Text = 0.00
@@ -75,6 +78,7 @@ Public Class FormEntradas
             datagrid.DataSource = allItems
         End If
 
+        bs.DataSource = allItems
         Return allItems
 
     End Function
@@ -167,14 +171,16 @@ Public Class FormEntradas
 
     End Sub
 
-    Private Sub ExcluirToolStripMenuItem_Click_1(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
+    Private Async Sub ExcluirToolStripMenuItem_Click_1(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
         Dim row As DataGridViewRow = dgCriptos.SelectedRows.Item(0)
+        Dim simbolToDelete As ItemKey = CType(bs.Current, ItemKey)
 
         Dim key As String = dgCriptos.SelectedRows.Item(0).Cells(0).Value.ToString()
-        If json.DeleteJSONLocal(key) Then
-            dgCriptos.Rows.Remove(row)
-            FormEntradas_Load(sender, e)
-            'FormMain.Setup()
+        If Await json.DeleteJSONFromBin(key) Then
+            bs.Remove(simbolToDelete)
+            'FormEntradas_Load(sender, e)
+            loadJSONtoDatagridLocal(dgCriptos)
+            FormatGrid(dgCriptos)
         End If
 
     End Sub
