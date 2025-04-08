@@ -34,7 +34,6 @@ Public Class FormEntradas
             If sucesso Then
                 MsgBox("Salvo!")
                 'FormEntradas_Load(sender, e)
-
                 loadJSONtoDatagridLocal(dgCriptos)
                 FormatGrid(dgCriptos)
             End If

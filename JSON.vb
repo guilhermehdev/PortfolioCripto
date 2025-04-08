@@ -13,6 +13,9 @@ Public Class JSON
     Private bindingSource As New BindingSource()
     Dim jsonbin = "67f018608561e97a50f8c330"
     Dim apiKey As String = "$2a$10$rpXMW77wJUW72Cly.mPCiuBQBGmxpaunjMcsljDdGs/0TIXox/TGG"
+    Dim saoPauloTimeZone As TimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time")
+    Dim saoPauloTime As DateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saoPauloTimeZone)
+
 
     Public Function loadJSONfile()
         Dim jsonString As String = File.ReadAllText(portfolioPathFile)
@@ -25,25 +28,190 @@ Public Class JSON
         Using client As New HttpClient()
             Try
                 client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
+
+                ' Verificar se o JSON local existe
+                If File.Exists(portfolioPathFile) Then
+                    Dim localJSON As String = File.ReadAllText(portfolioPathFile)
+                    Dim localObject As JObject = JObject.Parse(localJSON)
+
+                    ' Obter ultimaAtualizacao do JSON local
+                    If localObject.ContainsKey("ultimaAtualizacao") Then
+                        Dim ultimaAtualizacaoLocal As DateTime = DateTime.Parse(localObject("ultimaAtualizacao").ToString())
+
+                        If My.Settings.lastUpdate = "" Then
+                            My.Settings.lastUpdate = ultimaAtualizacaoLocal
+                        End If
+
+                        Dim ultimaAtualizacaoSettings As DateTime = My.Settings.lastUpdate
+
+                        If ultimaAtualizacaoLocal = ultimaAtualizacaoSettings Then
+                            Debug.WriteLine("O JSON local já está atualizado.")
+                            Return
+                        End If
+
+                    End If
+
+                End If
+
+                ' Fazer o download do JSON caso seja necessário
                 Dim response As HttpResponseMessage = Await client.GetAsync(url)
 
                 If response.IsSuccessStatusCode Then
                     Dim json As String = Await response.Content.ReadAsStringAsync()
                     Dim jObj As JObject = JObject.Parse(json)
-                    Dim conteudoLimpo As String = jObj("record").ToString()
-                    File.WriteAllText(portfolioPathFile, conteudoLimpo)
+                    Dim conteudoLimpo As JObject = CType(jObj("record"), JObject)
 
+                    ' Atualizar ultimaAtualizacao com a data/hora atual
+                    conteudoLimpo("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-dd HH:mm:ss")
+
+                    ' Salvar o conteúdo atualizado no arquivo local
+                    File.WriteAllText(portfolioPathFile, conteudoLimpo.ToString())
+                    Debug.WriteLine("JSON atualizado com sucesso!")
                 Else
-                    Console.WriteLine("Erro: " & response.StatusCode)
-
+                    Debug.WriteLine("Erro: " & response.StatusCode)
                 End If
-            Catch ex As Exception
-                Console.WriteLine("Exceção: " & ex.Message)
 
+
+            Catch ex As Exception
+                Debug.WriteLine("Exceção: " & ex.Message)
+            End Try
+        End Using
+
+    End Function
+
+    Public Async Function AppendJSONToBin(chave As String, InitialPrice As Decimal, Qtd As Decimal, Data As String, Wallet As String, lastPrice As Decimal) As Task(Of Boolean)
+        Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}"
+        Dim jsonAtual As JObject = Nothing
+
+        Using client As New HttpClient()
+            client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
+
+            Try
+                ' 1. Obter o JSON atual do bin
+                'Dim response As HttpResponseMessage = Await client.GetAsync(url)
+                'If response.IsSuccessStatusCode Then
+                '    Dim content As String = Await response.Content.ReadAsStringAsync()
+                '    jsonAtual = JObject.Parse(content)("record")
+                'Else
+                '    MsgBox("Erro ao carregar JSON atual: " & response.StatusCode)
+                '    Return False
+                'End If
+
+                jsonAtual = JObject.Parse(loadJSONfile)
+
+                ' 2. Atualizar ou adicionar item na chave correspondente
+                If jsonAtual(chave) Is Nothing Then
+                    jsonAtual(chave) = New JArray()
+                End If
+
+                Dim itemsArray As JArray = CType(jsonAtual(chave), JArray)
+                Dim atualizado As Boolean = False
+
+                For Each item As JObject In itemsArray
+                    If item("Data") = Data AndAlso item("Wallet") = Wallet Then
+                        item("InitialPrice") = InitialPrice
+                        item("Qtd") = Qtd
+                        item("LastPrice") = lastPrice
+                        atualizado = True
+                        Exit For
+                    End If
+                Next
+
+                If Not atualizado Then
+                    Dim novoItem As New JObject()
+                    novoItem("InitialPrice") = InitialPrice
+                    novoItem("Qtd") = Qtd
+                    novoItem("Data") = Data
+                    novoItem("Wallet") = Wallet
+                    novoItem("LastPrice") = lastPrice
+                    itemsArray.Add(novoItem)
+                End If
+
+                ' 3. Serializar o novo JSON e enviar via PUT
+                jsonAtual("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
+
+                Dim body As String = JsonConvert.SerializeObject(jsonAtual, Formatting.Indented)
+                Dim stringContent As New StringContent(body, Encoding.UTF8, "application/json")
+                Dim putResponse = Await client.PutAsync(url, stringContent)
+
+                If putResponse.IsSuccessStatusCode Then
+                    File.WriteAllText(portfolioPathFile, jsonAtual.ToString())
+                    My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
+                    My.Settings.Save()
+                    Return True
+                Else
+                    MsgBox("Erro ao salvar: " & putResponse.StatusCode)
+                    Return False
+                End If
+
+            Catch ex As Exception
+                MsgBox("Erro: " & ex.Message)
+                Return False
             End Try
         End Using
     End Function
 
+    Public Async Function DeleteJSONFromBin(ByVal key As String) As Task(Of Boolean)
+        Try
+            Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}"
+
+            Using client As New HttpClient()
+                'client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
+
+                'Dim response As HttpResponseMessage = Await client.GetAsync(url)
+
+                ' If response.IsSuccessStatusCode Then
+                'Dim json As String = Await response.Content.ReadAsStringAsync()
+                'Dim jObj As JObject = JObject.Parse(json)
+                'Dim record As JObject = CType(jObj("record"), JObject)
+
+                Dim record As JObject = JObject.Parse(loadJSONfile)
+
+                If record.ContainsKey(key) Then
+                    record.Remove(key)
+                Else
+                    MessageBox.Show("Chave não encontrada no arquivo.")
+                    Return False
+                End If
+
+                ' Atualizar o campo ultimaAtualizacao
+                record("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
+
+                ' Atualizando o JSONBin com o novo conteúdo (sem o Content-Type aqui)
+                ' Dim putUrl As String = $"https://api.jsonbin.io/v3/b/{jsonbin}"
+                'client.DefaultRequestHeaders.Clear()
+                client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
+
+                'Dim content As New StringContent(record.ToString(), Encoding.UTF8, "application/json")
+                'Dim putResponse As HttpResponseMessage = Await client.PutAsync(url, content)
+
+
+                Dim body As String = JsonConvert.SerializeObject(record, Formatting.Indented)
+                Dim stringContent As New StringContent(body, Encoding.UTF8, "application/json")
+                Dim putResponse = Await client.PutAsync(url, stringContent)
+
+                If putResponse.IsSuccessStatusCode Then
+                    MessageBox.Show("Removido com sucesso.")
+                    File.WriteAllText(portfolioPathFile, record.ToString())
+                    My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
+                    My.Settings.Save()
+                    Return True
+                Else
+                    MessageBox.Show("Erro ao atualizar: " & putResponse.StatusCode.ToString())
+                    Return False
+                End If
+
+                'Else
+                'MessageBox.Show("Erro ao carregar: " & response.StatusCode.ToString())
+                'Return False
+                'End If
+            End Using
+
+        Catch ex As Exception
+            MessageBox.Show("Erro: " & ex.Message)
+            Return False
+        End Try
+    End Function
     Private Async Function checkJSONfile() As Task(Of Boolean)
         If Not Directory.Exists(Application.StartupPath & "\JSON") Or Not File.Exists(portfolioPathFile) Then
             Directory.CreateDirectory(Application.StartupPath & "\JSON")
@@ -78,72 +246,6 @@ Public Class JSON
             Return True
         End If
 
-    End Function
-
-    Public Async Function AppendJSONToBin(chave As String, InitialPrice As Decimal, Qtd As Decimal, Data As String, Wallet As String, lastPrice As Decimal) As Task(Of Boolean)
-        Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}"
-        Dim jsonAtual As JObject = Nothing
-
-        Using client As New HttpClient()
-            client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
-
-            Try
-                ' 1. Obter o JSON atual do bin
-                Dim response As HttpResponseMessage = Await client.GetAsync(url)
-                If response.IsSuccessStatusCode Then
-                    Dim content As String = Await response.Content.ReadAsStringAsync()
-                    jsonAtual = JObject.Parse(content)("record")
-                Else
-                    MsgBox("Erro ao carregar JSON atual: " & response.StatusCode)
-                    Return False
-                End If
-
-                ' 2. Atualizar ou adicionar item na chave correspondente
-                If jsonAtual(chave) Is Nothing Then
-                    jsonAtual(chave) = New JArray()
-                End If
-
-                Dim itemsArray As JArray = CType(jsonAtual(chave), JArray)
-                Dim atualizado As Boolean = False
-
-                For Each item As JObject In itemsArray
-                    If item("Data") = Data AndAlso item("Wallet") = Wallet Then
-                        item("InitialPrice") = InitialPrice
-                        item("Qtd") = Qtd
-                        item("LastPrice") = lastPrice
-                        atualizado = True
-                        Exit For
-                    End If
-                Next
-
-                If Not atualizado Then
-                    Dim novoItem As New JObject()
-                    novoItem("InitialPrice") = InitialPrice
-                    novoItem("Qtd") = Qtd
-                    novoItem("Data") = Data
-                    novoItem("Wallet") = Wallet
-                    novoItem("LastPrice") = lastPrice
-                    itemsArray.Add(novoItem)
-                End If
-
-                ' 3. Serializar o novo JSON e enviar via PUT
-                Dim body As String = JsonConvert.SerializeObject(jsonAtual, Formatting.Indented)
-                Dim stringContent As New StringContent(body, Encoding.UTF8, "application/json")
-                Dim putResponse = Await client.PutAsync(url, stringContent)
-
-                If putResponse.IsSuccessStatusCode Then
-                    Await loadJSONfromJSONBIN()
-                    Return True
-                Else
-                    MsgBox("Erro ao salvar: " & putResponse.StatusCode)
-                    Return False
-                End If
-
-            Catch ex As Exception
-                MsgBox("Erro: " & ex.Message)
-                Return False
-            End Try
-        End Using
     End Function
 
     Public Sub loadFromJSON2ComboGrid(filePath As String, Optional combobox As System.Windows.Forms.ComboBox = Nothing, Optional grid As DataGridView = Nothing)
@@ -344,57 +446,6 @@ Public Class JSON
         End Try
 
     End Function
-
-    Public Async Function DeleteJSONFromBin(ByVal key As String) As Task(Of Boolean)
-        Try
-            Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}/latest"
-
-            Using client As New HttpClient()
-                client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
-
-                Dim response As HttpResponseMessage = Await client.GetAsync(url)
-
-                If response.IsSuccessStatusCode Then
-                    Dim json As String = Await response.Content.ReadAsStringAsync()
-                    Dim jObj As JObject = JObject.Parse(json)
-                    Dim record As JObject = CType(jObj("record"), JObject)
-
-                    If record.ContainsKey(key) Then
-                        record.Remove(key)
-                    Else
-                        MessageBox.Show("Chave não encontrada no JSONBin.")
-                        Return False
-                    End If
-
-                    ' Atualizando o JSONBin com o novo conteúdo (sem o Content-Type aqui)
-                    Dim putUrl As String = $"https://api.jsonbin.io/v3/b/{jsonbin}"
-                    client.DefaultRequestHeaders.Clear()
-                    client.DefaultRequestHeaders.Add("X-Master-Key", apiKey)
-
-                    Dim content As New StringContent(record.ToString(), Encoding.UTF8, "application/json")
-                    Dim putResponse As HttpResponseMessage = Await client.PutAsync(putUrl, content)
-
-                    If putResponse.IsSuccessStatusCode Then
-                        MessageBox.Show("Removido com sucesso.")
-                        Await loadJSONfromJSONBIN()
-                        Return True
-                    Else
-                        MessageBox.Show("Erro ao atualizar: " & putResponse.StatusCode.ToString())
-                        Return False
-                    End If
-                Else
-                    MessageBox.Show("Erro ao carregar: " & response.StatusCode.ToString())
-                    Return False
-                End If
-            End Using
-
-        Catch ex As Exception
-            MessageBox.Show("Erro: " & ex.Message)
-            Return False
-        End Try
-    End Function
-
-
 
     'Public Function DeleteJSONLocal(ByVal key As String)
     '    If File.Exists(portfolioPathFile) Then
