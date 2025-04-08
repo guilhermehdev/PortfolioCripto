@@ -214,6 +214,7 @@ Public Class JSON
     End Function
     Private Async Function checkJSONfile() As Task(Of Boolean)
         If Not Directory.Exists(Application.StartupPath & "\JSON") Or Not File.Exists(portfolioPathFile) Then
+
             Directory.CreateDirectory(Application.StartupPath & "\JSON")
 
             Try
