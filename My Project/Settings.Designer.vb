@@ -137,6 +137,42 @@ Namespace My
                 Me("lastUpdate") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+        Public Property JSONBinURL() As String
+            Get
+                Return CType(Me("JSONBinURL"),String)
+            End Get
+            Set
+                Me("JSONBinURL") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+        Public Property JSONBinMasterKey() As String
+            Get
+                Return CType(Me("JSONBinMasterKey"),String)
+            End Get
+            Set
+                Me("JSONBinMasterKey") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+        Public Property JSONBinID() As String
+            Get
+                Return CType(Me("JSONBinID"),String)
+            End Get
+            Set
+                Me("JSONBinID") = value
+            End Set
+        End Property
     End Class
 End Namespace
 
