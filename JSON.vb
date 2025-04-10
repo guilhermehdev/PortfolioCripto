@@ -28,10 +28,26 @@ Public Class JSON
             Dim propertyName As String = settings.Name
             Dim propertyValue As Object = My.Settings(propertyName)
 
-            ' Verifica se a configuração está vazia ou nula
-            If propertyValue Is Nothing OrElse String.IsNullOrWhiteSpace(propertyValue.ToString()) Then
-                Return False
-            End If
+            Select Case propertyName
+                Case "JSONBinID"
+                    If propertyValue Is Nothing OrElse String.IsNullOrWhiteSpace(propertyValue.ToString()) Then
+                        Return False
+                    End If
+                Case "JSONBinMasterKey"
+                    If propertyValue Is Nothing OrElse String.IsNullOrWhiteSpace(propertyValue.ToString()) Then
+                        Return False
+                    End If
+                Case "JSONBinURL"
+                    If propertyValue Is Nothing OrElse String.IsNullOrWhiteSpace(propertyValue.ToString()) Then
+                        Return False
+                    End If
+                Case "apiCMCKey"
+                    If propertyValue Is Nothing OrElse String.IsNullOrWhiteSpace(propertyValue.ToString()) Then
+                        Return False
+                    End If
+
+            End Select
+
         Next
 
         Return True
