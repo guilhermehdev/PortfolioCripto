@@ -72,13 +72,13 @@ Public Class JSON
                         If localObject.ContainsKey("ultimaAtualizacao") Then
                             Dim ultimaAtualizacaoLocal As DateTime = DateTime.Parse(localObject("ultimaAtualizacao").ToString())
 
+                            Dim ultimaAtualizacaoSettings As DateTime = My.Settings.lastUpdate
+
                             If My.Settings.lastUpdate = "" Then
                                 My.Settings.lastUpdate = ultimaAtualizacaoLocal
                             End If
 
-                            Dim ultimaAtualizacaoSettings As DateTime = My.Settings.lastUpdate
-
-                            If ultimaAtualizacaoLocal = ultimaAtualizacaoSettings Then
+                            If Await checkLastUpdateOnJSONBin() = ultimaAtualizacaoSettings Then
                                 Debug.WriteLine("O JSON local já está atualizado.")
                                 Return
                             End If
@@ -115,6 +115,42 @@ Public Class JSON
         End If
 
     End Function
+
+    Public Async Function checkLastUpdateOnJSONBin() As Task(Of DateTime?)
+        Try
+            Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}?meta=true"
+            Using client As New HttpClient()
+                client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
+
+                ' Solicitação GET para obter apenas os metadados
+                Dim response As HttpResponseMessage = Await client.GetAsync(url)
+
+                If response.IsSuccessStatusCode Then
+                    Dim json As String = Await response.Content.ReadAsStringAsync()
+                    Dim metaObj As JObject = JObject.Parse(json)
+
+                    ' Verificar se o campo 'ultimaAtualizacao' existe nos metadados
+                    If metaObj("record") IsNot Nothing AndAlso metaObj("record")("ultimaAtualizacao") IsNot Nothing Then
+                        Dim ultimaAtualizacaoStr As String = metaObj("record")("ultimaAtualizacao").ToString()
+                        Dim ultimaAtualizacao As DateTime = DateTime.Parse(ultimaAtualizacaoStr)
+
+                        'Console.WriteLine("Última Atualização: " & ultimaAtualizacao)
+                        Return ultimaAtualizacao
+                    Else
+                        'Console.WriteLine("O campo 'ultimaAtualizacao' não foi encontrado no JSONBin.")
+                        Return Nothing
+                    End If
+                Else
+                    'Console.WriteLine("Erro ao acessar JSONBin: " & response.StatusCode)
+                    Return Nothing
+                End If
+            End Using
+        Catch ex As Exception
+            Debug.WriteLine("Erro: " & ex.Message)
+            Return Nothing
+        End Try
+    End Function
+
 
     Public Async Function AppendJSONToBin(chave As String, InitialPrice As Decimal, Qtd As Decimal, Data As String, Wallet As String, lastPrice As Decimal) As Task(Of Boolean)
         Dim url As String = JSONBinPut
