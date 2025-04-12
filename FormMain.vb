@@ -1,5 +1,6 @@
 ﻿Imports System.IO
 Imports System.Windows.Forms.DataVisualization.Charting
+Imports Newtonsoft.Json.Linq
 
 Public Class FormMain
     Public remainingtimeInSeconds As Integer
@@ -14,17 +15,16 @@ Public Class FormMain
         Application.Exit()
     End Sub
 
-    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    Private Async Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
 
     Public Async Sub Setup()
 
-        If My.Settings.apiUrl = Nothing Or My.Settings.activeAPI = Nothing Or My.Settings.apiCMCKey = Nothing Then
-            FormAPI.ShowDialog()
-        Else
-            Try
+        Try
+            If Await Cjson.checkLastUpdateOnJSONBin() Then
+
                 chart.removeCharts()
                 lbLoadFromMarket.Visible = True
                 TimerBlink.Start()
@@ -37,11 +37,12 @@ Public Class FormMain
 
                 lbAtualizaEm.Text = "Atualizado em:"
                 lbRefresh.Text = My.Settings.lastView
+            End If
 
-            Catch ex As Exception
+        Catch ex As Exception
 
-            End Try
-        End If
+        End Try
+
 
     End Sub
 

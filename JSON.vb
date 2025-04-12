@@ -54,38 +54,13 @@ Public Class JSON
 
     End Function
 
-    Async Function loadJSONfromJSONBIN() As Task
+    Async Function loadJSONfromJSONBIN() As Task(Of Boolean)
         If checkMySettings() Then
-
             Dim url As String = JSONBinGet
 
             Using client As New HttpClient()
                 Try
                     client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
-
-                    ' Verificar se o JSON local existe
-                    If File.Exists(portfolioPathFile) Then
-                        Dim localJSON As String = File.ReadAllText(portfolioPathFile)
-                        Dim localObject As JObject = JObject.Parse(localJSON)
-
-                        ' Obter ultimaAtualizacao do JSON local
-                        If localObject.ContainsKey("ultimaAtualizacao") Then
-                            Dim ultimaAtualizacaoLocal As DateTime = DateTime.Parse(localObject("ultimaAtualizacao").ToString())
-
-                            Dim ultimaAtualizacaoSettings As DateTime = My.Settings.lastUpdate
-
-                            If My.Settings.lastUpdate = "" Then
-                                My.Settings.lastUpdate = ultimaAtualizacaoLocal
-                            End If
-
-                            If Await checkLastUpdateOnJSONBin() = ultimaAtualizacaoSettings Then
-                                Debug.WriteLine("O JSON local já está atualizado.")
-                                Return
-                            End If
-
-                        End If
-
-                    End If
 
                     ' Fazer o download do JSON caso seja necessário
                     Dim response As HttpResponseMessage = Await client.GetAsync(url)
@@ -101,24 +76,37 @@ Public Class JSON
                         ' Salvar o conteúdo atualizado no arquivo local
                         File.WriteAllText(portfolioPathFile, conteudoLimpo.ToString())
                         Debug.WriteLine("JSON atualizado com sucesso!")
+                        Return True
                     Else
                         Debug.WriteLine("Erro: " & response.StatusCode)
+                        Return False
                     End If
-
 
                 Catch ex As Exception
                     Debug.WriteLine("Exceção: " & ex.Message)
+                    Return False
                 End Try
             End Using
         Else
             FormAPI.ShowDialog()
+            Return False
         End If
 
     End Function
 
-    Public Async Function checkLastUpdateOnJSONBin() As Task(Of DateTime?)
+    Public Async Function checkLastUpdateOnJSONBin() As Task(Of Boolean)
+        Dim cjson As New JSON
+
         Try
-            Dim url As String = $"https://api.jsonbin.io/v3/b/{jsonbin}?meta=true"
+
+            If Not Directory.Exists(Application.StartupPath & "\JSON") Or Not File.Exists(portfolioPathFile) Then
+
+                Directory.CreateDirectory(Application.StartupPath & "\JSON")
+                Await cjson.AppendJSONToBin("BTC", 10000, 5, Date.Today, "Wallet", 3000)
+
+            End If
+
+            Dim url As String = $"{JSONBinPut}?meta=true"
             Using client As New HttpClient()
                 client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
 
@@ -134,20 +122,27 @@ Public Class JSON
                         Dim ultimaAtualizacaoStr As String = metaObj("record")("ultimaAtualizacao").ToString()
                         Dim ultimaAtualizacao As DateTime = DateTime.Parse(ultimaAtualizacaoStr)
 
-                        'Console.WriteLine("Última Atualização: " & ultimaAtualizacao)
-                        Return ultimaAtualizacao
+                        ' MsgBox(My.Settings.lastUpdate & " " & ultimaAtualizacao.ToString)
+
+                        If My.Settings.lastUpdate <> ultimaAtualizacao Then
+
+                            My.Settings.lastUpdate = ultimaAtualizacao
+                            My.Settings.Save()
+                            Return Await loadJSONfromJSONBIN()
+                        Else
+                            Return True
+                        End If
                     Else
-                        'Console.WriteLine("O campo 'ultimaAtualizacao' não foi encontrado no JSONBin.")
-                        Return Nothing
+                        Return False
                     End If
                 Else
-                    'Console.WriteLine("Erro ao acessar JSONBin: " & response.StatusCode)
-                    Return Nothing
+                    Return False
                 End If
             End Using
+
         Catch ex As Exception
             Debug.WriteLine("Erro: " & ex.Message)
-            Return Nothing
+            Return False
         End Try
     End Function
 
@@ -266,42 +261,7 @@ Public Class JSON
             Return False
         End Try
     End Function
-    Private Async Function checkJSONfile() As Task(Of Boolean)
-        If Not Directory.Exists(Application.StartupPath & "\JSON") Or Not File.Exists(portfolioPathFile) Then
 
-            Directory.CreateDirectory(Application.StartupPath & "\JSON")
-
-            Try
-                Await loadJSONfromJSONBIN()
-                Return True
-
-            Catch ex As Exception
-
-                Dim criptos As New Dictionary(Of String, List(Of Dictionary(Of String, Object))) From {
-                {"BTC", New List(Of Dictionary(Of String, Object)) From {
-                    New Dictionary(Of String, Object) From {
-                        {"InitialPrice", 10000.0},
-                        {"Qtd", 2},
-                        {"Data", "01/01/2000"},
-                        {"Wallet", "Binance"},
-                        {"LastPrice", 1}
-                    }
-                }}
-            }
-
-                Dim jsonString As String = System.Text.Json.JsonSerializer.Serialize(criptos, New JsonSerializerOptions With {
-                .WriteIndented = True
-            })
-
-                File.WriteAllText(portfolioPathFile, jsonString)
-                Return True
-            End Try
-        Else
-            Await loadJSONfromJSONBIN()
-            Return True
-        End If
-
-    End Function
 
     Public Sub loadFromJSON2ComboGrid(filePath As String, Optional combobox As System.Windows.Forms.ComboBox = Nothing, Optional grid As DataGridView = Nothing)
 
@@ -501,8 +461,10 @@ Public Class JSON
         End Try
 
     End Function
-    Public Async Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing) As Task(Of Object)
-        If Await checkJSONfile() Then
+    Public Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing) As Object
+        Try
+
+
             Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
             Dim allItems As New List(Of ItemKey)()
 
@@ -531,9 +493,10 @@ Public Class JSON
             End If
 
             Return allItems
-        Else
+        Catch ex As Exception
             Return False
-        End If
+        End Try
+
     End Function
 
     Public Function ConvertListToDataTable(Of T)(list As List(Of T)) As DataTable
@@ -557,7 +520,7 @@ Public Class JSON
     End Function
     Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task
         ' Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
-        Dim result = Await LoadJSONtoDataGrid()
+        Dim result = LoadJSONtoDataGrid()
         Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
 
         Dim getCriptoData As New Cotacao
