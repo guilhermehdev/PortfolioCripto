@@ -102,17 +102,28 @@ Public Class FormMain
         FormIntervalo.ShowDialog()
     End Sub
 
-    Private Sub Timer1_Tick(sender As Object, e As EventArgs) Handles TimerRefresh.Tick
+    Private Async Function Timer1_TickAsync(sender As Object, e As EventArgs) As Task Handles TimerRefresh.Tick
         Dim json As New JSON
         Try
             json.FormatGrid(dgPortfolio)
             Me.remainingtimeInSeconds = TimerRefresh.Interval / 1000
-            Setup()
+            chart.removeCharts()
+            lbLoadFromMarket.Visible = True
+            TimerBlink.Start()
+
+            Cursor = Cursors.WaitCursor
+            dgPortfolio.Cursor = Cursors.WaitCursor
+            Await Cjson.LoadCriptos(dgPortfolio)
+            dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
+            Adjust()
+
+            lbAtualizaEm.Text = "Atualizado em:"
+            lbRefresh.Text = My.Settings.lastView
         Catch ex As Exception
 
         End Try
 
-    End Sub
+    End Function
     Private Sub TimerCountdown_Tick(sender As Object, e As EventArgs) Handles TimerCountdown.Tick
         remainingtimeInSeconds -= 1
         lbAtualizaEm.Text = "Atualiza em:"
