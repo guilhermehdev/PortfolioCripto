@@ -15,7 +15,7 @@ Public Class FormMain
         Application.Exit()
     End Sub
 
-    Private Async Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
@@ -36,6 +36,7 @@ Public Class FormMain
                 Adjust()
 
                 lbAtualizaEm.Text = "Atualizado em:"
+                lbRefresh.Location = New Point(125, 7)
                 lbRefresh.Text = My.Settings.lastView
             End If
 
@@ -72,9 +73,22 @@ Public Class FormMain
 
     End Sub
 
-    Private Sub btRefresh_Click_1(sender As Object, e As EventArgs) Handles btRefresh.Click
+    Private Async Sub btRefresh_Click_1Async(sender As Object, e As EventArgs) Handles btRefresh.Click
         Try
-            Setup()
+            chart.removeCharts()
+            lbLoadFromMarket.Visible = True
+            TimerBlink.Start()
+
+            Cursor = Cursors.WaitCursor
+            dgPortfolio.Cursor = Cursors.WaitCursor
+            Await Cjson.LoadCriptos(dgPortfolio)
+            dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
+            Adjust()
+
+            lbAtualizaEm.Text = "Atualizado em:"
+            lbRefresh.Location = New Point(125, 7)
+            lbRefresh.Text = My.Settings.lastView
+
             TimerCountdown.Stop()
             TimerRefresh.Stop()
         Catch ex As Exception
@@ -119,6 +133,7 @@ Public Class FormMain
 
             lbAtualizaEm.Text = "Atualizado em:"
             lbRefresh.Text = My.Settings.lastView
+            lbRefresh.Location = New Point(125, 7)
         Catch ex As Exception
 
         End Try
@@ -127,6 +142,7 @@ Public Class FormMain
     Private Sub TimerCountdown_Tick(sender As Object, e As EventArgs) Handles TimerCountdown.Tick
         remainingtimeInSeconds -= 1
         lbAtualizaEm.Text = "Atualiza em:"
+        lbRefresh.Location = New Point(112, 7)
         lbRefresh.Text = $"{(remainingtimeInSeconds \ 60).ToString("D2")}:{(remainingtimeInSeconds Mod 60).ToString("D2")}"
     End Sub
 

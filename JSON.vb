@@ -146,7 +146,6 @@ Public Class JSON
         End Try
     End Function
 
-
     Public Async Function AppendJSONToBin(chave As String, InitialPrice As Decimal, Qtd As Decimal, Data As String, Wallet As String, lastPrice As Decimal) As Task(Of Boolean)
         Dim url As String = JSONBinPut
         Dim jsonAtual As JObject = Nothing
@@ -208,7 +207,6 @@ Public Class JSON
             End Try
         End Using
     End Function
-
     Public Async Function DeleteJSONFromBin(ByVal key As String) As Task(Of Boolean)
         Try
             Dim url As String = JSONBinPut

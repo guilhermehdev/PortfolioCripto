@@ -172,12 +172,12 @@ Partial Class FormMain
         Label15.AutoSize = True
         Label15.BackColor = Color.Transparent
         Label15.Font = New Font("Candara", 14F, FontStyle.Bold)
-        Label15.ForeColor = Color.Gold
+        Label15.ForeColor = Color.LawnGreen
         Label15.Location = New Point(5, 9)
         Label15.Name = "Label15"
-        Label15.Size = New Size(60, 23)
+        Label15.Size = New Size(43, 23)
         Label15.TabIndex = 17
-        Label15.Text = "Lucro:"
+        Label15.Text = "L / P"
         ' 
         ' lbTotalBRL
         ' 
@@ -248,7 +248,7 @@ Partial Class FormMain
         lbRefresh.AutoSize = True
         lbRefresh.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
         lbRefresh.ForeColor = Color.Gold
-        lbRefresh.Location = New Point(125, 7)
+        lbRefresh.Location = New Point(112, 7)
         lbRefresh.Name = "lbRefresh"
         lbRefresh.Size = New Size(38, 15)
         lbRefresh.TabIndex = 0
