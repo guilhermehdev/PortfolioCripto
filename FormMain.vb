@@ -116,7 +116,7 @@ Public Class FormMain
         FormIntervalo.ShowDialog()
     End Sub
 
-    Private Async Function Timer1_TickAsync(sender As Object, e As EventArgs) As Task Handles TimerRefresh.Tick
+    Private Async Sub Timer1_TickAsync(sender As Object, e As EventArgs) Handles TimerRefresh.Tick
         Dim json As New JSON
         Try
             json.FormatGrid(dgPortfolio)
@@ -138,7 +138,7 @@ Public Class FormMain
 
         End Try
 
-    End Function
+    End Sub
     Private Sub TimerCountdown_Tick(sender As Object, e As EventArgs) Handles TimerCountdown.Tick
         remainingtimeInSeconds -= 1
         lbAtualizaEm.Text = "Atualiza em:"
