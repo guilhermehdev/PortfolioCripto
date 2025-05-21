@@ -8,7 +8,7 @@ Public Class Cotacao
     Private Shared ReadOnly apiUrlHistorical As String = My.Settings.apiUrlHistorical
     Private Shared ReadOnly apiUrl As String = My.Settings.activeAPI
 
-    Public Async Function GetCriptoPrices(simbolosCripto As String) As Task(Of String)
+    Public Async Function GetCriptoPrices(symbolORid As String) As Task(Of String)
 
         Try
             Dim requestUrl As String
@@ -17,7 +17,17 @@ Public Class Cotacao
                 client.DefaultRequestHeaders.Add("X-CMC_PRO_API_KEY", apiKey)
                 client.DefaultRequestHeaders.Accept.Add(New MediaTypeWithQualityHeaderValue("application/json"))
 
-                requestUrl = $"{apiUrl}?symbol={simbolosCripto.ToUpper()}"
+                If IsNumeric(symbolORid) Then
+                    ' MsgBox($"O parâmetro {symbolORid} é numérico, portanto, será tratado como ID.", MsgBoxStyle.Information, "Informação")
+
+                    requestUrl = $"{apiUrl}?id={symbolORid}"
+                Else
+                    'MsgBox($"O parâmetro {symbolORid} não é numérico, portanto, será tratado como símbolo.", MsgBoxStyle.Information, "Informação")
+                    ' Caso contrário, trata como símbolo
+                    requestUrl = $"{apiUrl}?symbol={symbolORid.ToUpper()}"
+                End If
+
+                'requestUrl = $"{apiUrl}?symbol={symbolORid.ToUpper()}"
 
                 Dim response As HttpResponseMessage = Await client.GetAsync(requestUrl)
                 response.EnsureSuccessStatusCode()
@@ -26,7 +36,7 @@ Public Class Cotacao
 
                 ' Processa o JSON para extrair o preço da criptomoeda
                 Dim json = JsonDocument.Parse(responseBody)
-                Dim data = json.RootElement.GetProperty("data").GetProperty(simbolosCripto.ToUpper()).GetProperty("quote").GetProperty("USD")
+                Dim data = json.RootElement.GetProperty("data").GetProperty(symbolORid.ToUpper()).GetProperty("quote").GetProperty("USD")
 
                 Dim preco As Decimal = data.GetProperty("price").GetDecimal()
                 Dim marketcap As Decimal = data.GetProperty("market_cap").GetDecimal()
@@ -43,7 +53,7 @@ Public Class Cotacao
             Return False
             Exit Function
         Catch ex As Exception
-            MessageBox.Show($"Erro ao processar a resposta: Verifique o simbolo, talvez {simbolosCripto} não esteja correto. " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show($"Erro ao processar a resposta: Verifique o simbolo, talvez {symbolORid} não esteja correto. " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
             FormMain.lbLoadFromMarket.Visible = False
             FormMain.TimerBlink.Stop()
             FormMain.Cursor = Cursors.Default
