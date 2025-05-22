@@ -6,36 +6,20 @@ Public Class FormEntradas
     Dim json As New JSON
     Dim bs As New BindingSource()
 
-    'Private Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
-    '    Dim json As New JSON
-    '    Dim key = cbCripto.Text
-    '    If (IsNothing(tbQtd.Text) Or tbQtd.Text = 0) Or (Not IsNumeric(TbPrecoEntrada.Text) Or TbPrecoEntrada.Text = 0 Or IsNothing(TbPrecoEntrada)) Then
-    '        MsgBox("Preencha todos os campos!")
-    '    Else
-    '        'If json.AppendJSONLocal(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1) Then
-    '        If json.AppendJSONToBin(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1) Then
-    '            MsgBox("Salvo!")
-    '            FormEntradas_Load(sender, e)
-    '            'FormMain.Setup()
-    '        End If
-    '    End If
-
-    'End Sub
-
     Private Async Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
-        Dim key = cbCripto.Text
+        Dim key = cbCripto.SelectedValue
 
         If (String.IsNullOrWhiteSpace(tbQtd.Text) OrElse tbQtd.Text = "0") OrElse
        (Not IsNumeric(TbPrecoEntrada.Text) OrElse TbPrecoEntrada.Text = "0") Then
             MsgBox("Preencha todos os campos!")
         Else
-            Dim sucesso As Boolean = Await json.AppendJSONToBin(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1)
+            Dim sucesso As Boolean = Await json.AppendJSONToBin(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1, cbCripto.Text)
 
             If sucesso Then
                 MsgBox("Salvo!")
                 'FormEntradas_Load(sender, e)
                 loadJSONtoDatagridLocal(dgCriptos)
-                FormatGrid(dgCriptos)
+
             End If
         End If
     End Sub
@@ -48,7 +32,7 @@ Public Class FormEntradas
         loadJSONtoDatagridLocal(dgCriptos)
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", cbWallet, Nothing)
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\criptos.json", cbCripto, Nothing)
-        FormatGrid(dgCriptos)
+
     End Sub
 
     Private Function loadJSONtoDatagridLocal(Optional ByVal datagrid As DataGridView = Nothing)
@@ -62,19 +46,122 @@ Public Class FormEntradas
                 For Each item As Item In items
                     Dim itemkey As New ItemKey() With {
                     .Cripto = propertyPair.Key,
+                    .Symbol = item.Symbol,
                     .InitialPrice = item.InitialPrice,
                     .Qtd = item.Qtd,
                     .Data = item.Data,
-                    .Wallet = item.Wallet,
-                    .LastPrice = item.LastPrice
+                    .Wallet = item.Wallet
                 }
                     allItems.Add(itemkey)
+
                 Next
             End If
+
         Next
 
+        Dim fontsize As Int16 = 10
+        Dim fontname As String = "Calibri"
         If datagrid IsNot Nothing Then
+
+            datagrid.DataSource = Nothing
+            datagrid.AutoGenerateColumns = True
             datagrid.DataSource = allItems
+
+            ' === Configuração de colunas ===
+            ' Ocultar colunas
+            datagrid.Columns("Cripto").Visible = False
+            datagrid.Columns("LastPrice").Visible = False
+
+            ' Reordenar colunas
+            datagrid.Columns("Symbol").DisplayIndex = 0
+            datagrid.Columns("Qtd").DisplayIndex = 1
+            datagrid.Columns("InitialPrice").DisplayIndex = 2
+            datagrid.Columns("Data").DisplayIndex = 3
+            datagrid.Columns("Wallet").DisplayIndex = 4
+
+            datagrid.ColumnHeadersHeight = 40
+            datagrid.CellBorderStyle = DataGridViewCellBorderStyle.None
+            datagrid.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
+            datagrid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+            With datagrid.ColumnHeadersDefaultCellStyle
+                .BackColor = Color.FromArgb(40, 40, 40)
+                .ForeColor = Color.Aqua
+                .Font = New Font("Calibri", 10, FontStyle.Italic)
+            End With
+
+            datagrid.Columns("Symbol").Width = 100
+            datagrid.Columns("Symbol").HeaderText = "Cripto"
+            With datagrid.Columns("Symbol").DefaultCellStyle
+                .BackColor = Color.Black
+                .ForeColor = Color.White
+                .Font = New Font(fontname, fontsize, FontStyle.Bold)
+                .Alignment = DataGridViewContentAlignment.MiddleLeft
+            End With
+
+            datagrid.Columns(1).HeaderText = "Preço médio"
+            datagrid.Columns(1).Width = 80
+            With datagrid.Columns(1).DefaultCellStyle
+                .BackColor = Color.Black
+                .ForeColor = Color.LimeGreen
+                .Font = New Font(fontname, fontsize, FontStyle.Bold)
+                .Alignment = DataGridViewContentAlignment.MiddleLeft
+            End With
+
+            datagrid.Columns(2).HeaderText = "Qtd"
+            datagrid.Columns(2).Width = 80
+            With datagrid.Columns(2).DefaultCellStyle
+                .BackColor = Color.Black
+                .Font = New Font(fontname, fontsize, FontStyle.Bold)
+                .Alignment = DataGridViewContentAlignment.MiddleLeft
+            End With
+
+            datagrid.Columns(3).Width = 80
+            With datagrid.Columns(3).DefaultCellStyle
+                .BackColor = Color.Black
+                .ForeColor = Color.Gold
+                .Font = New Font(fontname, fontsize, FontStyle.Bold)
+                .Alignment = DataGridViewContentAlignment.MiddleLeft
+            End With
+
+            datagrid.Columns(4).Width = 80
+            With datagrid.Columns(4).DefaultCellStyle
+                .BackColor = Color.Black
+                .ForeColor = Color.White
+                .Font = New Font(fontname, fontsize, FontStyle.Bold)
+                .Alignment = DataGridViewContentAlignment.MiddleLeft
+            End With
+
+            For Each row As DataGridViewRow In datagrid.Rows
+
+                Select Case row.Cells(4).Value
+                    Case "Binance"
+                        row.Cells(4).Style.ForeColor = Color.Goldenrod
+                    Case "Metamask"
+                        row.Cells(4).Style.ForeColor = Color.DarkOrange
+                    Case "TrustWallet"
+                        row.Cells(4).Style.ForeColor = Color.LawnGreen
+                    Case "Phantom"
+                        row.Cells(4).Style.ForeColor = Color.MediumPurple
+                    Case "Bybit"
+                        row.Cells(4).Style.ForeColor = Color.Gainsboro
+                    Case "Gate.io"
+                        row.Cells(4).Style.ForeColor = Color.DodgerBlue
+                End Select
+
+                row.Height = 35
+                datagrid.ClearSelection()
+                datagrid.CurrentCell = Nothing
+
+                With row.Cells(2)
+                    .Style.Format = "C2"
+                    .Style.FormatProvider = New CultureInfo("en-US")
+                End With
+            Next
+
+            datagrid.ClearSelection()
+            datagrid.CurrentCell = Nothing
+
         End If
 
         bs.DataSource = allItems
@@ -98,6 +185,7 @@ Public Class FormEntradas
             .Font = New Font("Calibri", 10, FontStyle.Italic)
         End With
 
+        datagrid.Columns(0).Visible = False
         datagrid.Columns(0).Width = 60
         With datagrid.Columns(0).DefaultCellStyle
             .BackColor = Color.Black
@@ -106,19 +194,11 @@ Public Class FormEntradas
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
-        datagrid.Columns(1).HeaderText = "Preço médio/entrada"
-        datagrid.Columns(1).Width = 90
-        With datagrid.Columns(1).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.LimeGreen
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleLeft
-        End With
-
-        datagrid.Columns(2).Width = 80
+        datagrid.Columns(2).HeaderText = "Preço médio/entrada"
+        datagrid.Columns(2).Width = 90
         With datagrid.Columns(2).DefaultCellStyle
             .BackColor = Color.Black
-            .ForeColor = Color.Gold
+            .ForeColor = Color.LimeGreen
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
@@ -126,13 +206,21 @@ Public Class FormEntradas
         datagrid.Columns(3).Width = 80
         With datagrid.Columns(3).DefaultCellStyle
             .BackColor = Color.Black
+            .ForeColor = Color.Gold
+            .Font = New Font(fontname, fontsize, FontStyle.Bold)
+            .Alignment = DataGridViewContentAlignment.MiddleLeft
+        End With
+
+        datagrid.Columns(4).Width = 80
+        With datagrid.Columns(4).DefaultCellStyle
+            .BackColor = Color.Black
             .ForeColor = Color.White
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
-        datagrid.Columns(4).Width = 104
-        With datagrid.Columns(4).DefaultCellStyle
+        datagrid.Columns(5).Width = 104
+        With datagrid.Columns(5).DefaultCellStyle
             .BackColor = Color.Black
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -140,26 +228,26 @@ Public Class FormEntradas
 
         For Each row As DataGridViewRow In datagrid.Rows
 
-            Select Case row.Cells(4).Value
+            Select Case row.Cells(5).Value
                 Case "Binance"
-                    row.Cells(4).Style.ForeColor = Color.Goldenrod
+                    row.Cells(5).Style.ForeColor = Color.Goldenrod
                 Case "Metamask"
-                    row.Cells(4).Style.ForeColor = Color.DarkOrange
+                    row.Cells(5).Style.ForeColor = Color.DarkOrange
                 Case "TrustWallet"
-                    row.Cells(4).Style.ForeColor = Color.LawnGreen
+                    row.Cells(5).Style.ForeColor = Color.LawnGreen
                 Case "Phantom"
-                    row.Cells(4).Style.ForeColor = Color.MediumPurple
+                    row.Cells(5).Style.ForeColor = Color.MediumPurple
                 Case "Bybit"
-                    row.Cells(4).Style.ForeColor = Color.Gainsboro
+                    row.Cells(5).Style.ForeColor = Color.Gainsboro
                 Case "Gate.io"
-                    row.Cells(4).Style.ForeColor = Color.DodgerBlue
+                    row.Cells(5).Style.ForeColor = Color.DodgerBlue
             End Select
 
             row.Height = 35
             datagrid.ClearSelection()
             datagrid.CurrentCell = Nothing
 
-            With row.Cells(1)
+            With row.Cells(2)
                 .Style.Format = "C2"
                 .Style.FormatProvider = New CultureInfo("en-US")
             End With
@@ -179,7 +267,7 @@ Public Class FormEntradas
             bs.Remove(simbolToDelete)
             'FormEntradas_Load(sender, e)
             loadJSONtoDatagridLocal(dgCriptos)
-            FormatGrid(dgCriptos)
+
         End If
 
     End Sub
@@ -189,7 +277,7 @@ Public Class FormEntradas
 
     Private Sub dgCriptos_CellEnter(sender As Object, e As DataGridViewCellEventArgs) Handles dgCriptos.CellEnter
         Try
-            cbCripto.Text = dgCriptos.SelectedRows.Item(0).Cells(0).Value.ToString
+            cbCripto.Text = dgCriptos.SelectedRows.Item(0).Cells(6).Value.ToString
             TbPrecoEntrada.Text = dgCriptos.SelectedRows.Item(0).Cells(1).Value.ToString.Replace(".", ",")
             tbQtd.Text = dgCriptos.SelectedRows.Item(0).Cells(2).Value.ToString.Replace(".", ",")
             dtpDataEntrada.Value = dgCriptos.SelectedRows.Item(0).Cells(3).Value.ToString

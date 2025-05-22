@@ -4,7 +4,9 @@
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\criptos.json", Nothing, dgSymbols)
         Me.Icon = FormMain.Icon
 
-        dgSymbols.Columns(0).HeaderText = "Simbolo"
+        dgSymbols.Columns(0).HeaderText = "ID"
+        dgSymbols.Columns(0).Width = 75
+        dgSymbols.Columns(1).HeaderText = "Simbolo"
         dgSymbols.ColumnHeadersHeight = 30
         dgSymbols.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         dgSymbols.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
@@ -17,6 +19,10 @@
 
         For Each row As DataGridViewRow In dgSymbols.Rows
             With row.Cells(0)
+                .Style.ForeColor = Color.Lime
+                .Style.BackColor = Color.FromArgb(20, 20, 30)
+            End With
+            With row.Cells(1)
                 .Style.ForeColor = Color.Orange
                 .Style.BackColor = Color.FromArgb(20, 20, 20)
             End With
@@ -32,13 +38,25 @@
 
     Private Sub btSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
         Dim json As New JSON
-        json.AddWalletExchangeSymbolToJson(Application.StartupPath & "\JSON\criptos.json", tbSymbol.Text)
+        Dim id As Integer = 0
+        If tbSymbol.Text = "" Or tbSymbol.Text.Length < 3 Then
+            MessageBox.Show("Preencha o simbolo!", "Atenção", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            tbSymbol.Focus()
+            Return
+        End If
+
+        If tbID.Text = "" Then
+            id = tbSymbol.Text
+        Else
+            id = tbID.Text
+        End If
+        json.AddWalletExchangeSymbolToJson(Application.StartupPath & "\JSON\criptos.json", tbSymbol.Text, id)
         FormSymbols_Load(sender, e)
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\criptos.json", FormEntradas.cbCripto, Nothing)
     End Sub
     Private Sub ExcluirToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
         Dim json As New JSON
-        json.RemoveWalletExchangeSymbolFromJson(Application.StartupPath & "\JSON\criptos.json", dgSymbols.SelectedRows(0).Cells(0).Value.ToString)
+        json.RemoveWalletExchangeSymbolFromJson(Application.StartupPath & "\JSON\criptos.json", dgSymbols.SelectedRows(0).Cells(1).Value.ToString)
         FormSymbols_Load(sender, e)
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\criptos.json", FormEntradas.cbCripto, Nothing)
     End Sub

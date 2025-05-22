@@ -23,9 +23,9 @@ Partial Class FormSymbols
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         components = New ComponentModel.Container()
-        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle5 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormSymbols))
         StatusStrip1 = New StatusStrip()
         ToolStripStatusLabel1 = New ToolStripStatusLabel()
@@ -37,6 +37,8 @@ Partial Class FormSymbols
         dgSymbols = New DataGridView()
         ContextMenuStrip1 = New ContextMenuStrip(components)
         ExcluirToolStripMenuItem = New ToolStripMenuItem()
+        tbID = New MaskedTextBox()
+        Label1 = New Label()
         StatusStrip1.SuspendLayout()
         GroupBox1.SuspendLayout()
         CType(dgSymbols, ComponentModel.ISupportInitialize).BeginInit()
@@ -49,7 +51,7 @@ Partial Class FormSymbols
         StatusStrip1.Items.AddRange(New ToolStripItem() {ToolStripStatusLabel1, ToolStripStatusLabel2})
         StatusStrip1.Location = New Point(0, 385)
         StatusStrip1.Name = "StatusStrip1"
-        StatusStrip1.Size = New Size(250, 22)
+        StatusStrip1.Size = New Size(316, 22)
         StatusStrip1.TabIndex = 31
         ' 
         ' ToolStripStatusLabel1
@@ -73,7 +75,7 @@ Partial Class FormSymbols
         btSalvarEntrada.FlatAppearance.BorderSize = 0
         btSalvarEntrada.FlatStyle = FlatStyle.Flat
         btSalvarEntrada.ForeColor = SystemColors.ButtonHighlight
-        btSalvarEntrada.Location = New Point(162, 28)
+        btSalvarEntrada.Location = New Point(232, 28)
         btSalvarEntrada.Name = "btSalvarEntrada"
         btSalvarEntrada.Size = New Size(72, 23)
         btSalvarEntrada.TabIndex = 30
@@ -84,7 +86,7 @@ Partial Class FormSymbols
         ' 
         tbSymbol.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
         tbSymbol.ForeColor = Color.Gold
-        tbSymbol.Location = New Point(12, 28)
+        tbSymbol.Location = New Point(82, 28)
         tbSymbol.Name = "tbSymbol"
         tbSymbol.Size = New Size(144, 23)
         tbSymbol.TabIndex = 28
@@ -93,7 +95,7 @@ Partial Class FormSymbols
         ' 
         Label2.AutoSize = True
         Label2.ForeColor = SystemColors.ButtonHighlight
-        Label2.Location = New Point(12, 10)
+        Label2.Location = New Point(82, 10)
         Label2.Name = "Label2"
         Label2.Size = New Size(40, 15)
         Label2.TabIndex = 29
@@ -106,7 +108,7 @@ Partial Class FormSymbols
         GroupBox1.ForeColor = Color.Aqua
         GroupBox1.Location = New Point(12, 57)
         GroupBox1.Name = "GroupBox1"
-        GroupBox1.Size = New Size(222, 325)
+        GroupBox1.Size = New Size(292, 325)
         GroupBox1.TabIndex = 27
         GroupBox1.TabStop = False
         GroupBox1.Text = "Registros"
@@ -122,43 +124,43 @@ Partial Class FormSymbols
         dgSymbols.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         dgSymbols.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgSymbols.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle1.BackColor = Color.Black
-        DataGridViewCellStyle1.Font = New Font("Calibri", 14F, FontStyle.Italic)
-        DataGridViewCellStyle1.ForeColor = Color.DodgerBlue
-        DataGridViewCellStyle1.SelectionBackColor = Color.Black
-        DataGridViewCellStyle1.SelectionForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
-        dgSymbols.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = Color.Black
+        DataGridViewCellStyle4.Font = New Font("Calibri", 14F, FontStyle.Italic)
+        DataGridViewCellStyle4.ForeColor = Color.DodgerBlue
+        DataGridViewCellStyle4.SelectionBackColor = Color.Black
+        DataGridViewCellStyle4.SelectionForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
+        dgSymbols.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
         dgSymbols.ContextMenuStrip = ContextMenuStrip1
-        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle2.Font = New Font("Calibri", 14F, FontStyle.Italic)
-        DataGridViewCellStyle2.ForeColor = Color.Aqua
-        DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle2.SelectionForeColor = SystemColors.ControlText
-        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
-        dgSymbols.DefaultCellStyle = DataGridViewCellStyle2
+        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle5.Font = New Font("Calibri", 14F, FontStyle.Italic)
+        DataGridViewCellStyle5.ForeColor = Color.Aqua
+        DataGridViewCellStyle5.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle5.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.True
+        dgSymbols.DefaultCellStyle = DataGridViewCellStyle5
         dgSymbols.EnableHeadersVisualStyles = False
         dgSymbols.Location = New Point(6, 25)
         dgSymbols.MultiSelect = False
         dgSymbols.Name = "dgSymbols"
         dgSymbols.ReadOnly = True
-        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle3.Font = New Font("Calibri", 14F, FontStyle.Bold)
-        DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle3.Padding = New Padding(2)
-        DataGridViewCellStyle3.SelectionBackColor = Color.DarkOrange
-        DataGridViewCellStyle3.SelectionForeColor = SystemColors.ControlText
-        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
-        dgSymbols.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
+        DataGridViewCellStyle6.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle6.Font = New Font("Calibri", 14F, FontStyle.Bold)
+        DataGridViewCellStyle6.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle6.Padding = New Padding(2)
+        DataGridViewCellStyle6.SelectionBackColor = Color.DarkOrange
+        DataGridViewCellStyle6.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
+        dgSymbols.RowHeadersDefaultCellStyle = DataGridViewCellStyle6
         dgSymbols.RowHeadersWidth = 4
         dgSymbols.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
         dgSymbols.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         dgSymbols.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgSymbols.ScrollBars = ScrollBars.Vertical
         dgSymbols.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgSymbols.Size = New Size(210, 294)
+        dgSymbols.Size = New Size(280, 294)
         dgSymbols.TabIndex = 12
         ' 
         ' ContextMenuStrip1
@@ -173,12 +175,33 @@ Partial Class FormSymbols
         ExcluirToolStripMenuItem.Size = New Size(109, 22)
         ExcluirToolStripMenuItem.Text = "Excluir"
         ' 
+        ' tbID
+        ' 
+        tbID.BackColor = Color.FromArgb(CByte(32), CByte(32), CByte(32))
+        tbID.ForeColor = Color.Gold
+        tbID.Location = New Point(12, 28)
+        tbID.Name = "tbID"
+        tbID.Size = New Size(64, 23)
+        tbID.TabIndex = 32
+        ' 
+        ' Label1
+        ' 
+        Label1.AutoSize = True
+        Label1.ForeColor = SystemColors.ButtonHighlight
+        Label1.Location = New Point(12, 10)
+        Label1.Name = "Label1"
+        Label1.Size = New Size(18, 15)
+        Label1.TabIndex = 33
+        Label1.Text = "ID"
+        ' 
         ' FormSymbols
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        ClientSize = New Size(250, 407)
+        ClientSize = New Size(316, 407)
+        Controls.Add(tbID)
+        Controls.Add(Label1)
         Controls.Add(StatusStrip1)
         Controls.Add(btSalvarEntrada)
         Controls.Add(tbSymbol)
@@ -210,4 +233,6 @@ Partial Class FormSymbols
     Friend WithEvents dgSymbols As DataGridView
     Friend WithEvents ContextMenuStrip1 As ContextMenuStrip
     Friend WithEvents ExcluirToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents tbID As MaskedTextBox
+    Friend WithEvents Label1 As Label
 End Class

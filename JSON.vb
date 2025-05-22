@@ -102,7 +102,7 @@ Public Class JSON
             If Not Directory.Exists(Application.StartupPath & "\JSON") Or Not File.Exists(portfolioPathFile) Then
 
                 Directory.CreateDirectory(Application.StartupPath & "\JSON")
-                Await cjson.AppendJSONToBin("BTC", 10000, 5, Date.Today, "Wallet", 3000)
+                Await cjson.AppendJSONToBin("BTC", 10000, 5, Date.Today, "Wallet", 3000, "BTC")
 
             End If
 
@@ -146,7 +146,7 @@ Public Class JSON
         End Try
     End Function
 
-    Public Async Function AppendJSONToBin(chave As String, InitialPrice As Decimal, Qtd As Decimal, Data As String, Wallet As String, lastPrice As Decimal) As Task(Of Boolean)
+    Public Async Function AppendJSONToBin(chave As String, InitialPrice As Decimal, Qtd As Decimal, Data As String, Wallet As String, lastPrice As Decimal, symbol As String) As Task(Of Boolean)
         Dim url As String = JSONBinPut
         Dim jsonAtual As JObject = Nothing
 
@@ -181,6 +181,7 @@ Public Class JSON
                     novoItem("Data") = Data
                     novoItem("Wallet") = Wallet
                     novoItem("LastPrice") = lastPrice
+                    novoItem("Symbol") = symbol
                     itemsArray.Add(novoItem)
                 End If
 
@@ -291,6 +292,7 @@ Public Class JSON
 
         If Not IsNothing(combobox) Then
             combobox.DataSource = exchanges
+            combobox.ValueMember = "id"
             combobox.DisplayMember = "Name"
         End If
 
@@ -300,7 +302,7 @@ Public Class JSON
 
     End Sub
 
-    Public Sub AddWalletExchangeSymbolToJson(filePath As String, newValue As String)
+    Public Sub AddWalletExchangeSymbolToJson(filePath As String, simbol_wallet As String, Optional id As String = "")
         ' Caminho do arquivo JSON
         ' Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
 
@@ -328,9 +330,16 @@ Public Class JSON
             Exit Sub
         End Try
 
+        Dim newID As String
+        If id = "" Or Not IsNumeric(id) Then
+            newID = simbol_wallet.ToUpper
+        Else
+            newID = id
+        End If
         ' Criar um novo objeto Exchange e adicionar à lista
         Dim newExchange As New Exchange With {
-            .Name = newValue.ToUpper
+            .Name = simbol_wallet.ToUpper,
+            .id = newID
         }
         exchanges.Add(newExchange)
 
@@ -398,6 +407,7 @@ Public Class JSON
     End Sub
 
     Public Class Exchange
+        Public Property id As String
         Public Property Name As String
     End Class
 
@@ -431,7 +441,7 @@ Public Class JSON
         Return Nothing
     End Function
 
-    Function AppendJSONLocal(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String, ByVal lastPrice As Decimal)
+    Function AppendJSONLocal(ByVal chave As String, ByVal InitialPrice As Decimal, ByVal Qtd As Decimal, ByVal Data As String, ByVal Wallet As String, ByVal lastPrice As Decimal, symbol As String)
         Try
             Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
             Dim newObject As New JObject()
@@ -441,6 +451,7 @@ Public Class JSON
             newObject("Data") = Data
             newObject("Wallet") = Wallet
             newObject("LastPrice") = lastPrice
+            newObject("Symbol") = symbol
             jsonObject(chave) = New JArray()
 
             Dim itemsArray As JArray = CType(jsonObject(chave), JArray)
@@ -455,43 +466,6 @@ Public Class JSON
 
         Catch ex As Exception
             MsgBox("Erro ao salvar o arquivo JSON: " & ex.Message)
-            Return False
-        End Try
-
-    End Function
-    Public Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing) As Object
-        Try
-
-
-            Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
-            Dim allItems As New List(Of ItemKey)()
-
-            For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
-                If propertyPair.Value.Type = JTokenType.Array Then
-                    Dim items As List(Of Item) = propertyPair.Value.ToObject(Of List(Of Item))()
-
-                    For Each item As Item In items
-                        Dim itemkey As New ItemKey() With {
-                        .Cripto = propertyPair.Key,
-                        .InitialPrice = item.InitialPrice,
-                        .Qtd = item.Qtd,
-                        .Data = item.Data,
-                        .Wallet = item.Wallet,
-                        .LastPrice = item.LastPrice
-                    }
-                        allItems.Add(itemkey)
-                    Next
-                End If
-            Next
-
-            bindingSource.DataSource = allItems
-
-            If datagrid IsNot Nothing Then
-                datagrid.DataSource = bindingSource
-            End If
-
-            Return allItems
-        Catch ex As Exception
             Return False
         End Try
 
@@ -514,6 +488,44 @@ Public Class JSON
         Next
 
         Return table
+
+    End Function
+
+    Public Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing) As Object
+        Try
+
+            Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
+            Dim allItems As New List(Of ItemKey)()
+
+            For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
+                If propertyPair.Value.Type = JTokenType.Array Then
+                    Dim items As List(Of Item) = propertyPair.Value.ToObject(Of List(Of Item))()
+
+                    For Each item As Item In items
+                        Dim itemkey As New ItemKey() With {
+                        .Cripto = propertyPair.Key,
+                        .InitialPrice = item.InitialPrice,
+                        .Qtd = item.Qtd,
+                        .Data = item.Data,
+                        .Wallet = item.Wallet,
+                        .LastPrice = item.LastPrice,
+                        .Symbol = item.Symbol
+                    }
+                        allItems.Add(itemkey)
+                    Next
+                End If
+            Next
+
+            bindingSource.DataSource = allItems
+
+            If datagrid IsNot Nothing Then
+                datagrid.DataSource = bindingSource
+            End If
+
+            Return allItems
+        Catch ex As Exception
+            Return False
+        End Try
 
     End Function
     Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task
@@ -605,7 +617,7 @@ Public Class JSON
 
                 x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
 
-                newRow("Cripto") = row("Cripto")
+                newRow("Cripto") = row.Item(6).ToString
                 newRow("Perf") = $"{perform.Value:F2}%"
                 newRow("Wallet") = wallet
 
@@ -657,7 +669,7 @@ Public Class JSON
                 listInitValue.Add(initialValueUSD)
                 listCurrValue.Add(currValueUSD)
 
-                AppendJSONLocal(newRow("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"))
+                AppendJSONLocal(row("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"), row.Item(6).ToString)
 
             Next
 
@@ -787,7 +799,7 @@ Public Class JSON
             .Font = New Font("Calibri", 10, FontStyle.Italic)
         End With
 
-        datagrid.Columns(0).Width = 75
+        datagrid.Columns(0).Width = 100
         With datagrid.Columns(0).DefaultCellStyle
             .BackColor = Color.Black
             .ForeColor = Color.White
@@ -1138,6 +1150,7 @@ Public Class Item
     Public Property Data As String
     Public Property Wallet As String
     Public Property LastPrice As String
+    Public Property Symbol As Object
 End Class
 
 Public Class ItemKey
@@ -1147,4 +1160,5 @@ Public Class ItemKey
     Public Property Data As String
     Public Property Wallet As String
     Public Property LastPrice As String
+    Public Property Symbol As Object
 End Class
