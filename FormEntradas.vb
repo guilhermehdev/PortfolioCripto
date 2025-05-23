@@ -7,7 +7,12 @@ Public Class FormEntradas
     Dim bs As New BindingSource()
 
     Private Async Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
-        Dim key = cbCripto.SelectedValue
+        Dim key
+        If cbCripto.SelectedValue = 0 Or Not IsNumeric(cbCripto.SelectedValue) Then
+            key = cbCripto.Text
+        Else
+            key = cbCripto.SelectedValue
+        End If
 
         If (String.IsNullOrWhiteSpace(tbQtd.Text) OrElse tbQtd.Text = "0") OrElse
        (Not IsNumeric(TbPrecoEntrada.Text) OrElse TbPrecoEntrada.Text = "0") Then

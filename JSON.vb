@@ -150,6 +150,8 @@ Public Class JSON
         Dim url As String = JSONBinPut
         Dim jsonAtual As JObject = Nothing
 
+        MsgBox("Adicionando chave: " & chave & " " & symbol)
+
         Using client As New HttpClient()
             client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
 
@@ -824,7 +826,7 @@ Public Class JSON
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
-        datagrid.Columns(3).Width = 80
+        datagrid.Columns(3).Width = 90
         With datagrid.Columns(3).DefaultCellStyle
             .BackColor = Color.MidnightBlue
             .ForeColor = Color.Gold
