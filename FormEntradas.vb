@@ -8,7 +8,7 @@ Public Class FormEntradas
 
     Private Async Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
         Dim key
-        If cbCripto.SelectedValue = 0 Or Not IsNumeric(cbCripto.SelectedValue) Then
+        If cbCripto.SelectedValue = 0 Or Not IsNumeric(cbCripto.SelectedValue) Or cbCripto.SelectedValue = "" Then
             key = cbCripto.Text
         Else
             key = cbCripto.SelectedValue
@@ -124,7 +124,7 @@ Public Class FormEntradas
             datagrid.Columns(3).Width = 80
             With datagrid.Columns(3).DefaultCellStyle
                 .BackColor = Color.Black
-                .ForeColor = Color.Gold
+                .ForeColor = Color.White
                 .Font = New Font(fontname, fontsize, FontStyle.Bold)
                 .Alignment = DataGridViewContentAlignment.MiddleLeft
             End With
@@ -140,18 +140,20 @@ Public Class FormEntradas
             For Each row As DataGridViewRow In datagrid.Rows
 
                 Select Case row.Cells(4).Value
-                    Case "Binance"
+                    Case "BINANCE"
                         row.Cells(4).Style.ForeColor = Color.Goldenrod
-                    Case "Metamask"
+                    Case "METAMASK"
                         row.Cells(4).Style.ForeColor = Color.DarkOrange
-                    Case "TrustWallet"
+                    Case "TRUSTWALLET"
                         row.Cells(4).Style.ForeColor = Color.LawnGreen
-                    Case "Phantom"
+                    Case "PHANTOM"
                         row.Cells(4).Style.ForeColor = Color.MediumPurple
-                    Case "Bybit"
+                    Case "BYBIT"
                         row.Cells(4).Style.ForeColor = Color.Gainsboro
-                    Case "Gate.io"
+                    Case "GATE.IO"
                         row.Cells(4).Style.ForeColor = Color.DodgerBlue
+                    Case "MEXC"
+                        row.Cells(4).Style.ForeColor = Color.White
                 End Select
 
                 row.Height = 35

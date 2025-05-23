@@ -150,8 +150,6 @@ Public Class JSON
         Dim url As String = JSONBinPut
         Dim jsonAtual As JObject = Nothing
 
-        MsgBox("Adicionando chave: " & chave & " " & symbol)
-
         Using client As New HttpClient()
             client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
 
@@ -666,7 +664,7 @@ Public Class JSON
 
                 newDT.Rows.Add(newRow)
                 'criptoDic.Add(row("Cripto"), (currValueUSD / total) * 100)
-                listCriptos.Add(row("Cripto"))
+                listCriptos.Add(row.Item(6).ToString)
                 listAddress.Add(wallet)
                 listInitValue.Add(initialValueUSD)
                 listCurrValue.Add(currValueUSD)
@@ -819,7 +817,7 @@ Public Class JSON
         End With
 
         datagrid.Columns(2).HeaderText = "Wallet/Cex"
-        datagrid.Columns(2).Width = 85
+        datagrid.Columns(2).Width = 110
         With datagrid.Columns(2).DefaultCellStyle
             .BackColor = Color.FromArgb(20, 20, 20)
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
@@ -949,17 +947,17 @@ Public Class JSON
             End Select
 
             Select Case row.Cells(2).Value
-                Case "Binance"
+                Case "BINANCE"
                     row.Cells(2).Style.ForeColor = Color.Goldenrod
-                Case "Metamask"
+                Case "METAMASK"
                     row.Cells(2).Style.ForeColor = Color.DarkOrange
-                Case "TrustWallet"
+                Case "TRUSTWALLET"
                     row.Cells(2).Style.ForeColor = Color.LawnGreen
-                Case "Phantom"
+                Case "PHANTOM"
                     row.Cells(2).Style.ForeColor = Color.MediumPurple
-                Case "Bybit"
+                Case "BYBIT"
                     row.Cells(2).Style.ForeColor = Color.Gainsboro
-                Case "Gate.io"
+                Case "GATE.IO"
                     row.Cells(2).Style.ForeColor = Color.DodgerBlue
                 Case "MEXC"
                     row.Cells(2).Style.ForeColor = Color.White

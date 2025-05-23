@@ -65,5 +65,11 @@
         Dim json As New JSON
         json.captureRightClick(dgSymbols, e)
     End Sub
+    Private Sub dgSymbols_CellEnter(sender As Object, e As DataGridViewCellEventArgs) Handles dgSymbols.CellEnter
+        If dgSymbols.RowCount > 0 Then
+            tbID.Text = dgSymbols.CurrentRow.Cells(0).Value.ToString
+            tbSymbol.Text = dgSymbols.CurrentRow.Cells(1).Value.ToString
+        End If
+    End Sub
 
 End Class

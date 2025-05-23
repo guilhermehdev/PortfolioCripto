@@ -4,7 +4,8 @@
         json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", Nothing, dgWalletExchange)
         Me.Icon = FormMain.Icon
 
-        dgWalletExchange.Columns(0).HeaderText = "Wallet/Exchange"
+        dgWalletExchange.Columns(0).Visible = False
+        dgWalletExchange.Columns(1).HeaderText = "Wallet/Exchange"
         dgWalletExchange.ColumnHeadersHeight = 30
         dgWalletExchange.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         dgWalletExchange.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
@@ -16,7 +17,7 @@
         End With
 
         For Each row As DataGridViewRow In dgWalletExchange.Rows
-            With row.Cells(0)
+            With row.Cells(1)
                 .Style.ForeColor = Color.Orange
                 .Style.BackColor = Color.FromArgb(20, 20, 20)
             End With
