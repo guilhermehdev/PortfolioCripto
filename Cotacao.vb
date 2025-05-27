@@ -18,12 +18,8 @@ Public Class Cotacao
                 client.DefaultRequestHeaders.Accept.Add(New MediaTypeWithQualityHeaderValue("application/json"))
 
                 If IsNumeric(symbolORid) Then
-                    ' MsgBox($"O parâmetro {symbolORid} é numérico, portanto, será tratado como ID.", MsgBoxStyle.Information, "Informação")
-
                     requestUrl = $"{apiUrl}?id={symbolORid}"
                 Else
-                    'MsgBox($"O parâmetro {symbolORid} não é numérico, portanto, será tratado como símbolo.", MsgBoxStyle.Information, "Informação")
-                    ' Caso contrário, trata como símbolo
                     requestUrl = $"{apiUrl}?symbol={symbolORid.ToUpper()}"
                 End If
 

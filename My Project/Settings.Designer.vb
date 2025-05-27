@@ -15,7 +15,7 @@ Option Explicit On
 Namespace My
     
     <Global.System.Runtime.CompilerServices.CompilerGeneratedAttribute(),  _
-     Global.System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.13.0.0"),  _
+     Global.System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.14.0.0"),  _
      Global.System.ComponentModel.EditorBrowsableAttribute(Global.System.ComponentModel.EditorBrowsableState.Advanced)>  _
     Partial Friend NotInheritable Class MySettings
         Inherits Global.System.Configuration.ApplicationSettingsBase
@@ -171,6 +171,30 @@ Namespace My
             End Get
             Set
                 Me("JSONBinID") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("I6CTK7z1IwFbjvIpZYvjjKw7y0phdX3mGay8R4tPMvCSKtp3u2jabdPNMa9IUR5b")>  _
+        Public Property BinanceAPIKey() As String
+            Get
+                Return CType(Me("BinanceAPIKey"),String)
+            End Get
+            Set
+                Me("BinanceAPIKey") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("aTpFL4KmiTMoXlhn8Xj31XfKuxMNGPTz0SY6obOcvFleOivBR8iXQVviUuh1tHOe")>  _
+        Public Property BinanceSecretKey() As String
+            Get
+                Return CType(Me("BinanceSecretKey"),String)
+            End Get
+            Set
+                Me("BinanceSecretKey") = value
             End Set
         End Property
     End Class

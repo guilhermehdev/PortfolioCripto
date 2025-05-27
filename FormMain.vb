@@ -6,6 +6,7 @@ Public Class FormMain
     Public remainingtimeInSeconds As Integer
     Dim Cjson As New JSON
     Dim chart As New Charts
+    Dim B As New Binance
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -16,7 +17,9 @@ Public Class FormMain
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Setup()
+        'B.getMyAccount()
+        MsgBox(B.getCoinsPrice("VIRTUALUSDT"))
+        'Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
 

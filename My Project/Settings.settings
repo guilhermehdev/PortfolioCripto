@@ -32,5 +32,11 @@
     <Setting Name="JSONBinID" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="BinanceAPIKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)">I6CTK7z1IwFbjvIpZYvjjKw7y0phdX3mGay8R4tPMvCSKtp3u2jabdPNMa9IUR5b</Value>
+    </Setting>
+    <Setting Name="BinanceSecretKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)">aTpFL4KmiTMoXlhn8Xj31XfKuxMNGPTz0SY6obOcvFleOivBR8iXQVviUuh1tHOe</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
