@@ -7,6 +7,7 @@ Imports System.Windows.Forms.VisualStyles.VisualStyleElement
 Imports System.Net.Http
 Imports System.Text
 Imports System.Reflection
+Imports System.Diagnostics.Eventing.Reader
 
 
 Public Class JSON
@@ -18,6 +19,7 @@ Public Class JSON
     Private ReadOnly saoPauloTime As DateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saoPauloTimeZone)
     Private ReadOnly JSONBinGet As String = $"{My.Settings.JSONBinURL}/b/{jsonbin}/latest"
     Private ReadOnly JSONBinPut As String = $"{My.Settings.JSONBinURL}/b/{jsonbin}"
+    Dim b As New Binance
 
     Public Function loadJSONfile()
         Dim jsonString As String = File.ReadAllText(portfolioPathFile)
@@ -532,23 +534,27 @@ Public Class JSON
         ' Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
         Dim result = LoadJSONtoDataGrid()
         Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
+        Dim b As New Binance
+        Dim cot As New Cotacao
+        Dim gec As New Coingecko
+        Dim USDBRLprice = Await b.BINANCE_GetUSDTBRL()
+        Dim BTCprice As String = Await b.BINANCE_GetCoinsPrice("BTC")
 
-        Dim getCriptoData As New Cotacao
-        Dim USDBRLprice
+        'If Await cot.GetUSDBRL = 0 Then
+        '    FormMain.lbLoadFromMarket.Visible = False
+        '    FormMain.TimerBlink.Stop()
+        '    FormMain.Cursor = Cursors.Default
+        '    FormMain.dgPortfolio.Cursor = Cursors.Default
+        '    'Exit Function
 
-        If Await getCriptoData.GetUSDBRL = False Then
-            FormMain.lbLoadFromMarket.Visible = False
-            FormMain.TimerBlink.Stop()
-            FormMain.Cursor = Cursors.Default
-            FormMain.dgPortfolio.Cursor = Cursors.Default
-            Exit Function
+        'Else
+        '    'USDBRLprice = Await getCriptoData.GetUSDBRL
 
-        Else
-            USDBRLprice = Await getCriptoData.GetUSDBRL
-        End If
+        'End If
 
         Dim json As New JSON
-        Dim dom As Decimal? = Await Task.Run(Async Function() Await getCriptoData.GetBTCDOM())
+        'Dim dom As Decimal? = Await Task.Run(Async Function() Await cot.CM_GetBTCDOM())
+        Dim dom As Decimal? = Await Task.Run(Async Function() Await gec.CGECKO_GetBTCDominance())
         Dim profit As Decimal
         Dim initialValue As Decimal
         Dim currValueTotal As Decimal
@@ -568,6 +574,7 @@ Public Class JSON
         Dim addressDic As New Dictionary(Of String, Decimal)
         Dim difPrice As Decimal = 0
         Dim total As Decimal
+        Dim critoPriceTask As String
 
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
@@ -590,17 +597,28 @@ Public Class JSON
             ' Adicionar dados do DataTable original ao novo
             For Each row As DataRow In originalDT.Rows
                 Dim newRow As DataRow = newDT.NewRow()
-                Dim critoPriceTask As String = Await getCriptoData.GetCriptoPrices(row("Cripto"))
+
+                If row("Wallet") = "BINANCE" Then
+                    critoPriceTask = Await b.BINANCE_GetCoinsPrice(row.Item(6).ToString.ToUpper)
+                Else
+                    If Await cot.CM_GetCriptoPrices(row("Cripto")) = False Then
+                        Continue For
+                    Else
+                        critoPriceTask = Await cot.CM_GetCriptoPrices(row("Cripto"))
+                    End If
+                End If
+
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
                 Dim marketcap As String = valores(1)
-                Dim currPrice As Decimal = preco
-                Dim initialPrice As Decimal = row("InitialPrice").ToString.Replace(".", ",")
-                Dim initialValueUSD As Decimal = row("Qtd").ToString.Replace(".", ",") * row("InitialPrice").ToString.Replace(".", ",")
+                Dim currPrice As Decimal = cot.decimalBR(preco)
+                Dim initialPrice As Decimal = cot.decimalBR(row("InitialPrice"))
+                Dim initialValueUSD As Decimal = cot.decimalBR(row("Qtd")) * cot.decimalBR(row("InitialPrice"))
                 Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
 
                 wallet = row("Wallet")
-                currValueUSD = row("Qtd").ToString.Replace(".", ",") * currPrice
+                currValueUSD = cot.decimalBR(row("Qtd")) * currPrice
+
                 currValueBRL = currValueUSD * USDBRLprice
                 roi = currValueUSD - initialValueUSD
                 perform = (roi / initialValueUSD) * 100
@@ -623,13 +641,13 @@ Public Class JSON
 
                 Dim qtd As Decimal
                 If row("Qtd").ToString.Contains(".") Then
-                    qtd = row("Qtd").ToString.Replace(".", ",")
+                    qtd = cot.decimalBR(row("Qtd"))
                 Else
                     qtd = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
                 End If
                 newRow("Qtd") = qtd
 
-                Dim lastPrice As Decimal = row("LastPrice").ToString.Replace(".", ",")
+                Dim lastPrice As Decimal = cot.decimalBR(row("LastPrice"))
                 difPrice = CDec(currPrice.ToString("N2")) - CDec(lastPrice.ToString("N2"))
                 Dim priceAction As String
                 Dim op As String
@@ -677,9 +695,10 @@ Public Class JSON
             Dim arrayAddress() As String = listAddress.ToArray
             Dim arraySum() = Array.Empty(Of Object)()
             Dim listSum As New List(Of KeyValuePair(Of String, Decimal))
-            Dim task As String = Await getCriptoData.GetCriptoPrices("BTC")
-            Dim res() As String = task.Split("|"c)
-            Dim btcPrice As String = res(0)
+            'Dim task As String = Await getCriptoData.GetCriptoPrices("BTC")
+
+            Dim res() As String = BTCprice.Split("|"c)
+            Dim btc As String = res(0)
             Dim percentCashFlow As Decimal? = (cashflow / total) * 100
             Dim percentInvest As Decimal? = (currValueTotal / total) * 100
 
@@ -723,7 +742,7 @@ Public Class JSON
             End If
 
             FormMain.lbDolar.Text = BRLformat(USDBRLprice)
-            FormMain.lbBTC.Text = USDformat(btcPrice)
+            FormMain.lbBTC.Text = USDformat(cot.decimalBR(btc))
             FormMain.lbDom.Text = $"{dom.Value:F2}%"
             If performWallet < 0 Then
                 FormMain.lbPerformWallet.ForeColor = Color.Red
@@ -760,7 +779,7 @@ Public Class JSON
             End If
 
         Catch ex As Exception
-
+            Debug.WriteLine("Erro ao carregar os dados: " & ex.Message)
         End Try
 
     End Function

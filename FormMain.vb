@@ -17,9 +17,7 @@ Public Class FormMain
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        'B.getMyAccount()
-        MsgBox(B.getCoinsPrice("VIRTUALUSDT"))
-        'Setup()
+        Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
 
@@ -44,7 +42,7 @@ Public Class FormMain
             End If
 
         Catch ex As Exception
-
+            Debug.WriteLine("Erro ao carregar o portfólio: " & ex.Message)
         End Try
 
 

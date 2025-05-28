@@ -1,4 +1,5 @@
 ﻿
+Imports System.Globalization
 Imports System.Net.Http
 Imports System.Net.Http.Headers
 Imports System.Text.Json
@@ -8,7 +9,7 @@ Public Class Cotacao
     Private Shared ReadOnly apiUrlHistorical As String = My.Settings.apiUrlHistorical
     Private Shared ReadOnly apiUrl As String = My.Settings.activeAPI
 
-    Public Async Function GetCriptoPrices(symbolORid As String) As Task(Of String)
+    Public Async Function CM_GetCriptoPrices(symbolORid As String) As Task(Of String)
 
         Try
             Dim requestUrl As String
@@ -41,7 +42,7 @@ Public Class Cotacao
 
             End Using
         Catch e As HttpRequestException
-            MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Debug.Write($"Erro ao chamar a API do CoinMarketCap.{vbCrLf & vbCrLf & e.Message}")
             FormMain.lbLoadFromMarket.Visible = False
             FormMain.TimerBlink.Stop()
             FormMain.Cursor = Cursors.Default
@@ -49,7 +50,7 @@ Public Class Cotacao
             Return False
             Exit Function
         Catch ex As Exception
-            MessageBox.Show($"Erro ao processar a resposta: Verifique o simbolo, talvez {symbolORid} não esteja correto. " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Debug.Write($"Erro ao processar a resposta: Verifique o simbolo, talvez {symbolORid} não esteja correto. " & ex.Message)
             FormMain.lbLoadFromMarket.Visible = False
             FormMain.TimerBlink.Stop()
             FormMain.Cursor = Cursors.Default
@@ -60,7 +61,7 @@ Public Class Cotacao
 
     End Function
 
-    Public Async Function GetUSDBRL() As Task(Of Decimal)
+    Public Async Function CM_GetUSDBRL() As Task(Of Decimal)
 
         Try
             Dim requestUrl As String
@@ -89,15 +90,15 @@ Public Class Cotacao
 
             End Using
         Catch e As HttpRequestException
-            MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            Return False
+            Debug.Write($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}")
+            Return 0
         Catch ex As Exception
-            MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            Return False
+            Debug.Write($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & ex.Message}")
+            Return 0
         End Try
     End Function
 
-    Public Async Function GetBTCDOM() As Task(Of Decimal?)
+    Public Async Function CM_GetBTCDOM() As Task(Of Decimal?)
         Try
             Dim requestUrl As String
 
@@ -165,6 +166,10 @@ Public Class Cotacao
 
         ' Retorna Nothing em caso de falha
         Return Nothing
+    End Function
+
+    Public Function decimalBR(valor As String)
+        Return Decimal.Parse(valor, CultureInfo.InvariantCulture)
     End Function
 
 End Class

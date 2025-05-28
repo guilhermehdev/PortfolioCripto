@@ -1,12 +1,13 @@
-﻿Imports System.Net.Http
+﻿Imports System.Globalization
+Imports System.Net.Http
 Imports System.Security.Cryptography
 Imports System.Text
+Imports System.Text.Json
 Imports Newtonsoft.Json.Linq
-Imports System.Globalization
 Public Class Binance
     Private apiKey As String = My.Settings.BinanceAPIKey
     Private secret As String = My.Settings.BinanceSecretKey
-    Function QuerySigned(ByVal path As String, ByVal query As String) As String
+    Private Function QuerySigned(ByVal path As String, ByVal query As String) As String
 
         Dim qs = query & "&timestamp=" & (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
         Using hmac As New HMACSHA256(Encoding.UTF8.GetBytes(secret))
@@ -24,7 +25,7 @@ Public Class Binance
 
     End Function
 
-    Public Function getMyAccount()
+    Public Function BINANCE_getMyAccount()
         Dim json = QuerySigned("/api/v3/account", "recvWindow=5000")
         Dim account = JObject.Parse(json)
         Dim ativos = account("balances")
@@ -42,26 +43,47 @@ Public Class Binance
         Return False
 
     End Function
-    Public Function getCoinsPrice(ByVal pair As String) As String
-        Try
-            Using client As New HttpClient()
-                Dim url = $"https://api.binance.com/api/v3/ticker/price?symbol={pair}"
-                Dim response = client.GetAsync(url).Result
+    Public Async Function BINANCE_GetCoinsPrice(symbol As String) As Task(Of String)
+        Using client As New HttpClient()
+            Dim usdt As String = "USDT"
 
-                ' Verifica se a resposta HTTP foi bem-sucedida (status 200)
-                If response.IsSuccessStatusCode Then
-                    Dim price = response.Content.ReadAsStringAsync().Result
-                    Return price
-                Else
-                    Debug.WriteLine($"Erro HTTP: {CInt(response.StatusCode)} - {response.ReasonPhrase}")
-                    Return False
-                End If
-            End Using
-        Catch ex As Exception
-            Debug.WriteLine($"Erro de exceção: {ex.Message}")
-            Return False
-        End Try
+            If symbol.Trim.ToUpper = "USDT" Then
+                symbol = "USDC"
+            End If
+
+            Dim url = $"https://api.binance.com/api/v3/ticker/price?symbol={symbol.Trim.ToUpper}USDT"
+            Dim response = Await client.GetAsync(url)
+
+            If response.IsSuccessStatusCode Then
+                Dim content = Await response.Content.ReadAsStringAsync()
+                Dim json = JsonDocument.Parse(content)
+                Dim priceStr = json.RootElement.GetProperty("price").GetString()
+                Dim price As Decimal = Decimal.Parse(priceStr, CultureInfo.InvariantCulture)
+
+                Return $"{price.ToString(CultureInfo.InvariantCulture)}|0"
+            Else
+                Throw New Exception($"HTTP {CInt(response.StatusCode)} – {response.ReasonPhrase}")
+            End If
+        End Using
     End Function
 
+    Public Async Function BINANCE_GetUSDTBRL() As Task(Of Decimal)
+        Using client As New HttpClient()
+
+            Dim url = $"https://api.binance.com/api/v3/ticker/price?symbol=USDTBRL"
+            Dim response = Await client.GetAsync(url)
+
+            If response.IsSuccessStatusCode Then
+                Dim content = Await response.Content.ReadAsStringAsync()
+                Dim json = JsonDocument.Parse(content)
+                Dim priceStr = json.RootElement.GetProperty("price").GetString()
+                Dim price As Decimal = Decimal.Parse(priceStr, CultureInfo.InvariantCulture)
+
+                Return $"{price}"
+            Else
+                Throw New Exception($"HTTP {CInt(response.StatusCode)} – {response.ReasonPhrase}")
+            End If
+        End Using
+    End Function
 
 End Class
