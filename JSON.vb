@@ -553,7 +553,6 @@ Public Class JSON
         'End If
 
         Dim json As New JSON
-        'Dim dom As Decimal? = Await Task.Run(Async Function() Await cot.CM_GetBTCDOM())
         Dim dom As Decimal? = Await Task.Run(Async Function() Await gec.CGECKO_GetBTCDominance())
         Dim profit As Decimal
         Dim initialValue As Decimal
@@ -597,6 +596,9 @@ Public Class JSON
             ' Adicionar dados do DataTable original ao novo
             For Each row As DataRow In originalDT.Rows
                 Dim newRow As DataRow = newDT.NewRow()
+                Dim qtd As Decimal
+                Dim initialPrice As Decimal
+                initialPrice = cot.decimalBR(row("InitialPrice"))
 
                 If row("Wallet") = "BINANCE" Then
                     critoPriceTask = Await b.BINANCE_GetCoinsPrice(row.Item(6).ToString.ToUpper)
@@ -611,13 +613,23 @@ Public Class JSON
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
                 Dim marketcap As String = valores(1)
+
+                If IsNumeric(valores(2)) Then
+                    qtd = cot.decimalBR(valores(2))
+                Else
+                    qtd = cot.decimalBR(row("Qtd"))
+                End If
+
                 Dim currPrice As Decimal = cot.decimalBR(preco)
-                Dim initialPrice As Decimal = cot.decimalBR(row("InitialPrice"))
-                Dim initialValueUSD As Decimal = cot.decimalBR(row("Qtd")) * cot.decimalBR(row("InitialPrice"))
+
+                'Dim initialValueUSD As Decimal = cot.decimalBR(row("Qtd")) * cot.decimalBR(row("InitialPrice"))
+                Dim initialValueUSD As Decimal = (qtd) * cot.decimalBR(row("InitialPrice"))
+
                 Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
 
                 wallet = row("Wallet")
-                currValueUSD = cot.decimalBR(row("Qtd")) * currPrice
+                'currValueUSD = cot.decimalBR(row("Qtd")) * currPrice
+                currValueUSD = qtd * currPrice
 
                 currValueBRL = currValueUSD * USDBRLprice
                 roi = currValueUSD - initialValueUSD
@@ -636,16 +648,17 @@ Public Class JSON
                 x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
 
                 newRow("Cripto") = row.Item(6).ToString
+                newRow("Qtd") = qtd.ToString("N2")
                 newRow("Perf") = $"{perform.Value:F2}%"
                 newRow("Wallet") = wallet
 
-                Dim qtd As Decimal
-                If row("Qtd").ToString.Contains(".") Then
-                    qtd = cot.decimalBR(row("Qtd"))
-                Else
-                    qtd = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
-                End If
-                newRow("Qtd") = qtd
+                'Dim qtd As Decimal
+                'If row("Qtd").ToString.Contains(".") Then
+                '    qtd = cot.decimalBR(row("Qtd"))
+                'Else
+                '    qtd = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
+                'End If
+
 
                 Dim lastPrice As Decimal = cot.decimalBR(row("LastPrice"))
                 difPrice = CDec(currPrice.ToString("N2")) - CDec(lastPrice.ToString("N2"))
@@ -779,7 +792,8 @@ Public Class JSON
             End If
 
         Catch ex As Exception
-            Debug.WriteLine("Erro ao carregar os dados: " & ex.Message)
+            Debug.WriteLine("Erro ao carregar os dados: LoadCripto(): " & ex.Message)
+
         End Try
 
     End Function
@@ -1005,7 +1019,7 @@ Public Class JSON
                 End With
             Else
                 With row.Cells(6)
-                    .Style.Format = "C8"
+                    .Style.Format = "C6"
                     .Style.FormatProvider = New CultureInfo("en-US")
                 End With
             End If
