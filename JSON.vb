@@ -531,14 +531,21 @@ Public Class JSON
 
     End Function
     Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task
-        ' Dim originalDT = ConvertListToDataTable(LoadJSONtoDataGrid())
-        Dim result = LoadJSONtoDataGrid()
-        Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
+
         Dim b As New Binance
         Dim cot As New Cotacao
         Dim gec As New Coingecko
+        Dim result = LoadJSONtoDataGrid()
+        Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
+        Dim allSymbols = originalDT.AsEnumerable().
+                 Select(Function(r) r.Field(Of String)("Cripto").ToUpper()).
+                 ToList()
+
+        Dim mcapDict = Await gec.CGECKO_MCaps(allSymbols)
         Dim USDBRLprice = Await b.BINANCE_GetUSDTBRL()
         Dim BTCprice As String = Await b.BINANCE_GetCoinsPrice("BTC")
+
+        MsgBox(mcapDict.Count & " moedas carregadas do Coingecko.")
 
         'If Await cot.GetUSDBRL = 0 Then
         '    FormMain.lbLoadFromMarket.Visible = False
