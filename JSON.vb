@@ -541,7 +541,7 @@ Public Class JSON
                  Select(Function(r) r.Field(Of String)("Cripto").ToUpper()).
                  ToList()
 
-        Dim mcapDict = Await gec.CGECKO_MCaps(allSymbols)
+        Dim mcapDict = Await gec.GetMarketCapsFromCoinGecko(allSymbols)
         Dim USDBRLprice = Await b.BINANCE_GetUSDTBRL()
         Dim BTCprice As String = Await b.BINANCE_GetCoinsPrice("BTC")
 
@@ -619,7 +619,11 @@ Public Class JSON
 
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
-                Dim marketcap As String = valores(1)
+                ' Dim marketcap As String = valores(1)
+
+                Dim symbolUpper = row.Item(6).ToString().ToUpper()
+                Dim marketcap As Decimal = If(mcapDict.ContainsKey(symbolUpper), mcapDict(symbolUpper), 0D)
+
 
                 If IsNumeric(valores(2)) Then
                     qtd = cot.decimalBR(valores(2))
