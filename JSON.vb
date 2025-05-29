@@ -538,14 +538,12 @@ Public Class JSON
         Dim result = LoadJSONtoDataGrid()
         Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
         Dim allSymbols = originalDT.AsEnumerable().
-                 Select(Function(r) r.Field(Of String)("Cripto").ToUpper()).
+                 Select(Function(r) r.Field(Of String)("Symbol").ToUpper()).
                  ToList()
 
-        Dim mcapDict = Await gec.GetMarketCapsFromCoinGecko(allSymbols)
+        Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
         Dim USDBRLprice = Await b.BINANCE_GetUSDTBRL()
         Dim BTCprice As String = Await b.BINANCE_GetCoinsPrice("BTC")
-
-        MsgBox(mcapDict.Count & " moedas carregadas do Coingecko.")
 
         'If Await cot.GetUSDBRL = 0 Then
         '    FormMain.lbLoadFromMarket.Visible = False
@@ -607,41 +605,39 @@ Public Class JSON
                 Dim initialPrice As Decimal
                 initialPrice = cot.decimalBR(row("InitialPrice"))
 
+                Dim symbolUpper = row.Item(6).ToString().ToUpper()
+                Dim mData As CoinMarketData = Nothing
+
+                If mcapDict.ContainsKey(symbolUpper) Then
+                    mData = mcapDict(symbolUpper)
+                Else
+                    mData = New CoinMarketData() ' fallback vazio
+                End If
+
+                Dim marketcap = mData.MarketCap
+                Dim price = mData.Price
+                Dim volume = mData.Volume24h
+                Dim change = mData.Change24h
+
                 If row("Wallet") = "BINANCE" Then
                     critoPriceTask = Await b.BINANCE_GetCoinsPrice(row.Item(6).ToString.ToUpper)
                 Else
-                    If Await cot.CM_GetCriptoPrices(row("Cripto")) = False Then
-                        Continue For
-                    Else
-                        critoPriceTask = Await cot.CM_GetCriptoPrices(row("Cripto"))
-                    End If
+                    critoPriceTask = $"{price}|{marketcap}|0"
                 End If
 
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
-                ' Dim marketcap As String = valores(1)
+                qtd = cot.decimalBR(row("Qtd"))
 
-                Dim symbolUpper = row.Item(6).ToString().ToUpper()
-                Dim marketcap As Decimal = If(mcapDict.ContainsKey(symbolUpper), mcapDict(symbolUpper), 0D)
-
-
-                If IsNumeric(valores(2)) Then
-                    qtd = cot.decimalBR(valores(2))
-                Else
-                    qtd = cot.decimalBR(row("Qtd"))
+                If qtd >= 1 Then
+                    qtd = qtd.ToString("N2")
                 End If
 
                 Dim currPrice As Decimal = cot.decimalBR(preco)
-
-                'Dim initialValueUSD As Decimal = cot.decimalBR(row("Qtd")) * cot.decimalBR(row("InitialPrice"))
                 Dim initialValueUSD As Decimal = (qtd) * cot.decimalBR(row("InitialPrice"))
-
                 Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
-
                 wallet = row("Wallet")
-                'currValueUSD = cot.decimalBR(row("Qtd")) * currPrice
                 currValueUSD = qtd * currPrice
-
                 currValueBRL = currValueUSD * USDBRLprice
                 roi = currValueUSD - initialValueUSD
                 perform = (roi / initialValueUSD) * 100
@@ -659,17 +655,9 @@ Public Class JSON
                 x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
 
                 newRow("Cripto") = row.Item(6).ToString
-                newRow("Qtd") = qtd.ToString("N2")
+                newRow("Qtd") = qtd
                 newRow("Perf") = $"{perform.Value:F2}%"
                 newRow("Wallet") = wallet
-
-                'Dim qtd As Decimal
-                'If row("Qtd").ToString.Contains(".") Then
-                '    qtd = cot.decimalBR(row("Qtd"))
-                'Else
-                '    qtd = CDec(row("Qtd")).ToString("N2", New CultureInfo("pt-BR"))
-                'End If
-
 
                 Dim lastPrice As Decimal = cot.decimalBR(row("LastPrice"))
                 difPrice = CDec(currPrice.ToString("N2")) - CDec(lastPrice.ToString("N2"))
@@ -1023,7 +1011,7 @@ Public Class JSON
             End Select
 
 
-            If row.Cells(6).Value > 1 Then
+            If row.Cells(6).Value >= 1 Then
                 With row.Cells(6)
                     .Style.Format = "C2"
                     .Style.FormatProvider = New CultureInfo("en-US")
@@ -1042,7 +1030,7 @@ Public Class JSON
                 End With
             Else
                 With row.Cells(7)
-                    .Style.Format = "C8"
+                    .Style.Format = "C6"
                     .Style.FormatProvider = New CultureInfo("en-US")
                 End With
             End If

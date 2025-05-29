@@ -73,6 +73,7 @@ Public Class Binance
 
             Return $"{price.ToString(CultureInfo.InvariantCulture)}|0|{qtd.ToString(CultureInfo.InvariantCulture)}"
         End Using
+
     End Function
 
 
@@ -136,8 +137,6 @@ Public Class Binance
             Next
 
             If saldoAtual = 0D Then Return 0D
-
-            MsgBox(totalGasto & " " & saldoAtual)
 
             Return totalGasto / saldoAtual
 
