@@ -197,6 +197,30 @@ Namespace My
                 Me("BinanceSecretKey") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("152424aa741e1adcc2f4f845017fe654")>  _
+        Public Property GateAPIKey() As String
+            Get
+                Return CType(Me("GateAPIKey"),String)
+            End Get
+            Set
+                Me("GateAPIKey") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("b96395b658c752836fc5acd045cdf3d3c284782225040510ff3c6df4f32de7fa")>  _
+        Public Property GateSecretKey() As String
+            Get
+                Return CType(Me("GateSecretKey"),String)
+            End Get
+            Set
+                Me("GateSecretKey") = value
+            End Set
+        End Property
     End Class
 End Namespace
 

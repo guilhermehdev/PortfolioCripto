@@ -1,13 +1,14 @@
-﻿Imports Newtonsoft.Json
-Imports Newtonsoft.Json.Linq
-Imports System.Text.Json
+﻿Imports System.Diagnostics.Eventing.Reader
 Imports System.Globalization
 Imports System.IO
-Imports System.Windows.Forms.VisualStyles.VisualStyleElement
 Imports System.Net.Http
-Imports System.Text
 Imports System.Reflection
-Imports System.Diagnostics.Eventing.Reader
+Imports System.Runtime.InteropServices.JavaScript.JSType
+Imports System.Text
+Imports System.Text.Json
+Imports System.Windows.Forms.VisualStyles.VisualStyleElement
+Imports Newtonsoft.Json
+Imports Newtonsoft.Json.Linq
 
 
 Public Class JSON
@@ -535,6 +536,7 @@ Public Class JSON
         Dim b As New Binance
         Dim cot As New Cotacao
         Dim gec As New Coingecko
+        Dim gate As New Gateio
         Dim result = LoadJSONtoDataGrid()
         Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
         Dim allSymbols = originalDT.AsEnumerable().
@@ -585,7 +587,16 @@ Public Class JSON
         newDT.Columns.Add("X", GetType(String))
 
         Try
-            ' Adicionar dados do DataTable original ao novo
+            Dim info As String = Await gate.GATE_GetCoinsInfo("TOMI")
+            Dim valor() As String = info.Split("|"c)
+
+            Dim prec = Decimal.Parse(valor(0), CultureInfo.InvariantCulture)
+            Dim qtdade = Decimal.Parse(valor(2), CultureInfo.InvariantCulture)
+
+            MsgBox($"Preço: {prec}, Quantidade: {qtdade}")
+
+            Exit Function
+
             For Each row As DataRow In originalDT.Rows
                 Dim newRow As DataRow = newDT.NewRow()
                 Dim qtd As Decimal
@@ -608,12 +619,16 @@ Public Class JSON
 
                 If row("Wallet") = "BINANCE" Then
                     critoPriceTask = Await b.BINANCE_GetCoinsPrice(row.Item(6).ToString.ToUpper)
+                ElseIf row("Wallet") = "GATE.IO" Then
+                    critoPriceTask = Await gate.GATE_GetCoinsInfo(row.Item(6).ToString.ToUpper)
                 Else
                     critoPriceTask = $"{price}|{marketcap}|0"
                 End If
 
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
+
+
 
                 If valores(2) > 0 Then
                     qtd = cot.decimalBR(valores(2))

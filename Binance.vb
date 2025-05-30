@@ -76,7 +76,6 @@ Public Class Binance
 
     End Function
 
-
     Public Async Function BINANCE_GetUSDTBRL() As Task(Of Decimal)
         Using client As New HttpClient()
 
