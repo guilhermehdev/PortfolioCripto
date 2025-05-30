@@ -544,19 +544,6 @@ Public Class JSON
         Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
         Dim USDBRLprice = Await b.BINANCE_GetUSDTBRL()
         Dim BTCprice As String = Await b.BINANCE_GetCoinsPrice("BTC")
-
-        'If Await cot.GetUSDBRL = 0 Then
-        '    FormMain.lbLoadFromMarket.Visible = False
-        '    FormMain.TimerBlink.Stop()
-        '    FormMain.Cursor = Cursors.Default
-        '    FormMain.dgPortfolio.Cursor = Cursors.Default
-        '    'Exit Function
-
-        'Else
-        '    'USDBRLprice = Await getCriptoData.GetUSDBRL
-
-        'End If
-
         Dim json As New JSON
         Dim dom As Decimal? = Await Task.Run(Async Function() Await gec.CGECKO_GetBTCDominance())
         Dim profit As Decimal
@@ -627,13 +614,21 @@ Public Class JSON
 
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
-                qtd = cot.decimalBR(row("Qtd"))
+
+                If valores(2) > 0 Then
+                    qtd = cot.decimalBR(valores(2))
+                Else
+                    qtd = cot.decimalBR(row("Qtd"))
+                End If
 
                 If qtd >= 1 Then
                     qtd = qtd.ToString("N2")
+                Else
+                    qtd = qtd
                 End If
 
-                Dim currPrice As Decimal = cot.decimalBR(preco)
+                ' Dim currPrice As Decimal = cot.decimalBR(preco)
+                Dim currPrice As Decimal = price
                 Dim initialValueUSD As Decimal = (qtd) * cot.decimalBR(row("InitialPrice"))
                 Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
                 wallet = row("Wallet")
