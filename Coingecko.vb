@@ -106,6 +106,28 @@ Public Class Coingecko
 
     End Function
 
+    Public Async Function CGECKO_GetPrice(symbol As String) As Task(Of Decimal)
+        Dim idMap As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
+            {"TOMI", "tominet"},
+            {"BTC", "bitcoin"},
+            {"ETH", "ethereum"},
+            {"USDT", "tether"},
+            {"VELO", "velodrome-finance"},
+            {"SOL", "solana"}
+        }
+
+        If Not idMap.ContainsKey(symbol) Then Return 0D
+
+        Dim id = idMap(symbol)
+        Dim url = $"https://api.coingecko.com/api/v3/simple/price?ids={id}&vs_currencies=usd"
+
+        Using client As New HttpClient()
+            client.DefaultRequestHeaders.Add("User-Agent", "VBApp/1.0")
+            Dim json = JObject.Parse(Await client.GetStringAsync(url))
+            Return json(id)("usd").Value(Of Decimal)()
+        End Using
+    End Function
+
 End Class
 
 Public Class CoinMarketData
