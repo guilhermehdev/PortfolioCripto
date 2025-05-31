@@ -76,38 +76,95 @@ Public Class Gateio
     '    End Using
     'End Function
 
+    'Public Async Function GATE_GetAssetQty(symbol As String) As Task(Of Decimal)
+    '    Dim endpoint = "/api/v4/spot/accounts"
+    '    Dim url = "https://api.gateio.ws" & endpoint
+    '    Dim timestamp = CInt(DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString()
+    '    Dim method = "GET"
+    '    Dim query = ""
+    '    Dim body = ""
+
+    '    Dim stringToSign = $"{timestamp}" & vbLf &
+    '                   $"{method}" & vbLf &
+    '                   $"{endpoint}" & vbLf &
+    '                   $"{query}" & vbLf &
+    '                   $"{body}"
+
+    '    Debug.WriteLine($"[GATE.IO] StringToSign: {stringToSign}")
+
+    '    Dim signBytes = New HMACSHA512(Encoding.UTF8.GetBytes(My.Settings.GateSecretKey)).
+    '                ComputeHash(Encoding.UTF8.GetBytes(stringToSign))
+    '    Dim signature = BitConverter.ToString(signBytes).Replace("-", "").ToLower()
+
+    '    Dim handler As New HttpClientHandler() With {.SslProtocols = Security.Authentication.SslProtocols.Tls12}
+
+    '    Using client As New HttpClient(handler)
+    '        client.DefaultRequestHeaders.Add("KEY", My.Settings.GateAPIKey)
+    '        client.DefaultRequestHeaders.Add("Timestamp", timestamp)
+    '        client.DefaultRequestHeaders.Add("SIGN", signature)
+    '        client.DefaultRequestHeaders.Add("User-Agent", "VBApp/1.0")
+    '        'client.DefaultRequestHeaders.Add("Content-Type", "application/json")
+
+    '        Dim resp = Await client.GetAsync(url)
+    '        resp.EnsureSuccessStatusCode()
+
+    '        Dim json = JArray.Parse(Await resp.Content.ReadAsStringAsync())
+
+    '        For Each bal In json
+    '            If bal("currency").ToString().Equals(symbol, StringComparison.OrdinalIgnoreCase) Then
+    '                Dim free = Decimal.Parse(bal("available").ToString(), CultureInfo.InvariantCulture)
+    '                Dim locked = Decimal.Parse(bal("locked").ToString(), CultureInfo.InvariantCulture)
+    '                Return free + locked
+    '            End If
+    '        Next
+    '    End Using
+
+    '    Return 0D  ' não encontrou a moeda
+    'End Function
+
     Public Async Function GATE_GetAssetQty(symbol As String) As Task(Of Decimal)
         Dim endpoint = "/api/v4/spot/accounts"
         Dim url = "https://api.gateio.ws" & endpoint
-        Dim timestamp = CInt(DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString()
         Dim method = "GET"
         Dim query = ""
         Dim body = ""
+        Dim timestamp = CInt(DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString()
 
-        Dim stringToSign = $"{timestamp}" & vbLf &
-                       $"{method}" & vbLf &
+        ' 🔑 Gerar hash do corpo vazio
+        Dim bodyHash As String
+        Using sha512 As New SHA512Managed()
+            Dim bodyBytes = Encoding.UTF8.GetBytes(body)
+            Dim hashBytes = sha512.ComputeHash(bodyBytes)
+            bodyHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLower()
+        End Using
+
+        ' 🧾 stringToSign padrão atualizado
+        Dim stringToSign = $"{method}" & vbLf &
                        $"{endpoint}" & vbLf &
                        $"{query}" & vbLf &
-                       $"{body}"
+                       $"{bodyHash}" & vbLf &
+                       $"{timestamp}"
 
-        Debug.WriteLine($"[GATE.IO] StringToSign: {stringToSign}")
-
-        Dim signBytes = New HMACSHA512(Encoding.UTF8.GetBytes(My.Settings.GateSecretKey)).
+        ' 🔏 Gerar assinatura com o segredo em UTF8 puro (sem hex-decode!)
+        Dim secretClean = My.Settings.GateSecretKey.Trim()
+        Dim signBytes = New HMACSHA512(Encoding.UTF8.GetBytes(secretClean)).
                     ComputeHash(Encoding.UTF8.GetBytes(stringToSign))
         Dim signature = BitConverter.ToString(signBytes).Replace("-", "").ToLower()
 
-        Dim handler As New HttpClientHandler() With {.SslProtocols = Security.Authentication.SslProtocols.Tls12}
+        ' 🌐 Enviar requisição
+        Dim handler As New HttpClientHandler() With {
+        .SslProtocols = Security.Authentication.SslProtocols.Tls12
+    }
 
         Using client As New HttpClient(handler)
+            client.DefaultRequestHeaders.Clear()
             client.DefaultRequestHeaders.Add("KEY", My.Settings.GateAPIKey)
             client.DefaultRequestHeaders.Add("Timestamp", timestamp)
             client.DefaultRequestHeaders.Add("SIGN", signature)
             client.DefaultRequestHeaders.Add("User-Agent", "VBApp/1.0")
-            'client.DefaultRequestHeaders.Add("Content-Type", "application/json")
+            client.DefaultRequestHeaders.Accept.Add(New System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"))
 
             Dim resp = Await client.GetAsync(url)
-            resp.EnsureSuccessStatusCode()
-
             Dim json = JArray.Parse(Await resp.Content.ReadAsStringAsync())
 
             For Each bal In json
@@ -119,8 +176,9 @@ Public Class Gateio
             Next
         End Using
 
-        Return 0D  ' não encontrou a moeda
+        Return 0D ' Se não encontrou
     End Function
+
 
     Public Async Function GATE_GetCoinsPrice(symbol As String) As Task(Of Decimal)
         Dim pair = $"{symbol.Trim().ToUpper()}_USDT"
@@ -154,20 +212,29 @@ Public Class Gateio
 
     Public Async Function GATE_GetCoinsInfo(symbol As String) As Task(Of String)
         Try
-            ' 1. Tenta buscar o preço via Gate.io
-            Dim preco As Decimal = Await GATE_GetCoinsPrice(symbol)
+            ' 1. Obter o preço atual da moeda
+            Dim pair = $"{symbol.Trim().ToUpper()}_USDT"
+            Dim url = $"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
 
-            ' 2. Se falhar (0), usa CoinGecko como fallback
-            If preco = 0D Then
-                preco = Await gec.CGECKO_GetPrice(symbol)
-                Debug.WriteLine($"[INFO] Preço de {symbol} veio da CoinGecko (fallback)")
-            End If
+            Dim priceDecimal As Decimal = 0D
+            Using client As New HttpClient()
+                Dim resp = Await client.GetAsync(url)
+                Dim body = Await resp.Content.ReadAsStringAsync()
 
-            ' 3. Busca o saldo via API privada
+                If Not body.Trim().StartsWith("[") Then
+                    Dim err = JObject.Parse(body)
+                    Throw New Exception($"[GATE.IO] Erro no preço: {err}")
+                End If
+
+                Dim json = JArray.Parse(body)
+                priceDecimal = Decimal.Parse(json(0)("last").ToString(), CultureInfo.InvariantCulture)
+            End Using
+
+            ' 2. Obter saldo da moeda (via API privada)
             Dim qtd As Decimal = Await GATE_GetAssetQty(symbol)
 
-            ' 4. Retorna no formato padrão
-            Return $"{preco.ToString(CultureInfo.InvariantCulture)}|0|{qtd.ToString(CultureInfo.InvariantCulture)}"
+            ' 3. Montar retorno no formato esperado
+            Return $"{priceDecimal.ToString(CultureInfo.InvariantCulture)}|0|{qtd.ToString(CultureInfo.InvariantCulture)}"
 
         Catch ex As Exception
             Debug.WriteLine($"[GATE.IO] Erro geral em GetCoinsInfo({symbol}): {ex.Message}")
@@ -179,8 +246,9 @@ Public Class Gateio
     'Public Async Function GATE_GetCoinsInfo(symbol As String) As Task(Of String)
     '    Try
     '        Dim preco As Decimal = Await GATE_GetCoinsPrice(symbol)
-    '        Dim qtd As Decimal = Await GATE_GetAssetQty(symbol)
 
+    '        Dim qtd As Decimal = Await GATE_GetAssetQty(symbol)
+    '        MsgBox(qtd)
     '        Return $"{preco.ToString(CultureInfo.InvariantCulture)}|0|{qtd.ToString(CultureInfo.InvariantCulture)}"
 
     '    Catch ex As Exception

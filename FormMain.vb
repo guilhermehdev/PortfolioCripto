@@ -17,7 +17,7 @@ Public Class FormMain
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        'Setup()
+        Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
 
@@ -405,11 +405,4 @@ Public Class FormMain
         FormAPI.ShowDialog()
     End Sub
 
-    Private Async Sub btnTestar_Click(sender As Object, e As EventArgs) Handles btnTestar.Click
-        'Dim f As New Form1
-        'Dim log = Await f.TestarGateAPI("TOMI")
-        'Debug.Write(log, "Resultado")
-        Dim g As New Gateio
-        MsgBox(Await g.GATE_GetCoinsPrice("BTC"))
-    End Sub
 End Class

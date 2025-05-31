@@ -39,10 +39,10 @@
       <Value Profile="(Default)">aTpFL4KmiTMoXlhn8Xj31XfKuxMNGPTz0SY6obOcvFleOivBR8iXQVviUuh1tHOe</Value>
     </Setting>
     <Setting Name="GateAPIKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)">152424aa741e1adcc2f4f845017fe654</Value>
+      <Value Profile="(Default)">98db4f63584bb557c0e5d162324edf43</Value>
     </Setting>
     <Setting Name="GateSecretKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)">b96395b658c752836fc5acd045cdf3d3c284782225040510ff3c6df4f32de7fa</Value>
+      <Value Profile="(Default)">6c7a7c9aa890301a5078d09adfeb2d5e6eef4c81a7da556232d5b6e8d81685ec</Value>
     </Setting>
   </Settings>
 </SettingsFile>

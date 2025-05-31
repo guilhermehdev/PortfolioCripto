@@ -108,7 +108,8 @@ Public Class Form1
                                 If item("currency") IsNot Nothing AndAlso item("currency").ToString().ToUpper() = symbol.ToUpper() Then
                                     Dim free = If(item("available") IsNot Nothing, item("available").ToString(), "N/A")
                                     Dim locked = If(item("locked") IsNot Nothing, item("locked").ToString(), "N/A")
-                                    debugLog.AppendLine($"✅ {symbol} = {free} disponível + {locked} bloqueado")
+                                    Return free + locked
+                                    ' debugLog.AppendLine($"✅ {symbol} = {free} disponível + {locked} bloqueado")
                                 End If
                             Next
                         Catch jsonEx As Exception

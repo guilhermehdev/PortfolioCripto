@@ -587,15 +587,15 @@ Public Class JSON
         newDT.Columns.Add("X", GetType(String))
 
         Try
-            Dim info As String = Await gate.GATE_GetCoinsInfo("TOMI")
-            Dim valor() As String = info.Split("|"c)
+            'Dim info As String = Await gate.GATE_GetCoinsInfo("TOMI")
+            'Dim valor() As String = info.Split("|"c)
 
-            Dim prec = Decimal.Parse(valor(0), CultureInfo.InvariantCulture)
-            Dim qtdade = Decimal.Parse(valor(2), CultureInfo.InvariantCulture)
+            'Dim prec = Decimal.Parse(valor(0), CultureInfo.InvariantCulture)
+            'Dim qtdade = Decimal.Parse(valor(2), CultureInfo.InvariantCulture)
 
-            MsgBox($"Preço: {prec}, Quantidade: {qtdade}")
+            'MsgBox($"Preço: {prec}, Quantidade: {qtdade}")
 
-            Exit Function
+            'Exit Function
 
             For Each row As DataRow In originalDT.Rows
                 Dim newRow As DataRow = newDT.NewRow()
@@ -628,7 +628,7 @@ Public Class JSON
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
 
-
+                'MsgBox(valores(0))
 
                 If valores(2) > 0 Then
                     qtd = cot.decimalBR(valores(2))
