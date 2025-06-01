@@ -852,7 +852,7 @@ Public Class JSON
         datagrid.Columns(1).HeaderText = "Desempenho"
         datagrid.Columns(1).Width = 80
         With datagrid.Columns(1).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .ForeColor = Color.Red
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -861,14 +861,14 @@ Public Class JSON
         datagrid.Columns(2).HeaderText = "Wallet/Cex"
         datagrid.Columns(2).Width = 110
         With datagrid.Columns(2).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
 
         datagrid.Columns(3).Width = 90
         With datagrid.Columns(3).DefaultCellStyle
-            .BackColor = Color.MidnightBlue
+            .BackColor = Color.Black
             .ForeColor = Color.Gold
             .Font = New Font(fontname, fontsize, FontStyle.Italic)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
@@ -877,7 +877,7 @@ Public Class JSON
         datagrid.Columns(4).HeaderText = "Valor entrada/médio"
         datagrid.Columns(4).Width = 95
         With datagrid.Columns(4).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .ForeColor = Color.LimeGreen
             .Format = "C"
             .FormatProvider = New CultureInfo("en-US")
@@ -888,7 +888,7 @@ Public Class JSON
         datagrid.Columns(5).HeaderText = "Valor entrada/médio"
         datagrid.Columns(5).Width = 95
         With datagrid.Columns(5).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .ForeColor = Color.DeepSkyBlue
             .Format = "C"
             .FormatProvider = New CultureInfo("pt-BR")
@@ -899,7 +899,7 @@ Public Class JSON
         datagrid.Columns(6).HeaderText = "Preço médio"
         datagrid.Columns(6).Width = 95
         With datagrid.Columns(6).DefaultCellStyle
-            .BackColor = Color.FromArgb(50, 50, 50)
+            .BackColor = Color.Black
             .ForeColor = Color.LightYellow
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -908,7 +908,7 @@ Public Class JSON
         datagrid.Columns(7).HeaderText = "Preço atual"
         datagrid.Columns(7).Width = 95
         With datagrid.Columns(7).DefaultCellStyle
-            .BackColor = Color.FromArgb(50, 50, 50)
+            .BackColor = Color.Black
             .ForeColor = Color.Yellow
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -917,7 +917,7 @@ Public Class JSON
         datagrid.Columns(8).HeaderText = "Última atualização"
         datagrid.Columns(8).Width = 70
         With datagrid.Columns(8).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
@@ -925,7 +925,7 @@ Public Class JSON
         datagrid.Columns(9).HeaderText = "Capitalização de mercado"
         datagrid.Columns(9).Width = 150
         With datagrid.Columns(9).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .ForeColor = Color.Orange
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
@@ -936,7 +936,7 @@ Public Class JSON
         datagrid.Columns(10).HeaderText = "Valor atual"
         datagrid.Columns(10).Width = 95
         With datagrid.Columns(10).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .ForeColor = Color.Lime
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -945,7 +945,7 @@ Public Class JSON
         datagrid.Columns(11).HeaderText = "Valor atual"
         datagrid.Columns(11).Width = 95
         With datagrid.Columns(11).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .ForeColor = Color.DeepSkyBlue
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -954,7 +954,7 @@ Public Class JSON
         datagrid.Columns(12).HeaderText = "ROI"
         datagrid.Columns(12).Width = 130
         With datagrid.Columns(12).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .Format = "C2"
             .FormatProvider = New CultureInfo("en-US")
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
@@ -964,7 +964,7 @@ Public Class JSON
         datagrid.Columns(13).HeaderText = "ROI"
         datagrid.Columns(13).Width = 130
         With datagrid.Columns(13).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .ForeColor = Color.IndianRed
             .Format = "C2"
             .FormatProvider = New CultureInfo("pt-BR")
@@ -975,7 +975,7 @@ Public Class JSON
         datagrid.Columns(14).HeaderText = "X"
         datagrid.Columns(14).Width = 50
         With datagrid.Columns(14).DefaultCellStyle
-            .BackColor = Color.FromArgb(20, 20, 20)
+            .BackColor = Color.Black
             .ForeColor = Color.Red
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -1085,10 +1085,15 @@ Public Class JSON
                 End With
             End If
 
-            Dim rowBackColor As Color = Color.FromArgb(88, 0, 0)
+            Dim rowBackColor As Color
 
             If row.Cells(7).Value < row.Cells(6).Value Then
-                With row.Cells(7)
+                rowBackColor = Color.FromArgb(25, 0, 0)
+            Else
+                rowBackColor = Color.FromArgb(0, 25, 0)
+            End If
+
+            With row.Cells(7)
                     .Style.ForeColor = Color.IndianRed
                     .Style.BackColor = rowBackColor
                 End With
@@ -1140,8 +1145,6 @@ Public Class JSON
                     .Style.ForeColor = rowBackColor
                 End With
 
-            End If
-
             Dim mcap = row.Cells(9).Value
             If mcap <= 100000000 Then
                 row.Cells(9).Style.ForeColor = Color.DeepSkyBlue
@@ -1150,11 +1153,11 @@ Public Class JSON
             ElseIf mcap > 300000000 And mcap <= 600000000 Then
                 row.Cells(9).Style.ForeColor = Color.YellowGreen
             ElseIf mcap > 600000000 And mcap <= 1000000000 Then
-                row.Cells(9).Style.ForeColor = Color.Yellow
+                row.Cells(9).Style.ForeColor = Color.GreenYellow
             ElseIf mcap > 1000000000 And mcap <= 10000000000 Then
                 row.Cells(9).Style.ForeColor = Color.DarkOrange
             ElseIf mcap > 10000000000 Then
-                row.Cells(9).Style.ForeColor = Color.Red
+                row.Cells(9).Style.ForeColor = Color.Maroon
             End If
 
             row.Height = 35
