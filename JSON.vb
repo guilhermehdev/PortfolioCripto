@@ -531,6 +531,25 @@ Public Class JSON
         End Try
 
     End Function
+
+    Public Function SomaSe(ByVal valores() As Decimal, ByVal criterios() As String, ByVal criterio As String) As Double
+        Dim soma As Decimal = 0
+
+        ' Verificar se os arrays têm o mesmo tamanho
+        If valores.Length <> criterios.Length Then
+            Throw New ArgumentException("Os arrays de valores e critérios devem ter o mesmo tamanho.")
+        End If
+
+        ' Iterar pelos arrays e somar os valores que atendem ao critério
+        For i As Integer = 0 To valores.Length - 1
+            If criterios(i) = criterio Then
+                soma += valores(i)
+            End If
+        Next
+
+        Return soma
+
+    End Function
     Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task
 
         Dim b As New Binance
@@ -587,15 +606,6 @@ Public Class JSON
         newDT.Columns.Add("X", GetType(String))
 
         Try
-            'Dim info As String = Await gate.GATE_GetCoinsInfo("TOMI")
-            'Dim valor() As String = info.Split("|"c)
-
-            'Dim prec = Decimal.Parse(valor(0), CultureInfo.InvariantCulture)
-            'Dim qtdade = Decimal.Parse(valor(2), CultureInfo.InvariantCulture)
-
-            'MsgBox($"Preço: {prec}, Quantidade: {qtdade}")
-
-            'Exit Function
 
             For Each row As DataRow In originalDT.Rows
                 Dim newRow As DataRow = newDT.NewRow()
@@ -609,7 +619,7 @@ Public Class JSON
                 If mcapDict.ContainsKey(symbolUpper) Then
                     mData = mcapDict(symbolUpper)
                 Else
-                    mData = New CoinMarketData() ' fallback vazio
+                    mData = New CoinMarketData()
                 End If
 
                 Dim marketcap = mData.MarketCap
@@ -628,8 +638,6 @@ Public Class JSON
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
 
-                'MsgBox(valores(0))
-
                 If valores(2) > 0 Then
                     qtd = cot.decimalBR(valores(2))
                 Else
@@ -642,7 +650,6 @@ Public Class JSON
                     qtd = qtd
                 End If
 
-                ' Dim currPrice As Decimal = cot.decimalBR(preco)
                 Dim currPrice As Decimal = price
                 Dim initialValueUSD As Decimal = (qtd) * cot.decimalBR(row("InitialPrice"))
                 Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
@@ -703,7 +710,6 @@ Public Class JSON
                 End If
 
                 newDT.Rows.Add(newRow)
-                'criptoDic.Add(row("Cripto"), (currValueUSD / total) * 100)
                 listCriptos.Add(row.Item(6).ToString)
                 listAddress.Add(wallet)
                 listInitValue.Add(initialValueUSD)
@@ -717,8 +723,6 @@ Public Class JSON
             Dim arrayAddress() As String = listAddress.ToArray
             Dim arraySum() = Array.Empty(Of Object)()
             Dim listSum As New List(Of KeyValuePair(Of String, Decimal))
-            'Dim task As String = Await getCriptoData.GetCriptoPrices("BTC")
-
             Dim res() As String = BTCprice.Split("|"c)
             Dim btc As String = res(0)
             Dim percentCashFlow As Decimal? = (cashflow / total) * 100
@@ -801,28 +805,8 @@ Public Class JSON
             End If
 
         Catch ex As Exception
-            Debug.WriteLine("Erro ao carregar os dados: LoadCripto(): " & ex.Message)
-
+            Debug.WriteLine("Erro ao carregar os dados na função LoadCripto(): " & ex.Message)
         End Try
-
-    End Function
-
-    Public Function SomaSe(ByVal valores() As Decimal, ByVal criterios() As String, ByVal criterio As String) As Double
-        Dim soma As Decimal = 0
-
-        ' Verificar se os arrays têm o mesmo tamanho
-        If valores.Length <> criterios.Length Then
-            Throw New ArgumentException("Os arrays de valores e critérios devem ter o mesmo tamanho.")
-        End If
-
-        ' Iterar pelos arrays e somar os valores que atendem ao critério
-        For i As Integer = 0 To valores.Length - 1
-            If criterios(i) = criterio Then
-                soma += valores(i)
-            End If
-        Next
-
-        Return soma
 
     End Function
 
@@ -1020,7 +1004,6 @@ Public Class JSON
                     row.Cells(13).Style.ForeColor = Color.LightCoral
             End Select
 
-
             If row.Cells(6).Value >= 1 Then
                 With row.Cells(6)
                     .Style.Format = "C2"
@@ -1086,78 +1069,81 @@ Public Class JSON
             End If
 
             Dim rowBackColor As Color
+            Dim fontColor As Color
 
             If row.Cells(7).Value < row.Cells(6).Value Then
                 rowBackColor = Color.FromArgb(25, 0, 0)
+                fontColor = Color.IndianRed
             Else
                 rowBackColor = Color.FromArgb(0, 25, 0)
+                fontColor = Color.White
             End If
 
             With row.Cells(7)
-                    .Style.ForeColor = Color.IndianRed
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(8)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(9)
-                    .Style.ForeColor = Color.Orange
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(10)
-                    .Style.ForeColor = Color.Orange
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(11)
-                    .Style.ForeColor = Color.DarkOrange
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(0)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(1)
-                    .Style.ForeColor = Color.IndianRed
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(2)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(3)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(4)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(5)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(6)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(12)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(13)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(14)
-                    .Style.BackColor = rowBackColor
-                    .Style.ForeColor = rowBackColor
-                End With
+                .Style.ForeColor = fontColor
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(8)
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(9)
+                .Style.ForeColor = fontColor
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(10)
+                .Style.ForeColor = fontColor
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(11)
+                .Style.ForeColor = fontColor
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(0)
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(1)
+                .Style.ForeColor = fontColor
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(2)
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(3)
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(4)
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(5)
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(6)
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(12)
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(13)
+                .Style.BackColor = rowBackColor
+            End With
+            With row.Cells(14)
+                .Style.BackColor = rowBackColor
+                .Style.ForeColor = rowBackColor
+            End With
 
             Dim mcap = row.Cells(9).Value
             If mcap <= 100000000 Then
                 row.Cells(9).Style.ForeColor = Color.DeepSkyBlue
             ElseIf mcap > 100000000 And mcap <= 300000000 Then
-                row.Cells(9).Style.ForeColor = Color.LimeGreen
+                row.Cells(9).Style.ForeColor = Color.FromArgb(135, 206, 235)
             ElseIf mcap > 300000000 And mcap <= 600000000 Then
-                row.Cells(9).Style.ForeColor = Color.YellowGreen
+                row.Cells(9).Style.ForeColor = Color.FromArgb(70, 130, 180)
             ElseIf mcap > 600000000 And mcap <= 1000000000 Then
-                row.Cells(9).Style.ForeColor = Color.GreenYellow
+                row.Cells(9).Style.ForeColor = Color.FromArgb(65, 105, 225)
             ElseIf mcap > 1000000000 And mcap <= 10000000000 Then
-                row.Cells(9).Style.ForeColor = Color.DarkOrange
+                row.Cells(9).Style.ForeColor = Color.FromArgb(25, 25, 112)
             ElseIf mcap > 10000000000 Then
-                row.Cells(9).Style.ForeColor = Color.Maroon
+                row.Cells(9).Style.ForeColor = Color.FromArgb(25, 60, 180)
             End If
 
             row.Height = 35
@@ -1166,15 +1152,12 @@ Public Class JSON
         Next
 
     End Sub
-
     Public Function USDformat(ByVal value As Decimal)
         Return value.ToString("C", New CultureInfo("en-US"))
     End Function
-
     Public Function BRLformat(ByVal value As Decimal)
         Return value.ToString("C", New CultureInfo("pt-BR"))
     End Function
-
     Public Sub captureRightClick(datagrid As DataGridView, e As MouseEventArgs)
         If e.Button = MouseButtons.Right Then
 
