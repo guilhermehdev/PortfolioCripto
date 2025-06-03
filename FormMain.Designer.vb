@@ -120,7 +120,7 @@ Partial Class FormMain
         DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
         DataGridViewCellStyle1.ForeColor = Color.Turquoise
         DataGridViewCellStyle1.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle1.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle1.SelectionForeColor = Color.Transparent
         DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
         dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
         DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
@@ -128,7 +128,7 @@ Partial Class FormMain
         DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
         DataGridViewCellStyle2.ForeColor = Color.Bisque
         DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle2.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.SelectionForeColor = Color.Transparent
         DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
         dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
         dgPortfolio.EnableHeadersVisualStyles = False
@@ -141,8 +141,8 @@ Partial Class FormMain
         DataGridViewCellStyle3.Font = New Font("Segoe UI", 9F)
         DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
         DataGridViewCellStyle3.Padding = New Padding(2)
-        DataGridViewCellStyle3.SelectionBackColor = Color.DarkOrange
-        DataGridViewCellStyle3.SelectionForeColor = SystemColors.ControlText
+        DataGridViewCellStyle3.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle3.SelectionForeColor = Color.Transparent
         DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
         dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
         dgPortfolio.RowHeadersWidth = 4
@@ -150,7 +150,7 @@ Partial Class FormMain
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgPortfolio.ScrollBars = ScrollBars.Vertical
-        dgPortfolio.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgPortfolio.SelectionMode = DataGridViewSelectionMode.CellSelect
         dgPortfolio.Size = New Size(1154, 350)
         dgPortfolio.TabIndex = 11
         ' 
@@ -654,7 +654,7 @@ Partial Class FormMain
         ImportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {PortfolioToolStripMenuItem, WalletsExchangeToolStripMenuItem})
         ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
-        ImportarToolStripMenuItem.Size = New Size(167, 22)
+        ImportarToolStripMenuItem.Size = New Size(168, 22)
         ImportarToolStripMenuItem.Text = "Portfolio"
         ' 
         ' PortfolioToolStripMenuItem
@@ -679,7 +679,7 @@ Partial Class FormMain
         ExportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem1, ExportarToolStripMenuItem1})
         ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        ExportarToolStripMenuItem.Size = New Size(167, 22)
+        ExportarToolStripMenuItem.Size = New Size(168, 22)
         ExportarToolStripMenuItem.Text = "Wallets/Exchange"
         ' 
         ' ImportarToolStripMenuItem1
@@ -704,7 +704,7 @@ Partial Class FormMain
         CriptoToolStripMenuItem2.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem2, ExportarToolStripMenuItem2})
         CriptoToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
         CriptoToolStripMenuItem2.Name = "CriptoToolStripMenuItem2"
-        CriptoToolStripMenuItem2.Size = New Size(167, 22)
+        CriptoToolStripMenuItem2.Size = New Size(168, 22)
         CriptoToolStripMenuItem2.Text = "Cripto"
         ' 
         ' ImportarToolStripMenuItem2

@@ -825,333 +825,395 @@ Public Class JSON
             .Font = New Font("Calibri", 10, FontStyle.Italic)
         End With
 
-        datagrid.Columns(0).Width = 100
-        With datagrid.Columns(0).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.White
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleLeft
-        End With
-
-        datagrid.Columns(1).HeaderText = "Desempenho"
-        datagrid.Columns(1).Width = 80
-        With datagrid.Columns(1).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.Red
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        datagrid.Columns(2).HeaderText = "Wallet/Cex"
-        datagrid.Columns(2).Width = 110
-        With datagrid.Columns(2).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.WhiteSmoke
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
-            .Alignment = DataGridViewContentAlignment.MiddleLeft
-        End With
-
-        datagrid.Columns(3).Width = 90
-        With datagrid.Columns(3).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.WhiteSmoke
-            .Font = New Font(fontname, fontsize, FontStyle.Italic)
-            .Alignment = DataGridViewContentAlignment.MiddleLeft
-        End With
-
-        datagrid.Columns(4).HeaderText = "Valor entrada/médio"
-        datagrid.Columns(4).Width = 95
-        With datagrid.Columns(4).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.WhiteSmoke
-            .Format = "C"
-            .FormatProvider = New CultureInfo("en-US")
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        datagrid.Columns(5).HeaderText = "Valor entrada/médio"
-        datagrid.Columns(5).Width = 95
-        With datagrid.Columns(5).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.WhiteSmoke
-            .Format = "C"
-            .FormatProvider = New CultureInfo("pt-BR")
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        datagrid.Columns(6).HeaderText = "Preço médio"
-        datagrid.Columns(6).Width = 95
-        With datagrid.Columns(6).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.WhiteSmoke
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        datagrid.Columns(7).HeaderText = "Preço atual"
-        datagrid.Columns(7).Width = 95
-        With datagrid.Columns(7).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.IndianRed
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        datagrid.Columns(8).HeaderText = "Última atualização"
-        datagrid.Columns(8).Width = 70
-        With datagrid.Columns(8).DefaultCellStyle
-            .BackColor = Color.Black
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        datagrid.Columns(9).HeaderText = "Capitalização de mercado"
-        datagrid.Columns(9).Width = 150
-        With datagrid.Columns(9).DefaultCellStyle
-            .BackColor = Color.Black
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleLeft
-            .Format = "C2"
-            .FormatProvider = New CultureInfo("en-US")
-        End With
-
-        datagrid.Columns(10).HeaderText = "Valor atual"
-        datagrid.Columns(10).Width = 95
-        With datagrid.Columns(10).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.Lime
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        datagrid.Columns(11).HeaderText = "Valor atual"
-        datagrid.Columns(11).Width = 95
-        With datagrid.Columns(11).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.DeepSkyBlue
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        datagrid.Columns(12).HeaderText = "ROI"
-        datagrid.Columns(12).Width = 130
-        With datagrid.Columns(12).DefaultCellStyle
-            .BackColor = Color.Black
-            .Format = "C2"
-            .FormatProvider = New CultureInfo("en-US")
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        datagrid.Columns(13).HeaderText = "ROI"
-        datagrid.Columns(13).Width = 130
-        With datagrid.Columns(13).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.IndianRed
-            .Format = "C2"
-            .FormatProvider = New CultureInfo("pt-BR")
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
-        datagrid.Columns(14).HeaderText = "X"
-        datagrid.Columns(14).Width = 50
-        With datagrid.Columns(14).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.Red
-            .Font = New Font(fontname, fontsize, FontStyle.Regular)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
-
         For Each row As DataGridViewRow In datagrid.Rows
+            row.Height = 35
+            row.Selected = False
 
-            Select Case CDec(row.Cells(1).Value.ToString.Replace("%", ""))
-                Case > 0
-                    row.Cells(1).Style.ForeColor = Color.Green
-            End Select
+            If row.Cells(0).Value.ToString.Contains("USD") Then
 
-            'Select Case row.Cells(2).Value
-            '    Case "BINANCE"
-            '        row.Cells(2).Style.ForeColor = Color.Goldenrod
-            '    Case "METAMASK"
-            '        row.Cells(2).Style.ForeColor = Color.DarkOrange
-            '    Case "TRUSTWALLET"
-            '        row.Cells(2).Style.ForeColor = Color.LawnGreen
-            '    Case "PHANTOM"
-            '        row.Cells(2).Style.ForeColor = Color.MediumPurple
-            '    Case "BYBIT"
-            '        row.Cells(2).Style.ForeColor = Color.Gainsboro
-            '    Case "GATE.IO"
-            '        row.Cells(2).Style.ForeColor = Color.DodgerBlue
-            '    Case "MEXC"
-            '        row.Cells(2).Style.ForeColor = Color.White
+                row.DefaultCellStyle.BackColor = Color.Black
 
-            'End Select
-
-            Select Case CDec(row.Cells(12).Value)
-                Case > 0
-                    row.Cells(12).Style.ForeColor = Color.Aquamarine
-                Case < 0
-                    row.Cells(12).Style.ForeColor = Color.LightCoral
-            End Select
-
-            Select Case CDec(row.Cells(13).Value)
-                Case > 0
-                    row.Cells(13).Style.ForeColor = Color.Aqua
-                Case < 0
-                    row.Cells(13).Style.ForeColor = Color.LightCoral
-            End Select
-
-            If row.Cells(6).Value >= 1 Then
-                With row.Cells(6)
-                    .Style.Format = "C2"
-                    .Style.FormatProvider = New CultureInfo("en-US")
+                With row.Cells(0)
+                    .Style.ForeColor = Color.DodgerBlue
                 End With
+
+                row.Cells(1).Value = ""
+                row.Cells(4).Style.ForeColor = Color.Black
+                row.Cells(5).Style.ForeColor = Color.Black
+                row.Cells(6).Style.ForeColor = Color.Black
+                row.Cells(7).Style.ForeColor = Color.Black
+                row.Cells(8).Value = ""
+                row.Cells(9).Style.ForeColor = Color.Black
+                row.Cells(10).Style.ForeColor = Color.Black
+                row.Cells(11).Style.ForeColor = Color.Black
+                row.Cells(12).Style.ForeColor = Color.Black
+                row.Cells(13).Style.ForeColor = Color.Black
+                row.Cells(14).Value = ""
+
             Else
-                With row.Cells(6)
-                    .Style.Format = "C6"
-                    .Style.FormatProvider = New CultureInfo("en-US")
-                End With
-            End If
 
-            If row.Cells(7).Value > 1 Then
+                datagrid.Columns(0).Width = 100
+                With datagrid.Columns(0).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.White
+                    .Font = New Font(fontname, fontsize, FontStyle.Bold)
+                    .Alignment = DataGridViewContentAlignment.MiddleLeft
+                End With
+
+                datagrid.Columns(1).HeaderText = "Desempenho"
+                datagrid.Columns(1).Width = 80
+                With datagrid.Columns(1).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .Font = New Font(fontname, fontsize, FontStyle.Regular)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                datagrid.Columns(2).HeaderText = "Wallet/Cex"
+                datagrid.Columns(2).Width = 110
+                With datagrid.Columns(2).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .Font = New Font(fontname, fontsize, FontStyle.Regular)
+                    .Alignment = DataGridViewContentAlignment.MiddleLeft
+                End With
+
+                datagrid.Columns(3).Width = 90
+                With datagrid.Columns(3).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .Font = New Font(fontname, fontsize, FontStyle.Italic)
+                    .Alignment = DataGridViewContentAlignment.MiddleLeft
+                End With
+
+                datagrid.Columns(4).HeaderText = "Valor entrada/médio"
+                datagrid.Columns(4).Width = 95
+                With datagrid.Columns(4).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .Format = "C"
+                    .FormatProvider = New CultureInfo("en-US")
+                    .Font = New Font(fontname, fontsize, FontStyle.Regular)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                datagrid.Columns(5).HeaderText = "Valor entrada/médio"
+                datagrid.Columns(5).Width = 95
+                With datagrid.Columns(5).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .Format = "C"
+                    .FormatProvider = New CultureInfo("pt-BR")
+                    .Font = New Font(fontname, fontsize, FontStyle.Regular)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                datagrid.Columns(6).HeaderText = "Preço médio"
+                datagrid.Columns(6).Width = 95
+                With datagrid.Columns(6).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .Font = New Font(fontname, fontsize, FontStyle.Bold)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                datagrid.Columns(7).HeaderText = "Preço atual"
+                datagrid.Columns(7).Width = 95
+                With datagrid.Columns(7).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .Font = New Font(fontname, fontsize, FontStyle.Bold)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                datagrid.Columns(8).HeaderText = "Última atualização"
+                datagrid.Columns(8).Width = 70
+                With datagrid.Columns(8).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .Font = New Font(fontname, fontsize, FontStyle.Bold)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                datagrid.Columns(9).HeaderText = "Capitalização de mercado"
+                datagrid.Columns(9).Width = 150
+                With datagrid.Columns(9).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .Font = New Font(fontname, fontsize, FontStyle.Bold)
+                    .Alignment = DataGridViewContentAlignment.MiddleLeft
+                    .Format = "C2"
+                    .FormatProvider = New CultureInfo("en-US")
+                End With
+
+                datagrid.Columns(10).HeaderText = "Valor atual"
+                datagrid.Columns(10).Width = 95
+                With datagrid.Columns(10).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .Font = New Font(fontname, fontsize, FontStyle.Regular)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                datagrid.Columns(11).HeaderText = "Valor atual"
+                datagrid.Columns(11).Width = 95
+                With datagrid.Columns(11).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .Font = New Font(fontname, fontsize, FontStyle.Regular)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                datagrid.Columns(12).HeaderText = "ROI"
+                datagrid.Columns(12).Width = 130
+                With datagrid.Columns(12).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .Format = "C2"
+                    .FormatProvider = New CultureInfo("en-US")
+                    .Font = New Font(fontname, fontsize, FontStyle.Regular)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                datagrid.Columns(13).HeaderText = "ROI"
+                datagrid.Columns(13).Width = 130
+                With datagrid.Columns(13).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.IndianRed
+                    .Format = "C2"
+                    .FormatProvider = New CultureInfo("pt-BR")
+                    .Font = New Font(fontname, fontsize, FontStyle.Regular)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                datagrid.Columns(14).HeaderText = "X"
+                datagrid.Columns(14).Width = 50
+                With datagrid.Columns(14).DefaultCellStyle
+                    .BackColor = Color.Black
+                    .ForeColor = Color.Red
+                    .Font = New Font(fontname, fontsize, FontStyle.Regular)
+                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                End With
+
+                If row.Cells(13).Value > 0 Then
+                    row.Cells(0).Style.ForeColor = Color.Lime
+                ElseIf row.Cells(13).Value < 0 Then
+                    row.Cells(0).Style.ForeColor = Color.LightCoral
+                End If
+
+                Select Case CDec(row.Cells(1).Value.ToString.Replace("%", ""))
+                    Case > 0
+                        row.Cells(1).Style.ForeColor = Color.LightGreen
+                    Case < 0
+                        row.Cells(1).Style.ForeColor = Color.IndianRed
+                    Case = 0
+                        row.Cells(1).Style.ForeColor = Color.Gray
+                End Select
+
+                'Select Case row.Cells(2).Value
+                '    Case "BINANCE"
+                '        row.Cells(2).Style.ForeColor = Color.Goldenrod
+                '    Case "METAMASK"
+                '        row.Cells(2).Style.ForeColor = Color.DarkOrange
+                '    Case "TRUSTWALLET"
+                '        row.Cells(2).Style.ForeColor = Color.LawnGreen
+                '    Case "PHANTOM"
+                '        row.Cells(2).Style.ForeColor = Color.MediumPurple
+                '    Case "BYBIT"
+                '        row.Cells(2).Style.ForeColor = Color.Gainsboro
+                '    Case "GATE.IO"
+                '        row.Cells(2).Style.ForeColor = Color.DodgerBlue
+                '    Case "MEXC"
+                '        row.Cells(2).Style.ForeColor = Color.White
+
+                'End Select
+
+                Select Case CDec(row.Cells(12).Value)
+                    Case > 0
+                        row.Cells(12).Style.ForeColor = Color.Aquamarine
+                    Case < 0
+                        row.Cells(12).Style.ForeColor = Color.LightCoral
+                End Select
+
+                Select Case CDec(row.Cells(13).Value)
+                    Case > 0
+                        row.Cells(13).Style.ForeColor = Color.Aqua
+                    Case < 0
+                        row.Cells(13).Style.ForeColor = Color.LightCoral
+                End Select
+
+                If row.Cells(6).Value >= 1 Then
+                    With row.Cells(6)
+                        .Style.Format = "C2"
+                        .Style.FormatProvider = New CultureInfo("en-US")
+                    End With
+                Else
+                    With row.Cells(6)
+                        .Style.Format = "C6"
+                        .Style.FormatProvider = New CultureInfo("en-US")
+                    End With
+                End If
+
+                If row.Cells(7).Value > 1 Then
+                    With row.Cells(7)
+                        .Style.Format = "C2"
+                        .Style.FormatProvider = New CultureInfo("en-US")
+                    End With
+                Else
+                    With row.Cells(7)
+                        .Style.Format = "C6"
+                        .Style.FormatProvider = New CultureInfo("en-US")
+                    End With
+                End If
+
+                Dim cellValue = row.Cells(8).Value
+
+                If cellValue.ToString.Contains("+") Then
+                    With row.Cells(8)
+                        .Style.ForeColor = Color.LimeGreen
+                    End With
+                ElseIf cellValue.ToString.Contains("-") Then
+                    With row.Cells(8)
+                        .Style.ForeColor = Color.Red
+                    End With
+                Else
+                    With row.Cells(8)
+                        .Style.ForeColor = Color.FromArgb(20, 20, 20)
+                    End With
+                End If
+
+                If row.Cells(10).Value > 1 Then
+                    With row.Cells(10)
+                        .Style.Format = "C2"
+                        .Style.FormatProvider = New CultureInfo("en-US")
+                    End With
+                Else
+                    With row.Cells(10)
+                        .Style.Format = "C8"
+                        .Style.FormatProvider = New CultureInfo("en-US")
+                    End With
+                End If
+
+                If row.Cells(11).Value > 1 Then
+                    With row.Cells(11)
+                        .Style.Format = "C2"
+                        .Style.FormatProvider = New CultureInfo("pt-BR")
+                    End With
+                Else
+                    With row.Cells(11)
+                        .Style.Format = "C8"
+                        .Style.FormatProvider = New CultureInfo("pt-BR")
+                    End With
+                End If
+
+                Dim rowBackColor As Color
+                Dim fontColor As Color
+
+                If row.Cells(7).Value < row.Cells(6).Value Then
+                    rowBackColor = Color.FromArgb(25, 0, 0)
+                    fontColor = Color.IndianRed
+
+                    With row.Cells(7)
+                        .Style.ForeColor = Color.IndianRed
+                    End With
+                    With row.Cells(11)
+                        .Style.ForeColor = Color.IndianRed
+                    End With
+                    With row.Cells(10)
+                        .Style.ForeColor = Color.IndianRed
+                    End With
+                    With row.Cells(11)
+                        .Style.ForeColor = Color.IndianRed
+                    End With
+
+                    With row.Cells(14)
+                        .Style.BackColor = rowBackColor
+                        .Style.ForeColor = rowBackColor
+                    End With
+
+                Else
+
+                    With row.Cells(7)
+                        .Style.ForeColor = Color.LimeGreen
+                    End With
+                    With row.Cells(10)
+                        .Style.ForeColor = Color.LimeGreen
+                    End With
+                    With row.Cells(11)
+                        .Style.ForeColor = Color.LimeGreen
+                    End With
+
+                    rowBackColor = Color.FromArgb(0, 25, 0)
+                    fontColor = Color.White
+                End If
+
                 With row.Cells(7)
-                    .Style.Format = "C2"
-                    .Style.FormatProvider = New CultureInfo("en-US")
+                    '.Style.ForeColor = fontColor
+                    .Style.BackColor = rowBackColor
                 End With
-            Else
-                With row.Cells(7)
-                    .Style.Format = "C6"
-                    .Style.FormatProvider = New CultureInfo("en-US")
-                End With
-            End If
-
-            Dim cellValue = row.Cells(8).Value
-
-            If cellValue.ToString.Contains("+") Then
                 With row.Cells(8)
-                    .Style.ForeColor = Color.LimeGreen
+                    .Style.BackColor = rowBackColor
                 End With
-            ElseIf cellValue.ToString.Contains("-") Then
-                With row.Cells(8)
-                    .Style.ForeColor = Color.Red
+                With row.Cells(9)
+                    ' .Style.ForeColor = fontColor
+                    .Style.BackColor = rowBackColor
                 End With
-            Else
-                With row.Cells(8)
-                    .Style.ForeColor = Color.FromArgb(20, 20, 20)
-                End With
-            End If
-
-            If row.Cells(10).Value > 1 Then
                 With row.Cells(10)
-                    .Style.Format = "C2"
-                    .Style.FormatProvider = New CultureInfo("en-US")
+                    '.Style.ForeColor = fontColor
+                    .Style.BackColor = rowBackColor
                 End With
-            Else
-                With row.Cells(10)
-                    .Style.Format = "C8"
-                    .Style.FormatProvider = New CultureInfo("en-US")
-                End With
-            End If
-
-            If row.Cells(11).Value > 1 Then
                 With row.Cells(11)
-                    .Style.Format = "C2"
-                    .Style.FormatProvider = New CultureInfo("pt-BR")
+                    ' .Style.ForeColor = fontColor
+                    .Style.BackColor = rowBackColor
                 End With
-            Else
-                With row.Cells(11)
-                    .Style.Format = "C8"
-                    .Style.FormatProvider = New CultureInfo("pt-BR")
+                With row.Cells(0)
+                    .Style.BackColor = rowBackColor
                 End With
-            End If
-
-            Dim rowBackColor As Color
-            Dim fontColor As Color
-
-            If row.Cells(7).Value < row.Cells(6).Value Then
-                rowBackColor = Color.FromArgb(25, 0, 0)
-                fontColor = Color.IndianRed
+                With row.Cells(1)
+                    '.Style.ForeColor = fontColor
+                    .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(2)
+                    .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(3)
+                    .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(4)
+                    .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(5)
+                    .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(6)
+                    .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(12)
+                    .Style.BackColor = rowBackColor
+                End With
+                With row.Cells(13)
+                    .Style.BackColor = rowBackColor
+                End With
                 With row.Cells(14)
                     .Style.BackColor = rowBackColor
-                    .Style.ForeColor = rowBackColor
                 End With
-            Else
-                rowBackColor = Color.FromArgb(0, 25, 0)
-                fontColor = Color.White
+
+                Dim mcap = row.Cells(9).Value
+                If mcap <= 100000000 Then
+                    row.Cells(9).Style.ForeColor = Color.FromArgb(135, 206, 235)
+                ElseIf mcap > 100000000 And mcap <= 300000000 Then
+                    row.Cells(9).Style.ForeColor = Color.DeepSkyBlue
+                ElseIf mcap > 300000000 And mcap <= 600000000 Then
+                    row.Cells(9).Style.ForeColor = Color.FromArgb(70, 130, 180)
+                ElseIf mcap > 600000000 And mcap <= 1000000000 Then
+                    row.Cells(9).Style.ForeColor = Color.FromArgb(65, 105, 225)
+                ElseIf mcap > 1000000000 And mcap <= 10000000000 Then
+                    row.Cells(9).Style.ForeColor = Color.CornflowerBlue
+                ElseIf mcap > 10000000000 Then
+                    row.Cells(9).Style.ForeColor = Color.BlueViolet
+                End If
+
+                datagrid.ClearSelection()
+
             End If
 
-            With row.Cells(7)
-                '.Style.ForeColor = fontColor
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(8)
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(9)
-                ' .Style.ForeColor = fontColor
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(10)
-                '.Style.ForeColor = fontColor
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(11)
-                ' .Style.ForeColor = fontColor
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(0)
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(1)
-                '.Style.ForeColor = fontColor
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(2)
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(3)
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(4)
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(5)
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(6)
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(12)
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(13)
-                .Style.BackColor = rowBackColor
-            End With
-            With row.Cells(14)
-                .Style.BackColor = rowBackColor
-            End With
-
-            Dim mcap = row.Cells(9).Value
-            If mcap <= 100000000 Then
-                row.Cells(9).Style.ForeColor = Color.DeepSkyBlue
-            ElseIf mcap > 100000000 And mcap <= 300000000 Then
-                row.Cells(9).Style.ForeColor = Color.FromArgb(135, 206, 235)
-            ElseIf mcap > 300000000 And mcap <= 600000000 Then
-                row.Cells(9).Style.ForeColor = Color.FromArgb(70, 130, 180)
-            ElseIf mcap > 600000000 And mcap <= 1000000000 Then
-                row.Cells(9).Style.ForeColor = Color.FromArgb(65, 105, 225)
-            ElseIf mcap > 1000000000 And mcap <= 10000000000 Then
-                row.Cells(9).Style.ForeColor = Color.CornflowerBlue
-            ElseIf mcap > 10000000000 Then
-                row.Cells(9).Style.ForeColor = Color.BlueViolet
-            End If
-
-            row.Height = 35
-            datagrid.ClearSelection()
-            datagrid.CurrentCell = Nothing
         Next
 
     End Sub

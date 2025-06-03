@@ -405,4 +405,8 @@ Public Class FormMain
         FormAPI.ShowDialog()
     End Sub
 
+    Private Sub dgPortfolio_SelectionChanged(sender As Object, e As EventArgs) Handles dgPortfolio.SelectionChanged
+        dgPortfolio.ClearSelection()
+    End Sub
+
 End Class
