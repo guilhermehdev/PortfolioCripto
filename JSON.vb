@@ -832,7 +832,7 @@ Public Class JSON
             If row.Cells(0).Value.ToString.Contains("USD") Then
 
                 row.DefaultCellStyle.BackColor = Color.Black
-
+                row.Visible = False
                 With row.Cells(0)
                     .Style.ForeColor = Color.DodgerBlue
                 End With
@@ -886,7 +886,7 @@ Public Class JSON
                     .Alignment = DataGridViewContentAlignment.MiddleLeft
                 End With
 
-                datagrid.Columns(4).HeaderText = "Valor entrada/médio"
+                datagrid.Columns(4).HeaderText = "Quantia entrada/médio"
                 datagrid.Columns(4).Width = 95
                 With datagrid.Columns(4).DefaultCellStyle
                     .BackColor = Color.Black
@@ -897,7 +897,7 @@ Public Class JSON
                     .Alignment = DataGridViewContentAlignment.MiddleCenter
                 End With
 
-                datagrid.Columns(5).HeaderText = "Valor entrada/médio"
+                datagrid.Columns(5).HeaderText = "Quantia entrada/médio"
                 datagrid.Columns(5).Width = 95
                 With datagrid.Columns(5).DefaultCellStyle
                     .BackColor = Color.Black
@@ -944,7 +944,7 @@ Public Class JSON
                     .FormatProvider = New CultureInfo("en-US")
                 End With
 
-                datagrid.Columns(10).HeaderText = "Valor atual"
+                datagrid.Columns(10).HeaderText = "Quantia atual"
                 datagrid.Columns(10).Width = 95
                 With datagrid.Columns(10).DefaultCellStyle
                     .BackColor = Color.Black
@@ -953,7 +953,7 @@ Public Class JSON
                     .Alignment = DataGridViewContentAlignment.MiddleCenter
                 End With
 
-                datagrid.Columns(11).HeaderText = "Valor atual"
+                datagrid.Columns(11).HeaderText = "Quantia atual"
                 datagrid.Columns(11).Width = 95
                 With datagrid.Columns(11).DefaultCellStyle
                     .BackColor = Color.Black

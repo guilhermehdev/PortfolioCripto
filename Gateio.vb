@@ -105,8 +105,6 @@ Public Class Gateio
             Dim priceDecimal As Decimal = Await GATE_GetCoinsPrice(symbol)
             Dim qtd As Decimal = Await GATE_GetAssetQty(symbol)
 
-            MsgBox(qtd)
-
             ' 3. Montar retorno no formato esperado
             Return $"{priceDecimal.ToString(CultureInfo.InvariantCulture)}|0|{qtd.ToString(CultureInfo.InvariantCulture)}"
 
