@@ -846,6 +846,7 @@ Public Class JSON
         datagrid.Columns(2).Width = 110
         With datagrid.Columns(2).DefaultCellStyle
             .BackColor = Color.Black
+            .ForeColor = Color.WhiteSmoke
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
@@ -853,7 +854,7 @@ Public Class JSON
         datagrid.Columns(3).Width = 90
         With datagrid.Columns(3).DefaultCellStyle
             .BackColor = Color.Black
-            .ForeColor = Color.Gold
+            .ForeColor = Color.WhiteSmoke
             .Font = New Font(fontname, fontsize, FontStyle.Italic)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
         End With
@@ -862,7 +863,7 @@ Public Class JSON
         datagrid.Columns(4).Width = 95
         With datagrid.Columns(4).DefaultCellStyle
             .BackColor = Color.Black
-            .ForeColor = Color.LimeGreen
+            .ForeColor = Color.WhiteSmoke
             .Format = "C"
             .FormatProvider = New CultureInfo("en-US")
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
@@ -873,7 +874,7 @@ Public Class JSON
         datagrid.Columns(5).Width = 95
         With datagrid.Columns(5).DefaultCellStyle
             .BackColor = Color.Black
-            .ForeColor = Color.DeepSkyBlue
+            .ForeColor = Color.WhiteSmoke
             .Format = "C"
             .FormatProvider = New CultureInfo("pt-BR")
             .Font = New Font(fontname, fontsize, FontStyle.Regular)
@@ -884,7 +885,7 @@ Public Class JSON
         datagrid.Columns(6).Width = 95
         With datagrid.Columns(6).DefaultCellStyle
             .BackColor = Color.Black
-            .ForeColor = Color.LightYellow
+            .ForeColor = Color.WhiteSmoke
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
@@ -893,7 +894,7 @@ Public Class JSON
         datagrid.Columns(7).Width = 95
         With datagrid.Columns(7).DefaultCellStyle
             .BackColor = Color.Black
-            .ForeColor = Color.Yellow
+            .ForeColor = Color.IndianRed
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleCenter
         End With
@@ -910,7 +911,6 @@ Public Class JSON
         datagrid.Columns(9).Width = 150
         With datagrid.Columns(9).DefaultCellStyle
             .BackColor = Color.Black
-            .ForeColor = Color.Orange
             .Font = New Font(fontname, fontsize, FontStyle.Bold)
             .Alignment = DataGridViewContentAlignment.MiddleLeft
             .Format = "C2"
@@ -969,26 +969,26 @@ Public Class JSON
 
             Select Case CDec(row.Cells(1).Value.ToString.Replace("%", ""))
                 Case > 0
-                    row.Cells(1).Style.ForeColor = Color.LawnGreen
+                    row.Cells(1).Style.ForeColor = Color.Green
             End Select
 
-            Select Case row.Cells(2).Value
-                Case "BINANCE"
-                    row.Cells(2).Style.ForeColor = Color.Goldenrod
-                Case "METAMASK"
-                    row.Cells(2).Style.ForeColor = Color.DarkOrange
-                Case "TRUSTWALLET"
-                    row.Cells(2).Style.ForeColor = Color.LawnGreen
-                Case "PHANTOM"
-                    row.Cells(2).Style.ForeColor = Color.MediumPurple
-                Case "BYBIT"
-                    row.Cells(2).Style.ForeColor = Color.Gainsboro
-                Case "GATE.IO"
-                    row.Cells(2).Style.ForeColor = Color.DodgerBlue
-                Case "MEXC"
-                    row.Cells(2).Style.ForeColor = Color.White
+            'Select Case row.Cells(2).Value
+            '    Case "BINANCE"
+            '        row.Cells(2).Style.ForeColor = Color.Goldenrod
+            '    Case "METAMASK"
+            '        row.Cells(2).Style.ForeColor = Color.DarkOrange
+            '    Case "TRUSTWALLET"
+            '        row.Cells(2).Style.ForeColor = Color.LawnGreen
+            '    Case "PHANTOM"
+            '        row.Cells(2).Style.ForeColor = Color.MediumPurple
+            '    Case "BYBIT"
+            '        row.Cells(2).Style.ForeColor = Color.Gainsboro
+            '    Case "GATE.IO"
+            '        row.Cells(2).Style.ForeColor = Color.DodgerBlue
+            '    Case "MEXC"
+            '        row.Cells(2).Style.ForeColor = Color.White
 
-            End Select
+            'End Select
 
             Select Case CDec(row.Cells(12).Value)
                 Case > 0
@@ -1074,35 +1074,39 @@ Public Class JSON
             If row.Cells(7).Value < row.Cells(6).Value Then
                 rowBackColor = Color.FromArgb(25, 0, 0)
                 fontColor = Color.IndianRed
+                With row.Cells(14)
+                    .Style.BackColor = rowBackColor
+                    .Style.ForeColor = rowBackColor
+                End With
             Else
                 rowBackColor = Color.FromArgb(0, 25, 0)
                 fontColor = Color.White
             End If
 
             With row.Cells(7)
-                .Style.ForeColor = fontColor
+                '.Style.ForeColor = fontColor
                 .Style.BackColor = rowBackColor
             End With
             With row.Cells(8)
                 .Style.BackColor = rowBackColor
             End With
             With row.Cells(9)
-                .Style.ForeColor = fontColor
+                ' .Style.ForeColor = fontColor
                 .Style.BackColor = rowBackColor
             End With
             With row.Cells(10)
-                .Style.ForeColor = fontColor
+                '.Style.ForeColor = fontColor
                 .Style.BackColor = rowBackColor
             End With
             With row.Cells(11)
-                .Style.ForeColor = fontColor
+                ' .Style.ForeColor = fontColor
                 .Style.BackColor = rowBackColor
             End With
             With row.Cells(0)
                 .Style.BackColor = rowBackColor
             End With
             With row.Cells(1)
-                .Style.ForeColor = fontColor
+                '.Style.ForeColor = fontColor
                 .Style.BackColor = rowBackColor
             End With
             With row.Cells(2)
@@ -1128,7 +1132,6 @@ Public Class JSON
             End With
             With row.Cells(14)
                 .Style.BackColor = rowBackColor
-                .Style.ForeColor = rowBackColor
             End With
 
             Dim mcap = row.Cells(9).Value
@@ -1141,9 +1144,9 @@ Public Class JSON
             ElseIf mcap > 600000000 And mcap <= 1000000000 Then
                 row.Cells(9).Style.ForeColor = Color.FromArgb(65, 105, 225)
             ElseIf mcap > 1000000000 And mcap <= 10000000000 Then
-                row.Cells(9).Style.ForeColor = Color.FromArgb(25, 25, 112)
+                row.Cells(9).Style.ForeColor = Color.CornflowerBlue
             ElseIf mcap > 10000000000 Then
-                row.Cells(9).Style.ForeColor = Color.FromArgb(25, 60, 180)
+                row.Cells(9).Style.ForeColor = Color.BlueViolet
             End If
 
             row.Height = 35
