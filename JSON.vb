@@ -550,6 +550,56 @@ Public Class JSON
         Return soma
 
     End Function
+
+    Public Sub loadCaixa(datagrid As DataGridView)
+        Dim caminhoArquivo As String = portfolioPathFile
+        Dim jsonTexto As String = File.ReadAllText(caminhoArquivo)
+        Dim jsonObj As JObject = JObject.Parse(jsonTexto)
+
+        ' Limpa o grid
+        datagrid.Rows.Clear()
+        datagrid.Columns.Clear()
+
+        ' Define colunas
+        datagrid.Columns.Add("Symbol", "Cripto")
+        datagrid.Columns.Add("Qtd", "Quantidade")
+        datagrid.Columns.Add("Wallet", "Carteira")
+
+        Dim totalUsd As Decimal = 0D
+
+        ' Percorre os ativos com "USD" na chave
+        For Each prop In jsonObj.Properties()
+            Dim chave As String = prop.Name
+
+            If chave.ToUpper().Contains("USD") Then
+                Dim ativos = prop.Value
+
+                For Each item In ativos
+                    Dim qtd As Decimal = item("Qtd")
+                    Dim wallet As String = item("Wallet").ToString()
+                    Dim symbol As String = item("Symbol").ToString()
+
+                    datagrid.Rows.Add(symbol, qtd, wallet)
+                    totalUsd += qtd
+                Next
+            End If
+        Next
+
+        ' Adiciona linha com total
+        datagrid.Rows.Add("TOTAL", USDformat(totalUsd), "")
+        datagrid.Rows(datagrid.Rows.Count - 1).DefaultCellStyle.BackColor = Color.Black
+        datagrid.Rows(datagrid.Rows.Count - 1).DefaultCellStyle.Font = New Font(datagrid.Font, FontStyle.Bold)
+
+        datagrid.Columns(0).HeaderText = "Cripto"
+        datagrid.Columns(0).Width = 40
+        datagrid.Columns(1).HeaderText = "Qtd"
+        datagrid.Columns(1).Width = 80
+        datagrid.Columns(2).HeaderText = "Wallet/Cex"
+        datagrid.Columns(2).Width = 100
+
+        datagrid.ClearSelection()
+
+    End Sub
     Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task
 
         Dim b As New Binance

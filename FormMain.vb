@@ -408,5 +408,13 @@ Public Class FormMain
     Private Sub dgPortfolio_SelectionChanged(sender As Object, e As EventArgs) Handles dgPortfolio.SelectionChanged
         dgPortfolio.ClearSelection()
     End Sub
+    Private Sub lbCaixa_Click(sender As Object, e As EventArgs) Handles lbCaixa.Click
+        Dim posLabelNaTela As Point = lbCaixa.PointToScreen(Point.Empty)
+        FormCaixa.Location = New Point(
+            posLabelNaTela.X + (lbCaixa.Width - FormCaixa.Width) \ 2,
+            posLabelNaTela.Y - FormCaixa.Height - 5 ' 5px de margem acima
+        )
+        FormCaixa.ShowDialog()
+    End Sub
 
 End Class
