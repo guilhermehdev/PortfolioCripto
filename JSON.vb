@@ -22,6 +22,7 @@ Public Class JSON
     Private ReadOnly JSONBinPut As String = $"{My.Settings.JSONBinURL}/b/{jsonbin}"
     Dim b As New Binance
     Dim gec As New Coingecko
+    Public USDBRLprice
 
     Public Function loadJSONfile()
         Dim jsonString As String = File.ReadAllText(portfolioPathFile)
@@ -552,7 +553,7 @@ Public Class JSON
 
     End Function
 
-    Public Async Sub loadCaixa(datagrid As DataGridView)
+    Public Sub loadCaixa(datagrid As DataGridView)
         Dim caminhoArquivo As String = portfolioPathFile
         Dim jsonTexto As String = File.ReadAllText(caminhoArquivo)
         Dim jsonObj As JObject = JObject.Parse(jsonTexto)
@@ -586,10 +587,9 @@ Public Class JSON
             End If
         Next
 
-        MsgBox(Await gec.CGECKO_GetPrice("USD", "brl"))
-        datagrid.Rows.Add("TOTAL", USDformat(totalUsd) & " / " & BRLformat(totalUsd * Await gec.CGECKO_GetPrice("USD", "brl")), "")
-        datagrid.Rows(datagrid.Rows.Count - 1).DefaultCellStyle.BackColor = Color.Black
-        datagrid.Rows(datagrid.Rows.Count - 1).DefaultCellStyle.Font = New Font(datagrid.Font, FontStyle.Bold)
+        'datagrid.Rows.Add("TOTAL", USDformat(totalUsd) & " / " & BRLformat(USDBRLprice), "")
+        'datagrid.Rows(datagrid.Rows.Count - 1).DefaultCellStyle.BackColor = Color.Black
+        'datagrid.Rows(datagrid.Rows.Count - 1).DefaultCellStyle.Font = New Font(datagrid.Font, FontStyle.Bold)
 
         datagrid.Columns(0).HeaderText = "Cripto"
         datagrid.Columns(0).Width = 40
@@ -613,7 +613,7 @@ Public Class JSON
                  ToList()
 
         Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
-        Dim USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
+        USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
         Dim BTCprice As String = Await b.BINANCE_GetCoinsPrice("BTC")
         Dim json As New JSON
         Dim dom As Decimal? = Await Task.Run(Async Function() Await gec.CGECKO_GetBTCDominance())

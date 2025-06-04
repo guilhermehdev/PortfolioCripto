@@ -31,15 +31,23 @@ Public Class Binance
         Dim json = QuerySigned("/api/v3/account", "recvWindow=5000")
         Dim account = JObject.Parse(json)
 
-        For Each bal In account("balances")
-            If bal("asset").ToString().Equals(asset, StringComparison.OrdinalIgnoreCase) Then
-                Dim free = Decimal.Parse(bal("free").ToString(), CultureInfo.InvariantCulture)
-                Dim locked = Decimal.Parse(bal("locked").ToString(), CultureInfo.InvariantCulture)
-                Return free + locked
-            End If
-        Next
+        Try
 
-        Return 0D     'se não achar, volta zero
+            For Each bal In account("balances")
+                If bal("asset").ToString().Equals(asset, StringComparison.OrdinalIgnoreCase) Then
+                    Dim free = Decimal.Parse(bal("free").ToString(), CultureInfo.InvariantCulture)
+                    Dim locked = Decimal.Parse(bal("locked").ToString(), CultureInfo.InvariantCulture)
+                    Return free + locked
+                End If
+            Next
+
+            Return 0D
+
+        Catch ex As Exception
+            Debug.Write(ex.Message)
+            Return False
+        End Try
+
     End Function
 
     Public Async Function BINANCE_GetCoinsPrice(symbol As String) As Task(Of String)
