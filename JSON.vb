@@ -1203,9 +1203,9 @@ Public Class JSON
                 ElseIf mcap > 300000000 And mcap <= 600000000 Then
                     row.Cells(9).Style.ForeColor = Color.FromArgb(70, 130, 180)
                 ElseIf mcap > 600000000 And mcap <= 1000000000 Then
-                    row.Cells(9).Style.ForeColor = Color.FromArgb(65, 105, 225)
-                ElseIf mcap > 1000000000 And mcap <= 10000000000 Then
                     row.Cells(9).Style.ForeColor = Color.CornflowerBlue
+                ElseIf mcap > 1000000000 And mcap <= 10000000000 Then
+                    row.Cells(9).Style.ForeColor = Color.FromArgb(65, 105, 225)
                 ElseIf mcap > 10000000000 Then
                     row.Cells(9).Style.ForeColor = Color.BlueViolet
                 End If
