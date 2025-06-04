@@ -976,7 +976,7 @@ Public Class JSON
                     .Alignment = DataGridViewContentAlignment.MiddleCenter
                 End With
 
-                datagrid.Columns(8).HeaderText = "Última atualização"
+                datagrid.Columns(8).HeaderText = "Price Action"
                 datagrid.Columns(8).Width = 70
                 With datagrid.Columns(8).DefaultCellStyle
                     .BackColor = Color.Black
