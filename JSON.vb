@@ -21,6 +21,7 @@ Public Class JSON
     Private ReadOnly JSONBinGet As String = $"{My.Settings.JSONBinURL}/b/{jsonbin}/latest"
     Private ReadOnly JSONBinPut As String = $"{My.Settings.JSONBinURL}/b/{jsonbin}"
     Dim b As New Binance
+    Dim gec As New Coingecko
 
     Public Function loadJSONfile()
         Dim jsonString As String = File.ReadAllText(portfolioPathFile)
@@ -551,7 +552,7 @@ Public Class JSON
 
     End Function
 
-    Public Sub loadCaixa(datagrid As DataGridView)
+    Public Async Sub loadCaixa(datagrid As DataGridView)
         Dim caminhoArquivo As String = portfolioPathFile
         Dim jsonTexto As String = File.ReadAllText(caminhoArquivo)
         Dim jsonObj As JObject = JObject.Parse(jsonTexto)
@@ -585,8 +586,8 @@ Public Class JSON
             End If
         Next
 
-        ' Adiciona linha com total
-        datagrid.Rows.Add("TOTAL", USDformat(totalUsd), "")
+        MsgBox(Await gec.CGECKO_GetPrice("USD", "brl"))
+        datagrid.Rows.Add("TOTAL", USDformat(totalUsd) & " / " & BRLformat(totalUsd * Await gec.CGECKO_GetPrice("USD", "brl")), "")
         datagrid.Rows(datagrid.Rows.Count - 1).DefaultCellStyle.BackColor = Color.Black
         datagrid.Rows(datagrid.Rows.Count - 1).DefaultCellStyle.Font = New Font(datagrid.Font, FontStyle.Bold)
 
@@ -604,7 +605,6 @@ Public Class JSON
 
         Dim b As New Binance
         Dim cot As New Cotacao
-        Dim gec As New Coingecko
         Dim gate As New Gateio
         Dim result = LoadJSONtoDataGrid()
         Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
@@ -613,7 +613,7 @@ Public Class JSON
                  ToList()
 
         Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
-        Dim USDBRLprice = Await b.BINANCE_GetUSDTBRL()
+        Dim USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
         Dim BTCprice As String = Await b.BINANCE_GetCoinsPrice("BTC")
         Dim json As New JSON
         Dim dom As Decimal? = Await Task.Run(Async Function() Await gec.CGECKO_GetBTCDominance())
