@@ -676,9 +676,14 @@ Public Class JSON
                 Dim volume = mData.Volume24h
                 Dim change = mData.Change24h
 
-                Dim criptosBinance = b.BINANCE_GetCoinsInfo()
-
                 If row("Wallet") = "BINANCE" Then
+                    Dim criptosBinance = Await b.BINANCE_GetCoinsInfo()
+                    If criptosBinance.ContainsKey(symbolUpper) Then
+                        critoPriceTask = criptosBinance(symbolUpper)
+                    Else
+                        critoPriceTask = $"{price}|{marketcap}|0"
+                    End If
+
                     critoPriceTask = Await b.BINANCE_GetCoinsInfo(row.Item(6).ToString.ToUpper)
                 ElseIf row("Wallet") = "GATE.IO" Then
                     critoPriceTask = Await gate.GATE_GetCoinsInfo(row.Item(6).ToString.ToUpper)
