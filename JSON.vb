@@ -146,7 +146,6 @@ Public Class JSON
             End Using
 
         Catch ex As Exception
-            Debug.WriteLine("Erro: " & ex.Message)
             Return False
         End Try
     End Function
@@ -614,7 +613,7 @@ Public Class JSON
 
         Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
         USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
-        Dim BTCprice As String = Await b.BINANCE_GetCoinsPrice("BTC")
+        Dim BTCprice As String = Await b.BINANCE_GetCoinsInfo("BTC")
         Dim json As New JSON
         Dim dom As Decimal? = Await Task.Run(Async Function() Await gec.CGECKO_GetBTCDominance())
         Dim profit As Decimal
@@ -677,8 +676,10 @@ Public Class JSON
                 Dim volume = mData.Volume24h
                 Dim change = mData.Change24h
 
+                Dim criptosBinance = b.BINANCE_GetCoinsInfo()
+
                 If row("Wallet") = "BINANCE" Then
-                    critoPriceTask = Await b.BINANCE_GetCoinsPrice(row.Item(6).ToString.ToUpper)
+                    critoPriceTask = Await b.BINANCE_GetCoinsInfo(row.Item(6).ToString.ToUpper)
                 ElseIf row("Wallet") = "GATE.IO" Then
                     critoPriceTask = Await gate.GATE_GetCoinsInfo(row.Item(6).ToString.ToUpper)
                 Else
