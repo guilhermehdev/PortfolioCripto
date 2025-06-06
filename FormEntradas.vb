@@ -7,32 +7,25 @@ Public Class FormEntradas
     Dim bs As New BindingSource()
 
     Private Async Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
-        Dim key
-
-        ' Try
+        Dim key As String = ""
         If cbCripto.SelectedValue = 0 Or Not IsNumeric(cbCripto.SelectedValue) Or cbCripto.SelectedValue = "" Then
-                key = cbCripto.Text
-            Else
-                key = cbCripto.SelectedValue
-            End If
+            key = cbCripto.Text
+        Else
+            key = cbCripto.SelectedValue
+        End If
 
         If (String.IsNullOrWhiteSpace(tbQtd.Text) OrElse tbQtd.Text = "0") OrElse
            (Not IsNumeric(TbPrecoEntrada.Text) OrElse TbPrecoEntrada.Text = "0") Then
             MsgBox("Preencha todos os campos!")
-            MsgBox(key)
         Else
-            Dim sucesso As Boolean = Await json.AppendJSONToBin(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, 1, cbCripto.Text)
 
-                If sucesso Then
-                    MsgBox("Salvo!")
-                    'FormEntradas_Load(sender, e)
-                    loadJSONtoDatagridLocal(dgCriptos)
+        End If
 
-                End If
-            End If
-        ' Catch ex As Exception
-        'Debug.Write(ex.Message)
-        'End Try
+        If Await json.saveAportToJSONBin(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, cbCripto.Text) Then
+            MsgBox("Salvo!")
+            loadJSONtoDatagridLocal(dgCriptos)
+        End If
+
     End Sub
 
     Private Sub FormEntradas_Load(sender As Object, e As EventArgs) Handles MyBase.Load

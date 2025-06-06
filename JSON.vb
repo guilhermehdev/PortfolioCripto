@@ -150,6 +150,13 @@ Public Class JSON
         End Try
     End Function
 
+    Public Async Function saveAportToJSONBin(key As String, precoMedio As Decimal, qtd As Decimal, data As Date, wallet As String, symbol As String) As Task(Of Boolean)
+
+        Dim sucesso As Boolean = Await AppendJSONToBin(key, precoMedio, qtd, data, wallet, 1, symbol)
+        Return sucesso
+
+    End Function
+
     Public Async Function AppendJSONToBin(chave As String, InitialPrice As Decimal, Qtd As Decimal, Data As String, Wallet As String, lastPrice As Decimal, symbol As String) As Task(Of Boolean)
         Dim url As String = JSONBinPut
         Dim jsonAtual As JObject = Nothing
@@ -610,7 +617,6 @@ Public Class JSON
         Dim allSymbols = originalDT.AsEnumerable().
                  Select(Function(r) r.Field(Of String)("Symbol").ToUpper()).
                  ToList()
-
         Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
         USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
         Dim BTCprice As String = Await b.BINANCE_GetCoinsInfo("BTC")
@@ -636,7 +642,6 @@ Public Class JSON
         Dim difPrice As Decimal = 0
         Dim total As Decimal
         Dim critoPriceTask As String
-
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
         newDT.Columns.Add("Perf", GetType(String))
@@ -655,6 +660,22 @@ Public Class JSON
         newDT.Columns.Add("X", GetType(String))
 
         Try
+            Dim binanceResult = Await b.BINANCE_GetCoinsInfo()
+            Dim binanceSymbols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+            For Each linha As String In DirectCast(binanceResult, List(Of String))
+                Dim parts = linha.Split("|"c)
+                If parts.Length >= 1 Then
+                    binanceSymbols.Add(parts(0).Trim().ToUpper())
+                End If
+            Next
+
+            Dim jsonSymbols As HashSet(Of String) = originalDT.AsEnumerable().Select(Function(row) row.Field(Of String)("Symbol").Trim().ToUpper()).ToHashSet(StringComparer.OrdinalIgnoreCase)
+
+            Dim novosSymbols = binanceSymbols.Except(jsonSymbols).ToList()
+            MessageBox.Show("Criptos novas na Binance (não estão no JSON):" & vbCrLf & String.Join(", ", novosSymbols))
+
+            Return
 
             For Each row As DataRow In originalDT.Rows
                 Dim newRow As DataRow = newDT.NewRow()
@@ -677,13 +698,6 @@ Public Class JSON
                 Dim change = mData.Change24h
 
                 If row("Wallet") = "BINANCE" Then
-                    Dim criptosBinance = Await b.BINANCE_GetCoinsInfo()
-                    If criptosBinance.ContainsKey(symbolUpper) Then
-                        critoPriceTask = criptosBinance(symbolUpper)
-                    Else
-                        critoPriceTask = $"{price}|{marketcap}|0"
-                    End If
-
                     critoPriceTask = Await b.BINANCE_GetCoinsInfo(row.Item(6).ToString.ToUpper)
                 ElseIf row("Wallet") = "GATE.IO" Then
                     critoPriceTask = Await gate.GATE_GetCoinsInfo(row.Item(6).ToString.ToUpper)
