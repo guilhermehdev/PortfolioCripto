@@ -614,9 +614,7 @@ Public Class JSON
         Dim gate As New Gateio
         Dim result = LoadJSONtoDataGrid()
         Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
-        Dim allSymbols = originalDT.AsEnumerable().
-                 Select(Function(r) r.Field(Of String)("Symbol").ToUpper()).
-                 ToList()
+        Dim allSymbols = originalDT.AsEnumerable().Select(Function(r) r.Field(Of String)("Symbol").ToUpper()).ToList()
         Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
         USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
         Dim BTCprice As String = Await b.BINANCE_GetCoinsInfo("BTC")
@@ -661,19 +659,20 @@ Public Class JSON
 
         Try
             Dim binanceResult = Await b.BINANCE_GetCoinsInfo()
-            Dim binanceSymbols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            'Dim binanceSymbols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Dim jsonSymbols As HashSet(Of String) = originalDT.AsEnumerable().Select(Function(row) row.Field(Of String)("Symbol").Trim().ToUpper()).ToHashSet(StringComparer.OrdinalIgnoreCase)
 
             For Each linha As String In DirectCast(binanceResult, List(Of String))
                 Dim parts = linha.Split("|"c)
                 If parts.Length >= 1 Then
-                    binanceSymbols.Add(parts(0).Trim().ToUpper())
+                    If Not jsonSymbols.Contains(parts(0).Trim().ToUpper()) Then
+                        MsgBox(" Cripto nova na Binance: " & parts(0).Trim().ToUpper())
+                    End If
                 End If
             Next
 
-            Dim jsonSymbols As HashSet(Of String) = originalDT.AsEnumerable().Select(Function(row) row.Field(Of String)("Symbol").Trim().ToUpper()).ToHashSet(StringComparer.OrdinalIgnoreCase)
-
-            Dim novosSymbols = binanceSymbols.Except(jsonSymbols).ToList()
-            MessageBox.Show("Criptos novas na Binance (não estão no JSON):" & vbCrLf & String.Join(", ", novosSymbols))
+            ' Dim novosSymbols = binanceSymbols.Except(jsonSymbols).ToList()
+            ' MessageBox.Show("Criptos novas na Binance (não estão no JSON):" & vbCrLf & String.Join(", ", novosSymbols))
 
             Return
 
@@ -746,27 +745,27 @@ Public Class JSON
                 newRow("Perf") = $"{perform.Value:F2}%"
                 newRow("Wallet") = wallet
 
-                Dim lastPrice As Decimal = cot.decimalBR(row("LastPrice"))
-                difPrice = CDec(currPrice.ToString("N2")) - CDec(lastPrice.ToString("N2"))
-                Dim priceAction As String
-                Dim op As String
+                'Dim lastPrice As Decimal = cot.decimalBR(row("LastPrice"))
+                'difPrice = CDec(currPrice.ToString("N2")) - CDec(lastPrice.ToString("N2"))
+                'Dim priceAction As String
+                'Dim op As String
 
-                If difPrice > 0 Then
-                    priceAction = $"{((difPrice / lastPrice) * 100):F2}%"
-                    op = "+"
-                ElseIf difPrice = 0 Then
-                    priceAction = "--"
-                    op = ""
-                Else
-                    priceAction = $"{((difPrice / lastPrice) * 100):F2}%"
-                    op = "-"
-                End If
+                'If difPrice > 0 Then
+                '    priceAction = $"{((difPrice / lastPrice) * 100):F2}%"
+                '    op = "+"
+                'ElseIf difPrice = 0 Then
+                '    priceAction = "--"
+                '    op = ""
+                'Else
+                '    priceAction = $"{((difPrice / lastPrice) * 100):F2}%"
+                '    op = "-"
+                'End If
 
                 newRow("vlEntradaUSD") = initialValueUSD
                 newRow("vlEntradaBRL") = initialValueBRL
                 newRow("precoMedio") = initialPrice
                 newRow("precoAtual") = currPrice
-                newRow("lastPrice") = op & priceAction.ToString().Replace("-", "")
+                newRow("lastPrice") = change
                 newRow("marketcap") = marketcap
                 newRow("vlAtualUSD") = (currValueUSD)
                 newRow("vlAtualBRL") = (currValueBRL)
