@@ -662,10 +662,26 @@ Public Class JSON
             'Dim binanceSymbols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
             Dim jsonSymbols As HashSet(Of String) = originalDT.AsEnumerable().Select(Function(row) row.Field(Of String)("Symbol").Trim().ToUpper()).ToHashSet(StringComparer.OrdinalIgnoreCase)
 
+            Dim jsonTexto As String = File.ReadAllText("portfolio.json")
+            Dim jsonObj = JObject.Parse(jsonTexto)
+
+            ' Dim jsonSymbols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+            For Each prop In jsonObj.Properties()
+                If prop.Name <> "ultimaAtualizacao" Then
+                    jsonSymbols.Add(prop.Name.ToUpper())
+                End If
+            Next
+
+
             For Each linha As String In DirectCast(binanceResult, List(Of String))
                 Dim parts = linha.Split("|"c)
                 If parts.Length >= 1 Then
                     If Not jsonSymbols.Contains(parts(0).Trim().ToUpper()) Then
+
+
+
+
                         MsgBox(" Cripto nova na Binance: " & parts(0).Trim().ToUpper())
                     End If
                 End If
