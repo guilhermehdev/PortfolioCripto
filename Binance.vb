@@ -1,4 +1,5 @@
 ﻿Imports System.Globalization
+Imports System.IO
 Imports System.Net.Http
 Imports System.Security.Cryptography
 Imports System.Security.Principal
@@ -76,83 +77,6 @@ Public Class Binance
         End Try
     End Function
 
-    'Public Async Function BINANCE_GetCoinsInfo(Optional symbol As String = "") As Task(Of String)
-    '    Dim account = Await BINANCE_GetAllAssets()
-    '    Dim originalSymbol As String = ""
-    '    Dim pairSymbol As String = ""
-    '    Dim pair As String = ""
-    '    Dim url As String = "https://api.binance.com/api/v3/ticker/price?symbol="
-
-    '    Using client As New HttpClient()
-
-    '        If symbol Is Nothing OrElse symbol.Trim() = "" Then
-
-    '            For Each cripto In account
-
-    '                originalSymbol = cripto.Key.Trim().ToUpper()
-    '                pairSymbol = originalSymbol
-
-    '                If originalSymbol = "USDT" Then
-    '                    pairSymbol = "USDC"
-    '                End If
-
-    '                pair = $"{pairSymbol}USDT"
-    '                url = $"{url}{pair}"
-
-    '                Dim resp = Await client.GetAsync(url)
-    '                If Not resp.IsSuccessStatusCode Then
-    '                    Throw New Exception($"HTTP {CInt(resp.StatusCode)} – {resp.ReasonPhrase}")
-    '                End If
-
-    '                Dim content = Await resp.Content.ReadAsStringAsync()
-    '                Dim j = JsonDocument.Parse(content)
-    '                Dim priceStr = j.RootElement.GetProperty("price").GetString()
-    '                Dim price = Decimal.Parse(priceStr, CultureInfo.InvariantCulture)
-
-    '                ' Se estamos usando USDCUSDT, inverter o valor (USDT → USD)
-    '                If originalSymbol = "USDT" Then
-    '                    price = 1 / price
-    '                End If
-
-    '            Next
-
-    '        Else
-
-    '            originalSymbol = symbol.Trim().ToUpper()
-    '            pairSymbol = originalSymbol
-
-    '            If originalSymbol = "USDT" Then
-    '                pairSymbol = "USDC"
-    '            End If
-
-    '            pair = $"{pairSymbol}USDT"
-    '            url = $"{url}{pair}"
-
-    '            Dim resp = Await client.GetAsync(url)
-    '            If Not resp.IsSuccessStatusCode Then
-    '                Throw New Exception($"HTTP {CInt(resp.StatusCode)} – {resp.ReasonPhrase}")
-    '            End If
-
-    '            Dim content = Await resp.Content.ReadAsStringAsync()
-    '            Dim j = JsonDocument.Parse(content)
-    '            Dim priceStr = j.RootElement.GetProperty("price").GetString()
-    '            Dim price = Decimal.Parse(priceStr, CultureInfo.InvariantCulture)
-
-    '            ' Se estamos usando USDCUSDT, inverter o valor (USDT → USD)
-    '            If originalSymbol = "USDT" Then
-    '                price = 1 / price
-    '            End If
-
-    '            Dim qtd As Decimal = BINANCE_GetAssetQty(originalSymbol)
-
-    '            Return $"{price.ToString(CultureInfo.InvariantCulture)}|0|{qtd.ToString(CultureInfo.InvariantCulture)}"
-
-    '        End If
-
-    '    End Using
-
-    'End Function
-
     Public Async Function BINANCE_GetCoinsInfo(Optional symbol As String = "") As Task(Of Object)
         Dim account = Await Task.Run(Function() BINANCE_GetAllAssets()) ' Executa em thread separada se for necessário
         Dim urlBase As String = "https://api.binance.com/api/v3/ticker/price?symbol="
@@ -182,7 +106,10 @@ Public Class Binance
                             price = 1 / price ' Inverter USDC→USDT para ter o preço do USDT em USD
                         End If
 
-                        result.Add($"{originalSymbol}|{price.ToString(CultureInfo.InvariantCulture)}|{qtd.ToString(CultureInfo.InvariantCulture)}")
+                        Dim totalUSD = price * qtd
+                        If totalUSD >= 1 Then ' <<<<< FILTRO AQUI
+                            result.Add($"{originalSymbol}|{price.ToString(CultureInfo.InvariantCulture)}|{qtd.ToString(CultureInfo.InvariantCulture)}")
+                        End If
 
                     Catch ex As Exception
                         Debug.WriteLine($"Erro ao buscar {pair}: {ex.Message}")
@@ -220,8 +147,6 @@ Public Class Binance
         Return Nothing
 
     End Function
-
-
     Public Async Function BINANCE_GetUSDTBRL() As Task(Of Decimal)
         Using client As New HttpClient()
 
@@ -242,5 +167,52 @@ Public Class Binance
         End Using
 
     End Function
+
+    Public Async Function compare() As Task
+        Dim j As New JSON
+        ' Obtém as informações da Binance
+        Dim binanceResult = Await BINANCE_GetCoinsInfo()
+
+        ' Lê e parseia o arquivo JSON
+        Dim jsonTexto As String = File.ReadAllText(j.portfolioPathFile)
+        Dim jsonObj = JObject.Parse(jsonTexto)
+
+        ' Monta o conjunto de símbolos existentes no JSON
+        Dim jsonSymbols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        For Each prop In jsonObj.Properties()
+            If prop.Value.Type = JTokenType.Array Then
+                Dim arr = CType(prop.Value, JArray)
+                For Each item In arr
+                    Dim symbol = item("Symbol")?.ToString()?.Trim()?.ToUpper()
+                    If Not String.IsNullOrEmpty(symbol) Then
+                        jsonSymbols.Add(symbol)
+                    End If
+                Next
+            End If
+        Next
+
+        ' Percorre os dados vindos da Binance
+        For Each linha As String In DirectCast(binanceResult, List(Of String))
+            Dim parts = linha.Split("|"c)
+            If parts.Length < 3 Then Continue For ' Garante que há dados suficientes
+
+            Dim symbol = parts(0).Trim().ToUpper()
+            Dim qtd As Decimal = j.decimalBR(parts(2))
+
+            If Not jsonSymbols.Contains(symbol) Then
+                MsgBox($"Cripto {symbol} não encontrada no arquivo local. Adicionando...")
+                Dim precoMedioStr = InputBox($"Digite o preço de entrada/médio para {symbol}", "Nova Cripto")
+
+                Dim precoMedio As Decimal
+                If Decimal.TryParse(precoMedioStr.Replace(",", "."), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, precoMedio) Then
+                    Await j.saveAportToJSONBin(symbol, precoMedio, qtd, Date.Today, "BINANCE", symbol)
+                Else
+                    MsgBox("Preço inválido. Pulando " & symbol)
+                End If
+            End If
+        Next
+    End Function
+
 
 End Class

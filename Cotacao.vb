@@ -168,9 +168,5 @@ Public Class Cotacao
         Return Nothing
     End Function
 
-    Public Function decimalBR(valor As String)
-        Return Decimal.Parse(valor, CultureInfo.InvariantCulture)
-    End Function
-
 End Class
 

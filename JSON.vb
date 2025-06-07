@@ -12,7 +12,7 @@ Imports Newtonsoft.Json.Linq
 
 
 Public Class JSON
-    Private ReadOnly portfolioPathFile As String = Application.StartupPath & "\JSON\portfolio.json"
+    Public ReadOnly portfolioPathFile As String = Application.StartupPath & "\JSON\portfolio.json"
     Private ReadOnly bindingSource As New BindingSource()
     Private ReadOnly jsonbin = My.Settings.JSONBinID
     Private ReadOnly JSONBinMasterKey As String = My.Settings.JSONBinMasterKey
@@ -608,8 +608,9 @@ Public Class JSON
 
     End Sub
     Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task
-
+        Dim json As New JSON
         Dim b As New Binance
+        Await b.compare()
         Dim cot As New Cotacao
         Dim gate As New Gateio
         Dim result = LoadJSONtoDataGrid()
@@ -618,7 +619,6 @@ Public Class JSON
         Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
         USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
         Dim BTCprice As String = Await b.BINANCE_GetCoinsInfo("BTC")
-        Dim json As New JSON
         Dim dom As Decimal? = Await Task.Run(Async Function() Await gec.CGECKO_GetBTCDominance())
         Dim profit As Decimal
         Dim initialValue As Decimal
@@ -658,45 +658,12 @@ Public Class JSON
         newDT.Columns.Add("X", GetType(String))
 
         Try
-            Dim binanceResult = Await b.BINANCE_GetCoinsInfo()
-            'Dim binanceSymbols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-            Dim jsonSymbols As HashSet(Of String) = originalDT.AsEnumerable().Select(Function(row) row.Field(Of String)("Symbol").Trim().ToUpper()).ToHashSet(StringComparer.OrdinalIgnoreCase)
-
-            Dim jsonTexto As String = File.ReadAllText("portfolio.json")
-            Dim jsonObj = JObject.Parse(jsonTexto)
-
-            ' Dim jsonSymbols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-
-            For Each prop In jsonObj.Properties()
-                If prop.Name <> "ultimaAtualizacao" Then
-                    jsonSymbols.Add(prop.Name.ToUpper())
-                End If
-            Next
-
-
-            For Each linha As String In DirectCast(binanceResult, List(Of String))
-                Dim parts = linha.Split("|"c)
-                If parts.Length >= 1 Then
-                    If Not jsonSymbols.Contains(parts(0).Trim().ToUpper()) Then
-
-
-
-
-                        MsgBox(" Cripto nova na Binance: " & parts(0).Trim().ToUpper())
-                    End If
-                End If
-            Next
-
-            ' Dim novosSymbols = binanceSymbols.Except(jsonSymbols).ToList()
-            ' MessageBox.Show("Criptos novas na Binance (não estão no JSON):" & vbCrLf & String.Join(", ", novosSymbols))
-
-            Return
 
             For Each row As DataRow In originalDT.Rows
                 Dim newRow As DataRow = newDT.NewRow()
                 Dim qtd As Decimal
                 Dim initialPrice As Decimal
-                initialPrice = cot.decimalBR(row("InitialPrice"))
+                initialPrice = decimalBR(row("InitialPrice"))
 
                 Dim symbolUpper = row.Item(6).ToString().ToUpper()
                 Dim mData As CoinMarketData = Nothing
@@ -724,9 +691,9 @@ Public Class JSON
                 Dim preco As String = valores(0)
 
                 If valores(2) > 0 Then
-                    qtd = cot.decimalBR(valores(2))
+                    qtd = decimalBR(valores(2))
                 Else
-                    qtd = cot.decimalBR(row("Qtd"))
+                    qtd = decimalBR(row("Qtd"))
                 End If
 
                 If qtd >= 1 Then
@@ -736,7 +703,7 @@ Public Class JSON
                 End If
 
                 Dim currPrice As Decimal = price
-                Dim initialValueUSD As Decimal = (qtd) * cot.decimalBR(row("InitialPrice"))
+                Dim initialValueUSD As Decimal = (qtd) * decimalBR(row("InitialPrice"))
                 Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
                 wallet = row("Wallet")
                 currValueUSD = qtd * currPrice
@@ -853,7 +820,7 @@ Public Class JSON
             End If
 
             FormMain.lbDolar.Text = BRLformat(USDBRLprice)
-            FormMain.lbBTC.Text = USDformat(cot.decimalBR(btc))
+            FormMain.lbBTC.Text = USDformat(decimalBR(btc))
             FormMain.lbDom.Text = $"{dom.Value:F2}%"
             If performWallet < 0 Then
                 FormMain.lbPerformWallet.ForeColor = Color.Red
@@ -1302,6 +1269,9 @@ Public Class JSON
         Next
 
     End Sub
+    Public Function decimalBR(valor As String)
+        Return Decimal.Parse(valor, CultureInfo.InvariantCulture)
+    End Function
     Public Function USDformat(ByVal value As Decimal)
         Return value.ToString("C", New CultureInfo("en-US"))
     End Function
