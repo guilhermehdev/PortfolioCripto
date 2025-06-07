@@ -656,7 +656,7 @@ Partial Class FormMain
         ImportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {PortfolioToolStripMenuItem, WalletsExchangeToolStripMenuItem})
         ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
-        ImportarToolStripMenuItem.Size = New Size(168, 22)
+        ImportarToolStripMenuItem.Size = New Size(167, 22)
         ImportarToolStripMenuItem.Text = "Portfolio"
         ' 
         ' PortfolioToolStripMenuItem
@@ -681,7 +681,7 @@ Partial Class FormMain
         ExportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem1, ExportarToolStripMenuItem1})
         ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        ExportarToolStripMenuItem.Size = New Size(168, 22)
+        ExportarToolStripMenuItem.Size = New Size(167, 22)
         ExportarToolStripMenuItem.Text = "Wallets/Exchange"
         ' 
         ' ImportarToolStripMenuItem1
@@ -706,7 +706,7 @@ Partial Class FormMain
         CriptoToolStripMenuItem2.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem2, ExportarToolStripMenuItem2})
         CriptoToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
         CriptoToolStripMenuItem2.Name = "CriptoToolStripMenuItem2"
-        CriptoToolStripMenuItem2.Size = New Size(168, 22)
+        CriptoToolStripMenuItem2.Size = New Size(167, 22)
         CriptoToolStripMenuItem2.Text = "Cripto"
         ' 
         ' ImportarToolStripMenuItem2

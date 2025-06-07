@@ -649,7 +649,7 @@ Public Class JSON
         newDT.Columns.Add("vlEntradaBRL", GetType(Decimal))
         newDT.Columns.Add("precoMedio", GetType(Decimal))
         newDT.Columns.Add("precoAtual", GetType(Decimal))
-        newDT.Columns.Add("lastPrice", GetType(String))
+        newDT.Columns.Add("24horas", GetType(String))
         newDT.Columns.Add("marketcap", GetType(Decimal))
         newDT.Columns.Add("vlAtualUSD", GetType(Decimal))
         newDT.Columns.Add("vlAtualBRL", GetType(Decimal))
@@ -677,7 +677,8 @@ Public Class JSON
                 Dim marketcap = mData.MarketCap
                 Dim price = mData.Price
                 Dim volume = mData.Volume24h
-                Dim change = mData.Change24h
+                Dim change As Decimal? = mData.Change24h
+
 
                 If row("Wallet") = "BINANCE" Then
                     critoPriceTask = Await b.BINANCE_GetCoinsInfo(row.Item(6).ToString.ToUpper)
@@ -710,6 +711,7 @@ Public Class JSON
                 currValueBRL = currValueUSD * USDBRLprice
                 roi = currValueUSD - initialValueUSD
                 perform = (roi / initialValueUSD) * 100
+
                 initialValue += initialValueUSD
 
                 If row("Cripto") = "USDT" Or row("Cripto") = "USDC" Then
@@ -727,28 +729,11 @@ Public Class JSON
                 newRow("Qtd") = qtd
                 newRow("Perf") = $"{perform.Value:F2}%"
                 newRow("Wallet") = wallet
-
-                'Dim lastPrice As Decimal = cot.decimalBR(row("LastPrice"))
-                'difPrice = CDec(currPrice.ToString("N2")) - CDec(lastPrice.ToString("N2"))
-                'Dim priceAction As String
-                'Dim op As String
-
-                'If difPrice > 0 Then
-                '    priceAction = $"{((difPrice / lastPrice) * 100):F2}%"
-                '    op = "+"
-                'ElseIf difPrice = 0 Then
-                '    priceAction = "--"
-                '    op = ""
-                'Else
-                '    priceAction = $"{((difPrice / lastPrice) * 100):F2}%"
-                '    op = "-"
-                'End If
-
                 newRow("vlEntradaUSD") = initialValueUSD
                 newRow("vlEntradaBRL") = initialValueBRL
                 newRow("precoMedio") = initialPrice
                 newRow("precoAtual") = currPrice
-                newRow("lastPrice") = change
+                newRow("24horas") = change
                 newRow("marketcap") = marketcap
                 newRow("vlAtualUSD") = (currValueUSD)
                 newRow("vlAtualBRL") = (currValueBRL)
@@ -978,10 +963,11 @@ Public Class JSON
                     .Alignment = DataGridViewContentAlignment.MiddleCenter
                 End With
 
-                datagrid.Columns(8).HeaderText = "Price Action"
+                datagrid.Columns(8).HeaderText = "24 horas"
                 datagrid.Columns(8).Width = 70
                 With datagrid.Columns(8).DefaultCellStyle
                     .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
                     .Font = New Font(fontname, fontsize, FontStyle.Bold)
                     .Alignment = DataGridViewContentAlignment.MiddleCenter
                 End With
@@ -1117,11 +1103,11 @@ Public Class JSON
 
                 Dim cellValue = row.Cells(8).Value
 
-                If cellValue.ToString.Contains("+") Then
+                If cellValue > 0 Then
                     With row.Cells(8)
                         .Style.ForeColor = Color.LimeGreen
                     End With
-                ElseIf cellValue.ToString.Contains("-") Then
+                ElseIf cellValue < 0 Then
                     With row.Cells(8)
                         .Style.ForeColor = Color.Red
                     End With

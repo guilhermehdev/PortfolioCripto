@@ -1,4 +1,5 @@
-﻿Imports System.IO
+﻿Imports System.Globalization
+Imports System.IO
 Imports System.Windows.Forms.DataVisualization.Charting
 Imports Newtonsoft.Json.Linq
 
@@ -421,6 +422,19 @@ Public Class FormMain
             posLabelNaTela.Y - FormCaixa.Height - 5 ' 5px de margem acima
         )
         FormCaixa.ShowDialog()
+    End Sub
+
+    Private Sub dgPortfolio_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgPortfolio.CellFormatting
+        Dim dgv = DirectCast(sender, DataGridView)
+
+        If dgv.Columns(e.ColumnIndex).Name = "24horas" AndAlso e.Value IsNot Nothing Then
+            Dim valorDecimal As Decimal
+
+            ' Garante conversão segura
+            If Decimal.TryParse(e.Value.ToString().Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, valorDecimal) Then
+                e.Value = $"{valorDecimal:F2}%"
+            End If
+        End If
     End Sub
 
 End Class
