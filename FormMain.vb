@@ -33,11 +33,11 @@ Public Class FormMain
             chart.removeCharts()
             lbLoadFromMarket.Visible = True
             TimerBlink.Start()
-            Debug.WriteLine("Conectando...")
+            Debug.WriteLine("Status: Conectando...")
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
             If Await Cjson.checkLastUpdateOnJSONBin() Then
-                Debug.WriteLine("Status Ok")
+
                 Await Cjson.LoadCriptos(dgPortfolio)
                 dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
                 Adjust()
@@ -45,14 +45,12 @@ Public Class FormMain
                 lbRefresh.Location = New Point(125, 7)
                 lbRefresh.Text = My.Settings.lastView
             Else
-                Debug.WriteLine("JSONBin não respondeu! Carregando arquivo local...", MsgBoxStyle.Critical)
                 Await refreshMarket()
             End If
 
         Catch ex As Exception
             Debug.WriteLine("Erro ao carregar o portfólio: " & ex.Message)
         End Try
-
 
     End Sub
 
@@ -165,13 +163,8 @@ Public Class FormMain
     Private Sub Adjust()
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
         PanelGraphs.Width = Me.Width
-        'If dgPortfolio.RowCount < 10 Then
         dgPortfolio.Height = (dgPortfolio.RowCount * 35)
-        'Else
-        'dgPortfolio.Height = 350
-        'End If
-        Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + panelDebug.Height + 60
-
+        Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + panelDebug.Height + 78
     End Sub
 
     Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter

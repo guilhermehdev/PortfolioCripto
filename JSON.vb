@@ -145,8 +145,9 @@ Public Class JSON
                     Return False
                 End If
             End Using
-
+            Debug.WriteLine("Status: Ok")
         Catch ex As Exception
+            Debug.WriteLine("Status: JSONBin não respondeu! Carregando arquivo local...", MsgBoxStyle.Critical)
             Return False
         End Try
     End Function
