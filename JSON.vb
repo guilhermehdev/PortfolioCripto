@@ -209,12 +209,12 @@ Public Class JSON
                     My.Settings.Save()
                     Return True
                 Else
-                    MsgBox("Erro ao salvar: " & putResponse.StatusCode)
+                    Debug.Write("Erro ao salvar: " & putResponse.StatusCode)
                     Return False
                 End If
 
             Catch ex As Exception
-                MsgBox("Erro: " & ex.Message)
+                Debug.Write("Erro: " & ex.Message)
                 Return False
             End Try
         End Using

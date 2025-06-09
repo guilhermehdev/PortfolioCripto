@@ -2,6 +2,8 @@
 Imports System.IO
 Imports System.Windows.Forms.DataVisualization.Charting
 Imports Newtonsoft.Json.Linq
+Imports System.Diagnostics
+
 
 Public Class FormMain
     Public remainingtimeInSeconds As Integer
@@ -18,12 +20,22 @@ Public Class FormMain
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        Dim listener As New CustomDebugListener
+        AddHandler listener.MessageCaptured, AddressOf ShowDebugMessage
+        Trace.Listeners.Add(listener)
+        Trace.AutoFlush = True
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
+    Private Sub ShowDebugMessage(msg As String)
+        Dim finalMsg = $"{msg}{Environment.NewLine}"
+        ' Atualiza label, textbox, ou qualquer controle
+        Me.lbDebug.Text = finalMsg
+        ' Ou qualquer outro controle que queira atualizar
+    End Sub
+
 
     Public Async Sub Setup()
-
         Try
             chart.removeCharts()
             lbLoadFromMarket.Visible = True
@@ -40,7 +52,7 @@ Public Class FormMain
                 lbRefresh.Location = New Point(125, 7)
                 lbRefresh.Text = My.Settings.lastView
             Else
-                MsgBox("Erro ao verificar a última atualização: JSONBin não respondeu!" & vbCrLf & "Carregando arquivo local...", MsgBoxStyle.Critical)
+                Debug.WriteLine("Erro ao verificar a última atualização: JSONBin não respondeu!" & vbCrLf & "Carregando arquivo local...", MsgBoxStyle.Critical)
                 Await refreshMarket()
             End If
 

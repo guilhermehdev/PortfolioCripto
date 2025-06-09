@@ -65,6 +65,7 @@ Partial Class FormMain
         lbTotalEntradaBRL = New Label()
         lbTotalEntradaUSD = New Label()
         PanelGraphs = New Panel()
+        lbDebug = New Label()
         lbCaixaBRL = New Label()
         lbCaixa = New Label()
         Panel2 = New Panel()
@@ -560,6 +561,7 @@ Partial Class FormMain
         ' PanelGraphs
         ' 
         PanelGraphs.BackColor = Color.FromArgb(CByte(30), CByte(30), CByte(30))
+        PanelGraphs.Controls.Add(lbDebug)
         PanelGraphs.Controls.Add(lbCaixaBRL)
         PanelGraphs.Controls.Add(lbCaixa)
         PanelGraphs.Controls.Add(PictureBox2)
@@ -576,6 +578,16 @@ Partial Class FormMain
         PanelGraphs.Name = "PanelGraphs"
         PanelGraphs.Size = New Size(1154, 182)
         PanelGraphs.TabIndex = 32
+        ' 
+        ' lbDebug
+        ' 
+        lbDebug.AutoSize = True
+        lbDebug.ForeColor = Color.White
+        lbDebug.Location = New Point(176, 7)
+        lbDebug.Name = "lbDebug"
+        lbDebug.Size = New Size(27, 15)
+        lbDebug.TabIndex = 34
+        lbDebug.Text = "Log"
         ' 
         ' lbCaixaBRL
         ' 
@@ -656,7 +668,7 @@ Partial Class FormMain
         ImportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {PortfolioToolStripMenuItem, WalletsExchangeToolStripMenuItem})
         ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
-        ImportarToolStripMenuItem.Size = New Size(167, 22)
+        ImportarToolStripMenuItem.Size = New Size(168, 22)
         ImportarToolStripMenuItem.Text = "Portfolio"
         ' 
         ' PortfolioToolStripMenuItem
@@ -681,7 +693,7 @@ Partial Class FormMain
         ExportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem1, ExportarToolStripMenuItem1})
         ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        ExportarToolStripMenuItem.Size = New Size(167, 22)
+        ExportarToolStripMenuItem.Size = New Size(168, 22)
         ExportarToolStripMenuItem.Text = "Wallets/Exchange"
         ' 
         ' ImportarToolStripMenuItem1
@@ -706,7 +718,7 @@ Partial Class FormMain
         CriptoToolStripMenuItem2.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem2, ExportarToolStripMenuItem2})
         CriptoToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
         CriptoToolStripMenuItem2.Name = "CriptoToolStripMenuItem2"
-        CriptoToolStripMenuItem2.Size = New Size(167, 22)
+        CriptoToolStripMenuItem2.Size = New Size(168, 22)
         CriptoToolStripMenuItem2.Text = "Cripto"
         ' 
         ' ImportarToolStripMenuItem2
@@ -892,5 +904,6 @@ Partial Class FormMain
     Friend WithEvents lbPercentInvestido As Label
     Friend WithEvents lbPercentCaixa As Label
     Friend WithEvents ToolTip1 As ToolTip
+    Friend WithEvents lbDebug As Label
 
 End Class

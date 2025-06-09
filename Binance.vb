@@ -55,29 +55,102 @@ Public Class Binance
         End Try
     End Function
 
-    Private Function BINANCE_GetFuturesAssets() As Task(Of Dictionary(Of String, Decimal))
+    'Private Function BINANCE_GetFuturesAssets() As Task(Of Dictionary(Of String, Decimal))
+    '    Dim json = QuerySigned("/fapi/v2/account", "recvWindow=5000", isFutures:=True)
+    '    Dim account = JObject.Parse(json)
+
+    '    Dim ativos As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+
+    '    Try
+    '        For Each asset In account("assets")
+    '            Dim symbol = asset("asset").ToString()
+    '            Dim balance = Decimal.Parse(asset("walletBalance").ToString(), CultureInfo.InvariantCulture)
+
+    '            If balance > 0 Then
+    '                ativos(symbol) = balance
+    '            End If
+    '        Next
+
+    '        Return Task.FromResult(ativos)
+
+    '    Catch ex As Exception
+    '        Debug.WriteLine("Erro em BINANCE_GetFuturesAssets: " & ex.Message)
+    '        Return Task.FromResult(New Dictionary(Of String, Decimal)) ' vazio
+    '    End Try
+    'End Function
+
+    'Private Function BINANCE_GetFuturesAssets() As Task(Of Dictionary(Of String, (Saldo As Decimal, Ordem As Decimal, Lucro As Decimal)))
+    '    Dim json = QuerySigned("/fapi/v2/account", "recvWindow=5000", isFutures:=True)
+    '    Dim account = JObject.Parse(json)
+
+    '    Dim ativos As New Dictionary(Of String, (Saldo As Decimal, Ordem As Decimal, Lucro As Decimal))(StringComparer.OrdinalIgnoreCase)
+
+
+    '    Try
+    '        For Each asset In account("assets")
+    '            Dim symbol = asset("asset").ToString()
+
+    '            Dim wallet = Decimal.Parse(asset("walletBalance").ToString(), CultureInfo.InvariantCulture)
+    '            Dim ordem = Decimal.Parse(asset("openOrderInitialMargin").ToString(), CultureInfo.InvariantCulture)
+    '            Dim lucro = Decimal.Parse(asset("unrealizedProfit").ToString(), CultureInfo.InvariantCulture)
+
+    '            If wallet > 0 Or ordem > 0 Or lucro <> 0 Then
+    '                ativos(symbol) = (wallet, ordem, lucro)
+    '            End If
+    '        Next
+
+    '        Return Task.FromResult(ativos)
+
+    '    Catch ex As Exception
+    '        Debug.WriteLine("Erro em BINANCE_GetFuturesFullAssets: " & ex.Message)
+    '        Return Task.FromResult(New Dictionary(Of String, (Decimal, Decimal, Decimal)))
+    '    End Try
+    'End Function
+
+    Private Function BINANCE_GetFuturesAssets() As Task(Of Dictionary(Of String, (Saldo As Decimal, Ordem As Decimal, Lucro As Decimal)))
         Dim json = QuerySigned("/fapi/v2/account", "recvWindow=5000", isFutures:=True)
         Dim account = JObject.Parse(json)
 
-        Dim ativos As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+        ' Usaremos dicionário por símbolo de contrato (ex: BTCUSDT)
+        Dim ativos As New Dictionary(Of String, (Saldo As Decimal, Ordem As Decimal, Lucro As Decimal))(StringComparer.OrdinalIgnoreCase)
 
         Try
+            ' 1. Pega saldo geral por ativo
             For Each asset In account("assets")
                 Dim symbol = asset("asset").ToString()
-                Dim balance = Decimal.Parse(asset("walletBalance").ToString(), CultureInfo.InvariantCulture)
+                Dim saldo = Decimal.Parse(asset("walletBalance").ToString(), CultureInfo.InvariantCulture)
+                Dim ordem = Decimal.Parse(asset("openOrderInitialMargin").ToString(), CultureInfo.InvariantCulture)
 
-                If balance > 0 Then
-                    ativos(symbol) = balance
+                ' Inicializa com lucro 0, será somado depois com base nas posições
+                If saldo > 0 Or ordem > 0 Then
+                    ativos(symbol) = (Saldo:=saldo, Ordem:=ordem, Lucro:=0)
+                End If
+            Next
+
+            ' 2. Pega lucro/prejuízo não realizado por contrato (BTCUSDT, ETHUSDT, etc.)
+            For Each pos In account("positions")
+                Dim contrato = pos("symbol").ToString()
+                Dim lucro = Decimal.Parse(pos("unrealizedProfit").ToString(), CultureInfo.InvariantCulture)
+
+                If lucro <> 0 Then
+                    If ativos.ContainsKey(contrato) Then
+                        Dim atual = ativos(contrato)
+                        ativos(contrato) = (atual.Saldo, atual.Ordem, atual.Lucro + lucro)
+                    Else
+                        ativos(contrato) = (Saldo:=0, Ordem:=0, Lucro:=lucro)
+                    End If
                 End If
             Next
 
             Return Task.FromResult(ativos)
 
         Catch ex As Exception
-            Debug.WriteLine("Erro em BINANCE_GetFuturesAssets: " & ex.Message)
-            Return Task.FromResult(New Dictionary(Of String, Decimal)) ' vazio
+            Debug.WriteLine("Erro em BINANCE_GetFuturesFullAssets: " & ex.Message)
+            Return Task.FromResult(New Dictionary(Of String, (Decimal, Decimal, Decimal)))
         End Try
     End Function
+
+
     Private Function BINANCE_GetAssetQty(asset As String) As Decimal
         Dim json = QuerySigned("/api/v3/account", "recvWindow=5000")
         Dim account = JObject.Parse(json)
@@ -100,7 +173,6 @@ Public Class Binance
         End Try
 
     End Function
-
     Public Async Function BINANCE_GetAllAssetsFull() As Task(Of Dictionary(Of String, Decimal))
         Dim spotAssets = Await BINANCE_GetSpotAssets()
         Dim futuresAssets = Await BINANCE_GetFuturesAssets()
@@ -114,18 +186,17 @@ Public Class Binance
 
         For Each kv In futuresAssets
             If allAccounts.ContainsKey(kv.Key) Then
-                allAccounts(kv.Key) += kv.Value
+                allAccounts(kv.Key) += kv.Value.Saldo
             Else
-                allAccounts(kv.Key) = kv.Value
+                allAccounts(kv.Key) = kv.Value.Saldo
             End If
         Next
 
         Return allAccounts
 
     End Function
-
     Public Async Function BINANCE_GetCoinsInfo(Optional symbol As String = "") As Task(Of Object)
-        Dim account = Await Task.Run(Function() BINANCE_GetAllAssetsFull()) ' Executa em thread separada se for necessário
+        Dim account = Await Task.Run(Function() BINANCE_GetAllAssetsFull())
         Dim urlBase As String = "https://api.binance.com/api/v3/ticker/price?symbol="
 
         Using client As New HttpClient()
@@ -133,11 +204,10 @@ Public Class Binance
 
             If String.IsNullOrWhiteSpace(symbol) Then
                 Dim result As New List(Of String)
+
                 For Each cripto In account
+
                     Dim originalSymbol = cripto.Key.Trim().ToUpper()
-
-                    ' MsgBox($"Obtendo informações para {originalSymbol}...")
-
                     Dim qtd = cripto.Value
                     Dim pairSymbol = If(originalSymbol = "USDT", "USDC", originalSymbol)
                     Dim pair = $"{pairSymbol}USDT"
@@ -217,7 +287,6 @@ Public Class Binance
         End Using
 
     End Function
-
     Public Async Function compare() As Task
         Dim j As New JSON
         ' Obtém as informações da Binance
@@ -258,7 +327,7 @@ Public Class Binance
                 If Decimal.TryParse(precoMedioStr.Replace(",", "."), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, precoMedio) Then
                     Await j.saveAportToJSONBin(symbol, precoMedio, qtd, Date.Today, "BINANCE", symbol)
                 Else
-                    MsgBox("Preço inválido. Pulando " & symbol)
+                    Debug.Write("Preço inválido. Pulando " & symbol)
                 End If
             End If
         Next
