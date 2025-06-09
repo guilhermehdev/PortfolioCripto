@@ -176,7 +176,7 @@ Namespace My
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("I6CTK7z1IwFbjvIpZYvjjKw7y0phdX3mGay8R4tPMvCSKtp3u2jabdPNMa9IUR5b")>  _
+         Global.System.Configuration.DefaultSettingValueAttribute("j2aE1GUK0v2IRBDwcDIXpc6KsO6zVwGLlKL6XLAPrZKQFj1DxfvNb52YCrfZKpLM")>  _
         Public Property BinanceAPIKey() As String
             Get
                 Return CType(Me("BinanceAPIKey"),String)
@@ -188,7 +188,7 @@ Namespace My
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("aTpFL4KmiTMoXlhn8Xj31XfKuxMNGPTz0SY6obOcvFleOivBR8iXQVviUuh1tHOe")>  _
+         Global.System.Configuration.DefaultSettingValueAttribute("BCXEC3pcnqYfZl7Fi7BkEGSIkla2JEZTA5HHpduAIZJ8iZkm9XSBoetawTfyU6Ne")>  _
         Public Property BinanceSecretKey() As String
             Get
                 Return CType(Me("BinanceSecretKey"),String)

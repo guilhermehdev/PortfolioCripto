@@ -8,10 +8,11 @@ Imports System.Text.Json
 Imports Newtonsoft.Json.Linq
 Public Class Binance
 
-    Private Function QuerySigned(ByVal path As String, ByVal query As String) As String
+    Private Function QuerySigned(ByVal path As String, ByVal query As String, Optional isFutures As Boolean = False) As String
         Dim apiKey As String = My.Settings.BinanceAPIKey
         Dim secret As String = My.Settings.BinanceSecretKey
 
+        Dim baseUrl = If(isFutures, "https://fapi.binance.com", "https://api.binance.com")
         Dim qs = query & "&timestamp=" & (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
         Using hmac As New HMACSHA256(Encoding.UTF8.GetBytes(secret))
             Dim sigBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(qs))
@@ -20,7 +21,7 @@ Public Class Binance
         End Using
 
         Using cli As New HttpClient()
-            cli.BaseAddress = New Uri("https://api.binance.com")
+            cli.BaseAddress = New Uri(baseUrl)
             cli.DefaultRequestHeaders.Add("X-MBX-APIKEY", apiKey)
             Dim resp = cli.GetAsync(path & "?" & qs).Result
             Return resp.Content.ReadAsStringAsync().Result
@@ -28,30 +29,7 @@ Public Class Binance
 
     End Function
 
-    Private Function BINANCE_GetAssetQty(asset As String) As Decimal
-        Dim json = QuerySigned("/api/v3/account", "recvWindow=5000")
-        Dim account = JObject.Parse(json)
-
-        Try
-
-            For Each bal In account("balances")
-                If bal("asset").ToString().Equals(asset, StringComparison.OrdinalIgnoreCase) Then
-                    Dim free = Decimal.Parse(bal("free").ToString(), CultureInfo.InvariantCulture)
-                    Dim locked = Decimal.Parse(bal("locked").ToString(), CultureInfo.InvariantCulture)
-                    Return free + locked
-                End If
-            Next
-
-            Return 0D
-
-        Catch ex As Exception
-            Debug.Write(ex.Message)
-            Return False
-        End Try
-
-    End Function
-
-    Private Function BINANCE_GetAllAssets() As Task(Of Dictionary(Of String, Decimal))
+    Private Function BINANCE_GetSpotAssets() As Task(Of Dictionary(Of String, Decimal))
         Dim json = QuerySigned("/api/v3/account", "recvWindow=5000")
         Dim account = JObject.Parse(json)
 
@@ -77,8 +55,77 @@ Public Class Binance
         End Try
     End Function
 
+    Private Function BINANCE_GetFuturesAssets() As Task(Of Dictionary(Of String, Decimal))
+        Dim json = QuerySigned("/fapi/v2/account", "recvWindow=5000", isFutures:=True)
+        Dim account = JObject.Parse(json)
+
+        Dim ativos As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+
+        Try
+            For Each asset In account("assets")
+                Dim symbol = asset("asset").ToString()
+                Dim balance = Decimal.Parse(asset("walletBalance").ToString(), CultureInfo.InvariantCulture)
+
+                If balance > 0 Then
+                    ativos(symbol) = balance
+                End If
+            Next
+
+            Return Task.FromResult(ativos)
+
+        Catch ex As Exception
+            Debug.WriteLine("Erro em BINANCE_GetFuturesAssets: " & ex.Message)
+            Return Task.FromResult(New Dictionary(Of String, Decimal)) ' vazio
+        End Try
+    End Function
+    Private Function BINANCE_GetAssetQty(asset As String) As Decimal
+        Dim json = QuerySigned("/api/v3/account", "recvWindow=5000")
+        Dim account = JObject.Parse(json)
+
+        Try
+
+            For Each bal In account("balances")
+                If bal("asset").ToString().Equals(asset, StringComparison.OrdinalIgnoreCase) Then
+                    Dim free = Decimal.Parse(bal("free").ToString(), CultureInfo.InvariantCulture)
+                    Dim locked = Decimal.Parse(bal("locked").ToString(), CultureInfo.InvariantCulture)
+                    Return free + locked
+                End If
+            Next
+
+            Return 0D
+
+        Catch ex As Exception
+            Debug.Write(ex.Message)
+            Return False
+        End Try
+
+    End Function
+
+    Public Async Function BINANCE_GetAllAssetsFull() As Task(Of Dictionary(Of String, Decimal))
+        Dim spotAssets = Await BINANCE_GetSpotAssets()
+        Dim futuresAssets = Await BINANCE_GetFuturesAssets()
+
+        ' Junta os dois dicionários
+        Dim allAccounts As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+
+        For Each kv In spotAssets
+            allAccounts(kv.Key) = kv.Value
+        Next
+
+        For Each kv In futuresAssets
+            If allAccounts.ContainsKey(kv.Key) Then
+                allAccounts(kv.Key) += kv.Value
+            Else
+                allAccounts(kv.Key) = kv.Value
+            End If
+        Next
+
+        Return allAccounts
+
+    End Function
+
     Public Async Function BINANCE_GetCoinsInfo(Optional symbol As String = "") As Task(Of Object)
-        Dim account = Await Task.Run(Function() BINANCE_GetAllAssets()) ' Executa em thread separada se for necessário
+        Dim account = Await Task.Run(Function() BINANCE_GetAllAssetsFull()) ' Executa em thread separada se for necessário
         Dim urlBase As String = "https://api.binance.com/api/v3/ticker/price?symbol="
 
         Using client As New HttpClient()
@@ -88,6 +135,9 @@ Public Class Binance
                 Dim result As New List(Of String)
                 For Each cripto In account
                     Dim originalSymbol = cripto.Key.Trim().ToUpper()
+
+                    ' MsgBox($"Obtendo informações para {originalSymbol}...")
+
                     Dim qtd = cripto.Value
                     Dim pairSymbol = If(originalSymbol = "USDT", "USDC", originalSymbol)
                     Dim pair = $"{pairSymbol}USDT"
@@ -213,6 +263,5 @@ Public Class Binance
             End If
         Next
     End Function
-
 
 End Class
