@@ -9,6 +9,7 @@ Imports System.Text.Json
 Imports System.Windows.Forms.VisualStyles.VisualStyleElement
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
+Imports Windows.Win32.System.Diagnostics
 
 
 Public Class JSON
@@ -829,6 +830,7 @@ Public Class JSON
             FormMain.TimerBlink.Stop()
             FormMain.Cursor = Cursors.Default
             FormMain.dgPortfolio.Cursor = Cursors.Default
+            FormMain.lbDebug.Text = "Status:OK"
 
             FormMain.criptoGraph(criptoDic)
             FormMain.addressGraph(addressDic)

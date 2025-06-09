@@ -40,6 +40,7 @@ Public Class FormMain
             chart.removeCharts()
             lbLoadFromMarket.Visible = True
             TimerBlink.Start()
+            lbDebug.Text = "Conectando..."
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
             If Await Cjson.checkLastUpdateOnJSONBin() Then
@@ -94,7 +95,7 @@ Public Class FormMain
             chart.removeCharts()
             lbLoadFromMarket.Visible = True
             TimerBlink.Start()
-
+            lbDebug.Text = "Conectando..."
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
             Await Cjson.LoadCriptos(dgPortfolio)
@@ -174,7 +175,7 @@ Public Class FormMain
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
         PanelGraphs.Width = Me.Width
         'If dgPortfolio.RowCount < 10 Then
-        dgPortfolio.Height = (dgPortfolio.RowCount * 35) + 43
+        dgPortfolio.Height = (dgPortfolio.RowCount * 35)
         'Else
         'dgPortfolio.Height = 350
         'End If

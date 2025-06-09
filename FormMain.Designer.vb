@@ -606,11 +606,11 @@ Partial Class FormMain
         ' lbDebug
         ' 
         lbDebug.ForeColor = Color.White
-        lbDebug.Location = New Point(5, 4)
+        lbDebug.Location = New Point(4, 3)
         lbDebug.Name = "lbDebug"
-        lbDebug.Size = New Size(1146, 30)
+        lbDebug.Size = New Size(1146, 31)
         lbDebug.TabIndex = 34
-        lbDebug.Text = "Log"
+        lbDebug.Text = "Status: OK"
         ' 
         ' Panel2
         ' 
