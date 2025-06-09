@@ -3,22 +3,17 @@ Imports System.IO
 Imports System.Windows.Forms.DataVisualization.Charting
 Imports Newtonsoft.Json.Linq
 Imports System.Diagnostics
-
-
 Public Class FormMain
     Public remainingtimeInSeconds As Integer
     Dim Cjson As New JSON
     Dim chart As New Charts
     Dim B As New Binance
-
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
     End Sub
-
     Private Sub FecharToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles FecharToolStripMenuItem.Click
         Application.Exit()
     End Sub
-
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Dim listener As New CustomDebugListener
         AddHandler listener.MessageCaptured, AddressOf ShowDebugMessage
@@ -33,27 +28,24 @@ Public Class FormMain
         Me.lbDebug.Text = finalMsg
         ' Ou qualquer outro controle que queira atualizar
     End Sub
-
-
     Public Async Sub Setup()
         Try
             chart.removeCharts()
             lbLoadFromMarket.Visible = True
             TimerBlink.Start()
-            lbDebug.Text = "Conectando..."
+            Debug.WriteLine("Conectando...")
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
             If Await Cjson.checkLastUpdateOnJSONBin() Then
-
+                Debug.WriteLine("Status Ok")
                 Await Cjson.LoadCriptos(dgPortfolio)
                 dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
                 Adjust()
-
                 lbAtualizaEm.Text = "Atualizado em:"
                 lbRefresh.Location = New Point(125, 7)
                 lbRefresh.Text = My.Settings.lastView
             Else
-                Debug.WriteLine("Erro ao verificar a última atualização: JSONBin não respondeu! Carregando arquivo local...", MsgBoxStyle.Critical)
+                Debug.WriteLine("JSONBin não respondeu! Carregando arquivo local...", MsgBoxStyle.Critical)
                 Await refreshMarket()
             End If
 
@@ -95,7 +87,6 @@ Public Class FormMain
             chart.removeCharts()
             lbLoadFromMarket.Visible = True
             TimerBlink.Start()
-            lbDebug.Text = "Conectando..."
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
             Await Cjson.LoadCriptos(dgPortfolio)

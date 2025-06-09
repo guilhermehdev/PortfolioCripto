@@ -830,7 +830,6 @@ Public Class JSON
             FormMain.TimerBlink.Stop()
             FormMain.Cursor = Cursors.Default
             FormMain.dgPortfolio.Cursor = Cursors.Default
-            FormMain.lbDebug.Text = "Status:OK"
 
             FormMain.criptoGraph(criptoDic)
             FormMain.addressGraph(addressDic)
