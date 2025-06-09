@@ -52,7 +52,7 @@ Public Class FormMain
                 lbRefresh.Location = New Point(125, 7)
                 lbRefresh.Text = My.Settings.lastView
             Else
-                Debug.WriteLine("Erro ao verificar a última atualização: JSONBin não respondeu!" & vbCrLf & "Carregando arquivo local...", MsgBoxStyle.Critical)
+                Debug.WriteLine("Erro ao verificar a última atualização: JSONBin não respondeu! Carregando arquivo local...", MsgBoxStyle.Critical)
                 Await refreshMarket()
             End If
 
@@ -76,7 +76,7 @@ Public Class FormMain
             If Me.WindowState = FormWindowState.Minimized Then
                 Me.Hide()
                 NotifyIcon1.Visible = True
-                NotifyIcon1.ShowBalloonTip(3000, "Porfólio Cripto", lbBTC.Text, ToolTipIcon.Info)
+                ' NotifyIcon1.ShowBalloonTip(3000, "Porfólio Cripto", lbBTC.Text, ToolTipIcon.Info)
             End If
 
             Adjust()
@@ -178,7 +178,7 @@ Public Class FormMain
         'Else
         'dgPortfolio.Height = 350
         'End If
-        Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + 60
+        Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + panelDebug.Height + 60
 
     End Sub
 

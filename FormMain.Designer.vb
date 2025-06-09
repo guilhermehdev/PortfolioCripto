@@ -65,9 +65,9 @@ Partial Class FormMain
         lbTotalEntradaBRL = New Label()
         lbTotalEntradaUSD = New Label()
         PanelGraphs = New Panel()
-        lbDebug = New Label()
         lbCaixaBRL = New Label()
         lbCaixa = New Label()
+        lbDebug = New Label()
         Panel2 = New Panel()
         CadastroToolStripMenuItem = New ToolStripMenuItem()
         CriptoToolStripMenuItem = New ToolStripMenuItem()
@@ -92,6 +92,7 @@ Partial Class FormMain
         SaveFileDialog1 = New SaveFileDialog()
         Label8 = New Label()
         ToolTip1 = New ToolTip(components)
+        panelDebug = New Panel()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
         Panel1.SuspendLayout()
@@ -103,6 +104,7 @@ Partial Class FormMain
         MenuStrip1.SuspendLayout()
         CType(pbBRL, ComponentModel.ISupportInitialize).BeginInit()
         CType(pbUSD, ComponentModel.ISupportInitialize).BeginInit()
+        panelDebug.SuspendLayout()
         SuspendLayout()
         ' 
         ' dgPortfolio
@@ -157,12 +159,12 @@ Partial Class FormMain
         ' 
         ' PanelProfits
         ' 
+        PanelProfits.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         PanelProfits.BackColor = Color.FromArgb(CByte(56), CByte(86), CByte(35))
         PanelProfits.Controls.Add(Label15)
         PanelProfits.Controls.Add(lbTotalBRL)
         PanelProfits.Controls.Add(Label5)
-        PanelProfits.Dock = DockStyle.Bottom
-        PanelProfits.Location = New Point(0, 577)
+        PanelProfits.Location = New Point(0, 592)
         PanelProfits.Name = "PanelProfits"
         PanelProfits.Size = New Size(1154, 40)
         PanelProfits.TabIndex = 15
@@ -560,8 +562,8 @@ Partial Class FormMain
         ' 
         ' PanelGraphs
         ' 
+        PanelGraphs.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         PanelGraphs.BackColor = Color.FromArgb(CByte(30), CByte(30), CByte(30))
-        PanelGraphs.Controls.Add(lbDebug)
         PanelGraphs.Controls.Add(lbCaixaBRL)
         PanelGraphs.Controls.Add(lbCaixa)
         PanelGraphs.Controls.Add(PictureBox2)
@@ -573,21 +575,10 @@ Partial Class FormMain
         PanelGraphs.Controls.Add(lbValoresHojeBRL)
         PanelGraphs.Controls.Add(lbRoiUSD)
         PanelGraphs.Controls.Add(lbValoresHojeUSD)
-        PanelGraphs.Dock = DockStyle.Bottom
-        PanelGraphs.Location = New Point(0, 395)
+        PanelGraphs.Location = New Point(0, 399)
         PanelGraphs.Name = "PanelGraphs"
-        PanelGraphs.Size = New Size(1154, 182)
+        PanelGraphs.Size = New Size(1154, 192)
         PanelGraphs.TabIndex = 32
-        ' 
-        ' lbDebug
-        ' 
-        lbDebug.AutoSize = True
-        lbDebug.ForeColor = Color.White
-        lbDebug.Location = New Point(176, 7)
-        lbDebug.Name = "lbDebug"
-        lbDebug.Size = New Size(27, 15)
-        lbDebug.TabIndex = 34
-        lbDebug.Text = "Log"
         ' 
         ' lbCaixaBRL
         ' 
@@ -612,13 +603,22 @@ Partial Class FormMain
         lbCaixa.TabIndex = 32
         lbCaixa.Text = "0.00"
         ' 
+        ' lbDebug
+        ' 
+        lbDebug.ForeColor = Color.White
+        lbDebug.Location = New Point(5, 4)
+        lbDebug.Name = "lbDebug"
+        lbDebug.Size = New Size(1146, 30)
+        lbDebug.TabIndex = 34
+        lbDebug.Text = "Log"
+        ' 
         ' Panel2
         ' 
+        Panel2.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Panel2.Controls.Add(lbLoadFromMarket)
-        Panel2.Dock = DockStyle.Bottom
-        Panel2.Location = New Point(0, 375)
+        Panel2.Location = New Point(0, 379)
         Panel2.Name = "Panel2"
-        Panel2.Size = New Size(1154, 20)
+        Panel2.Size = New Size(1154, 24)
         Panel2.TabIndex = 33
         ' 
         ' CadastroToolStripMenuItem
@@ -799,21 +799,32 @@ Partial Class FormMain
         Label8.TabIndex = 36
         Label8.Text = "Moeda:"
         ' 
+        ' panelDebug
+        ' 
+        panelDebug.BackColor = Color.Black
+        panelDebug.Controls.Add(lbDebug)
+        panelDebug.Dock = DockStyle.Bottom
+        panelDebug.Location = New Point(0, 632)
+        panelDebug.Name = "panelDebug"
+        panelDebug.Size = New Size(1154, 35)
+        panelDebug.TabIndex = 18
+        ' 
         ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        ClientSize = New Size(1154, 617)
+        ClientSize = New Size(1154, 667)
+        Controls.Add(panelDebug)
         Controls.Add(Label8)
         Controls.Add(pbUSD)
         Controls.Add(pbBRL)
-        Controls.Add(Panel2)
+        Controls.Add(PanelProfits)
         Controls.Add(PanelGraphs)
         Controls.Add(Panel1)
-        Controls.Add(PanelProfits)
         Controls.Add(dgPortfolio)
         Controls.Add(MenuStrip1)
+        Controls.Add(Panel2)
         Font = New Font("Segoe UI", 9F)
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
         MainMenuStrip = MenuStrip1
@@ -837,6 +848,7 @@ Partial Class FormMain
         MenuStrip1.PerformLayout()
         CType(pbBRL, ComponentModel.ISupportInitialize).EndInit()
         CType(pbUSD, ComponentModel.ISupportInitialize).EndInit()
+        panelDebug.ResumeLayout(False)
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -905,5 +917,6 @@ Partial Class FormMain
     Friend WithEvents lbPercentCaixa As Label
     Friend WithEvents ToolTip1 As ToolTip
     Friend WithEvents lbDebug As Label
+    Friend WithEvents panelDebug As Panel
 
 End Class
