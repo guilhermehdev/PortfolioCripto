@@ -31,7 +31,9 @@ Public Class Coingecko
         {"SOL", "solana"},
         {"USDT", "tether"},
         {"VELODROME", "velodrome-finance"},
-        {"BTC", "bitcoin"}
+        {"BTC", "bitcoin"},
+        {"USDC", "tether"},
+        {"USDT.F", "usd-coin"}
     }
 
     Public Async Function CGECKO_MarketData(symbols As IEnumerable(Of String)) _

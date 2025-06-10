@@ -67,7 +67,6 @@ Partial Class FormMain
         PanelGraphs = New Panel()
         lbCaixaBRL = New Label()
         lbCaixa = New Label()
-        lbDebug = New Label()
         Panel2 = New Panel()
         CadastroToolStripMenuItem = New ToolStripMenuItem()
         CriptoToolStripMenuItem = New ToolStripMenuItem()
@@ -93,6 +92,7 @@ Partial Class FormMain
         Label8 = New Label()
         ToolTip1 = New ToolTip(components)
         panelDebug = New Panel()
+        lbDebug = New RichTextBox()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
         Panel1.SuspendLayout()
@@ -136,7 +136,7 @@ Partial Class FormMain
         dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
         dgPortfolio.EnableHeadersVisualStyles = False
         dgPortfolio.Location = New Point(0, 27)
-        dgPortfolio.MinimumSize = New Size(0, 350)
+        dgPortfolio.MinimumSize = New Size(0, 360)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
@@ -154,7 +154,7 @@ Partial Class FormMain
         dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgPortfolio.ScrollBars = ScrollBars.Vertical
         dgPortfolio.SelectionMode = DataGridViewSelectionMode.CellSelect
-        dgPortfolio.Size = New Size(1154, 350)
+        dgPortfolio.Size = New Size(1154, 360)
         dgPortfolio.TabIndex = 11
         ' 
         ' PanelProfits
@@ -184,6 +184,7 @@ Partial Class FormMain
         ' 
         ' lbTotalBRL
         ' 
+        lbTotalBRL.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         lbTotalBRL.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
         lbTotalBRL.ForeColor = Color.Lime
         lbTotalBRL.Location = New Point(5, 1)
@@ -211,7 +212,7 @@ Partial Class FormMain
         lbLoadFromMarket.BackColor = Color.Transparent
         lbLoadFromMarket.Font = New Font("Segoe UI", 9F, FontStyle.Italic)
         lbLoadFromMarket.ForeColor = Color.OrangeRed
-        lbLoadFromMarket.Location = New Point(488, 6)
+        lbLoadFromMarket.Location = New Point(488, 4)
         lbLoadFromMarket.Name = "lbLoadFromMarket"
         lbLoadFromMarket.Size = New Size(178, 15)
         lbLoadFromMarket.TabIndex = 0
@@ -447,7 +448,7 @@ Partial Class FormMain
         Label9.Size = New Size(79, 19)
         Label9.TabIndex = 14
         Label9.Text = "Caixa USD:"
-        ToolTip1.SetToolTip(Label9, "Valor em StableCoisn")
+        ToolTip1.SetToolTip(Label9, "Valor em SPOT + FUTUROS")
         ' 
         ' Label16
         ' 
@@ -602,24 +603,13 @@ Partial Class FormMain
         lbCaixa.TabIndex = 32
         lbCaixa.Text = "0.00"
         ' 
-        ' lbDebug
-        ' 
-        lbDebug.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
-        lbDebug.ForeColor = Color.White
-        lbDebug.Location = New Point(7, 7)
-        lbDebug.Name = "lbDebug"
-        lbDebug.Size = New Size(1143, 23)
-        lbDebug.TabIndex = 34
-        lbDebug.Text = "_"
-        lbDebug.TextAlign = ContentAlignment.MiddleLeft
-        ' 
         ' Panel2
         ' 
         Panel2.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Panel2.Controls.Add(lbLoadFromMarket)
-        Panel2.Location = New Point(0, 380)
+        Panel2.Location = New Point(0, 385)
         Panel2.Name = "Panel2"
-        Panel2.Size = New Size(1154, 28)
+        Panel2.Size = New Size(1154, 25)
         Panel2.TabIndex = 33
         ' 
         ' CadastroToolStripMenuItem
@@ -810,12 +800,30 @@ Partial Class FormMain
         panelDebug.Size = New Size(1154, 35)
         panelDebug.TabIndex = 18
         ' 
+        ' lbDebug
+        ' 
+        lbDebug.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        lbDebug.BackColor = SystemColors.MenuText
+        lbDebug.BorderStyle = BorderStyle.None
+        lbDebug.Font = New Font("Calibri", 9.75F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        lbDebug.ForeColor = Color.White
+        lbDebug.ImeMode = ImeMode.Disable
+        lbDebug.Location = New Point(5, 1)
+        lbDebug.Margin = New Padding(2, 3, 3, 3)
+        lbDebug.Name = "lbDebug"
+        lbDebug.ReadOnly = True
+        lbDebug.ScrollBars = RichTextBoxScrollBars.Vertical
+        lbDebug.Size = New Size(1149, 34)
+        lbDebug.TabIndex = 0
+        lbDebug.Text = ""
+        ' 
         ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         ClientSize = New Size(1154, 667)
+        Controls.Add(dgPortfolio)
         Controls.Add(PanelGraphs)
         Controls.Add(panelDebug)
         Controls.Add(Label8)
@@ -823,7 +831,6 @@ Partial Class FormMain
         Controls.Add(pbBRL)
         Controls.Add(PanelProfits)
         Controls.Add(Panel1)
-        Controls.Add(dgPortfolio)
         Controls.Add(MenuStrip1)
         Controls.Add(Panel2)
         Font = New Font("Segoe UI", 9F)
@@ -917,7 +924,7 @@ Partial Class FormMain
     Friend WithEvents lbPercentInvestido As Label
     Friend WithEvents lbPercentCaixa As Label
     Friend WithEvents ToolTip1 As ToolTip
-    Friend WithEvents lbDebug As Label
     Friend WithEvents panelDebug As Panel
+    Friend WithEvents lbDebug As RichTextBox
 
 End Class

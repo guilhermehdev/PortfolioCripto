@@ -148,7 +148,8 @@ Public Class JSON
             End Using
 
         Catch ex As Exception
-            Debug.WriteLine("Status: JSONBin não respondeu! Carregando arquivo local...", MsgBoxStyle.Critical)
+            FormMain.lbDebug.Clear()
+            FormMain.lbDebug.AppendText("Status: JSONBin não respondeu! Carregando arquivo local...")
             Return False
         End Try
     End Function
@@ -610,39 +611,289 @@ Public Class JSON
         datagrid.ClearSelection()
 
     End Sub
+    'Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task
+    '    Dim json As New JSON
+    '    Dim b As New Binance
+    '    Await b.compare()
+    '    Dim cot As New Cotacao
+    '    Dim gate As New Gateio
+    '    Dim result = LoadJSONtoDataGrid()
+    '    Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
+    '    Dim allSymbols = originalDT.AsEnumerable().Select(Function(r) r.Field(Of String)("Symbol").ToUpper()).ToList()
+    '    Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
+    '    USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
+    '    Dim BTCprice As String = Await b.BINANCE_GetCoinsInfo("BTC")
+    '    Dim dom As Decimal? = Await Task.Run(Async Function() Await gec.CGECKO_GetBTCDominance())
+    '    Dim profit As Decimal
+    '    Dim initialValue As Decimal
+    '    Dim currValueTotal As Decimal
+    '    Dim cashflow As Decimal
+    '    Dim wallet As String = ""
+    '    Dim currValueUSD As Decimal
+    '    Dim currValueBRL As Decimal
+    '    Dim roi As Decimal
+    '    Dim x As String
+    '    Dim perform As Decimal?
+    '    Dim performWallet As Decimal?
+    '    Dim criptoDic As New Dictionary(Of String, Decimal)
+    '    Dim listAddress As New List(Of String)
+    '    Dim listCriptos As New List(Of String)
+    '    Dim listInitValue As New List(Of Decimal)
+    '    Dim listCurrValue As New List(Of Decimal)
+    '    Dim addressDic As New Dictionary(Of String, Decimal)
+    '    Dim difPrice As Decimal = 0
+    '    Dim total As Decimal
+    '    Dim critoPriceTask As String
+    '    Dim newDT As New DataTable()
+    '    newDT.Columns.Add("Cripto", GetType(String))
+    '    newDT.Columns.Add("Perf", GetType(String))
+    '    newDT.Columns.Add("Wallet", GetType(String))
+    '    newDT.Columns.Add("Qtd", GetType(Decimal))
+    '    newDT.Columns.Add("vlEntradaUSD", GetType(Decimal))
+    '    newDT.Columns.Add("vlEntradaBRL", GetType(Decimal))
+    '    newDT.Columns.Add("precoMedio", GetType(Decimal))
+    '    newDT.Columns.Add("precoAtual", GetType(Decimal))
+    '    newDT.Columns.Add("24horas", GetType(String))
+    '    newDT.Columns.Add("marketcap", GetType(Decimal))
+    '    newDT.Columns.Add("vlAtualUSD", GetType(Decimal))
+    '    newDT.Columns.Add("vlAtualBRL", GetType(Decimal))
+    '    newDT.Columns.Add("ROIusd", GetType(Decimal))
+    '    newDT.Columns.Add("ROIbrl", GetType(Decimal))
+    '    newDT.Columns.Add("X", GetType(String))
+
+    '    Try
+
+    '        For Each row As DataRow In originalDT.Rows
+    '            Dim newRow As DataRow = newDT.NewRow()
+    '            Dim qtd As Decimal
+    '            Dim initialPrice As Decimal
+    '            initialPrice = decimalBR(row("InitialPrice"))
+
+    '            Dim symbolUpper = row.Item(6).ToString().ToUpper()
+    '            Dim mData As CoinMarketData = Nothing
+
+    '            If mcapDict.ContainsKey(symbolUpper) Then
+    '                mData = mcapDict(symbolUpper)
+    '            Else
+    '                mData = New CoinMarketData()
+    '            End If
+
+    '            Dim marketcap = mData.MarketCap
+    '            Dim price = mData.Price
+    '            Dim volume = mData.Volume24h
+    '            Dim change As Decimal? = mData.Change24h
+
+    '            If row("Wallet") = "BINANCE" Then
+    '                critoPriceTask = Await b.BINANCE_GetCoinsInfo(symbolUpper)
+    '            ElseIf row("Wallet") = "GATE.IO" Then
+    '                critoPriceTask = Await gate.GATE_GetCoinsInfo(symbolUpper)
+    '            Else
+    '                critoPriceTask = $"{price}|{marketcap}|0"
+    '            End If
+
+    '            Dim valores() As String = critoPriceTask.Split("|"c)
+    '            Dim preco As String = valores(0)
+
+    '            If valores(2) > 0 Then
+    '                qtd = decimalBR(valores(2))
+    '            Else
+    '                qtd = decimalBR(row("Qtd"))
+    '            End If
+
+    '            If qtd >= 1 Then
+    '                qtd = qtd.ToString("N2")
+    '            Else
+    '                qtd = qtd
+    '            End If
+
+    '            Dim currPrice As Decimal = price
+    '            Dim initialValueUSD As Decimal = (qtd) * decimalBR(row("InitialPrice"))
+    '            Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
+    '            wallet = row("Wallet")
+    '            currValueUSD = qtd * currPrice
+    '            currValueBRL = currValueUSD * USDBRLprice
+    '            roi = currValueUSD - initialValueUSD
+    '            perform = (roi / initialValueUSD) * 100
+
+    '            initialValue += initialValueUSD
+
+    '            If row("Cripto") = "USDT" Or row("Cripto") = "USDC" Or row("Cripto") = "USDT.F" Then
+    '                cashflow += currValueUSD
+    '            Else
+    '                currValueTotal += currValueUSD
+    '                profit += roi
+    '            End If
+
+    '            total = cashflow + currValueTotal
+
+    '            x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
+
+    '            newRow("Cripto") = symbolUpper
+    '            newRow("Qtd") = qtd
+    '            newRow("Perf") = $"{perform.Value:F2}%"
+    '            newRow("Wallet") = wallet
+    '            newRow("vlEntradaUSD") = initialValueUSD
+    '            newRow("vlEntradaBRL") = initialValueBRL
+    '            newRow("precoMedio") = initialPrice
+    '            newRow("precoAtual") = currPrice
+    '            newRow("24horas") = change
+    '            newRow("marketcap") = marketcap
+    '            newRow("vlAtualUSD") = (currValueUSD)
+    '            newRow("vlAtualBRL") = (currValueBRL)
+    '            newRow("ROIusd") = (roi)
+    '            newRow("ROIbrl") = (roi * USDBRLprice)
+
+    '            If x < 1 Then
+    '                newRow("X") = "0 X"
+    '            Else
+    '                newRow("X") = $"{x} X"
+    '            End If
+
+    '            newDT.Rows.Add(newRow)
+    '            listCriptos.Add(symbolUpper)
+    '            listAddress.Add(wallet)
+    '            listInitValue.Add(initialValueUSD)
+    '            listCurrValue.Add(currValueUSD)
+
+    '            AppendJSONLocal(row("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"), symbolUpper)
+    '        Next
+
+    '        Dim arrayInitValue() As Decimal = listInitValue.ToArray
+    '        Dim arrayAddress() As String = listAddress.ToArray
+    '        Dim arraySum() = Array.Empty(Of Object)()
+    '        Dim listSum As New List(Of KeyValuePair(Of String, Decimal))
+    '        Dim res() As String = BTCprice.Split("|"c)
+    '        Dim btc As String = res(0)
+    '        Dim percentCashFlow As Decimal? = (cashflow / total) * 100
+    '        Dim percentInvest As Decimal? = (currValueTotal / total) * 100
+
+    '        For i = 0 To listCriptos.Count - 1
+    '            criptoDic.Add(listCriptos(i), (listCurrValue(i) / total) * 100)
+    '        Next
+
+    '        For i = 0 To listAddress.Count - 1
+    '            listSum.Add(New KeyValuePair(Of String, Decimal)(listAddress(i), SomaSe(arrayInitValue, arrayAddress, listAddress(i))))
+    '        Next
+
+    '        Dim filteredSum = listSum.GroupBy(Function(item) item.Key).Select(Function(grupo) grupo.First()).ToList()
+
+    '        For Each item In filteredSum
+    '            addressDic.Add(item.Key, item.Value)
+    '        Next
+
+    '        performWallet = (profit / initialValue) * 100
+
+    '        FormMain.lbTotalBRL.Visible = True
+    '        FormMain.lbTotalBRL.Text = BRLformat(profit * USDBRLprice)
+    '        If profit > 0 Then
+    '            FormMain.lbTotalBRL.ForeColor = Color.FromArgb(0, 255, 0)
+    '        Else
+    '            FormMain.lbTotalBRL.ForeColor = Color.FromArgb(255, 73, 73)
+    '        End If
+
+    '        If total < initialValue Then
+    '            FormMain.lbValoresHojeUSD.ForeColor = Color.IndianRed
+    '            FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal * -1)
+    '        End If
+
+    '        If (total * USDBRLprice) < (initialValue * USDBRLprice) Then
+    '            FormMain.lbValoresHojeBRL.ForeColor = Color.IndianRed
+    '            FormMain.lbValoresHojeBRL.Text = BRLformat((currValueTotal * USDBRLprice) * -1)
+    '        End If
+
+    '        If profit < 0 Then
+    '            FormMain.lbRoiUSD.ForeColor = Color.Red
+    '            FormMain.lbRoiUSD.Text = USDformat(profit * -1)
+    '        End If
+
+    '        FormMain.lbDolar.Text = BRLformat(USDBRLprice)
+    '        FormMain.lbBTC.Text = USDformat(decimalBR(btc))
+    '        FormMain.lbDom.Text = $"{dom.Value:F2}%"
+    '        If performWallet < 0 Then
+    '            FormMain.lbPerformWallet.ForeColor = Color.Red
+    '            FormMain.lbPerformWallet.Text = performWallet * -1
+    '        End If
+    '        FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
+    '        FormMain.lbTotalEntradaUSD.Text = USDformat(initialValue)
+    '        FormMain.lbTotalEntradaBRL.Text = BRLformat(initialValue * USDBRLprice)
+    '        FormMain.lbValoresHojeUSD.Text = USDformat(total)
+    '        FormMain.lbValoresHojeBRL.Text = BRLformat(total * USDBRLprice)
+    '        FormMain.lbRoiUSD.Text = USDformat(profit)
+    '        FormMain.lbCaixa.Text = USDformat(cashflow)
+    '        FormMain.lbCaixaBRL.Text = BRLformat(cashflow * USDBRLprice)
+    '        FormMain.lbPercentCaixa.Text = $"{percentCashFlow.Value:F2}%"
+    '        FormMain.lbPercentInvestido.Text = $"{percentInvest.Value:F2}%"
+
+    '        datagrid.DataSource = newDT
+    '        FormatGrid(datagrid)
+
+    '        FormMain.lbLoadFromMarket.Visible = False
+    '        FormMain.TimerBlink.Stop()
+    '        FormMain.Cursor = Cursors.Default
+    '        FormMain.dgPortfolio.Cursor = Cursors.Default
+
+    '        FormMain.criptoGraph(criptoDic)
+    '        FormMain.addressGraph(addressDic)
+
+    '        My.Settings.lastView = Date.Now
+
+    '        If currencyCollum = "USD" Then
+    '            FormMain.showUSDCollumns()
+    '        ElseIf currencyCollum = "BRL" Then
+    '            FormMain.showBRLCollumns()
+    '        End If
+
+    '    Catch ex As Exception
+    '        Debug.WriteLine("Erro ao carregar os dados na função LoadCripto(): " & ex.Message)
+    '    End Try
+
+    'End Function
+
     Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task
+        ' --- INICIALIZAÇÃO (Permanece a mesma) ---
         Dim json As New JSON
         Dim b As New Binance
         Await b.compare()
         Dim cot As New Cotacao
         Dim gate As New Gateio
+        Dim gec As New Coingecko ' Supondo que o nome da sua classe Gecko seja "Gecko"
+
+        ' --- CARREGAMENTO INICIAL DE DADOS (Agora é a única fonte da verdade) ---
+        ' 1. Carrega os dados do seu arquivo local (seu portfólio)
         Dim result = LoadJSONtoDataGrid()
         Dim originalDT = ConvertListToDataTable(Of ItemKey)(DirectCast(result, List(Of ItemKey)))
         Dim allSymbols = originalDT.AsEnumerable().Select(Function(r) r.Field(Of String)("Symbol").ToUpper()).ToList()
+
+        ' 2. Carrega TODOS os saldos da Binance (Spot + Futuros) DE UMA SÓ VEZ
+        Dim binanceAssets = Await b.BINANCE_GetAllAssetsFull()
+
+        ' 3. Carrega TODOS os preços e dados de mercado DE UMA SÓ VEZ
         Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
-        USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
-        Dim BTCprice As String = Await b.BINANCE_GetCoinsInfo("BTC")
-        Dim dom As Decimal? = Await Task.Run(Async Function() Await gec.CGECKO_GetBTCDominance())
-        Dim profit As Decimal
-        Dim initialValue As Decimal
-        Dim currValueTotal As Decimal
-        Dim cashflow As Decimal
-        Dim wallet As String = ""
-        Dim currValueUSD As Decimal
-        Dim currValueBRL As Decimal
-        Dim roi As Decimal
-        Dim x As String
-        Dim perform As Decimal?
-        Dim performWallet As Decimal?
+        Dim USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
+        Dim dom As Decimal? = Await gec.CGECKO_GetBTCDominance()
+
+        ' 4. Pega o preço do BTC apenas para o label no formulário
+        Dim btcPriceString As String = Await b.BINANCE_GetCoinsInfo("BTC")
+        Dim btcRes() As String = btcPriceString.Split("|"c)
+        Dim btcPrice As String = btcRes(0)
+
+
+        ' --- DECLARAÇÃO DE VARIÁVEIS PARA CÁLCULO (Permanece a mesma) ---
+        Dim profit As Decimal = 0
+        Dim initialValue As Decimal = 0
+        Dim currValueTotal As Decimal = 0
+        Dim cashflow As Decimal = 0
+        Dim total As Decimal = 0
+
+        ' Listas e Dicionários para os gráficos e cálculos
         Dim criptoDic As New Dictionary(Of String, Decimal)
+        Dim addressDic As New Dictionary(Of String, Decimal)
         Dim listAddress As New List(Of String)
         Dim listCriptos As New List(Of String)
         Dim listInitValue As New List(Of Decimal)
         Dim listCurrValue As New List(Of Decimal)
-        Dim addressDic As New Dictionary(Of String, Decimal)
-        Dim difPrice As Decimal = 0
-        Dim total As Decimal
-        Dim critoPriceTask As String
+
+        ' --- CRIAÇÃO DO NOVO DATATABLE PARA O GRID (Permanece a mesma) ---
         Dim newDT As New DataTable()
         newDT.Columns.Add("Cripto", GetType(String))
         newDT.Columns.Add("Perf", GetType(String))
@@ -660,82 +911,73 @@ Public Class JSON
         newDT.Columns.Add("ROIbrl", GetType(Decimal))
         newDT.Columns.Add("X", GetType(String))
 
-
         Try
-
+            ' --- LOOP PRINCIPAL (LÓGICA CORRIGIDA) ---
             For Each row As DataRow In originalDT.Rows
                 Dim newRow As DataRow = newDT.NewRow()
-                Dim qtd As Decimal
-                Dim initialPrice As Decimal
-                initialPrice = decimalBR(row("InitialPrice"))
+                Dim symbolUpper = row.Item("Symbol").ToString().ToUpper()
+                Dim wallet As String = row("Wallet").ToString()
 
-                Dim symbolUpper = row.Item(6).ToString().ToUpper()
-                Dim mData As CoinMarketData = Nothing
-
-                If mcapDict.ContainsKey(symbolUpper) Then
-                    mData = mcapDict(symbolUpper)
-                Else
-                    mData = New CoinMarketData()
-                End If
-
-
-
-                Dim marketcap = mData.MarketCap
-                Dim price = mData.Price
-                Dim volume = mData.Volume24h
+                ' PASSO 1: Obter preço e dados de mercado do dicionário já carregado (eficiente)
+                Dim mData As CoinMarketData = mcapDict.GetValueOrDefault(symbolUpper, New CoinMarketData())
+                Dim currPrice As Decimal = mData.Price
+                Dim marketcap As Decimal = mData.MarketCap
                 Dim change As Decimal? = mData.Change24h
 
+                ' PASSO 2: Obter a quantidade (qtd) da fonte correta, sem novas chamadas de API
+                Dim qtd As Decimal = 0
+                Select Case wallet.ToUpper()
+                    Case "BINANCE"
+                        ' Usa o dicionário com os saldos SOMADOS (Spot + Futuros)
+                        qtd = binanceAssets.GetValueOrDefault(symbolUpper, 0D)
+                    Case "GATE.IO"
+                        ' Mantém a chamada para Gate.io, mas idealmente seria como a da Binance
+                        Dim gateInfoTask = Await gate.GATE_GetCoinsInfo(symbolUpper)
+                        Dim valores() As String = gateInfoTask.Split("|"c)
+                        If valores.Length >= 3 Then
+                            qtd = decimalBR(valores(2))
+                        End If
+                    Case Else ' Para carteiras frias ou outras fontes
+                        ' Pega a quantidade diretamente do seu arquivo JSON
+                        qtd = decimalBR(row("Qtd"))
+                End Select
 
-                If row("Wallet") = "BINANCE" Then
-                    critoPriceTask = Await b.BINANCE_GetCoinsInfo(symbolUpper)
-                ElseIf row("Wallet") = "GATE.IO" Then
-                    critoPriceTask = Await gate.GATE_GetCoinsInfo(symbolUpper)
-                Else
-                    critoPriceTask = $"{price}|{marketcap}|0"
-                End If
+                ' Ignora linhas com quantidade zerada para não poluir o grid
+                If qtd = 0D Then Continue For
 
-                Dim valores() As String = critoPriceTask.Split("|"c)
-                Dim preco As String = valores(0)
+                ' PASSO 3: Realizar os cálculos com os dados corretos
+                Dim initialPrice As Decimal = decimalBR(row("InitialPrice"))
 
-
-                If valores(2) > 0 Then
-                    qtd = decimalBR(valores(2))
-                Else
-                    qtd = decimalBR(row("Qtd"))
-                End If
-
+                ' Formata a quantidade para exibição
+                Dim displayQtd As String
                 If qtd >= 1 Then
-                    qtd = qtd.ToString("N2")
+                    displayQtd = qtd.ToString("N2")
                 Else
-                    qtd = qtd
+                    displayQtd = qtd.ToString("G") ' Formato geral para números pequenos
                 End If
 
-                Dim currPrice As Decimal = price
-                Dim initialValueUSD As Decimal = (qtd) * decimalBR(row("InitialPrice"))
+                Dim initialValueUSD As Decimal = qtd * initialPrice
                 Dim initialValueBRL As Decimal = initialValueUSD * USDBRLprice
-                wallet = row("Wallet")
-                currValueUSD = qtd * currPrice
-                currValueBRL = currValueUSD * USDBRLprice
-                roi = currValueUSD - initialValueUSD
-                perform = (roi / initialValueUSD) * 100
+                Dim currValueUSD As Decimal = qtd * currPrice
+                Dim currValueBRL As Decimal = currValueUSD * USDBRLprice
+                Dim roi As Decimal = currValueUSD - initialValueUSD
+                Dim perform As Decimal? = If(initialValueUSD > 0, (roi / initialValueUSD) * 100, 0)
+                Dim x As String = "0 X"
 
+                x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
+
+                ' PASSO 4: Acumular os totais
                 initialValue += initialValueUSD
-
-                If row("Cripto") = "USDT" Or row("Cripto") = "USDC" Or row("Cripto") = "USDT.F" Then
+                If symbolUpper = "USDT" Or symbolUpper = "USDC" Or symbolUpper = "USDT.F" Then
                     cashflow += currValueUSD
                 Else
                     currValueTotal += currValueUSD
                     profit += roi
                 End If
 
-                total = cashflow + currValueTotal
-
-
-                x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
-
-
+                ' PASSO 5: Preencher a nova linha do DataTable
                 newRow("Cripto") = symbolUpper
-                newRow("Qtd") = qtd
+                newRow("Qtd") = qtd ' Salva o valor decimal real para ordenação
                 newRow("Perf") = $"{perform.Value:F2}%"
                 newRow("Wallet") = wallet
                 newRow("vlEntradaUSD") = initialValueUSD
@@ -744,10 +986,10 @@ Public Class JSON
                 newRow("precoAtual") = currPrice
                 newRow("24horas") = change
                 newRow("marketcap") = marketcap
-                newRow("vlAtualUSD") = (currValueUSD)
-                newRow("vlAtualBRL") = (currValueBRL)
-                newRow("ROIusd") = (roi)
-                newRow("ROIbrl") = (roi * USDBRLprice)
+                newRow("vlAtualUSD") = currValueUSD
+                newRow("vlAtualBRL") = currValueBRL
+                newRow("ROIusd") = roi
+                newRow("ROIbrl") = roi * USDBRLprice
 
                 If x < 1 Then
                     newRow("X") = "0 X"
@@ -756,71 +998,52 @@ Public Class JSON
                 End If
 
                 newDT.Rows.Add(newRow)
+
+                ' PASSO 6: Adicionar dados às listas para os gráficos
                 listCriptos.Add(symbolUpper)
                 listAddress.Add(wallet)
                 listInitValue.Add(initialValueUSD)
                 listCurrValue.Add(currValueUSD)
 
-                AppendJSONLocal(row("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"), symbolUpper)
-
-
+                ' Atualiza o arquivo local
+                AppendJSONLocal(row("Cripto"), initialPrice, qtd, row("Data"), wallet, currPrice.ToString("C8"), symbolUpper)
             Next
 
-            Dim arrayInitValue() As Decimal = listInitValue.ToArray
-            Dim arrayAddress() As String = listAddress.ToArray
-            Dim arraySum() = Array.Empty(Of Object)()
-            Dim listSum As New List(Of KeyValuePair(Of String, Decimal))
-            Dim res() As String = BTCprice.Split("|"c)
-            Dim btc As String = res(0)
-            Dim percentCashFlow As Decimal? = (cashflow / total) * 100
-            Dim percentInvest As Decimal? = (currValueTotal / total) * 100
+            ' --- LÓGICA PÓS-LOOP (CÁLCULO DE TOTAIS E GRÁFICOS) ---
+            total = cashflow + currValueTotal
+            Dim percentCashFlow As Decimal? = If(total > 0, (cashflow / total) * 100, 0)
+            Dim percentInvest As Decimal? = If(total > 0, (currValueTotal / total) * 100, 0)
+            Dim performWallet As Decimal? = If(initialValue > 0, (profit / initialValue) * 100, 0)
 
             For i = 0 To listCriptos.Count - 1
-                criptoDic.Add(listCriptos(i), (listCurrValue(i) / total) * 100)
+                If total > 0 Then
+                    criptoDic.Add(listCriptos(i), (listCurrValue(i) / total) * 100)
+                End If
             Next
 
-            For i = 0 To listAddress.Count - 1
-                listSum.Add(New KeyValuePair(Of String, Decimal)(listAddress(i), SomaSe(arrayInitValue, arrayAddress, listAddress(i))))
+            For Each addr In listAddress.Distinct()
+                Dim sumForAddress As Decimal = 0
+                For i = 0 To listAddress.Count - 1
+                    If listAddress(i) = addr Then
+                        sumForAddress += listCurrValue(i)
+                    End If
+                Next
+                addressDic.Add(addr, sumForAddress)
             Next
 
-            Dim filteredSum = listSum.GroupBy(Function(item) item.Key).Select(Function(grupo) grupo.First()).ToList()
-
-            For Each item In filteredSum
-                addressDic.Add(item.Key, item.Value)
-            Next
-
-            performWallet = (profit / initialValue) * 100
-
+            ' --- ATUALIZAÇÃO DA INTERFACE GRÁFICA (UI) ---
             FormMain.lbTotalBRL.Visible = True
             FormMain.lbTotalBRL.Text = BRLformat(profit * USDBRLprice)
-            If profit > 0 Then
-                FormMain.lbTotalBRL.ForeColor = Color.FromArgb(0, 255, 0)
-            Else
-                FormMain.lbTotalBRL.ForeColor = Color.FromArgb(255, 73, 73)
-            End If
+            FormMain.lbTotalBRL.ForeColor = If(profit > 0, Color.FromArgb(0, 255, 0), Color.FromArgb(255, 73, 73))
 
-            If total < initialValue Then
-                FormMain.lbValoresHojeUSD.ForeColor = Color.IndianRed
-                FormMain.lbValoresHojeUSD.Text = USDformat(currValueTotal * -1)
-            End If
-
-            If (total * USDBRLprice) < (initialValue * USDBRLprice) Then
-                FormMain.lbValoresHojeBRL.ForeColor = Color.IndianRed
-                FormMain.lbValoresHojeBRL.Text = BRLformat((currValueTotal * USDBRLprice) * -1)
-            End If
-
-            If profit < 0 Then
-                FormMain.lbRoiUSD.ForeColor = Color.Red
-                FormMain.lbRoiUSD.Text = USDformat(profit * -1)
-            End If
+            FormMain.lbValoresHojeUSD.ForeColor = If(total < initialValue, Color.IndianRed, Color.White)
+            FormMain.lbValoresHojeBRL.ForeColor = If(total < initialValue, Color.IndianRed, Color.White)
+            FormMain.lbRoiUSD.ForeColor = If(profit < 0, Color.Red, Color.White)
+            FormMain.lbPerformWallet.ForeColor = If(performWallet < 0, Color.Red, Color.White)
 
             FormMain.lbDolar.Text = BRLformat(USDBRLprice)
-            FormMain.lbBTC.Text = USDformat(decimalBR(btc))
+            FormMain.lbBTC.Text = USDformat(decimalBR(btcPrice))
             FormMain.lbDom.Text = $"{dom.Value:F2}%"
-            If performWallet < 0 Then
-                FormMain.lbPerformWallet.ForeColor = Color.Red
-                FormMain.lbPerformWallet.Text = performWallet * -1
-            End If
             FormMain.lbPerformWallet.Text = $"{performWallet.Value:F2}%"
             FormMain.lbTotalEntradaUSD.Text = USDformat(initialValue)
             FormMain.lbTotalEntradaBRL.Text = BRLformat(initialValue * USDBRLprice)
@@ -835,14 +1058,15 @@ Public Class JSON
             datagrid.DataSource = newDT
             FormatGrid(datagrid)
 
+            ' Gráficos
+            FormMain.criptoGraph(criptoDic)
+            FormMain.addressGraph(addressDic)
+
+            ' Controles de UI
             FormMain.lbLoadFromMarket.Visible = False
             FormMain.TimerBlink.Stop()
             FormMain.Cursor = Cursors.Default
             FormMain.dgPortfolio.Cursor = Cursors.Default
-
-            FormMain.criptoGraph(criptoDic)
-            FormMain.addressGraph(addressDic)
-
             My.Settings.lastView = Date.Now
 
             If currencyCollum = "USD" Then
@@ -852,7 +1076,9 @@ Public Class JSON
             End If
 
         Catch ex As Exception
-            Debug.WriteLine("Erro ao carregar os dados na função LoadCripto(): " & ex.Message)
+            FormMain.lbDebug.AppendText("Erro ao carregar os dados: " & ex.ToString())
+            ' Adicione aqui um tratamento de erro mais visível para o usuário, se desejar
+            ' MsgBox("Ocorreu um erro ao carregar os dados: " & ex.Message)
         End Try
 
     End Function
@@ -879,7 +1105,7 @@ Public Class JSON
             If row.Cells(0).Value.ToString.Contains("USD") Then
 
                 row.DefaultCellStyle.BackColor = Color.Black
-                'row.Visible = False
+                row.Visible = False
                 With row.Cells(0)
                     .Style.ForeColor = Color.DodgerBlue
                 End With

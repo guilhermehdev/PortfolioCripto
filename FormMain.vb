@@ -8,6 +8,7 @@ Public Class FormMain
     Dim Cjson As New JSON
     Dim chart As New Charts
     Dim B As New Binance
+    Dim gec As New Coingecko
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
     End Sub
@@ -15,25 +16,17 @@ Public Class FormMain
         Application.Exit()
     End Sub
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Dim listener As New CustomDebugListener
-        AddHandler listener.MessageCaptured, AddressOf ShowDebugMessage
-        Trace.Listeners.Add(listener)
-        Trace.AutoFlush = True
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
-    Private Sub ShowDebugMessage(msg As String)
-        Dim finalMsg = $"{msg}{Environment.NewLine}"
-        ' Atualiza label, textbox, ou qualquer controle
-        Me.lbDebug.Text = finalMsg
-        ' Ou qualquer outro controle que queira atualizar
-    End Sub
+
     Public Async Sub Setup()
         Try
             chart.removeCharts()
             lbLoadFromMarket.Visible = True
             TimerBlink.Start()
-            Debug.WriteLine("Status: Conectando...")
+            lbDebug.Clear()
+            lbDebug.AppendText("Status: Conectando...")
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
             If Await Cjson.checkLastUpdateOnJSONBin() Then
@@ -44,13 +37,15 @@ Public Class FormMain
                 lbAtualizaEm.Text = "Atualizado em:"
                 lbRefresh.Location = New Point(125, 7)
                 lbRefresh.Text = My.Settings.lastView
-                Debug.WriteLine("Status: Ok")
+                lbDebug.Clear()
+                lbDebug.AppendText("Status: Ok")
             Else
                 Await refreshMarket()
             End If
 
         Catch ex As Exception
-            Debug.WriteLine("Erro ao carregar o portfólio: " & ex.Message)
+            lbDebug.Clear()
+            lbDebug.AppendText("Erro ao carregar o portfólio: " & ex.Message)
         End Try
 
     End Sub
@@ -98,8 +93,10 @@ Public Class FormMain
 
             TimerCountdown.Stop()
             TimerRefresh.Stop()
+
         Catch ex As Exception
-            Debug.WriteLine("Erro ao atualizar o mercado: " & ex.Message)
+            lbDebug.Clear()
+            lbDebug.AppendText("Erro ao atualizar o mercado: " & ex.Message)
         End Try
     End Function
 
@@ -165,7 +162,7 @@ Public Class FormMain
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
         PanelGraphs.Width = Me.Width
         dgPortfolio.Height = (dgPortfolio.RowCount * 35)
-        Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + panelDebug.Height + 78
+        Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + panelDebug.Height + 65
     End Sub
 
     Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter

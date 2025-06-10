@@ -50,7 +50,7 @@ Public Class Binance
             Return Task.FromResult(ativos)
 
         Catch ex As Exception
-            Debug.WriteLine("Erro em BINANCE_GetAllAssets: " & ex.Message)
+            FormMain.lbDebug.AppendText("Erro ao trazer dados da conta Spot: " & ex.Message)
             Return Task.FromResult(New Dictionary(Of String, Decimal)) ' vazio
         End Try
     End Function
@@ -117,7 +117,7 @@ Public Class Binance
         Try
             ' 1. Pega saldo geral por ativo
             For Each asset In account("assets")
-                Dim symbol = asset("asset").ToString() & ".F"
+                Dim symbol = asset("asset").ToString()
                 Dim saldo = Decimal.Parse(asset("walletBalance").ToString(), CultureInfo.InvariantCulture)
                 Dim ordem = Decimal.Parse(asset("openOrderInitialMargin").ToString(), CultureInfo.InvariantCulture)
 
@@ -145,7 +145,7 @@ Public Class Binance
             Return Task.FromResult(ativos)
 
         Catch ex As Exception
-            Debug.WriteLine("Erro em BINANCE_GetFuturesFullAssets: " & ex.Message)
+            FormMain.lbDebug.AppendText("Erro ao trazer dados da conta de Futuros: " & ex.Message)
             Return Task.FromResult(New Dictionary(Of String, (Decimal, Decimal, Decimal)))
         End Try
     End Function
@@ -168,7 +168,7 @@ Public Class Binance
             Return 0D
 
         Catch ex As Exception
-            Debug.Write(ex.Message)
+            FormMain.lbDebug.AppendText(ex.Message)
             Return False
         End Try
 
@@ -211,7 +211,7 @@ Public Class Binance
                     Dim qtd = cripto.Value
                     Dim pairSymbol
 
-                    If originalSymbol = "USDT" Or originalSymbol = "USDT.F" Then
+                    If originalSymbol = "USDT" Then
                         pairSymbol = "USDC"
                     Else
                         pairSymbol = originalSymbol
@@ -219,8 +219,6 @@ Public Class Binance
 
                     Dim pair = $"{pairSymbol}USDT"
                     Dim url = $"{urlBase}{pair}"
-
-                    ' MsgBox($"Cripto: {originalSymbol} - Quantidade: {qtd}")
 
                     Try
                         Dim resp = Await client.GetAsync(url)
@@ -238,7 +236,8 @@ Public Class Binance
                         Dim totalUSD = price * qtd
                         If totalUSD >= 1 Then ' <<<<< FILTRO AQUI
                             result.Add($"{originalSymbol}|{price.ToString(CultureInfo.InvariantCulture)}|{qtd.ToString(CultureInfo.InvariantCulture)}")
-                            ' MsgBox($"{originalSymbol}|{price.ToString(CultureInfo.InvariantCulture)}|{qtd.ToString(CultureInfo.InvariantCulture)}")
+
+                            'MsgBox($"simbolo:{originalSymbol} Preço:{price.ToString(CultureInfo.InvariantCulture)} Qtd:{qtd.ToString(CultureInfo.InvariantCulture)}")
                         End If
 
                     Catch ex As Exception
@@ -291,7 +290,7 @@ Public Class Binance
 
                 Return $"{price}"
             Else
-                Debug.Write($"HTTP {CInt(response.StatusCode)} – {response.ReasonPhrase}")
+                FormMain.lbDebug.AppendText($"HTTP {CInt(response.StatusCode)} – {response.ReasonPhrase}")
                 Return False
             End If
         End Using
@@ -339,7 +338,7 @@ Public Class Binance
                 If Decimal.TryParse(precoMedioStr.Replace(",", "."), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, precoMedio) Then
                     Await j.saveAportToJSONBin(symbol, precoMedio, qtd, Date.Today, "BINANCE", symbol)
                 Else
-                    Debug.Write("Preço inválido. Pulando " & symbol)
+                    FormMain.lbDebug.AppendText("Preço inválido. Pulando " & symbol)
                 End If
             End If
         Next
