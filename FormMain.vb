@@ -44,6 +44,7 @@ Public Class FormMain
                 lbAtualizaEm.Text = "Atualizado em:"
                 lbRefresh.Location = New Point(125, 7)
                 lbRefresh.Text = My.Settings.lastView
+                Debug.WriteLine("Status: Ok")
             Else
                 Await refreshMarket()
             End If

@@ -117,7 +117,7 @@ Public Class Binance
         Try
             ' 1. Pega saldo geral por ativo
             For Each asset In account("assets")
-                Dim symbol = asset("asset").ToString()
+                Dim symbol = asset("asset").ToString() & ".F"
                 Dim saldo = Decimal.Parse(asset("walletBalance").ToString(), CultureInfo.InvariantCulture)
                 Dim ordem = Decimal.Parse(asset("openOrderInitialMargin").ToString(), CultureInfo.InvariantCulture)
 
@@ -209,9 +209,18 @@ Public Class Binance
 
                     Dim originalSymbol = cripto.Key.Trim().ToUpper()
                     Dim qtd = cripto.Value
-                    Dim pairSymbol = If(originalSymbol = "USDT", "USDC", originalSymbol)
+                    Dim pairSymbol
+
+                    If originalSymbol = "USDT" Or originalSymbol = "USDT.F" Then
+                        pairSymbol = "USDC"
+                    Else
+                        pairSymbol = originalSymbol
+                    End If
+
                     Dim pair = $"{pairSymbol}USDT"
                     Dim url = $"{urlBase}{pair}"
+
+                    ' MsgBox($"Cripto: {originalSymbol} - Quantidade: {qtd}")
 
                     Try
                         Dim resp = Await client.GetAsync(url)
@@ -229,6 +238,7 @@ Public Class Binance
                         Dim totalUSD = price * qtd
                         If totalUSD >= 1 Then ' <<<<< FILTRO AQUI
                             result.Add($"{originalSymbol}|{price.ToString(CultureInfo.InvariantCulture)}|{qtd.ToString(CultureInfo.InvariantCulture)}")
+                            ' MsgBox($"{originalSymbol}|{price.ToString(CultureInfo.InvariantCulture)}|{qtd.ToString(CultureInfo.InvariantCulture)}")
                         End If
 
                     Catch ex As Exception
@@ -318,6 +328,8 @@ Public Class Binance
 
             Dim symbol = parts(0).Trim().ToUpper()
             Dim qtd As Decimal = j.decimalBR(parts(2))
+
+            ' MsgBox($"Cripto: {symbol} - Quantidade: {qtd}")
 
             If Not jsonSymbols.Contains(symbol) Then
                 MsgBox($"Cripto {symbol} não encontrada no arquivo local. Adicionando...")

@@ -136,6 +136,7 @@ Public Class JSON
                             My.Settings.Save()
                             Return Await loadJSONfromJSONBIN()
                         Else
+
                             Return True
                         End If
                     Else
@@ -145,7 +146,7 @@ Public Class JSON
                     Return False
                 End If
             End Using
-            Debug.WriteLine("Status: Ok")
+
         Catch ex As Exception
             Debug.WriteLine("Status: JSONBin não respondeu! Carregando arquivo local...", MsgBoxStyle.Critical)
             Return False
@@ -659,6 +660,7 @@ Public Class JSON
         newDT.Columns.Add("ROIbrl", GetType(Decimal))
         newDT.Columns.Add("X", GetType(String))
 
+
         Try
 
             For Each row As DataRow In originalDT.Rows
@@ -676,6 +678,8 @@ Public Class JSON
                     mData = New CoinMarketData()
                 End If
 
+
+
                 Dim marketcap = mData.MarketCap
                 Dim price = mData.Price
                 Dim volume = mData.Volume24h
@@ -683,15 +687,16 @@ Public Class JSON
 
 
                 If row("Wallet") = "BINANCE" Then
-                    critoPriceTask = Await b.BINANCE_GetCoinsInfo(row.Item(6).ToString.ToUpper)
+                    critoPriceTask = Await b.BINANCE_GetCoinsInfo(symbolUpper)
                 ElseIf row("Wallet") = "GATE.IO" Then
-                    critoPriceTask = Await gate.GATE_GetCoinsInfo(row.Item(6).ToString.ToUpper)
+                    critoPriceTask = Await gate.GATE_GetCoinsInfo(symbolUpper)
                 Else
                     critoPriceTask = $"{price}|{marketcap}|0"
                 End If
 
                 Dim valores() As String = critoPriceTask.Split("|"c)
                 Dim preco As String = valores(0)
+
 
                 If valores(2) > 0 Then
                     qtd = decimalBR(valores(2))
@@ -716,7 +721,7 @@ Public Class JSON
 
                 initialValue += initialValueUSD
 
-                If row("Cripto") = "USDT" Or row("Cripto") = "USDC" Then
+                If row("Cripto") = "USDT" Or row("Cripto") = "USDC" Or row("Cripto") = "USDT.F" Then
                     cashflow += currValueUSD
                 Else
                     currValueTotal += currValueUSD
@@ -725,9 +730,11 @@ Public Class JSON
 
                 total = cashflow + currValueTotal
 
+
                 x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
 
-                newRow("Cripto") = row.Item(6).ToString
+
+                newRow("Cripto") = symbolUpper
                 newRow("Qtd") = qtd
                 newRow("Perf") = $"{perform.Value:F2}%"
                 newRow("Wallet") = wallet
@@ -749,12 +756,13 @@ Public Class JSON
                 End If
 
                 newDT.Rows.Add(newRow)
-                listCriptos.Add(row.Item(6).ToString)
+                listCriptos.Add(symbolUpper)
                 listAddress.Add(wallet)
                 listInitValue.Add(initialValueUSD)
                 listCurrValue.Add(currValueUSD)
 
-                AppendJSONLocal(row("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"), row.Item(6).ToString)
+                AppendJSONLocal(row("Cripto"), initialPrice, qtd, row("Data"), row("Wallet"), currPrice.ToString("C8"), symbolUpper)
+
 
             Next
 
@@ -871,7 +879,7 @@ Public Class JSON
             If row.Cells(0).Value.ToString.Contains("USD") Then
 
                 row.DefaultCellStyle.BackColor = Color.Black
-                row.Visible = False
+                'row.Visible = False
                 With row.Cells(0)
                     .Style.ForeColor = Color.DodgerBlue
                 End With
