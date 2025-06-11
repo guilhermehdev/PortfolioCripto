@@ -12,20 +12,28 @@ Public Class Binance
         Dim apiKey As String = My.Settings.BinanceAPIKey
         Dim secret As String = My.Settings.BinanceSecretKey
 
-        Dim baseUrl = If(isFutures, "https://fapi.binance.com", "https://api.binance.com")
-        Dim qs = query & "&timestamp=" & (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-        Using hmac As New HMACSHA256(Encoding.UTF8.GetBytes(secret))
-            Dim sigBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(qs))
-            Dim signature = BitConverter.ToString(sigBytes).Replace("-", "").ToLower()
-            qs &= "&signature=" & signature
-        End Using
+        Try
 
-        Using cli As New HttpClient()
-            cli.BaseAddress = New Uri(baseUrl)
-            cli.DefaultRequestHeaders.Add("X-MBX-APIKEY", apiKey)
-            Dim resp = cli.GetAsync(path & "?" & qs).Result
-            Return resp.Content.ReadAsStringAsync().Result
-        End Using
+            Dim baseUrl = If(isFutures, "https://fapi.binance.com", "https://api.binance.com")
+            Dim qs = query & "&timestamp=" & (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            Using hmac As New HMACSHA256(Encoding.UTF8.GetBytes(secret))
+                Dim sigBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(qs))
+                Dim signature = BitConverter.ToString(sigBytes).Replace("-", "").ToLower()
+                qs &= "&signature=" & signature
+            End Using
+
+            Using cli As New HttpClient()
+                cli.BaseAddress = New Uri(baseUrl)
+                cli.DefaultRequestHeaders.Add("X-MBX-APIKEY", apiKey)
+                Dim resp = cli.GetAsync(path & "?" & qs).Result
+                Return resp.Content.ReadAsStringAsync().Result
+            End Using
+
+        Catch ex As Exception
+            FormMain.lbDebug.Clear()
+            FormMain.lbDebug.AppendText("Erro na assinatura da API Binance: " & ex.Message)
+            Debug.WriteLine("Erro na assinatura da API Binance: " & ex.Message)
+        End Try
 
     End Function
 
@@ -50,7 +58,9 @@ Public Class Binance
             Return Task.FromResult(ativos)
 
         Catch ex As Exception
+            FormMain.lbDebug.Clear()
             FormMain.lbDebug.AppendText("Erro ao trazer dados da conta Spot: " & ex.Message)
+            Debug.WriteLine("Erro ao trazer dados da conta Spot: " & ex.Message)
             Return Task.FromResult(New Dictionary(Of String, Decimal)) ' vazio
         End Try
     End Function
@@ -145,6 +155,7 @@ Public Class Binance
             Return Task.FromResult(ativos)
 
         Catch ex As Exception
+            FormMain.lbDebug.Clear()
             FormMain.lbDebug.AppendText("Erro ao trazer dados da conta de Futuros: " & ex.Message)
             Return Task.FromResult(New Dictionary(Of String, (Decimal, Decimal, Decimal)))
         End Try
@@ -241,7 +252,9 @@ Public Class Binance
                         End If
 
                     Catch ex As Exception
+                        FormMain.lbDebug.Clear()
                         Debug.WriteLine($"Erro ao buscar {pair}: {ex.Message}")
+                        FormMain.lbDebug.AppendText($"Erro ao buscar {pair}: {ex.Message}")
                         Continue For
                     End Try
                 Next
@@ -338,6 +351,7 @@ Public Class Binance
                 If Decimal.TryParse(precoMedioStr.Replace(",", "."), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, precoMedio) Then
                     Await j.saveAportToJSONBin(symbol, precoMedio, qtd, Date.Today, "BINANCE", symbol)
                 Else
+                    FormMain.lbDebug.Clear()
                     FormMain.lbDebug.AppendText("Preço inválido. Pulando " & symbol)
                 End If
             End If

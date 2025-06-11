@@ -208,7 +208,6 @@ Public Class JSON
                 Dim putResponse = Await client.PutAsync(url, stringContent)
 
                 If putResponse.IsSuccessStatusCode Then
-                    File.WriteAllText(portfolioPathFile, jsonAtual.ToString())
                     My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
                     My.Settings.Save()
                     Return True
@@ -217,8 +216,11 @@ Public Class JSON
                     Return False
                 End If
 
+                File.WriteAllText(portfolioPathFile, jsonAtual.ToString())
+
             Catch ex As Exception
-                Debug.Write("Erro: " & ex.Message)
+                Debug.Write("Erro em AppendJSONToBin: " & ex.Message)
+                FormMain.lbDebug.Text = "Erro ao salvar em JSONBin: " & ex.Message
                 Return False
             End Try
         End Using
@@ -264,14 +266,11 @@ Public Class JSON
                     Return False
                 End If
 
-                'Else
-                'MessageBox.Show("Erro ao carregar: " & response.StatusCode.ToString())
-                'Return False
-                'End If
             End Using
 
         Catch ex As Exception
-            MessageBox.Show("Erro: " & ex.Message)
+            Debug.WriteLine("Erro em DeleteJSONFromBin: " & ex.Message)
+            FormMain.lbDebug.Text = "Erro ao deletar de JSONBin: " & ex.Message
             Return False
         End Try
     End Function
@@ -953,7 +952,7 @@ Public Class JSON
                 If qtd >= 1 Then
                     displayQtd = qtd.ToString("N2")
                 Else
-                    displayQtd = qtd.ToString("G") ' Formato geral para números pequenos
+                    displayQtd = qtd
                 End If
 
                 Dim initialValueUSD As Decimal = qtd * initialPrice

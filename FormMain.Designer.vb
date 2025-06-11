@@ -808,12 +808,12 @@ Partial Class FormMain
         lbDebug.Font = New Font("Calibri", 9.75F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
         lbDebug.ForeColor = Color.White
         lbDebug.ImeMode = ImeMode.Disable
-        lbDebug.Location = New Point(5, 1)
+        lbDebug.Location = New Point(5, 5)
         lbDebug.Margin = New Padding(2, 3, 3, 3)
         lbDebug.Name = "lbDebug"
         lbDebug.ReadOnly = True
         lbDebug.ScrollBars = RichTextBoxScrollBars.Vertical
-        lbDebug.Size = New Size(1149, 34)
+        lbDebug.Size = New Size(1145, 26)
         lbDebug.TabIndex = 0
         lbDebug.Text = ""
         ' 
