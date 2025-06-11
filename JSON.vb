@@ -24,6 +24,9 @@ Public Class JSON
     Dim b As New Binance
     Dim gec As New Coingecko
     Public USDBRLprice
+    Dim stablecoins As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
+             "USDT", "USDC", "BUSD", "DAI", "TUSD", "USD", "USDP", "GUSD"
+            }
 
     Public Function loadJSONfile()
         Dim jsonString As String = File.ReadAllText(portfolioPathFile)
@@ -208,6 +211,7 @@ Public Class JSON
                 Dim putResponse = Await client.PutAsync(url, stringContent)
 
                 If putResponse.IsSuccessStatusCode Then
+                    File.WriteAllText(portfolioPathFile, jsonAtual.ToString())
                     My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
                     My.Settings.Save()
                     Return True
@@ -216,7 +220,7 @@ Public Class JSON
                     Return False
                 End If
 
-                File.WriteAllText(portfolioPathFile, jsonAtual.ToString())
+
 
             Catch ex As Exception
                 Debug.Write("Erro em AppendJSONToBin: " & ex.Message)
@@ -340,7 +344,7 @@ Public Class JSON
         Try
             exchanges = JsonConvert.DeserializeObject(Of List(Of Exchange))(jsonData)
         Catch ex As Newtonsoft.Json.JsonException
-            MessageBox.Show("Erro ao desserializar o JSON: " & ex.Message)
+            Debug.WriteLine("Erro ao desserializar o JSON: " & ex.Message)
             Exit Sub
         End Try
 
@@ -366,7 +370,7 @@ Public Class JSON
 
             MessageBox.Show("Salvo com sucesso!")
         Catch ex As Exception
-            MessageBox.Show("Erro ao salvar o arquivo JSON: " & ex.Message)
+            Debug.WriteLine("Erro ao salvar o arquivo JSON: " & ex.Message)
         End Try
 
     End Sub
@@ -967,7 +971,7 @@ Public Class JSON
 
                 ' PASSO 4: Acumular os totais
                 initialValue += initialValueUSD
-                If symbolUpper = "USDT" Or symbolUpper = "USDC" Or symbolUpper = "USD" Then
+                If stablecoins.Contains(symbolUpper) Then
                     cashflow += currValueUSD
                 Else
                     currValueTotal += currValueUSD
@@ -1075,7 +1079,7 @@ Public Class JSON
         Catch ex As Exception
             FormMain.lbDebug.AppendText("Erro ao carregar os dados: " & ex.ToString())
             ' Adicione aqui um tratamento de erro mais visível para o usuário, se desejar
-            ' MsgBox("Ocorreu um erro ao carregar os dados: " & ex.Message)
+            Debug.WriteLine("Ocorreu um erro ao carregar os dados: " & ex.Message)
         End Try
 
     End Function
@@ -1095,32 +1099,22 @@ Public Class JSON
             .Font = New Font("Calibri", 10, FontStyle.Italic)
         End With
 
-        For Each row As DataGridViewRow In datagrid.Rows
-            row.Height = 35
-            row.Selected = False
+        Try
+            Dim cm As CurrencyManager = CType(FormMain.BindingContext(datagrid.DataSource), CurrencyManager)
+            cm.SuspendBinding()
+            datagrid.ClearSelection()
 
-            If row.Cells(0).Value.ToString.Contains("USD") Then
+            For Each row As DataGridViewRow In datagrid.Rows
+                row.Height = 35
+                row.Selected = False
 
-                row.DefaultCellStyle.BackColor = Color.Black
-                row.Visible = False
-                With row.Cells(0)
-                    .Style.ForeColor = Color.DodgerBlue
-                End With
+                If row.IsNewRow Then Continue For
 
-                row.Cells(1).Value = ""
-                row.Cells(4).Style.ForeColor = Color.Black
-                row.Cells(5).Style.ForeColor = Color.Black
-                row.Cells(6).Style.ForeColor = Color.Black
-                row.Cells(7).Style.ForeColor = Color.Black
-                row.Cells(8).Value = ""
-                row.Cells(9).Style.ForeColor = Color.Black
-                row.Cells(10).Style.ForeColor = Color.Black
-                row.Cells(11).Style.ForeColor = Color.Black
-                row.Cells(12).Style.ForeColor = Color.Black
-                row.Cells(13).Style.ForeColor = Color.Black
-                row.Cells(14).Value = ""
+                Dim symbol = row.Cells(0).Value.ToString().Trim().ToUpper()
 
-            Else
+                If stablecoins.Contains(symbol) Then
+                    row.Visible = False
+                End If
 
                 datagrid.Columns(0).Width = 100
                 With datagrid.Columns(0).DefaultCellStyle
@@ -1483,9 +1477,13 @@ Public Class JSON
 
                 datagrid.ClearSelection()
 
-            End If
+            Next
 
-        Next
+        Catch ex As Exception
+            Debug.WriteLine("Ocorreu um erro ao carregar os dados: " & ex.Message)
+        End Try
+
+
 
     End Sub
     Public Function decimalBR(valor As String)
