@@ -976,7 +976,7 @@ Public Class JSON
 
                 ' PASSO 5: Preencher a nova linha do DataTable
                 newRow("Cripto") = symbolUpper
-                newRow("Qtd") = qtd ' Salva o valor decimal real para ordenação
+                newRow("Qtd") = displayQtd ' Salva o valor decimal real para ordenação
                 newRow("Perf") = $"{perform.Value:F2}%"
                 newRow("Wallet") = wallet
                 newRow("vlEntradaUSD") = initialValueUSD
