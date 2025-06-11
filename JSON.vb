@@ -210,17 +210,16 @@ Public Class JSON
                 Dim stringContent As New StringContent(body, Encoding.UTF8, "application/json")
                 Dim putResponse = Await client.PutAsync(url, stringContent)
 
+                File.WriteAllText(portfolioPathFile, jsonAtual.ToString())
+
                 If putResponse.IsSuccessStatusCode Then
-                    File.WriteAllText(portfolioPathFile, jsonAtual.ToString())
                     My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
                     My.Settings.Save()
                     Return True
                 Else
-                    Debug.Write("Erro ao salvar: " & putResponse.StatusCode)
+                    Debug.Write("Erro ao salvar em JSONBin: " & putResponse.StatusCode)
                     Return False
                 End If
-
-
 
             Catch ex As Exception
                 Debug.Write("Erro em AppendJSONToBin: " & ex.Message)
