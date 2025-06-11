@@ -33,7 +33,7 @@ Public Class Coingecko
         {"VELODROME", "velodrome-finance"},
         {"BTC", "bitcoin"},
         {"USDC", "tether"},
-        {"USDT.F", "usd-coin"}
+        {"USD", "usd-coin"}
     }
 
     Public Async Function CGECKO_MarketData(symbols As IEnumerable(Of String)) _

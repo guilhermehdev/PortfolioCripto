@@ -967,7 +967,7 @@ Public Class JSON
 
                 ' PASSO 4: Acumular os totais
                 initialValue += initialValueUSD
-                If symbolUpper = "USDT" Or symbolUpper = "USDC" Then
+                If symbolUpper = "USDT" Or symbolUpper = "USDC" Or symbolUpper = "USD" Then
                     cashflow += currValueUSD
                 Else
                     currValueTotal += currValueUSD
