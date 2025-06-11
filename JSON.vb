@@ -967,7 +967,7 @@ Public Class JSON
 
                 ' PASSO 4: Acumular os totais
                 initialValue += initialValueUSD
-                If symbolUpper = "USDT" Or symbolUpper = "USDC" Or symbolUpper = "USDT.F" Then
+                If symbolUpper = "USDT" Or symbolUpper = "USDC" Then
                     cashflow += currValueUSD
                 Else
                     currValueTotal += currValueUSD
@@ -1015,9 +1015,7 @@ Public Class JSON
             Dim performWallet As Decimal? = If(initialValue > 0, (profit / initialValue) * 100, 0)
 
             For i = 0 To listCriptos.Count - 1
-                If total > 0 Then
-                    criptoDic.Add(listCriptos(i), (listCurrValue(i) / total) * 100)
-                End If
+                criptoDic.Add(listCriptos(i), (listCurrValue(i) / total) * 100)
             Next
 
             For Each addr In listAddress.Distinct()
