@@ -65,58 +65,6 @@ Public Class Binance
         End Try
     End Function
 
-    'Private Function BINANCE_GetFuturesAssets() As Task(Of Dictionary(Of String, Decimal))
-    '    Dim json = QuerySigned("/fapi/v2/account", "recvWindow=5000", isFutures:=True)
-    '    Dim account = JObject.Parse(json)
-
-    '    Dim ativos As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
-
-    '    Try
-    '        For Each asset In account("assets")
-    '            Dim symbol = asset("asset").ToString()
-    '            Dim balance = Decimal.Parse(asset("walletBalance").ToString(), CultureInfo.InvariantCulture)
-
-    '            If balance > 0 Then
-    '                ativos(symbol) = balance
-    '            End If
-    '        Next
-
-    '        Return Task.FromResult(ativos)
-
-    '    Catch ex As Exception
-    '        Debug.WriteLine("Erro em BINANCE_GetFuturesAssets: " & ex.Message)
-    '        Return Task.FromResult(New Dictionary(Of String, Decimal)) ' vazio
-    '    End Try
-    'End Function
-
-    'Private Function BINANCE_GetFuturesAssets() As Task(Of Dictionary(Of String, (Saldo As Decimal, Ordem As Decimal, Lucro As Decimal)))
-    '    Dim json = QuerySigned("/fapi/v2/account", "recvWindow=5000", isFutures:=True)
-    '    Dim account = JObject.Parse(json)
-
-    '    Dim ativos As New Dictionary(Of String, (Saldo As Decimal, Ordem As Decimal, Lucro As Decimal))(StringComparer.OrdinalIgnoreCase)
-
-
-    '    Try
-    '        For Each asset In account("assets")
-    '            Dim symbol = asset("asset").ToString()
-
-    '            Dim wallet = Decimal.Parse(asset("walletBalance").ToString(), CultureInfo.InvariantCulture)
-    '            Dim ordem = Decimal.Parse(asset("openOrderInitialMargin").ToString(), CultureInfo.InvariantCulture)
-    '            Dim lucro = Decimal.Parse(asset("unrealizedProfit").ToString(), CultureInfo.InvariantCulture)
-
-    '            If wallet > 0 Or ordem > 0 Or lucro <> 0 Then
-    '                ativos(symbol) = (wallet, ordem, lucro)
-    '            End If
-    '        Next
-
-    '        Return Task.FromResult(ativos)
-
-    '    Catch ex As Exception
-    '        Debug.WriteLine("Erro em BINANCE_GetFuturesFullAssets: " & ex.Message)
-    '        Return Task.FromResult(New Dictionary(Of String, (Decimal, Decimal, Decimal)))
-    '    End Try
-    'End Function
-
     Private Function BINANCE_GetFuturesAssets() As Task(Of Dictionary(Of String, (Saldo As Decimal, Ordem As Decimal, Lucro As Decimal)))
         Dim json = QuerySigned("/fapi/v2/account", "recvWindow=5000", isFutures:=True)
         Dim account = JObject.Parse(json)
