@@ -3,6 +3,7 @@ Imports System.IO
 Imports System.Windows.Forms.DataVisualization.Charting
 Imports Newtonsoft.Json.Linq
 Imports System.Diagnostics
+Imports System.Diagnostics.Tracing
 Public Class FormMain
     Public remainingtimeInSeconds As Integer
     Dim Cjson As New JSON
@@ -17,7 +18,7 @@ Public Class FormMain
         Application.Exit()
     End Sub
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Setup()
+        'Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
 
@@ -431,6 +432,9 @@ Public Class FormMain
                 e.Value = $"{valorDecimal:F2}%"
             End If
         End If
+    End Sub
+    Private Sub ImpermanetLossToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImpermanetLossToolStripMenuItem.Click
+        FormPools.Show()
     End Sub
 
     Private Sub dgPortfolio_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgPortfolio.CellClick

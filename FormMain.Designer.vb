@@ -23,9 +23,9 @@ Partial Class FormMain
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
         components = New ComponentModel.Container()
-        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle5 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         dgPortfolio = New DataGridView()
         PanelProfits = New Panel()
@@ -93,6 +93,8 @@ Partial Class FormMain
         ToolTip1 = New ToolTip(components)
         panelDebug = New Panel()
         lbDebug = New RichTextBox()
+        PoolsToolStripMenuItem = New ToolStripMenuItem()
+        ImpermanetLossToolStripMenuItem = New ToolStripMenuItem()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
         PanelProfits.SuspendLayout()
         Panel1.SuspendLayout()
@@ -118,36 +120,36 @@ Partial Class FormMain
         dgPortfolio.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         dgPortfolio.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgPortfolio.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle1.ForeColor = Color.Turquoise
-        DataGridViewCellStyle1.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle1.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
-        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
-        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle2.ForeColor = Color.Bisque
-        DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle2.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
-        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle4.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle4.ForeColor = Color.Turquoise
+        DataGridViewCellStyle4.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle4.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
+        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
+        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle5.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle5.ForeColor = Color.Bisque
+        DataGridViewCellStyle5.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle5.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.True
+        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle5
         dgPortfolio.EnableHeadersVisualStyles = False
         dgPortfolio.Location = New Point(0, 27)
         dgPortfolio.MinimumSize = New Size(0, 360)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
-        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle3.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle3.Padding = New Padding(2)
-        DataGridViewCellStyle3.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle3.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
-        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
+        DataGridViewCellStyle6.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle6.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle6.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle6.Padding = New Padding(2)
+        DataGridViewCellStyle6.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle6.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
+        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle6
         dgPortfolio.RowHeadersWidth = 4
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
@@ -746,7 +748,7 @@ Partial Class FormMain
         ' MenuStrip1
         ' 
         MenuStrip1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, OpçõesToolStripMenuItem, FecharToolStripMenuItem})
+        MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, OpçõesToolStripMenuItem, PoolsToolStripMenuItem, FecharToolStripMenuItem})
         MenuStrip1.Location = New Point(0, 0)
         MenuStrip1.Name = "MenuStrip1"
         MenuStrip1.Size = New Size(1154, 24)
@@ -816,6 +818,21 @@ Partial Class FormMain
         lbDebug.Size = New Size(1145, 26)
         lbDebug.TabIndex = 0
         lbDebug.Text = ""
+        ' 
+        ' PoolsToolStripMenuItem
+        ' 
+        PoolsToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(31))
+        PoolsToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImpermanetLossToolStripMenuItem})
+        PoolsToolStripMenuItem.ForeColor = Color.White
+        PoolsToolStripMenuItem.Name = "PoolsToolStripMenuItem"
+        PoolsToolStripMenuItem.Size = New Size(48, 20)
+        PoolsToolStripMenuItem.Text = "Pools"
+        ' 
+        ' ImpermanetLossToolStripMenuItem
+        ' 
+        ImpermanetLossToolStripMenuItem.Name = "ImpermanetLossToolStripMenuItem"
+        ImpermanetLossToolStripMenuItem.Size = New Size(180, 22)
+        ImpermanetLossToolStripMenuItem.Text = "Impermanent loss"
         ' 
         ' FormMain
         ' 
@@ -926,5 +943,7 @@ Partial Class FormMain
     Friend WithEvents ToolTip1 As ToolTip
     Friend WithEvents panelDebug As Panel
     Friend WithEvents lbDebug As RichTextBox
+    Friend WithEvents PoolsToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents ImpermanetLossToolStripMenuItem As ToolStripMenuItem
 
 End Class
