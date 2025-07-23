@@ -114,20 +114,19 @@ Public Class Gateio
         End Try
     End Function
 
-
-    'Public Async Function GATE_GetCoinsInfo(symbol As String) As Task(Of String)
-    '    Try
-    '        Dim preco As Decimal = Await GATE_GetCoinsPrice(symbol)
-
-    '        Dim qtd As Decimal = Await GATE_GetAssetQty(symbol)
-    '        MsgBox(qtd)
-    '        Return $"{preco.ToString(CultureInfo.InvariantCulture)}|0|{qtd.ToString(CultureInfo.InvariantCulture)}"
-
-    '    Catch ex As Exception
-    '        Debug.WriteLine($"[GATE.IO] Erro ao obter info de {symbol}: {ex.Message}")
-    '        Return $"0|0|0"
-    '    End Try
-    'End Function
+    Public Async Function ParExisteNaGateIo(symbol As String) As Task(Of Boolean)
+        Try
+            Dim parComUnderline As String = $"{symbol.Trim().ToUpper()}_USDT"
+            ' MsgBox($"Verificando par {parComUnderline} na Gate.io...")
+            Dim url As String = $"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={parComUnderline}"
+            Using client As New Net.Http.HttpClient()
+                Dim response = Await client.GetAsync(url)
+                Return response.IsSuccessStatusCode
+            End Using
+        Catch
+            Return False
+        End Try
+    End Function
 
 
 End Class

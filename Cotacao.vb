@@ -60,7 +60,6 @@ Public Class Cotacao
         End Try
 
     End Function
-
     Public Async Function CM_GetUSDBRL() As Task(Of Decimal)
 
         Try
@@ -97,7 +96,6 @@ Public Class Cotacao
             Return 0
         End Try
     End Function
-
     Public Async Function CM_GetBTCDOM() As Task(Of Decimal?)
         Try
             Dim requestUrl As String

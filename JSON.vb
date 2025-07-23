@@ -872,8 +872,8 @@ Public Class JSON
         ' 3. Carrega TODOS os preços e dados de mercado DE UMA SÓ VEZ
         Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
         Dim USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
-        Dim dom As Decimal? = Await gec.CGECKO_GetBTCDominance()
-
+        'Dim dom As Decimal? = Await gec.CGECKO_GetBTCDominance()
+        Dim dom As Decimal? = Await cot.CM_GetBTCDOM()
         ' 4. Pega o preço do BTC apenas para o label no formulário
         Dim btcPriceString As String = Await b.BINANCE_GetCoinsInfo("BTC")
         Dim btcRes() As String = btcPriceString.Split("|"c)
@@ -1036,10 +1036,10 @@ Public Class JSON
             FormMain.lbTotalBRL.Text = BRLformat(profit * USDBRLprice)
             FormMain.lbTotalBRL.ForeColor = If(profit > 0, Color.FromArgb(0, 255, 0), Color.FromArgb(255, 73, 73))
 
-            FormMain.lbValoresHojeUSD.ForeColor = If(total < initialValue, Color.IndianRed, Color.White)
-            FormMain.lbValoresHojeBRL.ForeColor = If(total < initialValue, Color.IndianRed, Color.White)
-            FormMain.lbRoiUSD.ForeColor = If(profit < 0, Color.Red, Color.White)
-            FormMain.lbPerformWallet.ForeColor = If(performWallet < 0, Color.Red, Color.White)
+            FormMain.lbValoresHojeUSD.ForeColor = If(total < initialValue, Color.IndianRed, Color.GreenYellow)
+            FormMain.lbValoresHojeBRL.ForeColor = If(total < initialValue, Color.IndianRed, Color.Cyan)
+            FormMain.lbRoiUSD.ForeColor = If(profit < 0, Color.Red, Color.Gold)
+            FormMain.lbPerformWallet.ForeColor = If(performWallet < 0, Color.Red, Color.Lime)
 
             FormMain.lbDolar.Text = BRLformat(USDBRLprice)
             FormMain.lbBTC.Text = USDformat(decimalBR(btcPrice))

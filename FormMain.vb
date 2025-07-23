@@ -9,6 +9,7 @@ Public Class FormMain
     Dim chart As New Charts
     Dim B As New Binance
     Dim gec As New Coingecko
+
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
     End Sub
@@ -432,4 +433,14 @@ Public Class FormMain
         End If
     End Sub
 
+    Private Sub dgPortfolio_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgPortfolio.CellClick
+        If dgPortfolio.Columns(e.ColumnIndex).Name = "Cripto" Then
+
+            Dim valor As String = dgPortfolio.Rows(e.RowIndex).Cells(e.ColumnIndex).Value?.ToString()
+            If Not String.IsNullOrEmpty(valor) Then
+                Dim f As New FormBrowser(valor)
+                f.Show()
+            End If
+        End If
+    End Sub
 End Class

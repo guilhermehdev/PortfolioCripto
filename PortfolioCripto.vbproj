@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Chart.Controls" Version="4.7.2046" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3351.48" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Data.OleDb" Version="9.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />

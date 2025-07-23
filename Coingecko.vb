@@ -33,6 +33,7 @@ Public Class Coingecko
         {"VELODROME", "velodrome-finance"},
         {"BTC", "bitcoin"},
         {"USDC", "tether"},
+         {"ETH", "ethereum"},
         {"USD", "usd-coin"}
     }
 

@@ -257,6 +257,18 @@ Public Class Binance
         End Using
 
     End Function
+
+    Public Async Function ParExisteNaBinance(symbol As String) As Task(Of Boolean)
+        Try
+            Dim url As String = $"https://api.binance.com/api/v3/exchangeInfo?symbol={symbol}USDT"
+            Using client As New Net.Http.HttpClient()
+                Dim response As Net.Http.HttpResponseMessage = Await client.GetAsync(url)
+                Return response.IsSuccessStatusCode
+            End Using
+        Catch
+            Return False
+        End Try
+    End Function
     Public Async Function compare() As Task
         Dim j As New JSON
         ' Obtém as informações da Binance
