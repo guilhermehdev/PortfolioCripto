@@ -18,7 +18,7 @@ Public Class FormMain
         Application.Exit()
     End Sub
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        'Setup()
+        Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
 
@@ -33,16 +33,22 @@ Public Class FormMain
             dgPortfolio.Cursor = Cursors.WaitCursor
             If Await Cjson.checkLastUpdateOnJSONBin() Then
 
-                Await Cjson.LoadCriptos(dgPortfolio)
-                dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
-                Adjust()
-                lbAtualizaEm.Text = "Atualizado em:"
-                lbRefresh.Location = New Point(125, 7)
-                lbRefresh.Text = My.Settings.lastView
-                lbDebug.Clear()
-                lbDebug.AppendText("Status: Ok")
+                If Await Cjson.LoadCriptos(dgPortfolio) Then
+                    lbDebug.Clear()
+                    lbDebug.AppendText("Status: Ok")
+                    dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
+                    Adjust()
+                    lbAtualizaEm.Text = "Atualizado em:"
+                    lbRefresh.Location = New Point(125, 7)
+                    lbRefresh.Text = My.Settings.lastView
+                Else
+                    lbDebug.AppendText("Status: Erro ao carregar o portfólio.")
+                End If
             Else
-                Await refreshMarket()
+                If Await refreshMarket() Then
+                    lbDebug.Clear()
+                    lbDebug.AppendText("Status: Ok")
+                End If
             End If
 
         Catch ex As Exception
@@ -78,7 +84,7 @@ Public Class FormMain
 
     End Sub
 
-    Private Async Function refreshMarket() As Task
+    Private Async Function refreshMarket() As Task(Of Boolean)
         Try
             chart.removeCharts()
             lbLoadFromMarket.Visible = True
@@ -96,10 +102,14 @@ Public Class FormMain
             TimerCountdown.Stop()
             TimerRefresh.Stop()
 
+            Return True
+
         Catch ex As Exception
             lbDebug.Clear()
             lbDebug.AppendText("Erro ao atualizar o mercado: " & ex.Message)
+            Return False
         End Try
+
     End Function
 
     Private Async Sub btRefresh_Click_1Async(sender As Object, e As EventArgs) Handles btRefresh.Click

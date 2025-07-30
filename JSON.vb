@@ -851,7 +851,7 @@ Public Class JSON
 
     'End Function
 
-    Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task
+    Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task(Of Boolean)
         ' --- INICIALIZAÇÃO (Permanece a mesma) ---
         Dim json As New JSON
         Dim b As New Binance
@@ -1075,10 +1075,13 @@ Public Class JSON
                 FormMain.showBRLCollumns()
             End If
 
+            Return True
+
         Catch ex As Exception
             FormMain.lbDebug.AppendText("Erro ao carregar os dados: " & ex.ToString())
             ' Adicione aqui um tratamento de erro mais visível para o usuário, se desejar
             Debug.WriteLine("Ocorreu um erro ao carregar os dados: " & ex.Message)
+            Return False
         End Try
 
     End Function
