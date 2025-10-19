@@ -695,6 +695,10 @@ Public Class JSON
                     Case "BINANCE"
                         ' Usa o dicionário com os saldos SOMADOS (Spot + Futuros)
                         qtd = binanceAssets.GetValueOrDefault(symbolUpper, 0D)
+                        Dim PriceString As String = Await b.BINANCE_GetCoinsInfo(symbolUpper)
+                        Dim Res() As String = PriceString.Split("|"c)
+                        Dim Price As String = Res(0)
+                        currPrice = decimalBR(Price)
                     Case "GATE.IO"
                         ' Mantém a chamada para Gate.io, mas idealmente seria como a da Binance
                         Dim gateInfoTask = Await gate.GATE_GetCoinsInfo(symbolUpper)
