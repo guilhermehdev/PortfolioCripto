@@ -699,8 +699,15 @@ Public Class JSON
                         ' Mantém a chamada para Gate.io, mas idealmente seria como a da Binance
                         Dim gateInfoTask = Await gate.GATE_GetCoinsInfo(symbolUpper)
                         Dim valores() As String = gateInfoTask.Split("|"c)
+
+                        ' MsgBox(valores(0) & "-" & valores(1) & "-" & valores(2))
+
                         If valores.Length >= 3 Then
                             qtd = decimalBR(valores(2))
+                            'MsgBox(valores(0))
+                            currPrice = decimalBR(valores(0))
+                            ' MsgBox(currPrice)
+
                         End If
                     Case Else ' Para carteiras frias ou outras fontes
                         ' Pega a quantidade diretamente do seu arquivo JSON
