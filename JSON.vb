@@ -634,7 +634,7 @@ Public Class JSON
 
         ' 3. Carrega TODOS os preços e dados de mercado DE UMA SÓ VEZ
         Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
-        Dim USDBRLprice = Await gec.CGECKO_GetPrice("USD", "brl")
+        Dim USDBRLprice = Await gec.CGECKO_GetPrice("USDT", "brl")
         'Dim dom As Decimal? = Await gec.CGECKO_GetBTCDominance()
         Dim dom As Decimal? = Await cot.CM_GetBTCDOM()
         ' 4. Pega o preço do BTC apenas para o label no formulário
