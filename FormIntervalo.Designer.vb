@@ -30,7 +30,7 @@ Partial Class FormIntervalo
         ' cbIntervalo
         ' 
         cbIntervalo.FormattingEnabled = True
-        cbIntervalo.Items.AddRange(New Object() {"1 minuto", "5 minutos", "10 minutos", "15 minutos", "20 minutos", "25 minutos", "30 minutos", "45 minutos", "60 minutos"})
+        cbIntervalo.Items.AddRange(New Object() {"1 minuto", "5 minutos", "10 minutos", "15 minutos", "20 minutos", "25 minutos", "30 minutos", "45 minutos", "1 hora", "6 horas", "12 horas", "24 horas"})
         cbIntervalo.Location = New Point(12, 33)
         cbIntervalo.Name = "cbIntervalo"
         cbIntervalo.Size = New Size(121, 23)
