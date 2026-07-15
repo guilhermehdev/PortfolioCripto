@@ -17,8 +17,15 @@ Public Class FormMain
     Private Sub FecharToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles FecharToolStripMenuItem.Click
         Application.Exit()
     End Sub
+    Public Shared Function msgQuestion(ByVal msgText As String, ByVal Title As String) As String
+        If MessageBox.Show(msgText, Title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button3) = DialogResult.Yes Then
+            Return True
+        Else
+            Return False
+        End If
+    End Function
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Setup()
+        ' Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
 
@@ -443,7 +450,7 @@ Public Class FormMain
             End If
         End If
     End Sub
-    Private Sub ImpermanetLossToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImpermanetLossToolStripMenuItem.Click
+    Private Sub ImpermanetLossToolStripMenuItem_Click(sender As Object, e As EventArgs)
         FormPools.Show()
     End Sub
 

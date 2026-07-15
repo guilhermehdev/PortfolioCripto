@@ -92,7 +92,7 @@ Partial Class FormAPI
         Label3.ForeColor = SystemColors.ButtonHighlight
         Label3.Location = New Point(34, 123)
         Label3.Name = "Label3"
-        Label3.Size = New Size(98, 15)
+        Label3.Size = New Size(97, 15)
         Label3.TabIndex = 22
         Label3.Text = "API URL Sandbox"
         ' 
@@ -121,7 +121,7 @@ Partial Class FormAPI
         btSaveActiveAPI.FlatAppearance.BorderSize = 0
         btSaveActiveAPI.FlatStyle = FlatStyle.Flat
         btSaveActiveAPI.ForeColor = SystemColors.ButtonHighlight
-        btSaveActiveAPI.Location = New Point(283, 441)
+        btSaveActiveAPI.Location = New Point(283, 247)
         btSaveActiveAPI.Name = "btSaveActiveAPI"
         btSaveActiveAPI.Size = New Size(107, 31)
         btSaveActiveAPI.TabIndex = 27
@@ -135,7 +135,7 @@ Partial Class FormAPI
         btCancelar.FlatAppearance.BorderSize = 0
         btCancelar.FlatStyle = FlatStyle.Flat
         btCancelar.ForeColor = SystemColors.ButtonHighlight
-        btCancelar.Location = New Point(396, 441)
+        btCancelar.Location = New Point(396, 247)
         btCancelar.Name = "btCancelar"
         btCancelar.Size = New Size(66, 31)
         btCancelar.TabIndex = 28
@@ -171,12 +171,13 @@ Partial Class FormAPI
         GroupBox2.Controls.Add(tbJSONBinGet)
         GroupBox2.Font = New Font("Segoe UI", 9F)
         GroupBox2.ForeColor = Color.DeepSkyBlue
-        GroupBox2.Location = New Point(12, 247)
+        GroupBox2.Location = New Point(484, 262)
         GroupBox2.Name = "GroupBox2"
         GroupBox2.Size = New Size(450, 188)
         GroupBox2.TabIndex = 30
         GroupBox2.TabStop = False
         GroupBox2.Text = "JSONBin"
+        GroupBox2.Visible = False
         ' 
         ' Label5
         ' 
@@ -234,7 +235,7 @@ Partial Class FormAPI
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        ClientSize = New Size(476, 484)
+        ClientSize = New Size(476, 290)
         Controls.Add(GroupBox2)
         Controls.Add(GroupBox1)
         Controls.Add(btCancelar)

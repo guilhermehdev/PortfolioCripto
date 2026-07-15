@@ -211,15 +211,15 @@ Public Class JSON
                 Dim putResponse = Await client.PutAsync(url, stringContent)
 
                 File.WriteAllText(portfolioPathFile, jsonAtual.ToString())
-
-                If putResponse.IsSuccessStatusCode Then
-                    My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
-                    My.Settings.Save()
-                    Return True
-                Else
-                    Debug.Write("Erro ao salvar em JSONBin: " & putResponse.StatusCode)
-                    Return False
-                End If
+                Return True
+                'If putResponse.IsSuccessStatusCode Then
+                '    My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
+                '    My.Settings.Save()
+                '    Return True
+                'Else
+                '    Debug.Write("Erro ao salvar em JSONBin: " & putResponse.StatusCode)
+                '    Return False
+                'End If
 
             Catch ex As Exception
                 Debug.Write("Erro em AppendJSONToBin: " & ex.Message)
@@ -233,17 +233,17 @@ Public Class JSON
             Dim url As String = JSONBinPut
 
             Using client As New HttpClient()
-                Dim record As JObject = JObject.Parse(loadJSONfile)
+                Dim jsonLocal As JObject = JObject.Parse(loadJSONfile)
 
-                If record.ContainsKey(key) Then
-                    record.Remove(key)
+                If jsonLocal.ContainsKey(key) Then
+                    jsonLocal.Remove(key)
                 Else
                     MessageBox.Show("Chave não encontrada no arquivo.")
                     Return False
                 End If
 
                 ' Atualizar o campo ultimaAtualizacao
-                record("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
+                jsonLocal("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
 
                 ' Atualizando o JSONBin com o novo conteúdo (sem o Content-Type aqui)
                 ' Dim putUrl As String = $"https://api.jsonbin.io/v3/b/{jsonbin}"
@@ -254,20 +254,23 @@ Public Class JSON
                 'Dim putResponse As HttpResponseMessage = Await client.PutAsync(url, content)
 
 
-                Dim body As String = JsonConvert.SerializeObject(record, Formatting.Indented)
-                Dim stringContent As New StringContent(body, Encoding.UTF8, "application/json")
-                Dim putResponse = Await client.PutAsync(url, stringContent)
+                'Dim body As String = JsonConvert.SerializeObject(jsonLocal, Formatting.Indented)
+                'Dim stringContent As New StringContent(body, Encoding.UTF8, "application/json")
+                'Dim putResponse = Await client.PutAsync(url, stringContent)
 
-                If putResponse.IsSuccessStatusCode Then
-                    MessageBox.Show("Removido com sucesso.")
-                    File.WriteAllText(portfolioPathFile, record.ToString())
-                    My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
-                    My.Settings.Save()
-                    Return True
-                Else
-                    MessageBox.Show("Erro ao atualizar: " & putResponse.StatusCode.ToString())
-                    Return False
-                End If
+
+                File.WriteAllText(portfolioPathFile, jsonLocal.ToString())
+                My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
+                My.Settings.Save()
+                MessageBox.Show("Removido com sucesso.")
+                Return True
+
+                'If putResponse.IsSuccessStatusCode Then
+                '   
+                'Else
+                '    MessageBox.Show("Erro ao atualizar: " & putResponse.StatusCode.ToString())
+                '    Return False
+                'End If
 
             End Using
 

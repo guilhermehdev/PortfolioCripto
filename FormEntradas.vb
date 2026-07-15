@@ -304,7 +304,9 @@ Public Class FormEntradas
         json.captureRightClick(dgCriptos, e)
     End Sub
     Private Sub FormEntradas_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed
-        FormMain.Setup()
+        If FormMain.msgQuestion("Deseja atualizar os gráficos?", "Aviso") Then
+            FormMain.Setup()
+        End If
     End Sub
 
 End Class
