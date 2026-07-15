@@ -32,8 +32,8 @@
         timerRefresh.Start()
         timerCount.Interval = 1000
         timerCount.Start()
-        FormMain.lbAtualizaEm.Text = "Atualizado em:"
-        FormMain.lbRefresh.Text = My.Settings.lastView
+        'FormMain.lbAtualizaEm.Text = "Atualizado em:"
+        ' FormMain.lbRefresh.Text = My.Settings.lastView
 
         FormMain.remainingtimeInSeconds = timerRefresh.Interval / 1000
 

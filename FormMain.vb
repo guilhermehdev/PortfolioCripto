@@ -102,12 +102,14 @@ Public Class FormMain
             dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
             Adjust()
 
-            lbAtualizaEm.Text = "Atualizado em:"
-            lbRefresh.Location = New Point(125, 7)
-            lbRefresh.Text = My.Settings.lastView
+            If TimerRefresh.Enabled = False Then
+                lbAtualizaEm.Text = "Atualizado em:"
+                lbRefresh.Location = New Point(125, 7)
+                lbRefresh.Text = My.Settings.lastView
+            End If
 
-            TimerCountdown.Stop()
-            TimerRefresh.Stop()
+            'TimerCountdown.Stop()
+            'TimerRefresh.Stop()
 
             Return True
 
