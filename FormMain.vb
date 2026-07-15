@@ -170,7 +170,9 @@ Public Class FormMain
         remainingtimeInSeconds -= 1
         lbAtualizaEm.Text = "Atualiza em:"
         lbRefresh.Location = New Point(112, 7)
-        lbRefresh.Text = $"{(remainingtimeInSeconds \ 60).ToString("D2")}:{(remainingtimeInSeconds Mod 60).ToString("D2")}"
+        'lbRefresh.Text = $"{(remainingtimeInSeconds \ 60).ToString("D2")}:{(remainingtimeInSeconds Mod 60).ToString("D2")}"
+        Dim ts As TimeSpan = TimeSpan.FromSeconds(remainingtimeInSeconds)
+        lbRefresh.Text = $"{Math.Floor(ts.TotalHours):00}:{ts.Minutes:00}:{ts.Seconds:00}"
     End Sub
 
     Private Sub NotifyIcon1_MouseMove(sender As Object, e As MouseEventArgs) Handles NotifyIcon1.MouseMove
@@ -464,4 +466,8 @@ Public Class FormMain
             End If
         End If
     End Sub
+    Private Sub ExportarPortfolioToolStripMenuItem_Click(sender As Object, e As EventArgs)
+
+    End Sub
+
 End Class

@@ -641,7 +641,7 @@ Partial Class FormMain
         IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
-        IntervaloToolStripMenuItem.Size = New Size(120, 22)
+        IntervaloToolStripMenuItem.Size = New Size(180, 22)
         IntervaloToolStripMenuItem.Text = "Intervalo"
         ' 
         ' JSONToolStripMenuItem
@@ -650,7 +650,7 @@ Partial Class FormMain
         JSONToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem, ExportarToolStripMenuItem, CriptoToolStripMenuItem2})
         JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
-        JSONToolStripMenuItem.Size = New Size(120, 22)
+        JSONToolStripMenuItem.Size = New Size(180, 22)
         JSONToolStripMenuItem.Text = "JSON"
         ' 
         ' ImportarToolStripMenuItem
@@ -659,7 +659,7 @@ Partial Class FormMain
         ImportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {PortfolioToolStripMenuItem, WalletsExchangeToolStripMenuItem})
         ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
-        ImportarToolStripMenuItem.Size = New Size(167, 22)
+        ImportarToolStripMenuItem.Size = New Size(180, 22)
         ImportarToolStripMenuItem.Text = "Portfolio"
         ' 
         ' PortfolioToolStripMenuItem
@@ -667,7 +667,7 @@ Partial Class FormMain
         PortfolioToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         PortfolioToolStripMenuItem.ForeColor = SystemColors.ControlLightLight
         PortfolioToolStripMenuItem.Name = "PortfolioToolStripMenuItem"
-        PortfolioToolStripMenuItem.Size = New Size(120, 22)
+        PortfolioToolStripMenuItem.Size = New Size(180, 22)
         PortfolioToolStripMenuItem.Text = "Importar"
         ' 
         ' WalletsExchangeToolStripMenuItem
@@ -675,7 +675,7 @@ Partial Class FormMain
         WalletsExchangeToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         WalletsExchangeToolStripMenuItem.ForeColor = SystemColors.ControlLightLight
         WalletsExchangeToolStripMenuItem.Name = "WalletsExchangeToolStripMenuItem"
-        WalletsExchangeToolStripMenuItem.Size = New Size(120, 22)
+        WalletsExchangeToolStripMenuItem.Size = New Size(180, 22)
         WalletsExchangeToolStripMenuItem.Text = "Exportar"
         ' 
         ' ExportarToolStripMenuItem
@@ -684,7 +684,7 @@ Partial Class FormMain
         ExportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem1, ExportarToolStripMenuItem1})
         ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        ExportarToolStripMenuItem.Size = New Size(167, 22)
+        ExportarToolStripMenuItem.Size = New Size(180, 22)
         ExportarToolStripMenuItem.Text = "Wallets/Exchange"
         ' 
         ' ImportarToolStripMenuItem1
@@ -709,7 +709,7 @@ Partial Class FormMain
         CriptoToolStripMenuItem2.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem2, ExportarToolStripMenuItem2})
         CriptoToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
         CriptoToolStripMenuItem2.Name = "CriptoToolStripMenuItem2"
-        CriptoToolStripMenuItem2.Size = New Size(167, 22)
+        CriptoToolStripMenuItem2.Size = New Size(180, 22)
         CriptoToolStripMenuItem2.Text = "Cripto"
         ' 
         ' ImportarToolStripMenuItem2
@@ -733,7 +733,7 @@ Partial Class FormMain
         APIToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         APIToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         APIToolStripMenuItem.Name = "APIToolStripMenuItem"
-        APIToolStripMenuItem.Size = New Size(120, 22)
+        APIToolStripMenuItem.Size = New Size(180, 22)
         APIToolStripMenuItem.Text = "API"
         ' 
         ' FecharToolStripMenuItem
