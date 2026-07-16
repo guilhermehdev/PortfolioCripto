@@ -842,10 +842,7 @@ Public Class JSON
             FormMain.addressGraph(addressDic)
 
             ' Controles de UI
-            FormMain.lbLoadFromMarket.Visible = False
-            FormMain.TimerBlink.Stop()
-            FormMain.Cursor = Cursors.Default
-            FormMain.dgPortfolio.Cursor = Cursors.Default
+            hideMarketDataLabel()
             My.Settings.lastView = Date.Now
 
             If currencyCollum = "USD" Then
@@ -864,6 +861,13 @@ Public Class JSON
         End Try
 
     End Function
+
+    Public Shared Sub hideMarketDataLabel()
+        FormMain.lbLoadFromMarket.Visible = False
+        FormMain.TimerBlink.Stop()
+        FormMain.Cursor = Cursors.Default
+        FormMain.dgPortfolio.Cursor = Cursors.Default
+    End Sub
 
     Public Sub FormatGrid(ByVal datagrid As DataGridView)
         Dim fontsize As Int16 = 12

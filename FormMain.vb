@@ -24,39 +24,41 @@ Public Class FormMain
             Return False
         End If
     End Function
-    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        ' Setup()
+    Private Sub Form1_LoadAsync(sender As Object, e As EventArgs) Handles MyBase.Load
+        Setup()
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
 
     Public Async Sub Setup()
         Try
-            chart.removeCharts()
-            lbLoadFromMarket.Visible = True
-            TimerBlink.Start()
-            lbDebug.Clear()
-            lbDebug.AppendText("Status: Conectando...")
-            Cursor = Cursors.WaitCursor
-            dgPortfolio.Cursor = Cursors.WaitCursor
-            If Await Cjson.checkLastUpdateOnJSONBin() Then
+            Await B.SyncBinanceTime()
 
-                If Await Cjson.LoadCriptos(dgPortfolio) Then
-                    lbDebug.Clear()
-                    lbDebug.AppendText("Status: Ok")
-                    dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
-                    Adjust()
-                    lbAtualizaEm.Text = "Atualizado em:"
-                    lbRefresh.Location = New Point(125, 7)
-                    lbRefresh.Text = My.Settings.lastView
-                Else
-                    lbDebug.AppendText("Status: Erro ao carregar o portfólio.")
-                End If
-            Else
-                If Await refreshMarket() Then
-                    lbDebug.Clear()
-                    lbDebug.AppendText("Status: Ok")
-                End If
-            End If
+            chart.removeCharts()
+            ' lbLoadFromMarket.Visible = True
+            'TimerBlink.Start()
+            lbDebug.Clear()
+            ' lbDebug.AppendText("Status: Conectando...")
+            ' Cursor = Cursors.WaitCursor
+            ' dgPortfolio.Cursor = Cursors.WaitCursor
+            ' If Await Cjson.checkLastUpdateOnJSONBin() Then
+
+            'If Await Cjson.LoadCriptos(dgPortfolio) Then
+            '    lbDebug.Clear()
+            '    lbDebug.AppendText("Status: Ok")
+            '    dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
+            '    Adjust()
+            '    lbAtualizaEm.Text = "Atualizado em:"
+            '    lbRefresh.Location = New Point(125, 7)
+            '    lbRefresh.Text = My.Settings.lastView
+            'Else
+            '    lbDebug.AppendText("Status: Erro ao carregar o portfólio.")
+            '    End If
+            ' Else
+            'If Await refreshMarket() Then
+            '        lbDebug.Clear()
+            '        lbDebug.AppendText("Status: Ok")
+            '    End If
+            'End If
 
         Catch ex As Exception
             lbDebug.Clear()
@@ -98,9 +100,16 @@ Public Class FormMain
             TimerBlink.Start()
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
-            Await Cjson.LoadCriptos(dgPortfolio)
-            dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
-            Adjust()
+
+            'Await Cjson.LoadCriptos(dgPortfolio)
+            If Await Cjson.LoadCriptos(dgPortfolio) Then
+                lbDebug.Clear()
+                lbDebug.AppendText("Status: Ok")
+                dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
+                Adjust()
+            Else
+                lbDebug.AppendText("Status: Erro ao carregar o portfólio.")
+            End If
 
             If TimerRefresh.Enabled = False Then
                 lbAtualizaEm.Text = "Atualizado em:"
@@ -116,6 +125,7 @@ Public Class FormMain
         Catch ex As Exception
             lbDebug.Clear()
             lbDebug.AppendText("Erro ao atualizar o mercado: " & ex.Message)
+            JSON.hideMarketDataLabel()
             Return False
         End Try
 
