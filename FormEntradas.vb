@@ -269,7 +269,7 @@ Public Class FormEntradas
         Dim simbolToDelete As ItemKey = CType(bs.Current, ItemKey)
 
         Dim key As String = dgCriptos.SelectedRows.Item(0).Cells(0).Value.ToString()
-        If Await json.DeleteJSONFromBin(key) Then
+        If json.DeleteJSONFromBin(key) Then
             bs.Remove(simbolToDelete)
             'FormEntradas_Load(sender, e)
             loadJSONtoDatagridLocal(dgCriptos)

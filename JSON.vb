@@ -228,7 +228,7 @@ Public Class JSON
             End Try
         End Using
     End Function
-    Public Async Function DeleteJSONFromBin(ByVal key As String) As Task(Of Boolean)
+    Public Function DeleteJSONFromBin(ByVal key As String) As Boolean
         Try
             Dim url As String = JSONBinPut
 
@@ -744,7 +744,7 @@ Public Class JSON
                 Dim x As String = "0 X"
 
                 x = CDec((currValueUSD - initialValueUSD) / initialValueUSD).ToString("N2")
-
+                Debug.WriteLine($"[{symbolUpper}]")
                 ' PASSO 4: Acumular os totais
                 initialValue += initialValueUSD
                 If stablecoins.Contains(symbolUpper) Then

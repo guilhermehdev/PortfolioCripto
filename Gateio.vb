@@ -5,6 +5,14 @@ Imports Newtonsoft.Json.Linq
 Imports System.Globalization
 Public Class Gateio
     Dim gec As New Coingecko
+    Private Shared ReadOnly StableCoins As HashSet(Of String) =
+    New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
+        "USDT",
+        "USDC",
+        "FDUSD",
+        "TUSD",
+        "DAI"
+    }
 
     Public Async Function GATE_GetAssetQty(symbol As String) As Task(Of Decimal)
         Dim endpoint = "/api/v4/spot/accounts"
@@ -70,7 +78,14 @@ Public Class Gateio
     End Function
 
     Public Async Function GATE_GetCoinsPrice(symbol As String) As Task(Of Decimal)
-        Dim pair = $"{symbol.Trim().ToUpper()}_USDT"
+        'Dim pair = $"{symbol.Trim().ToUpper()}_USDT"
+        symbol = symbol.Trim().ToUpper()
+
+        If StableCoins.Contains(symbol) Then
+            Return 1D
+        End If
+
+        Dim pair = $"{symbol}_USDT"
         Dim url = $"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
 
         Dim handler As New HttpClientHandler()
@@ -89,6 +104,9 @@ Public Class Gateio
                 End If
 
                 Dim json = JArray.Parse(Await response.Content.ReadAsStringAsync())
+                If json.Count = 0 Then
+                    Return 0D
+                End If
                 Dim lastPriceStr = json(0)("last").ToString()
                 Return Decimal.Parse(lastPriceStr, CultureInfo.InvariantCulture)
 
