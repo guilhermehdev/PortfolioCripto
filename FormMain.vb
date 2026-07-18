@@ -29,37 +29,35 @@ Public Class FormMain
         lbDataTotalToday.Text = Date.Today & ":"
     End Sub
 
+    Public Sub changeOnOffColor(text As String)
+        Dim palavra As String = text
+        Dim pos As Integer = lbDebug.Text.IndexOf(palavra)
+
+        If pos >= 0 Then
+
+            lbDebug.SelectionStart = pos
+            lbDebug.SelectionLength = palavra.Length
+
+            If palavra = "Online" Then
+                lbDebug.SelectionColor = Color.LimeGreen
+            ElseIf palavra = "Offline" Then
+                lbDebug.SelectionColor = Color.Red
+            ElseIf palavra = "Pronto" Then
+                lbDebug.SelectionColor = Color.Aqua
+            End If
+
+        End If
+
+    End Sub
+
     Public Async Sub Setup()
         Try
             Await B.SyncBinanceTime()
 
             chart.removeCharts()
-            ' lbLoadFromMarket.Visible = True
-            'TimerBlink.Start()
             lbDebug.Clear()
-            ' lbDebug.AppendText("Status: Conectando...")
-            ' Cursor = Cursors.WaitCursor
-            ' dgPortfolio.Cursor = Cursors.WaitCursor
-            ' If Await Cjson.checkLastUpdateOnJSONBin() Then
-
-            'If Await Cjson.LoadCriptos(dgPortfolio) Then
-            '    lbDebug.Clear()
-            '    lbDebug.AppendText("Status: Ok")
-            '    dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
-            '    Adjust()
-            '    lbAtualizaEm.Text = "Atualizado em:"
-            '    lbRefresh.Location = New Point(125, 7)
-            '    lbRefresh.Text = My.Settings.lastView
-            'Else
-            '    lbDebug.AppendText("Status: Erro ao carregar o portfólio.")
-            '    End If
-            ' Else
-            'If Await refreshMarket() Then
-            '        lbDebug.Clear()
-            '        lbDebug.AppendText("Status: Ok")
-            '    End If
-            'End If
-
+            lbDebug.AppendText("Status: Pronto")
+            changeOnOffColor("Pronto")
         Catch ex As Exception
             lbDebug.Clear()
             lbDebug.AppendText("Erro ao carregar o portfólio: " & ex.Message)
@@ -93,7 +91,7 @@ Public Class FormMain
 
     End Sub
 
-    Private Async Function refreshMarket() As Task(Of Boolean)
+    Public Async Function refreshMarket() As Task(Of Boolean)
         Try
             chart.removeCharts()
             lbLoadFromMarket.Visible = True
@@ -104,7 +102,8 @@ Public Class FormMain
             'Await Cjson.LoadCriptos(dgPortfolio)
             If Await Cjson.LoadCriptos(dgPortfolio) Then
                 lbDebug.Clear()
-                lbDebug.AppendText("Status: Ok")
+                lbDebug.AppendText("Status: Online")
+                changeOnOffColor("Online")
                 dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
                 Adjust()
             Else
@@ -124,7 +123,8 @@ Public Class FormMain
 
         Catch ex As Exception
             lbDebug.Clear()
-            lbDebug.AppendText("Erro ao atualizar o mercado: " & ex.Message)
+            lbDebug.AppendText("Offline - Erro ao atualizar o mercado: " & ex.Message)
+            changeOnOffColor("Offline")
             JSON.hideMarketDataLabel()
             Return False
         End Try

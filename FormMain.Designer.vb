@@ -154,7 +154,7 @@ Partial Class FormMain
         dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgPortfolio.ScrollBars = ScrollBars.Vertical
         dgPortfolio.SelectionMode = DataGridViewSelectionMode.CellSelect
-        dgPortfolio.Size = New Size(1154, 360)
+        dgPortfolio.Size = New Size(1167, 360)
         dgPortfolio.TabIndex = 11
         ' 
         ' PanelProfits
@@ -166,7 +166,7 @@ Partial Class FormMain
         PanelProfits.Controls.Add(Label5)
         PanelProfits.Location = New Point(0, 597)
         PanelProfits.Name = "PanelProfits"
-        PanelProfits.Size = New Size(1154, 35)
+        PanelProfits.Size = New Size(1167, 35)
         PanelProfits.TabIndex = 15
         ' 
         ' Label15
@@ -189,7 +189,7 @@ Partial Class FormMain
         lbTotalBRL.ForeColor = Color.Lime
         lbTotalBRL.Location = New Point(5, 1)
         lbTotalBRL.Name = "lbTotalBRL"
-        lbTotalBRL.Size = New Size(1145, 29)
+        lbTotalBRL.Size = New Size(1158, 29)
         lbTotalBRL.TabIndex = 16
         lbTotalBRL.Text = "R$ 0,00"
         lbTotalBRL.TextAlign = ContentAlignment.MiddleCenter
@@ -212,7 +212,7 @@ Partial Class FormMain
         lbLoadFromMarket.BackColor = Color.Transparent
         lbLoadFromMarket.Font = New Font("Segoe UI", 9F, FontStyle.Italic)
         lbLoadFromMarket.ForeColor = Color.OrangeRed
-        lbLoadFromMarket.Location = New Point(488, 4)
+        lbLoadFromMarket.Location = New Point(494, 4)
         lbLoadFromMarket.Name = "lbLoadFromMarket"
         lbLoadFromMarket.Size = New Size(178, 15)
         lbLoadFromMarket.TabIndex = 0
@@ -231,7 +231,7 @@ Partial Class FormMain
         Panel1.Controls.Add(lbBTC)
         Panel1.Controls.Add(Label1)
         Panel1.Controls.Add(lbDolar)
-        Panel1.Location = New Point(477, -1)
+        Panel1.Location = New Point(490, -1)
         Panel1.Name = "Panel1"
         Panel1.Size = New Size(673, 29)
         Panel1.TabIndex = 22
@@ -577,7 +577,7 @@ Partial Class FormMain
         PanelGraphs.Controls.Add(lbValoresHojeUSD)
         PanelGraphs.Location = New Point(0, 410)
         PanelGraphs.Name = "PanelGraphs"
-        PanelGraphs.Size = New Size(1154, 186)
+        PanelGraphs.Size = New Size(1167, 186)
         PanelGraphs.TabIndex = 32
         ' 
         ' lbCaixaBRL
@@ -609,7 +609,7 @@ Partial Class FormMain
         Panel2.Controls.Add(lbLoadFromMarket)
         Panel2.Location = New Point(0, 385)
         Panel2.Name = "Panel2"
-        Panel2.Size = New Size(1154, 25)
+        Panel2.Size = New Size(1167, 25)
         Panel2.TabIndex = 33
         ' 
         ' CadastroToolStripMenuItem
@@ -641,7 +641,7 @@ Partial Class FormMain
         IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
-        IntervaloToolStripMenuItem.Size = New Size(180, 22)
+        IntervaloToolStripMenuItem.Size = New Size(120, 22)
         IntervaloToolStripMenuItem.Text = "Intervalo"
         ' 
         ' JSONToolStripMenuItem
@@ -650,7 +650,7 @@ Partial Class FormMain
         JSONToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem, ExportarToolStripMenuItem, CriptoToolStripMenuItem2})
         JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
-        JSONToolStripMenuItem.Size = New Size(180, 22)
+        JSONToolStripMenuItem.Size = New Size(120, 22)
         JSONToolStripMenuItem.Text = "JSON"
         ' 
         ' ImportarToolStripMenuItem
@@ -659,7 +659,7 @@ Partial Class FormMain
         ImportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {PortfolioToolStripMenuItem, WalletsExchangeToolStripMenuItem})
         ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
-        ImportarToolStripMenuItem.Size = New Size(180, 22)
+        ImportarToolStripMenuItem.Size = New Size(167, 22)
         ImportarToolStripMenuItem.Text = "Portfolio"
         ' 
         ' PortfolioToolStripMenuItem
@@ -667,7 +667,7 @@ Partial Class FormMain
         PortfolioToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         PortfolioToolStripMenuItem.ForeColor = SystemColors.ControlLightLight
         PortfolioToolStripMenuItem.Name = "PortfolioToolStripMenuItem"
-        PortfolioToolStripMenuItem.Size = New Size(180, 22)
+        PortfolioToolStripMenuItem.Size = New Size(120, 22)
         PortfolioToolStripMenuItem.Text = "Importar"
         ' 
         ' WalletsExchangeToolStripMenuItem
@@ -675,7 +675,7 @@ Partial Class FormMain
         WalletsExchangeToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         WalletsExchangeToolStripMenuItem.ForeColor = SystemColors.ControlLightLight
         WalletsExchangeToolStripMenuItem.Name = "WalletsExchangeToolStripMenuItem"
-        WalletsExchangeToolStripMenuItem.Size = New Size(180, 22)
+        WalletsExchangeToolStripMenuItem.Size = New Size(120, 22)
         WalletsExchangeToolStripMenuItem.Text = "Exportar"
         ' 
         ' ExportarToolStripMenuItem
@@ -684,7 +684,7 @@ Partial Class FormMain
         ExportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem1, ExportarToolStripMenuItem1})
         ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        ExportarToolStripMenuItem.Size = New Size(180, 22)
+        ExportarToolStripMenuItem.Size = New Size(167, 22)
         ExportarToolStripMenuItem.Text = "Wallets/Exchange"
         ' 
         ' ImportarToolStripMenuItem1
@@ -709,7 +709,7 @@ Partial Class FormMain
         CriptoToolStripMenuItem2.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem2, ExportarToolStripMenuItem2})
         CriptoToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
         CriptoToolStripMenuItem2.Name = "CriptoToolStripMenuItem2"
-        CriptoToolStripMenuItem2.Size = New Size(180, 22)
+        CriptoToolStripMenuItem2.Size = New Size(167, 22)
         CriptoToolStripMenuItem2.Text = "Cripto"
         ' 
         ' ImportarToolStripMenuItem2
@@ -733,7 +733,7 @@ Partial Class FormMain
         APIToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         APIToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         APIToolStripMenuItem.Name = "APIToolStripMenuItem"
-        APIToolStripMenuItem.Size = New Size(180, 22)
+        APIToolStripMenuItem.Size = New Size(120, 22)
         APIToolStripMenuItem.Text = "API"
         ' 
         ' FecharToolStripMenuItem
@@ -749,7 +749,7 @@ Partial Class FormMain
         MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, OpçõesToolStripMenuItem, FecharToolStripMenuItem})
         MenuStrip1.Location = New Point(0, 0)
         MenuStrip1.Name = "MenuStrip1"
-        MenuStrip1.Size = New Size(1154, 24)
+        MenuStrip1.Size = New Size(1167, 24)
         MenuStrip1.TabIndex = 10
         MenuStrip1.Text = "MenuStrip1"
         ' 
@@ -797,7 +797,7 @@ Partial Class FormMain
         panelDebug.Dock = DockStyle.Bottom
         panelDebug.Location = New Point(0, 632)
         panelDebug.Name = "panelDebug"
-        panelDebug.Size = New Size(1154, 35)
+        panelDebug.Size = New Size(1167, 35)
         panelDebug.TabIndex = 18
         ' 
         ' lbDebug
@@ -805,7 +805,7 @@ Partial Class FormMain
         lbDebug.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         lbDebug.BackColor = SystemColors.MenuText
         lbDebug.BorderStyle = BorderStyle.None
-        lbDebug.Font = New Font("Calibri", 9.75F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        lbDebug.Font = New Font("Verdana", 11F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
         lbDebug.ForeColor = Color.White
         lbDebug.ImeMode = ImeMode.Disable
         lbDebug.Location = New Point(5, 5)
@@ -813,7 +813,7 @@ Partial Class FormMain
         lbDebug.Name = "lbDebug"
         lbDebug.ReadOnly = True
         lbDebug.ScrollBars = RichTextBoxScrollBars.Vertical
-        lbDebug.Size = New Size(1145, 26)
+        lbDebug.Size = New Size(1158, 26)
         lbDebug.TabIndex = 0
         lbDebug.Text = ""
         ' 
@@ -822,7 +822,7 @@ Partial Class FormMain
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        ClientSize = New Size(1154, 667)
+        ClientSize = New Size(1167, 667)
         Controls.Add(dgPortfolio)
         Controls.Add(PanelGraphs)
         Controls.Add(panelDebug)

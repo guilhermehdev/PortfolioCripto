@@ -303,9 +303,9 @@ Public Class FormEntradas
     Private Sub dgCriptos_MouseDown(sender As Object, e As MouseEventArgs) Handles dgCriptos.MouseDown
         json.captureRightClick(dgCriptos, e)
     End Sub
-    Private Sub FormEntradas_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed
+    Private Async Sub FormEntradas_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed
         If FormMain.msgQuestion("Deseja atualizar os gráficos?", "Aviso") Then
-            FormMain.Setup()
+            Await FormMain.refreshMarket()
         End If
     End Sub
 
