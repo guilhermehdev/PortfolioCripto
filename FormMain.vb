@@ -1079,16 +1079,209 @@ Public Class FormMain
     End Sub
 
     Private Sub dgPortfolio_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgPortfolio.CellFormatting
-        Dim dgv = DirectCast(sender, DataGridView)
-
-        If dgv.Columns(e.ColumnIndex).Name = "24horas" AndAlso e.Value IsNot Nothing Then
-            Dim valorDecimal As Decimal
-
-            ' Garante conversão segura
-            If Decimal.TryParse(e.Value.ToString().Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, valorDecimal) Then
-                e.Value = $"{valorDecimal:F2}%"
-            End If
+        If e.RowIndex < 0 OrElse e.ColumnIndex < 0 Then
+            Return
         End If
+
+        Dim dgv = DirectCast(sender, DataGridView)
+        Dim row = dgv.Rows(e.RowIndex)
+
+        If e.Value Is Nothing OrElse e.Value Is DBNull.Value Then
+            Return
+        End If
+
+        Dim valor As Decimal
+
+        Select Case dgv.Columns(e.ColumnIndex).Name
+
+        ' ==========================================
+        ' QTD
+        ' ==========================================
+            Case "Qtd"
+
+                If Decimal.TryParse(
+                    e.Value.ToString(),
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    valor) Then
+
+                    e.Value = valor.ToString("N2")
+                    e.FormattingApplied = True
+
+                End If
+
+        ' ==========================================
+        ' PREÇO MÉDIO
+        ' ==========================================
+            Case "precoMedio"
+
+                If Decimal.TryParse(
+                    e.Value.ToString(),
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    valor) Then
+
+                    e.Value =
+                        valor.ToString(
+                            "C2",
+                            CultureInfo.GetCultureInfo("en-US"))
+
+                    e.FormattingApplied = True
+
+                End If
+
+        ' ==========================================
+        ' PREÇO ATUAL
+        ' ==========================================
+            Case "precoAtual"
+
+                If Decimal.TryParse(
+                    e.Value.ToString(),
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    valor) Then
+
+                    e.Value =
+                        valor.ToString(
+                            "C2",
+                            CultureInfo.GetCultureInfo("en-US"))
+
+                    e.FormattingApplied = True
+
+                    ' Compara preço atual x preço médio
+                    Dim precoMedio As Decimal
+
+                    If Decimal.TryParse(
+                        row.Cells("precoMedio").Value?.ToString(),
+                        NumberStyles.Any,
+                        CultureInfo.InvariantCulture,
+                        precoMedio) Then
+
+                        If valor > precoMedio Then
+
+                            e.CellStyle.ForeColor =
+                                Color.LightGreen
+
+                        ElseIf valor < precoMedio Then
+
+                            e.CellStyle.ForeColor =
+                                Color.LightCoral
+
+                        Else
+
+                            e.CellStyle.ForeColor =
+                                Color.WhiteSmoke
+
+                        End If
+
+                    End If
+
+                End If
+
+        ' ==========================================
+        ' 24 HORAS
+        ' ==========================================
+            Case "24horas"
+
+                Dim texto As String =
+                    e.Value.ToString().
+                    Replace("%", "").
+                    Replace(",", ".")
+
+                If Decimal.TryParse(
+                    texto,
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    valor) Then
+
+                    e.Value =
+                        $"{valor:F2}%"
+
+                    If valor > 0D Then
+
+                        e.CellStyle.ForeColor =
+                            Color.LightGreen
+
+                    ElseIf valor < 0D Then
+
+                        e.CellStyle.ForeColor =
+                            Color.LightCoral
+
+                    Else
+
+                        e.CellStyle.ForeColor =
+                            Color.WhiteSmoke
+
+                    End If
+
+                    e.FormattingApplied = True
+
+                End If
+
+        ' ==========================================
+        ' MARKET CAP
+        ' ==========================================
+            Case "marketcap"
+
+                If Decimal.TryParse(
+                    e.Value.ToString(),
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    valor) Then
+
+                    e.Value =
+                        valor.ToString(
+                            "C2",
+                            CultureInfo.GetCultureInfo("en-US"))
+
+                    e.CellStyle.ForeColor =
+                        Color.WhiteSmoke
+
+                    e.FormattingApplied = True
+
+                End If
+
+        ' ==========================================
+        ' QUANTIA ATUAL USD
+        ' ==========================================
+            Case "vlAtualUSD"
+
+                If Decimal.TryParse(
+                    e.Value.ToString(),
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    valor) Then
+
+                    e.Value =
+                        valor.ToString(
+                            "C2",
+                            CultureInfo.GetCultureInfo("en-US"))
+
+                    e.FormattingApplied = True
+
+                End If
+
+        ' ==========================================
+        ' QUANTIA ATUAL BRL
+        ' ==========================================
+            Case "vlAtualBRL"
+
+                If Decimal.TryParse(
+                    e.Value.ToString(),
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    valor) Then
+
+                    e.Value =
+                        valor.ToString(
+                            "C2",
+                            CultureInfo.GetCultureInfo("pt-BR"))
+
+                    e.FormattingApplied = True
+
+                End If
+
+        End Select
     End Sub
     Private Sub ImpermanetLossToolStripMenuItem_Click(sender As Object, e As EventArgs)
         FormPools.Show()
