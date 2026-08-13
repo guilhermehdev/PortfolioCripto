@@ -14,9 +14,6 @@ Public Class PortfolioDb
 
             cn.Open()
 
-            ' --------------------------------------------------------
-            ' Configurações do SQLite
-            ' --------------------------------------------------------
             Using cmd As SqliteCommand = cn.CreateCommand()
 
                 cmd.CommandText = "PRAGMA journal_mode = WAL;"
@@ -27,9 +24,6 @@ Public Class PortfolioDb
 
             End Using
 
-            ' --------------------------------------------------------
-            ' Tabela principal
-            ' --------------------------------------------------------
             Using cmd As SqliteCommand = cn.CreateCommand()
 
                 cmd.CommandText =
@@ -50,9 +44,6 @@ Public Class PortfolioDb
 
             End Using
 
-            ' --------------------------------------------------------
-            ' Índice Symbol
-            ' --------------------------------------------------------
             Using cmd As SqliteCommand = cn.CreateCommand()
 
                 cmd.CommandText =
@@ -63,9 +54,6 @@ Public Class PortfolioDb
 
             End Using
 
-            ' --------------------------------------------------------
-            ' Índice Wallet
-            ' --------------------------------------------------------
             Using cmd As SqliteCommand = cn.CreateCommand()
 
                 cmd.CommandText =
@@ -79,6 +67,7 @@ Public Class PortfolioDb
         End Using
 
     End Sub
+
     Public Shared Function Exists() As Boolean
         Return File.Exists(DbPath)
     End Function
@@ -100,10 +89,6 @@ Public Class PortfolioDb
         End Using
     End Function
 
-    ''' <summary>
-    ''' Migra o portfolio.json atual para SQLite sem alterar o JSON original.
-    ''' Pode ser executado mais de uma vez sem duplicar registros equivalentes.
-    ''' </summary>
     Public Shared Function MigrateFromJson(jsonPath As String) As Integer
         If Not File.Exists(jsonPath) Then
             Throw New FileNotFoundException("Arquivo portfolio.json não encontrado.", jsonPath)
@@ -118,12 +103,15 @@ Public Class PortfolioDb
             cn.Open()
 
             Using transaction = cn.BeginTransaction()
+
                 For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
+
                     If propertyPair.Value.Type <> JTokenType.Array Then
                         Continue For
                     End If
 
                     For Each item As JToken In propertyPair.Value
+
                         Dim cripto As String = propertyPair.Key
                         Dim symbol As String = item("Symbol")?.ToString()
                         Dim wallet As String = item("Wallet")?.ToString()
@@ -142,7 +130,9 @@ Public Class PortfolioDb
                         Dim lastPrice As Decimal = ReadDecimal(item("LastPrice"))
 
                         Using checkCmd As SqliteCommand = cn.CreateCommand()
+
                             checkCmd.Transaction = transaction
+
                             checkCmd.CommandText =
                                 "SELECT COUNT(1) FROM PortfolioItems " &
                                 "WHERE Cripto = $cripto " &
@@ -162,10 +152,13 @@ Public Class PortfolioDb
                             If Convert.ToInt32(checkCmd.ExecuteScalar(), CultureInfo.InvariantCulture) > 0 Then
                                 Continue For
                             End If
+
                         End Using
 
                         Using insertCmd As SqliteCommand = cn.CreateCommand()
+
                             insertCmd.Transaction = transaction
+
                             insertCmd.CommandText =
                                 "INSERT INTO PortfolioItems " &
                                 "(Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice) " &
@@ -178,15 +171,21 @@ Public Class PortfolioDb
                             insertCmd.Parameters.AddWithValue("$data", If(data, String.Empty))
                             insertCmd.Parameters.AddWithValue("$wallet", wallet)
                             insertCmd.Parameters.AddWithValue("$lastPrice", lastPrice)
+
                             insertCmd.ExecuteNonQuery()
+
                         End Using
 
                         imported += 1
+
                     Next
+
                 Next
 
                 transaction.Commit()
+
             End Using
+
         End Using
 
         Return imported
@@ -201,6 +200,7 @@ Public Class PortfolioDb
             cn.Open()
 
             Using cmd As SqliteCommand = cn.CreateCommand()
+
                 cmd.CommandText =
                     "SELECT Id, Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice, CreatedAt, UpdatedAt " &
                     "FROM PortfolioItems ORDER BY Id;"
@@ -208,7 +208,9 @@ Public Class PortfolioDb
                 Using reader = cmd.ExecuteReader()
                     table.Load(reader)
                 End Using
+
             End Using
+
         End Using
 
         Return table
@@ -221,33 +223,97 @@ Public Class PortfolioDb
             cn.Open()
 
             Using cmd As SqliteCommand = cn.CreateCommand()
+
                 cmd.CommandText =
                     "UPDATE PortfolioItems SET LastPrice = $lastPrice, UpdatedAt = CURRENT_TIMESTAMP " &
                     "WHERE Id = $id;"
 
-                cmd.Parameters.AddWithValue("$lastPrice", lastPrice)
+                cmd.Parameters.AddWithValue("$lastPrice", Convert.ToDouble(lastPrice, CultureInfo.InvariantCulture))
                 cmd.Parameters.AddWithValue("$id", id)
                 cmd.ExecuteNonQuery()
+
             End Using
+
         End Using
     End Sub
 
     Private Shared Function ReadDecimal(token As JToken) As Decimal
+
         If token Is Nothing OrElse token.Type = JTokenType.Null Then
             Return 0D
         End If
 
+        Dim text As String = token.ToString().Trim()
         Dim value As Decimal
 
-        If Decimal.TryParse(token.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, value) Then
-            Return value
+        If String.IsNullOrWhiteSpace(text) Then
+            Return 0D
         End If
 
-        If Decimal.TryParse(token.ToString(), NumberStyles.Any, CultureInfo.GetCultureInfo("pt-BR"), value) Then
-            Return value
+        ' Quando existe apenas vírgula, trata como decimal pt-BR.
+        If text.Contains(",") AndAlso Not text.Contains(".") Then
+
+            If Decimal.TryParse(
+                text,
+                NumberStyles.Any,
+                CultureInfo.GetCultureInfo("pt-BR"),
+                value) Then
+
+                Return value
+            End If
+
+        End If
+
+        ' Quando existe apenas ponto, trata como decimal invariant.
+        If text.Contains(".") AndAlso Not text.Contains(",") Then
+
+            If Decimal.TryParse(
+                text,
+                NumberStyles.Any,
+                CultureInfo.InvariantCulture,
+                value) Then
+
+                Return value
+            End If
+
+        End If
+
+        ' Valores sem separador decimal.
+        If Not text.Contains(",") AndAlso Not text.Contains(".") Then
+
+            If Decimal.TryParse(
+                text,
+                NumberStyles.Any,
+                CultureInfo.InvariantCulture,
+                value) Then
+
+                Return value
+            End If
+
+        End If
+
+        ' Casos com os dois separadores: o último separador é o decimal.
+        If text.Contains(",") AndAlso text.Contains(".") Then
+
+            If text.LastIndexOf(","c) > text.LastIndexOf("."c) Then
+                text = text.Replace(".", String.Empty).Replace(",", ".")
+            Else
+                text = text.Replace(",", String.Empty)
+            End If
+
+            If Decimal.TryParse(
+                text,
+                NumberStyles.Any,
+                CultureInfo.InvariantCulture,
+                value) Then
+
+                Return value
+            End If
+
         End If
 
         Return 0D
+
     End Function
 
 End Class
