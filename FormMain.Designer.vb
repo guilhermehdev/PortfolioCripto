@@ -154,7 +154,7 @@ Partial Class FormMain
         dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgPortfolio.ScrollBars = ScrollBars.Vertical
         dgPortfolio.SelectionMode = DataGridViewSelectionMode.CellSelect
-        dgPortfolio.Size = New Size(1167, 360)
+        dgPortfolio.Size = New Size(1167, 378)
         dgPortfolio.TabIndex = 11
         ' 
         ' PanelProfits
@@ -164,9 +164,9 @@ Partial Class FormMain
         PanelProfits.Controls.Add(Label15)
         PanelProfits.Controls.Add(lbTotalBRL)
         PanelProfits.Controls.Add(Label5)
-        PanelProfits.Location = New Point(0, 597)
+        PanelProfits.Location = New Point(0, 611)
         PanelProfits.Name = "PanelProfits"
-        PanelProfits.Size = New Size(1167, 35)
+        PanelProfits.Size = New Size(1167, 40)
         PanelProfits.TabIndex = 15
         ' 
         ' Label15
@@ -176,7 +176,7 @@ Partial Class FormMain
         Label15.BackColor = Color.Transparent
         Label15.Font = New Font("Candara", 14F, FontStyle.Bold)
         Label15.ForeColor = Color.LawnGreen
-        Label15.Location = New Point(5, 7)
+        Label15.Location = New Point(5, 12)
         Label15.Name = "Label15"
         Label15.Size = New Size(43, 23)
         Label15.TabIndex = 17
@@ -189,7 +189,7 @@ Partial Class FormMain
         lbTotalBRL.ForeColor = Color.Lime
         lbTotalBRL.Location = New Point(5, 1)
         lbTotalBRL.Name = "lbTotalBRL"
-        lbTotalBRL.Size = New Size(1158, 29)
+        lbTotalBRL.Size = New Size(1158, 37)
         lbTotalBRL.TabIndex = 16
         lbTotalBRL.Text = "R$ 0,00"
         lbTotalBRL.TextAlign = ContentAlignment.MiddleCenter
@@ -575,9 +575,9 @@ Partial Class FormMain
         PanelGraphs.Controls.Add(lbValoresHojeBRL)
         PanelGraphs.Controls.Add(lbRoiUSD)
         PanelGraphs.Controls.Add(lbValoresHojeUSD)
-        PanelGraphs.Location = New Point(0, 410)
+        PanelGraphs.Location = New Point(0, 428)
         PanelGraphs.Name = "PanelGraphs"
-        PanelGraphs.Size = New Size(1167, 186)
+        PanelGraphs.Size = New Size(1167, 184)
         PanelGraphs.TabIndex = 32
         ' 
         ' lbCaixaBRL
@@ -607,7 +607,7 @@ Partial Class FormMain
         ' 
         Panel2.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Panel2.Controls.Add(lbLoadFromMarket)
-        Panel2.Location = New Point(0, 385)
+        Panel2.Location = New Point(0, 406)
         Panel2.Name = "Panel2"
         Panel2.Size = New Size(1167, 25)
         Panel2.TabIndex = 33
@@ -795,9 +795,9 @@ Partial Class FormMain
         panelDebug.BackColor = Color.Black
         panelDebug.Controls.Add(lbDebug)
         panelDebug.Dock = DockStyle.Bottom
-        panelDebug.Location = New Point(0, 632)
+        panelDebug.Location = New Point(0, 653)
         panelDebug.Name = "panelDebug"
-        panelDebug.Size = New Size(1167, 35)
+        panelDebug.Size = New Size(1167, 53)
         panelDebug.TabIndex = 18
         ' 
         ' lbDebug
@@ -808,12 +808,12 @@ Partial Class FormMain
         lbDebug.Font = New Font("Verdana", 11F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
         lbDebug.ForeColor = Color.White
         lbDebug.ImeMode = ImeMode.Disable
-        lbDebug.Location = New Point(5, 5)
+        lbDebug.Location = New Point(5, 8)
         lbDebug.Margin = New Padding(2, 3, 3, 3)
         lbDebug.Name = "lbDebug"
         lbDebug.ReadOnly = True
         lbDebug.ScrollBars = RichTextBoxScrollBars.Vertical
-        lbDebug.Size = New Size(1158, 26)
+        lbDebug.Size = New Size(1158, 45)
         lbDebug.TabIndex = 0
         lbDebug.Text = ""
         ' 
@@ -822,7 +822,7 @@ Partial Class FormMain
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        ClientSize = New Size(1167, 667)
+        ClientSize = New Size(1167, 706)
         Controls.Add(dgPortfolio)
         Controls.Add(PanelGraphs)
         Controls.Add(panelDebug)

@@ -122,6 +122,10 @@ Public Class FormMain
 
             Dim symbols As New List(Of String)
 
+            Debug.WriteLine(
+    "[WS] Símbolos Binance: " &
+    String.Join(", ", symbols))
+
             For Each row As DataGridViewRow In dgPortfolio.Rows
 
                 If row.IsNewRow Then
@@ -467,23 +471,22 @@ Public Class FormMain
     symbol As String,
     price As Decimal)
 
+        Debug.WriteLine(
+        $"[WS RECEBIDO] {symbol} = {price.ToString(CultureInfo.InvariantCulture)}")
+
         If Me.InvokeRequired Then
 
             Me.BeginInvoke(
             New Action(
                 Sub()
-                    UpdateBinanceRow(
-                        symbol,
-                        price)
+                    UpdateBinanceRow(symbol, price)
                 End Sub))
 
             Return
 
         End If
 
-        UpdateBinanceRow(
-        symbol,
-        price)
+        UpdateBinanceRow(symbol, price)
 
     End Sub
 
@@ -521,13 +524,14 @@ Public Class FormMain
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
 
-            'Await Cjson.LoadCriptos(dgPortfolio)
             If Await Cjson.LoadCriptos(dgPortfolio) Then
+
                 Await StartBinanceWebSocket()
-                lbDebug.Clear()
-                lbDebug.AppendText("Status: Online")
-                changeOnOffColor("Online")
-                dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
+
+                dgPortfolio.Sort(
+        dgPortfolio.Columns("ROIusd"),
+        System.ComponentModel.ListSortDirection.Descending)
+
                 Adjust()
             Else
                 lbDebug.AppendText("Status: Erro ao carregar o portfólio.")
@@ -617,8 +621,8 @@ Public Class FormMain
     Private Sub Adjust()
         lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
         PanelGraphs.Width = Me.Width
-        dgPortfolio.Height = (dgPortfolio.RowCount * 35)
-        Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + panelDebug.Height + 65
+        'dgPortfolio.Height = (dgPortfolio.RowCount * 35)
+        ' Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + panelDebug.Height + 65
     End Sub
 
     Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter
