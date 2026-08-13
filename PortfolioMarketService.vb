@@ -294,8 +294,6 @@ Public NotInheritable Class PortfolioMarketService
             FormMain.lbPercentInvestido.Text = $"{percentInvested:F2}%"
 
             datagrid.DataSource = newDT
-            formatter.FormatGrid(datagrid)
-
             If criptoDic.Count > 0 Then
                 FormMain.criptoGraph(criptoDic)
             End If
@@ -312,6 +310,8 @@ Public NotInheritable Class PortfolioMarketService
             ElseIf currencyColumn = "BRL" Then
                 FormMain.showBRLCollumns()
             End If
+
+            formatter.FormatGrid(datagrid)
 
             Return True
 
