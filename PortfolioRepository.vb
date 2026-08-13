@@ -21,7 +21,6 @@ Public NotInheritable Class PortfolioRepository
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText = "PRAGMA journal_mode = WAL;"
                 command.ExecuteNonQuery()
-
                 command.CommandText = "PRAGMA foreign_keys = ON;"
                 command.ExecuteNonQuery()
             End Using
@@ -94,7 +93,6 @@ Public NotInheritable Class PortfolioRepository
 
         Using connection As New SqliteConnection(ConnectionString)
             connection.Open()
-
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText = "SELECT COUNT(1) FROM PortfolioItems;"
                 Return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture)
@@ -149,20 +147,14 @@ Public NotInheritable Class PortfolioRepository
                         findCommand.Parameters.AddWithValue("$data", data)
 
                         Dim result = findCommand.ExecuteScalar()
-
                         If result IsNot Nothing AndAlso result IsNot DBNull.Value Then
                             existingId = Convert.ToInt64(result, CultureInfo.InvariantCulture)
                         End If
                     End Using
 
-                    Dim initialPriceText As String =
-                        initialPrice.ToString("G29", CultureInfo.InvariantCulture)
-
-                    Dim quantityText As String =
-                        quantity.ToString("G29", CultureInfo.InvariantCulture)
-
-                    Dim lastPriceText As String =
-                        lastPrice.ToString("G29", CultureInfo.InvariantCulture)
+                    Dim initialPriceText As String = initialPrice.ToString("G29", CultureInfo.InvariantCulture)
+                    Dim quantityText As String = quantity.ToString("G29", CultureInfo.InvariantCulture)
+                    Dim lastPriceText As String = lastPrice.ToString("G29", CultureInfo.InvariantCulture)
 
                     If existingId > 0 Then
                         Using updateCommand As SqliteCommand = connection.CreateCommand()
@@ -171,7 +163,7 @@ Public NotInheritable Class PortfolioRepository
                                 "UPDATE PortfolioItems SET " &
                                 "InitialPrice = $initialPrice, " &
                                 "Quantity = $quantity, " &
-                                "LastPrice = $lastPrice, " &
+                                "LastPrice = CAST($lastPrice AS REAL), " &
                                 "UpdatedAt = CURRENT_TIMESTAMP " &
                                 "WHERE Id = $id;"
 
@@ -183,36 +175,26 @@ Public NotInheritable Class PortfolioRepository
                         End Using
                     Else
                         Using insertCommand As SqliteCommand = connection.CreateCommand()
-
                             insertCommand.Transaction = transaction
-
                             insertCommand.CommandText =
-        "INSERT INTO PortfolioItems " &
-        "(Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice) " &
-        "VALUES ($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, $lastPrice);"
+                                "INSERT INTO PortfolioItems " &
+                                "(Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice) " &
+                                "VALUES ($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, CAST($lastPrice AS REAL));"
 
                             insertCommand.Parameters.AddWithValue("$cripto", cripto)
                             insertCommand.Parameters.AddWithValue("$symbol", symbol)
-                            insertCommand.Parameters.AddWithValue("$initialPrice", initialPrice)
-                            insertCommand.Parameters.AddWithValue("$quantity", quantity)
+                            insertCommand.Parameters.AddWithValue("$initialPrice", initialPriceText)
+                            insertCommand.Parameters.AddWithValue("$quantity", quantityText)
                             insertCommand.Parameters.AddWithValue("$data", data)
                             insertCommand.Parameters.AddWithValue("$wallet", wallet)
-                            insertCommand.Parameters.AddWithValue("$lastPrice", lastPrice)
-
+                            insertCommand.Parameters.AddWithValue("$lastPrice", lastPriceText)
                             insertCommand.ExecuteNonQuery()
-
                         End Using
 
-                        ' Recupera o ID gerado pelo SQLite
                         Using idCommand As SqliteCommand = connection.CreateCommand()
-
                             idCommand.Transaction = transaction
                             idCommand.CommandText = "SELECT last_insert_rowid();"
-
-                            existingId = Convert.ToInt64(
-        idCommand.ExecuteScalar(),
-        CultureInfo.InvariantCulture)
-
+                            existingId = Convert.ToInt64(idCommand.ExecuteScalar(), CultureInfo.InvariantCulture)
                         End Using
                     End If
 
@@ -236,17 +218,14 @@ Public NotInheritable Class PortfolioRepository
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
                     "UPDATE PortfolioItems SET " &
-                    "LastPrice = $lastPrice, " &
+                    "LastPrice = CAST($lastPrice AS REAL), " &
                     "UpdatedAt = CURRENT_TIMESTAMP " &
                     "WHERE Id = $id;"
 
-                ' Microsoft.Data.Sqlite não possui Decimal nativo no SQLite.
-                ' Gravamos explicitamente em formato invariant para não transformar
-                ' 2.60 em 260 em ambientes pt-BR.
-                Dim lastPriceText As String =
-                    lastPrice.ToString("G29", CultureInfo.InvariantCulture)
+                command.Parameters.AddWithValue(
+                    "$lastPrice",
+                    lastPrice.ToString("G29", CultureInfo.InvariantCulture))
 
-                command.Parameters.AddWithValue("$lastPrice", lastPriceText)
                 command.Parameters.AddWithValue("$id", id)
                 command.ExecuteNonQuery()
             End Using
@@ -258,7 +237,6 @@ Public NotInheritable Class PortfolioRepository
 
         Using connection As New SqliteConnection(ConnectionString)
             connection.Open()
-
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText = "DELETE FROM PortfolioItems WHERE Id = $id;"
                 command.Parameters.AddWithValue("$id", id)
