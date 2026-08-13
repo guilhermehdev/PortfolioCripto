@@ -6,7 +6,7 @@ Public Class FormEntradas
     Dim json As New JSON
     Dim bs As New BindingSource()
 
-    Private Async Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
+    Private Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
 
         Try
 
@@ -59,12 +59,6 @@ Public Class FormEntradas
 
                 MsgBox("Salvo!")
                 LoadPortfolioGrid(dgCriptos)
-
-                If FormMain IsNot Nothing Then
-                    FormMain.lbDebug.AppendText(
-                        Environment.NewLine &
-                        "Portfolio salvo no SQLite.")
-                End If
 
             End If
 
@@ -305,16 +299,15 @@ Public Class FormEntradas
                     row.Cells("Quantity").Value).
                 ToString("G29", CultureInfo.GetCultureInfo("pt-BR"))
 
+            Dim dataValue As DateTime
+
             If DateTime.TryParse(
                 row.Cells("Data").Value?.ToString(),
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.None,
-                Nothing) Then
+                dataValue) Then
 
-                dtpDataEntrada.Value =
-                    DateTime.Parse(
-                        row.Cells("Data").Value.ToString(),
-                        CultureInfo.InvariantCulture)
+                dtpDataEntrada.Value = dataValue
 
             End If
 
