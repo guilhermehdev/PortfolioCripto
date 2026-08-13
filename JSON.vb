@@ -1617,8 +1617,94 @@ Public Class JSON
 
 
     End Sub
-    Public Function decimalBR(valor As String)
-        Return Decimal.Parse(valor, CultureInfo.InvariantCulture)
+    'Public Function decimalBR(valor As String)
+    '    Return Decimal.Parse(valor, CultureInfo.InvariantCulture)
+    'End Function
+    Public Function decimalBR(valor As String) As Decimal
+
+        If String.IsNullOrWhiteSpace(valor) Then
+            Return 0D
+        End If
+
+        Dim texto As String = valor.Trim()
+
+        Dim resultado As Decimal
+
+        ' Apenas vírgula: decimal brasileiro
+        If texto.Contains(",") AndAlso Not texto.Contains(".") Then
+
+            If Decimal.TryParse(
+            texto,
+            NumberStyles.Any,
+            CultureInfo.GetCultureInfo("pt-BR"),
+            resultado) Then
+
+                Return resultado
+
+            End If
+
+        End If
+
+        ' Apenas ponto: decimal padrão de APIs
+        If texto.Contains(".") AndAlso Not texto.Contains(",") Then
+
+            If Decimal.TryParse(
+            texto,
+            NumberStyles.Any,
+            CultureInfo.InvariantCulture,
+            resultado) Then
+
+                Return resultado
+
+            End If
+
+        End If
+
+        ' Sem separador
+        If Not texto.Contains(",") AndAlso Not texto.Contains(".") Then
+
+            If Decimal.TryParse(
+            texto,
+            NumberStyles.Any,
+            CultureInfo.InvariantCulture,
+            resultado) Then
+
+                Return resultado
+
+            End If
+
+        End If
+
+        ' Possui os dois separadores
+        If texto.Contains(",") AndAlso texto.Contains(".") Then
+
+            If texto.LastIndexOf(","c) > texto.LastIndexOf("."c) Then
+
+                ' 1.234,56
+                texto = texto.Replace(".", "")
+                texto = texto.Replace(",", ".")
+
+            Else
+
+                ' 1,234.56
+                texto = texto.Replace(",", "")
+
+            End If
+
+            If Decimal.TryParse(
+            texto,
+            NumberStyles.Any,
+            CultureInfo.InvariantCulture,
+            resultado) Then
+
+                Return resultado
+
+            End If
+
+        End If
+
+        Return 0D
+
     End Function
     Public Function USDformat(ByVal value As Decimal)
         Return value.ToString("C", New CultureInfo("en-US"))
