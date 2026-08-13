@@ -13,29 +13,24 @@ Public Class PortfolioDb
             cn.Open()
 
             Using cmd As SqliteCommand = cn.CreateCommand()
-                cmd.CommandText = """
-                    PRAGMA journal_mode = WAL;
-                    PRAGMA foreign_keys = ON;
+                cmd.CommandText =
+                    "PRAGMA journal_mode = WAL;" & Environment.NewLine &
+                    "PRAGMA foreign_keys = ON;" & Environment.NewLine &
+                    "CREATE TABLE IF NOT EXISTS PortfolioItems (" &
+                    "Id INTEGER PRIMARY KEY AUTOINCREMENT," &
+                    "Cripto TEXT NOT NULL," &
+                    "Symbol TEXT NOT NULL," &
+                    "InitialPrice NUMERIC NOT NULL DEFAULT 0," &
+                    "Quantity NUMERIC NOT NULL DEFAULT 0," &
+                    "Data TEXT," &
+                    "Wallet TEXT NOT NULL," &
+                    "LastPrice NUMERIC NOT NULL DEFAULT 0," &
+                    "CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP," &
+                    "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
+                    ");" & Environment.NewLine &
+                    "CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Symbol ON PortfolioItems(Symbol);" & Environment.NewLine &
+                    "CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Wallet ON PortfolioItems(Wallet);"
 
-                    CREATE TABLE IF NOT EXISTS PortfolioItems (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        Cripto TEXT NOT NULL,
-                        Symbol TEXT NOT NULL,
-                        InitialPrice NUMERIC NOT NULL DEFAULT 0,
-                        Quantity NUMERIC NOT NULL DEFAULT 0,
-                        Data TEXT,
-                        Wallet TEXT NOT NULL,
-                        LastPrice NUMERIC NOT NULL DEFAULT 0,
-                        CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    );
-
-                    CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Symbol
-                        ON PortfolioItems(Symbol);
-
-                    CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Wallet
-                        ON PortfolioItems(Wallet);
-                """
                 cmd.ExecuteNonQuery()
             End Using
         End Using
@@ -64,7 +59,7 @@ Public Class PortfolioDb
 
     ''' <summary>
     ''' Migra o portfolio.json atual para SQLite sem alterar o JSON original.
-    ''' Pode ser executado mais de uma vez sem duplicar os registros.
+    ''' Pode ser executado mais de uma vez sem duplicar registros equivalentes.
     ''' </summary>
     Public Shared Function MigrateFromJson(jsonPath As String) As Integer
         If Not File.Exists(jsonPath) Then
@@ -105,22 +100,21 @@ Public Class PortfolioDb
 
                         Using checkCmd As SqliteCommand = cn.CreateCommand()
                             checkCmd.Transaction = transaction
-                            checkCmd.CommandText = """
-                                SELECT COUNT(1)
-                                FROM PortfolioItems
-                                WHERE Cripto = $cripto
-                                  AND Symbol = $symbol
-                                  AND Wallet = $wallet
-                                  AND Quantity = $quantity
-                                  AND InitialPrice = $initialPrice
-                                  AND COALESCE(Data, '') = COALESCE($data, '')
-                            """
+                            checkCmd.CommandText =
+                                "SELECT COUNT(1) FROM PortfolioItems " &
+                                "WHERE Cripto = $cripto " &
+                                "AND Symbol = $symbol " &
+                                "AND Wallet = $wallet " &
+                                "AND Quantity = $quantity " &
+                                "AND InitialPrice = $initialPrice " &
+                                "AND COALESCE(Data, '') = COALESCE($data, '');"
+
                             checkCmd.Parameters.AddWithValue("$cripto", cripto)
                             checkCmd.Parameters.AddWithValue("$symbol", symbol)
                             checkCmd.Parameters.AddWithValue("$wallet", wallet)
                             checkCmd.Parameters.AddWithValue("$quantity", quantity)
                             checkCmd.Parameters.AddWithValue("$initialPrice", initialPrice)
-                            checkCmd.Parameters.AddWithValue("$data", If(data, ""))
+                            checkCmd.Parameters.AddWithValue("$data", If(data, String.Empty))
 
                             If Convert.ToInt32(checkCmd.ExecuteScalar(), CultureInfo.InvariantCulture) > 0 Then
                                 Continue For
@@ -129,17 +123,16 @@ Public Class PortfolioDb
 
                         Using insertCmd As SqliteCommand = cn.CreateCommand()
                             insertCmd.Transaction = transaction
-                            insertCmd.CommandText = """
-                                INSERT INTO PortfolioItems
-                                    (Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice)
-                                VALUES
-                                    ($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, $lastPrice)
-                            """
+                            insertCmd.CommandText =
+                                "INSERT INTO PortfolioItems " &
+                                "(Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice) " &
+                                "VALUES ($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, $lastPrice);"
+
                             insertCmd.Parameters.AddWithValue("$cripto", cripto)
                             insertCmd.Parameters.AddWithValue("$symbol", symbol)
                             insertCmd.Parameters.AddWithValue("$initialPrice", initialPrice)
                             insertCmd.Parameters.AddWithValue("$quantity", quantity)
-                            insertCmd.Parameters.AddWithValue("$data", If(data, ""))
+                            insertCmd.Parameters.AddWithValue("$data", If(data, String.Empty))
                             insertCmd.Parameters.AddWithValue("$wallet", wallet)
                             insertCmd.Parameters.AddWithValue("$lastPrice", lastPrice)
                             insertCmd.ExecuteNonQuery()
@@ -165,21 +158,9 @@ Public Class PortfolioDb
             cn.Open()
 
             Using cmd As SqliteCommand = cn.CreateCommand()
-                cmd.CommandText = """
-                    SELECT
-                        Id,
-                        Cripto,
-                        Symbol,
-                        InitialPrice,
-                        Quantity,
-                        Data,
-                        Wallet,
-                        LastPrice,
-                        CreatedAt,
-                        UpdatedAt
-                    FROM PortfolioItems
-                    ORDER BY Id;
-                """
+                cmd.CommandText =
+                    "SELECT Id, Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice, CreatedAt, UpdatedAt " &
+                    "FROM PortfolioItems ORDER BY Id;"
 
                 Using reader = cmd.ExecuteReader()
                     table.Load(reader)
@@ -197,12 +178,10 @@ Public Class PortfolioDb
             cn.Open()
 
             Using cmd As SqliteCommand = cn.CreateCommand()
-                cmd.CommandText = """
-                    UPDATE PortfolioItems
-                    SET LastPrice = $lastPrice,
-                        UpdatedAt = CURRENT_TIMESTAMP
-                    WHERE Id = $id;
-                """
+                cmd.CommandText =
+                    "UPDATE PortfolioItems SET LastPrice = $lastPrice, UpdatedAt = CURRENT_TIMESTAMP " &
+                    "WHERE Id = $id;"
+
                 cmd.Parameters.AddWithValue("$lastPrice", lastPrice)
                 cmd.Parameters.AddWithValue("$id", id)
                 cmd.ExecuteNonQuery()
@@ -216,6 +195,7 @@ Public Class PortfolioDb
         End If
 
         Dim value As Decimal
+
         If Decimal.TryParse(token.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, value) Then
             Return value
         End If
