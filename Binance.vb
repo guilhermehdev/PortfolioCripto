@@ -13,17 +13,11 @@ Public Class Binance
 
         Using cli As New HttpClient()
 
-            Dim json As String =
-            Await cli.GetStringAsync(
-                "https://api.binance.com/api/v3/time"
-            )
-
+            Dim json As String = Await cli.GetStringAsync("https://api.binance.com/api/v3/time")
             Dim obj As JObject = JObject.Parse(json)
-
             Dim serverTime As Long = CLng(obj("serverTime"))
             Dim localTime As Long =
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-
             BinanceTimeOffset = serverTime - localTime
 
         End Using
@@ -32,7 +26,7 @@ Public Class Binance
 
     Private Async Function BINANCE_GetSpotAccountAsync() As Task(Of JObject)
 
-        Dim json = Await QuerySignedAsync("/api/v3/account", "recvWindow=5000")
+        Dim json = Await QuerySignedAsync("/api/v3/account", "recvWindow=60000")
 
         If String.IsNullOrWhiteSpace(json) Then
             Return Nothing
@@ -57,7 +51,7 @@ Public Class Binance
         Dim json =
         Await QuerySignedAsync(
             "/fapi/v2/account",
-            "recvWindow=5000",
+            "recvWindow=60000",
             isFutures:=True)
 
         If String.IsNullOrWhiteSpace(json) Then
@@ -271,7 +265,7 @@ Public Class Binance
 
     Private Async Function BINANCE_GetSpotAssets() As Task(Of Dictionary(Of String, Decimal))
 
-        Dim json = Await QuerySignedAsync("/api/v3/account", "recvWindow=5000")
+        Dim json = Await QuerySignedAsync("/api/v3/account", "recvWindow=60000")
 
         If String.IsNullOrWhiteSpace(json) Then
             Return New Dictionary(Of String, Decimal)
@@ -417,7 +411,7 @@ Public Class Binance
 
     Private Async Function BINANCE_GetFuturesAssets() As Task(Of Dictionary(Of String, (Saldo As Decimal, Ordem As Decimal, Lucro As Decimal)))
 
-        Dim json = Await QuerySignedAsync("/fapi/v2/account", "recvWindow=5000", isFutures:=True)
+        Dim json = Await QuerySignedAsync("/fapi/v2/account", "recvWindow=60000", isFutures:=True)
 
         If String.IsNullOrWhiteSpace(json) Then
             Return New Dictionary(Of String, (Decimal, Decimal, Decimal))
@@ -535,7 +529,7 @@ Public Class Binance
 
     Private Async Function BINANCE_GetAssetQty(asset As String) As Task(Of Decimal)
 
-        Dim json = Await QuerySignedAsync("/api/v3/account", "recvWindow=5000")
+        Dim json = Await QuerySignedAsync("/api/v3/account", "recvWindow=60000")
 
         If String.IsNullOrWhiteSpace(json) Then
             Return 0D
@@ -805,13 +799,5 @@ Public Class Binance
             End If
         Next
     End Function
-
-
-
-
-
-
-
-
 
 End Class

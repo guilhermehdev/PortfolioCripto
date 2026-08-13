@@ -28,7 +28,6 @@ Public NotInheritable Class PortfolioMarketService
                 ToList()
 
             Dim b As New Binance
-            Dim cot As New Cotacao
             Dim gate As New Gateio
             Dim gec As New Coingecko
             Dim formatter As New JSON
@@ -53,7 +52,7 @@ Public NotInheritable Class PortfolioMarketService
             JSON.USDBRLprice = usdBrl
             formatter.USDBRLprice = usdBrl
 
-            Dim dom As Decimal? = Await cot.CM_GetBTCDOM()
+            Dim dom As Decimal = Await gec.CGECKO_GetBTCDominance()
 
             Dim btcPriceString As String = Await b.BINANCE_GetCoinsInfo("BTC")
             Dim btcPrice As Decimal = 0D
@@ -282,7 +281,7 @@ Public NotInheritable Class PortfolioMarketService
 
             FormMain.lbDolar.Text = formatter.BRLformat(usdBrl)
             FormMain.lbBTC.Text = formatter.USDformat(btcPrice)
-            FormMain.lbDom.Text = $"{dom.GetValueOrDefault():F2}%"
+            FormMain.lbDom.Text = $"{dom:F2}%"
             FormMain.lbPerformWallet.Text = $"{walletPerformance:F2}%"
             FormMain.lbTotalEntradaUSD.Text = formatter.USDformat(initialValue)
             FormMain.lbTotalEntradaBRL.Text = formatter.BRLformat(initialValue * usdBrl)

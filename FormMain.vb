@@ -12,6 +12,7 @@ Public Class FormMain
     Dim gec As New Coingecko
     Private ReadOnly _binanceWs As New BinanceWebSocket
     Private ReadOnly _gateWs As New GateWebSocket
+    Private _marketRefreshRunning As Boolean = False
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -701,6 +702,12 @@ Public Class FormMain
 
     Public Async Function refreshMarket() As Task(Of Boolean)
         Try
+            If _marketRefreshRunning Then
+                Return False
+            End If
+
+            _marketRefreshRunning = True
+
             chart.removeCharts()
             lbLoadFromMarket.Visible = True
             TimerBlink.Start()
@@ -733,6 +740,11 @@ Public Class FormMain
             changeOnOffColor("Offline")
             JSON.hideMarketDataLabel()
             Return False
+
+        Finally
+            _marketRefreshRunning = False
+            Cursor = Cursors.Default
+            dgPortfolio.Cursor = Cursors.Default
         End Try
 
     End Function
@@ -772,7 +784,7 @@ Public Class FormMain
 
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
-            Await Cjson.LoadCriptos(dgPortfolio)
+            Await PortfolioMarketService.LoadAsync(dgPortfolio)
             dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
             Adjust()
 
@@ -780,7 +792,12 @@ Public Class FormMain
             lbRefresh.Text = My.Settings.lastView
             lbRefresh.Location = New Point(125, 7)
         Catch ex As Exception
-
+            Debug.WriteLine(
+            "[TIMER] Erro ao atualizar mercado: " &
+            ex.ToString())
+        Finally
+            Cursor = Cursors.Default
+            dgPortfolio.Cursor = Cursors.Default
         End Try
 
     End Sub
