@@ -3,6 +3,7 @@ Imports System.Globalization
 Imports System.Net.WebSockets
 Imports System.Text
 Imports System.Text.Json
+Imports System.Threading
 
 Public Class BinanceWebSocket
 
@@ -47,10 +48,8 @@ Public Class BinanceWebSocket
 
         Try
             Await ConnectAsync(_cts.Token)
-
         Catch ex As OperationCanceledException
             RaiseEvent ConnectionStateChanged(False, "Binance WebSocket cancelado.")
-
         Catch ex As Exception
             RaiseEvent ConnectionStateChanged(False, "Erro Binance WebSocket: " & ex.Message)
         End Try
@@ -69,12 +68,9 @@ Public Class BinanceWebSocket
                 _socket = New ClientWebSocket()
                 _socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(20)
 
-                Dim streamUrl As String =
-                    BuildCombinedStreamUrl(_symbols)
+                Dim streamUrl As String = BuildCombinedStreamUrl(_symbols)
 
-                Await _socket.ConnectAsync(
-                    New Uri(streamUrl),
-                    token)
+                Await _socket.ConnectAsync(New Uri(streamUrl), token)
 
                 RaiseEvent ConnectionStateChanged(
                     True,
@@ -84,44 +80,43 @@ Public Class BinanceWebSocket
                 Return
 
             Catch ex As OperationCanceledException
+                If _socket IsNot Nothing Then
+                    _socket.Dispose()
+                    _socket = Nothing
+                End If
                 Throw
 
-            Catch ex As Exception When attempt < 5
+            Catch ex As Exception
                 If _socket IsNot Nothing Then
                     _socket.Dispose()
                     _socket = Nothing
                 End If
 
+                If attempt >= 5 Then
+                    Throw New WebSocketException(
+                        "Não foi possível conectar ao Binance WebSocket após 5 tentativas.", ex)
+                End If
+
                 Await Task.Delay(delay, token)
                 delay = Math.Min(delay * 2, 8000)
-
             End Try
 
         Next
 
-        Throw New WebSocketException(
-            "Não foi possível conectar ao Binance WebSocket após 5 tentativas.")
-
     End Function
 
-    Private Function BuildCombinedStreamUrl(
-        symbols As IEnumerable(Of String)) As String
-
+    Private Function BuildCombinedStreamUrl(symbols As IEnumerable(Of String)) As String
         Dim streams = symbols.
             Select(Function(s) s.ToLowerInvariant() & "@ticker")
 
-        Return WebSocketBaseUrl &
-               String.Join("/", streams)
-
+        Return WebSocketBaseUrl & String.Join("/", streams)
     End Function
 
-    Private Async Function ReceiveLoopAsync(
-        token As CancellationToken) As Task
+    Private Async Function ReceiveLoopAsync(token As CancellationToken) As Task
 
         Dim buffer(8191) As Byte
 
         Try
-
             While Not token.IsCancellationRequested AndAlso
                   _socket IsNot Nothing AndAlso
                   _socket.State = WebSocketState.Open
@@ -131,14 +126,11 @@ Public Class BinanceWebSocket
                     Dim result As WebSocketReceiveResult
 
                     Do
-
                         result = Await _socket.ReceiveAsync(
-                            New ArraySegment(Of Byte)(buffer),
-                            token)
+                            New ArraySegment(Of Byte)(buffer), token)
 
                         If result.MessageType = WebSocketMessageType.Close Then
-                            Throw New WebSocketException(
-                                "Binance fechou a conexão.")
+                            Throw New WebSocketException("Binance fechou a conexão.")
                         End If
 
                         If result.Count > 0 Then
@@ -147,9 +139,7 @@ Public Class BinanceWebSocket
 
                     Loop Until result.EndOfMessage
 
-                    Dim json As String =
-                        Encoding.UTF8.GetString(ms.ToArray())
-
+                    Dim json As String = Encoding.UTF8.GetString(ms.ToArray())
                     ProcessMessage(json)
 
                 End Using
@@ -160,7 +150,6 @@ Public Class BinanceWebSocket
             ' Encerramento normal.
 
         Catch ex As Exception
-
             RaiseEvent ConnectionStateChanged(
                 False,
                 "Binance WebSocket desconectado: " & ex.Message)
@@ -168,7 +157,6 @@ Public Class BinanceWebSocket
             If Not token.IsCancellationRequested Then
                 _ = ReconnectAsync(token)
             End If
-
         End Try
 
     End Function
@@ -176,30 +164,28 @@ Public Class BinanceWebSocket
     Private Sub ProcessMessage(json As String)
 
         Try
+            Using document As JsonDocument = JsonDocument.Parse(json)
 
-            Using document As JsonDocument =
-                JsonDocument.Parse(json)
+                Dim root As JsonElement = document.RootElement
+                Dim data As JsonElement
 
-                Dim root As JsonElement =
-                    document.RootElement
-
-                If Not root.TryGetProperty("data", root) Then
+                If Not root.TryGetProperty("data", data) Then
                     Return
                 End If
 
-                If Not root.TryGetProperty("s", root) Then
+                Dim symbolElement As JsonElement
+                Dim priceElement As JsonElement
+
+                If Not data.TryGetProperty("s", symbolElement) Then
                     Return
                 End If
 
-                If Not root.TryGetProperty("c", root) Then
+                If Not data.TryGetProperty("c", priceElement) Then
                     Return
                 End If
 
-                Dim symbol As String =
-                    root.GetProperty("s").GetString()
-
-                Dim priceText As String =
-                    root.GetProperty("c").GetString()
+                Dim symbol As String = symbolElement.GetString()
+                Dim priceText As String = priceElement.GetString()
 
                 If String.IsNullOrWhiteSpace(symbol) OrElse
                    String.IsNullOrWhiteSpace(priceText) Then
@@ -215,29 +201,21 @@ Public Class BinanceWebSocket
                     price) Then
 
                     _prices(symbol) = price
-
-                    RaiseEvent PriceUpdated(
-                        symbol,
-                        price)
+                    RaiseEvent PriceUpdated(symbol, price)
 
                 End If
 
             End Using
 
         Catch ex As JsonException
-            Debug.WriteLine(
-                "Binance WebSocket JSON inválido: " & ex.Message)
-
+            Debug.WriteLine("Binance WebSocket JSON inválido: " & ex.Message)
         Catch ex As Exception
-            Debug.WriteLine(
-                "Erro processando Binance WebSocket: " & ex.Message)
-
+            Debug.WriteLine("Erro processando Binance WebSocket: " & ex.Message)
         End Try
 
     End Sub
 
-    Private Async Function ReconnectAsync(
-        token As CancellationToken) As Task
+    Private Async Function ReconnectAsync(token As CancellationToken) As Task
 
         If token.IsCancellationRequested Then
             Return
@@ -248,7 +226,6 @@ Public Class BinanceWebSocket
             "Reconectando Binance WebSocket...")
 
         Try
-
             Await Task.Delay(2000, token)
 
             If token.IsCancellationRequested Then
@@ -259,7 +236,6 @@ Public Class BinanceWebSocket
 
         Catch ex As OperationCanceledException
             ' Encerramento normal.
-
         Catch ex As Exception
             RaiseEvent ConnectionStateChanged(
                 False,
@@ -274,43 +250,37 @@ Public Class BinanceWebSocket
             _cts.Cancel()
         End If
 
-        If _receiveTask IsNot Nothing Then
+        Dim receiveTaskLocal As Task = _receiveTask
+        _receiveTask = Nothing
 
+        If receiveTaskLocal IsNot Nothing Then
             Try
-                Await _receiveTask
+                Await receiveTaskLocal
             Catch
                 ' Ignora erro durante encerramento.
             End Try
-
         End If
 
-        If _socket IsNot Nothing Then
+        Dim socketLocal As ClientWebSocket = _socket
+        _socket = Nothing
 
+        If socketLocal IsNot Nothing Then
             Try
+                If socketLocal.State = WebSocketState.Open OrElse
+                   socketLocal.State = WebSocketState.CloseReceived Then
 
-                If _socket.State = WebSocketState.Open OrElse
-                   _socket.State = WebSocketState.CloseReceived Then
-
-                    Using localCts As New CancellationTokenSource(
-                        TimeSpan.FromSeconds(2))
-
-                        Await _socket.CloseAsync(
+                    Using localCts As New CancellationTokenSource(TimeSpan.FromSeconds(2))
+                        Await socketLocal.CloseAsync(
                             WebSocketCloseStatus.NormalClosure,
                             "Encerrando",
                             localCts.Token)
-
                     End Using
-
                 End If
-
             Catch
                 ' Ignora erros de fechamento.
-
             Finally
-                _socket.Dispose()
-                _socket = Nothing
+                socketLocal.Dispose()
             End Try
-
         End If
 
         If _cts IsNot Nothing Then
@@ -318,11 +288,7 @@ Public Class BinanceWebSocket
             _cts = Nothing
         End If
 
-        _receiveTask = Nothing
-
-        RaiseEvent ConnectionStateChanged(
-            False,
-            "Binance WebSocket parado.")
+        RaiseEvent ConnectionStateChanged(False, "Binance WebSocket parado.")
 
     End Function
 
