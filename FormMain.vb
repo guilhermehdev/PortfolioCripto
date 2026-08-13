@@ -10,6 +10,7 @@ Public Class FormMain
     Dim chart As New Charts
     Dim B As New Binance
     Dim gec As New Coingecko
+    Private ReadOnly _binanceWs As New BinanceWebSocket
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -51,17 +52,438 @@ Public Class FormMain
     End Sub
 
     Public Async Sub Setup()
+
         Try
+
+            AddHandler _binanceWs.PriceUpdated,
+            AddressOf BinanceWs_PriceUpdated
+
+            AddHandler _binanceWs.ConnectionStateChanged,
+            AddressOf BinanceWs_ConnectionStateChanged
+
             Await B.SyncBinanceTime()
 
             chart.removeCharts()
+
             lbDebug.Clear()
             lbDebug.AppendText("Status: Pronto")
+
             changeOnOffColor("Pronto")
+
         Catch ex As Exception
+
             lbDebug.Clear()
-            lbDebug.AppendText("Erro ao carregar o portfólio: " & ex.Message)
+            lbDebug.AppendText(
+            "Erro ao carregar o portfólio: " &
+            ex.Message)
+
         End Try
+
+    End Sub
+
+    Private Sub BinanceWs_ConnectionStateChanged(
+    connected As Boolean,
+    message As String)
+
+        If Me.InvokeRequired Then
+
+            Me.BeginInvoke(
+            New Action(
+                Sub()
+                    BinanceWs_ConnectionStateChanged(
+                        connected,
+                        message)
+                End Sub))
+
+            Return
+
+        End If
+
+        Debug.WriteLine(message)
+
+        If connected Then
+
+            lbDebug.Clear()
+            lbDebug.AppendText("Status: Online")
+            changeOnOffColor("Online")
+
+        Else
+
+            lbDebug.AppendText(
+            Environment.NewLine & message)
+
+        End If
+
+    End Sub
+
+    Private Async Function StartBinanceWebSocket() As Task
+
+        Try
+
+            Dim symbols As New List(Of String)
+
+            For Each row As DataGridViewRow In dgPortfolio.Rows
+
+                If row.IsNewRow Then
+                    Continue For
+                End If
+
+                Dim wallet As String =
+                row.Cells(2).Value?.ToString().Trim().ToUpperInvariant()
+
+                If wallet <> "BINANCE" Then
+                    Continue For
+                End If
+
+                Dim symbol As String =
+                row.Cells(0).Value?.ToString().Trim().ToUpperInvariant()
+
+                If String.IsNullOrWhiteSpace(symbol) Then
+                    Continue For
+                End If
+
+                symbols.Add(symbol)
+
+            Next
+
+            symbols =
+            symbols.Distinct().ToList()
+
+            If symbols.Count = 0 Then
+
+                Debug.WriteLine(
+                "Nenhum ativo Binance encontrado no DataGrid.")
+
+                Return
+
+            End If
+
+            Await _binanceWs.StartAsync(symbols)
+
+        Catch ex As Exception
+
+            Debug.WriteLine(
+            "Erro iniciando Binance WebSocket: " &
+            ex.Message)
+
+        End Try
+
+    End Function
+
+    Private Sub UpdateRealtimeOverview()
+
+        Try
+
+            Dim totalEntradaUSD As Decimal = 0D
+            Dim totalAtualUSD As Decimal = 0D
+
+            Dim cashflowUSD As Decimal = 0D
+            Dim investidoUSD As Decimal = 0D
+
+            Dim lucroUSD As Decimal = 0D
+
+            For Each row As DataGridViewRow In dgPortfolio.Rows
+
+                If row.IsNewRow OrElse Not row.Visible Then
+                    Continue For
+                End If
+
+                Dim wallet As String =
+                row.Cells(2).Value?.
+                ToString().
+                Trim().
+                ToUpperInvariant()
+
+                Dim entrada As Decimal =
+                Convert.ToDecimal(
+                    row.Cells(4).Value)
+
+                Dim atual As Decimal =
+                Convert.ToDecimal(
+                    row.Cells(10).Value)
+
+                Dim symbol As String =
+                row.Cells(0).Value?.
+                ToString().
+                Trim().
+                ToUpperInvariant()
+
+                totalEntradaUSD += entrada
+                totalAtualUSD += atual
+
+                If Cjson.stablecoins.Contains(symbol) Then
+
+                    cashflowUSD += atual
+
+                Else
+
+                    investidoUSD += atual
+                    lucroUSD +=
+                    atual - entrada
+
+                End If
+
+            Next
+
+            ' =============================================
+            ' TOTAL
+            ' =============================================
+            Dim usdBrl As Decimal =
+            Cjson.USDBRLprice
+
+            Dim totalBRL As Decimal =
+            totalAtualUSD * usdBrl
+
+            Dim lucroBRL As Decimal =
+            lucroUSD * usdBrl
+
+            Dim percentualCaixa As Decimal = 0D
+            Dim percentualInvestido As Decimal = 0D
+            Dim performanceWallet As Decimal = 0D
+
+            If totalAtualUSD > 0D Then
+
+                percentualCaixa =
+                (cashflowUSD / totalAtualUSD) * 100D
+
+                percentualInvestido =
+                (investidoUSD / totalAtualUSD) * 100D
+
+            End If
+
+            If totalEntradaUSD > 0D Then
+
+                performanceWallet =
+                (lucroUSD / totalEntradaUSD) * 100D
+
+            End If
+
+            ' =============================================
+            ' UI
+            ' =============================================
+            Me.lbTotalBRL.Text =
+            Cjson.BRLformat(lucroBRL)
+
+            Me.lbTotalEntradaUSD.Text =
+            Cjson.USDformat(totalEntradaUSD)
+
+            Me.lbTotalEntradaBRL.Text =
+            Cjson.BRLformat(
+                totalEntradaUSD * usdBrl)
+
+            Me.lbValoresHojeUSD.Text =
+            Cjson.USDformat(totalAtualUSD)
+
+            Me.lbValoresHojeBRL.Text =
+            Cjson.BRLformat(totalBRL)
+
+            Me.lbRoiUSD.Text =
+            Cjson.USDformat(lucroUSD)
+
+            Me.lbCaixa.Text =
+            Cjson.USDformat(cashflowUSD)
+
+            Me.lbCaixaBRL.Text =
+            Cjson.BRLformat(
+                cashflowUSD * usdBrl)
+
+            Me.lbPercentCaixa.Text =
+            $"{percentualCaixa:F2}%"
+
+            Me.lbPercentInvestido.Text =
+            $"{percentualInvestido:F2}%"
+
+            Me.lbPerformWallet.Text =
+            $"{performanceWallet:F2}%"
+
+            Me.lbRoiUSD.ForeColor =
+            If(
+                lucroUSD < 0D,
+                Color.Red,
+                Color.Gold)
+
+            Me.lbPerformWallet.ForeColor =
+            If(
+                performanceWallet < 0D,
+                Color.Red,
+                Color.Lime)
+
+        Catch ex As Exception
+
+            Debug.WriteLine(
+            "Erro atualizando visão geral realtime: " &
+            ex.Message)
+
+        End Try
+
+    End Sub
+
+    Private Sub UpdateBinanceRow(
+    symbol As String,
+    price As Decimal)
+
+        Try
+
+            For Each row As DataGridViewRow In dgPortfolio.Rows
+
+                If row.IsNewRow Then
+                    Continue For
+                End If
+
+                Dim rowSymbol As String =
+                row.Cells(0).Value?.
+                ToString().
+                Trim().
+                ToUpperInvariant()
+
+                Dim wallet As String =
+                row.Cells(2).Value?.
+                ToString().
+                Trim().
+                ToUpperInvariant()
+
+                If rowSymbol <> symbol.ToUpperInvariant() Then
+                    Continue For
+                End If
+
+                If wallet <> "BINANCE" Then
+                    Continue For
+                End If
+
+                ' =============================================
+                ' QUANTIDADE
+                ' =============================================
+                Dim qtd As Decimal =
+                Convert.ToDecimal(
+                    row.Cells(3).Value)
+
+                ' =============================================
+                ' PREÇO MÉDIO
+                ' =============================================
+                Dim precoMedio As Decimal =
+                Convert.ToDecimal(
+                    row.Cells(6).Value)
+
+                ' =============================================
+                ' VALOR ATUAL USD
+                ' =============================================
+                Dim valorAtualUSD As Decimal =
+                qtd * price
+
+                ' =============================================
+                ' ROI USD
+                ' =============================================
+                Dim valorEntradaUSD As Decimal =
+                qtd * precoMedio
+
+                Dim roiUSD As Decimal =
+                valorAtualUSD - valorEntradaUSD
+
+                Dim performance As Decimal = 0D
+
+                If valorEntradaUSD > 0D Then
+
+                    performance =
+                    (roiUSD / valorEntradaUSD) * 100D
+
+                End If
+
+                ' =============================================
+                ' USD → BRL
+                ' =============================================
+                Dim usdBrl As Decimal =
+                Cjson.USDBRLprice
+
+                Dim valorAtualBRL As Decimal =
+                valorAtualUSD * usdBrl
+
+                Dim roiBRL As Decimal =
+                roiUSD * usdBrl
+
+                ' =============================================
+                ' MULTIPLICADOR
+                ' =============================================
+                Dim x As Decimal = 0D
+
+                If valorEntradaUSD > 0D Then
+
+                    x =
+                    valorAtualUSD / valorEntradaUSD
+
+                End If
+
+                ' =============================================
+                ' ATUALIZA GRID
+                ' =============================================
+                row.Cells(7).Value =
+                price
+
+                row.Cells(10).Value =
+                valorAtualUSD
+
+                row.Cells(11).Value =
+                valorAtualBRL
+
+                row.Cells(12).Value =
+                roiUSD
+
+                row.Cells(13).Value =
+                roiBRL
+
+                row.Cells(1).Value =
+                $"{performance:F2}%"
+
+                If x > 0D Then
+                    row.Cells(14).Value =
+                    $"{x:N2} X"
+                Else
+                    row.Cells(14).Value =
+                    "0 X"
+                End If
+
+                Exit For
+
+            Next
+
+            ' Recalcula visão geral
+            UpdateRealtimeOverview()
+
+            ' Mantém o estilo visual
+            Cjson.FormatGrid(dgPortfolio)
+
+        Catch ex As Exception
+
+            Debug.WriteLine(
+            "Erro atualizando preço realtime [" &
+            symbol &
+            "]: " &
+            ex.Message)
+
+        End Try
+
+    End Sub
+
+    Public Sub BinanceWs_PriceUpdated(
+    symbol As String,
+    price As Decimal)
+
+        If Me.InvokeRequired Then
+
+            Me.BeginInvoke(
+            New Action(
+                Sub()
+                    UpdateBinanceRow(
+                        symbol,
+                        price)
+                End Sub))
+
+            Return
+
+        End If
+
+        UpdateBinanceRow(
+        symbol,
+        price)
 
     End Sub
 
@@ -101,6 +523,7 @@ Public Class FormMain
 
             'Await Cjson.LoadCriptos(dgPortfolio)
             If Await Cjson.LoadCriptos(dgPortfolio) Then
+                Await StartBinanceWebSocket()
                 lbDebug.Clear()
                 lbDebug.AppendText("Status: Online")
                 changeOnOffColor("Online")
@@ -482,4 +905,11 @@ Public Class FormMain
 
     End Sub
 
+    Private Async Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+
+        Try
+            Await _binanceWs.StopAsync()
+        Catch
+        End Try
+    End Sub
 End Class

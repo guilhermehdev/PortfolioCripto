@@ -24,7 +24,7 @@ Public Class JSON
     Dim b As New Binance
     Dim gec As New Coingecko
     Public USDBRLprice
-    Dim stablecoins As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
+    Public stablecoins As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
              "USDT", "USDC", "BUSD", "DAI", "TUSD", "USD", "USDP", "GUSD"
             }
 
@@ -691,8 +691,7 @@ Public Class JSON
         Dim mcapDict =
         Await gec.CGECKO_MarketData(allSymbols)
 
-        Dim USDBRLprice =
-        Await gec.CGECKO_GetPrice("USDT", "brl")
+        USDBRLprice = Await gec.CGECKO_GetPrice("USDT", "brl")
 
         Dim dom As Decimal? =
         Await cot.CM_GetBTCDOM()
