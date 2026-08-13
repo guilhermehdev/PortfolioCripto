@@ -1154,17 +1154,16 @@ Public Class FormMain
                     If valor > 0D Then
 
                         e.CellStyle.ForeColor =
-                            Color.LightGreen
+                            Color.LimeGreen
 
                     ElseIf valor < 0D Then
 
                         e.CellStyle.ForeColor =
-                            Color.LightCoral
-
+                            Color.Red
                     Else
 
                         e.CellStyle.ForeColor =
-                            Color.WhiteSmoke
+                            Color.FromArgb(20, 20, 20)
 
                     End If
 
@@ -1176,10 +1175,7 @@ Public Class FormMain
         ' MARKET CAP
         ' ==========================================
             Case "marketcap"
-
                 valor.ToString("C2", CultureInfo.GetCultureInfo("en-US"))
-                e.CellStyle.ForeColor = Color.WhiteSmoke
-
         ' ==========================================
         ' QUANTIA ATUAL USD
         ' ==========================================
