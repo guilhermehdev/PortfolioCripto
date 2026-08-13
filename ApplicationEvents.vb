@@ -1,4 +1,5 @@
-﻿Imports Microsoft.VisualBasic.ApplicationServices
+Imports Microsoft.VisualBasic.ApplicationServices
+Imports System.IO
 
 Namespace My
     Partial Friend Class MyApplication
@@ -6,9 +7,34 @@ Namespace My
         Private Sub MyApplication_Startup(sender As Object, e As StartupEventArgs) Handles Me.Startup
             Try
                 PortfolioRepository.Initialize()
-                Debug.WriteLine("SQLite inicializado: " & PortfolioRepository.GetDatabasePath())
+
+                Dim cryptoJsonPath As String = Path.Combine(
+                    My.Application.Info.DirectoryPath,
+                    "JSON",
+                    "criptos.json")
+
+                Dim walletJsonPath As String = Path.Combine(
+                    My.Application.Info.DirectoryPath,
+                    "JSON",
+                    "wallets.json")
+
+                ' Migração única dos catálogos antigos para o SQLite.
+                If PortfolioRepository.GetCryptoSymbolCount() = 0 OrElse
+                   PortfolioRepository.GetWalletCount() = 0 Then
+
+                    PortfolioRepository.MigrateCatalogsFromJson(
+                        cryptoJsonPath,
+                        walletJsonPath)
+                End If
+
+                Debug.WriteLine(
+                    "SQLite inicializado: " &
+                    PortfolioRepository.GetDatabasePath())
+
             Catch ex As Exception
-                Debug.WriteLine("Erro ao inicializar SQLite: " & ex.Message)
+                Debug.WriteLine(
+                    "Erro ao inicializar SQLite: " &
+                    ex.Message)
             End Try
         End Sub
 
