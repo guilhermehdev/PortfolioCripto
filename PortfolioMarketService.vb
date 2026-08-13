@@ -32,7 +32,9 @@ Public NotInheritable Class PortfolioMarketService
             Dim gec As New Coingecko
             Dim formatter As New JSON
 
-            Await b.compare()
+            ' NÃO chama mais Binance.compare().
+            ' Essa rotina antiga dependia do portfolio.json/JSONBin.
+            ' O portfólio agora é exclusivamente SQLite.
 
             Dim binanceAssets = Await b.BINANCE_GetAllAssetsFull()
             Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
