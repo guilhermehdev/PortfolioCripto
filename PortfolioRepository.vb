@@ -1,4 +1,5 @@
 Imports Microsoft.Data.Sqlite
+Imports Newtonsoft.Json.Linq
 Imports System.Data
 Imports System.Globalization
 Imports System.IO
@@ -38,6 +39,24 @@ Public NotInheritable Class PortfolioRepository
                     "LastPrice NUMERIC NOT NULL DEFAULT 0, " &
                     "CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, " &
                     "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
+                    ");"
+                command.ExecuteNonQuery()
+            End Using
+
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "CREATE TABLE IF NOT EXISTS CryptoSymbols (" &
+                    "Id INTEGER PRIMARY KEY, " &
+                    "Symbol TEXT NOT NULL UNIQUE COLLATE NOCASE" &
+                    ");"
+                command.ExecuteNonQuery()
+            End Using
+
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "CREATE TABLE IF NOT EXISTS Wallets (" &
+                    "Id INTEGER PRIMARY KEY AUTOINCREMENT, " &
+                    "Name TEXT NOT NULL UNIQUE COLLATE NOCASE" &
                     ");"
                 command.ExecuteNonQuery()
             End Using
@@ -97,6 +116,168 @@ Public NotInheritable Class PortfolioRepository
             End Using
         End Using
     End Function
+
+    Public Shared Function GetCryptoSymbols() As DataTable
+        Initialize()
+        Dim table As New DataTable()
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "SELECT Id, Symbol FROM CryptoSymbols ORDER BY Symbol;"
+
+                Using reader = command.ExecuteReader()
+                    table.Load(reader)
+                End Using
+            End Using
+        End Using
+
+        Return table
+    End Function
+
+    Public Shared Function GetWallets() As DataTable
+        Initialize()
+        Dim table As New DataTable()
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "SELECT Id, Name FROM Wallets ORDER BY Name;"
+
+                Using reader = command.ExecuteReader()
+                    table.Load(reader)
+                End Using
+            End Using
+        End Using
+
+        Return table
+    End Function
+
+    Public Shared Sub AddCryptoSymbol(symbol As String, Optional id As Integer? = Nothing)
+        Initialize()
+
+        symbol = If(symbol, String.Empty).Trim().ToUpperInvariant()
+        If String.IsNullOrWhiteSpace(symbol) Then
+            Throw New ArgumentException("Símbolo não pode ser vazio.", NameOf(symbol))
+        End If
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+
+            Using command As SqliteCommand = connection.CreateCommand()
+                If id.HasValue Then
+                    command.CommandText =
+                        "INSERT INTO CryptoSymbols(Id, Symbol) VALUES($id, $symbol) " &
+                        "ON CONFLICT(Id) DO UPDATE SET Symbol = excluded.Symbol;"
+                    command.Parameters.AddWithValue("$id", id.Value)
+                Else
+                    command.CommandText =
+                        "INSERT INTO CryptoSymbols(Symbol) VALUES($symbol) " &
+                        "ON CONFLICT(Symbol) DO NOTHING;"
+                End If
+
+                command.Parameters.AddWithValue("$symbol", symbol)
+                command.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Public Shared Sub DeleteCryptoSymbol(symbol As String)
+        Initialize()
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "DELETE FROM CryptoSymbols WHERE Symbol = $symbol;"
+                command.Parameters.AddWithValue(
+                    "$symbol",
+                    If(symbol, String.Empty).Trim().ToUpperInvariant())
+                command.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Public Shared Sub AddWallet(name As String)
+        Initialize()
+
+        name = If(name, String.Empty).Trim()
+        If String.IsNullOrWhiteSpace(name) Then
+            Throw New ArgumentException("Wallet não pode ser vazia.", NameOf(name))
+        End If
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "INSERT INTO Wallets(Name) VALUES($name) " &
+                    "ON CONFLICT(Name) DO NOTHING;"
+                command.Parameters.AddWithValue("$name", name)
+                command.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Public Shared Sub DeleteWallet(id As Long)
+        Initialize()
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText = "DELETE FROM Wallets WHERE Id = $id;"
+                command.Parameters.AddWithValue("$id", id)
+                command.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Public Shared Sub MigrateCatalogsFromJson(cryptoJsonPath As String, walletJsonPath As String)
+        Initialize()
+
+        If File.Exists(cryptoJsonPath) Then
+            Dim jsonObject As JObject = JObject.Parse(File.ReadAllText(cryptoJsonPath))
+            For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
+                If propertyPair.Value.Type <> JTokenType.Array Then Continue For
+
+                For Each item As JToken In propertyPair.Value
+                    Dim symbol As String = item("Symbol")?.ToString()
+                    Dim idToken As JToken = item("Id")
+                    Dim idValue As Integer
+
+                    If String.IsNullOrWhiteSpace(symbol) Then Continue For
+
+                    If idToken IsNot Nothing AndAlso Integer.TryParse(idToken.ToString(), idValue) Then
+                        AddCryptoSymbol(symbol, idValue)
+                    Else
+                        AddCryptoSymbol(symbol)
+                    End If
+                Next
+            Next
+        End If
+
+        If File.Exists(walletJsonPath) Then
+            Dim jsonObject As JObject = JObject.Parse(File.ReadAllText(walletJsonPath))
+            For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
+                If propertyPair.Value.Type <> JTokenType.Array Then Continue For
+
+                For Each item As JToken In propertyPair.Value
+                    Dim name As String = item("Wallet")?.ToString()
+                    If String.IsNullOrWhiteSpace(name) Then
+                        name = item("Name")?.ToString()
+                    End If
+                    If String.IsNullOrWhiteSpace(name) Then
+                        name = item.ToString()
+                    End If
+                    If Not String.IsNullOrWhiteSpace(name) Then
+                        AddWallet(name)
+                    End If
+                Next
+            Next
+        End If
+    End Sub
 
     Public Shared Function AddOrUpdate(
         cripto As String,
