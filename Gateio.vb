@@ -15,70 +15,117 @@ Public Class Gateio
     }
 
     Public Async Function GATE_GetAssetQty(symbol As String) As Task(Of Decimal)
+        Dim assets = Await GATE_GetAllSpotAssets()
+        Return assets.GetValueOrDefault(symbol.Trim().ToUpperInvariant(), 0D)
+    End Function
+
+    Public Async Function GATE_GetAllSpotAssets() As Task(Of Dictionary(Of String, Decimal))
+
         Dim endpoint = "/api/v4/spot/accounts"
         Dim url = "https://api.gateio.ws" & endpoint
         Dim method = "GET"
         Dim query = ""
         Dim body = ""
-        Dim timestamp = CInt(DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString()
+        Dim timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)
 
-        ' hash do corpo (mesmo vazio)
         Dim bodyHash As String
         Using sha512 As New SHA512Managed()
             bodyHash = BitConverter.ToString(
                        sha512.ComputeHash(Encoding.UTF8.GetBytes(body))
-                   ).Replace("-", "").ToLower()
+                   ).Replace("-", "").ToLowerInvariant()
         End Using
 
-        ' stringToSign 100 % doc-Gate
         Dim stringToSign = $"{method}" & vbLf &
                        $"{endpoint}" & vbLf &
                        $"{query}" & vbLf &
                        $"{bodyHash}" & vbLf &
                        $"{timestamp}"
 
-        Dim secret = My.Settings.GateSecretKey.Trim()
+        Dim apiKey As String = My.Settings.GateAPIKey.Trim()
+        Dim secret As String = My.Settings.GateSecretKey.Trim()
+
+        If String.IsNullOrWhiteSpace(apiKey) OrElse String.IsNullOrWhiteSpace(secret) Then
+            Throw New Exception("Chave API/Secret da Gate.io não configurada.")
+        End If
+
         Dim signBytes = New HMACSHA512(Encoding.UTF8.GetBytes(secret)).
                     ComputeHash(Encoding.UTF8.GetBytes(stringToSign))
-        Dim signature = BitConverter.ToString(signBytes).Replace("-", "").ToLower()
+        Dim signature = BitConverter.ToString(signBytes).Replace("-", "").ToLowerInvariant()
 
         Dim handler As New HttpClientHandler() With {
-        .SslProtocols = Security.Authentication.SslProtocols.Tls12
-    }
+            .SslProtocols = Security.Authentication.SslProtocols.Tls12
+        }
 
         Using client As New HttpClient(handler)
-            client.DefaultRequestHeaders.Add("KEY", My.Settings.GateAPIKey)
+
+            client.DefaultRequestHeaders.Add("KEY", apiKey)
             client.DefaultRequestHeaders.Add("Timestamp", timestamp)
             client.DefaultRequestHeaders.Add("SIGN", signature)
             client.DefaultRequestHeaders.Add("User-Agent", "VBApp/1.0")
             client.DefaultRequestHeaders.Accept.Add(
-            New Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"))
+                New Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"))
 
             Dim resp = Await client.GetAsync(url)
             Dim raw = Await resp.Content.ReadAsStringAsync()
 
-            '– se a chamada falhou, mostre o erro detalhado
             If Not resp.IsSuccessStatusCode Then
-                Dim err = JObject.Parse(raw)
-                Throw New Exception($"Gate.io {CInt(resp.StatusCode)} – {err("label")}: {err("message")}")
+
+                Debug.WriteLine(
+                    $"[GATE.IO] Saldo HTTP {CInt(resp.StatusCode)}: {raw}")
+
+                Try
+                    Dim err = JObject.Parse(raw)
+                    Throw New Exception(
+                        $"Gate.io {CInt(resp.StatusCode)} – {err("label")}: {err("message")}")
+                Catch ex As Exception When TypeOf ex Is Newtonsoft.Json.JsonException
+                    Throw New Exception(
+                        $"Gate.io {CInt(resp.StatusCode)} – {raw}")
+                End Try
+
             End If
 
-            ' resposta OK – agora sim é um array
             Dim balances = JArray.Parse(raw)
+            Dim result As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+
             For Each bal In balances
-                If bal("currency").ToString().Equals(symbol, StringComparison.OrdinalIgnoreCase) Then
-                    Dim free = Decimal.Parse(bal("available").ToString(), CultureInfo.InvariantCulture)
-                    Dim locked = Decimal.Parse(bal("locked").ToString(), CultureInfo.InvariantCulture)
-                    Return free + locked
+
+                Dim currency As String =
+                    bal("currency")?.ToString().Trim().ToUpperInvariant()
+
+                If String.IsNullOrWhiteSpace(currency) Then
+                    Continue For
                 End If
+
+                Dim free As Decimal =
+                    Decimal.Parse(
+                        bal("available")?.ToString(),
+                        NumberStyles.Any,
+                        CultureInfo.InvariantCulture)
+
+                Dim locked As Decimal =
+                    Decimal.Parse(
+                        bal("locked")?.ToString(),
+                        NumberStyles.Any,
+                        CultureInfo.InvariantCulture)
+
+                Dim total As Decimal = free + locked
+
+                If total <> 0D Then
+                    result(currency) = total
+                End If
+
             Next
+
+            Debug.WriteLine(
+                $"[GATE.IO] Saldos carregados: {result.Count}")
+
+            Return result
+
         End Using
 
-        Return 0D ' moeda não encontrada
     End Function
 
     Public Async Function GATE_GetCoinsPrice(symbol As String) As Task(Of Decimal)
-        'Dim pair = $"{symbol.Trim().ToUpper()}_USDT"
         symbol = symbol.Trim().ToUpper()
 
         If StableCoins.Contains(symbol) Then
@@ -107,6 +154,7 @@ Public Class Gateio
                 If json.Count = 0 Then
                     Return 0D
                 End If
+
                 Dim lastPriceStr = json(0)("last").ToString()
                 Return Decimal.Parse(lastPriceStr, CultureInfo.InvariantCulture)
 
@@ -119,12 +167,9 @@ Public Class Gateio
 
     Public Async Function GATE_GetCoinsInfo(symbol As String) As Task(Of String)
         Try
-
             Dim priceDecimal As Decimal = Await GATE_GetCoinsPrice(symbol)
             Dim qtd As Decimal = Await GATE_GetAssetQty(symbol)
-            ' 3. Montar retorno no formato esperado
             Return $"{priceDecimal.ToString(CultureInfo.InvariantCulture)}|0|{qtd.ToString(CultureInfo.InvariantCulture)}"
-
         Catch ex As Exception
             Debug.WriteLine($"[GATE.IO] Erro geral em GetCoinsInfo({symbol}): {ex.Message}")
             Return "0|0|0"
@@ -134,7 +179,6 @@ Public Class Gateio
     Public Async Function ParExisteNaGateIo(symbol As String) As Task(Of Boolean)
         Try
             Dim parComUnderline As String = $"{symbol.Trim().ToUpper()}_USDT"
-            ' MsgBox($"Verificando par {parComUnderline} na Gate.io...")
             Dim url As String = $"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={parComUnderline}"
             Using client As New Net.Http.HttpClient()
                 Dim response = Await client.GetAsync(url)
@@ -144,6 +188,5 @@ Public Class Gateio
             Return False
         End Try
     End Function
-
 
 End Class
