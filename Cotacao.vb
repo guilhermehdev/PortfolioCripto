@@ -24,14 +24,10 @@ Public Class Cotacao
                     requestUrl = $"{apiUrl}?symbol={symbolORid.ToUpper()}"
                 End If
 
-                'requestUrl = $"{apiUrl}?symbol={symbolORid.ToUpper()}"
-
                 Dim response As HttpResponseMessage = Await client.GetAsync(requestUrl)
                 response.EnsureSuccessStatusCode()
 
                 Dim responseBody As String = Await response.Content.ReadAsStringAsync()
-
-                ' Processa o JSON para extrair o preço da criptomoeda
                 Dim json = JsonDocument.Parse(responseBody)
                 Dim data = json.RootElement.GetProperty("data").GetProperty(symbolORid.ToUpper()).GetProperty("quote").GetProperty("USD")
 
@@ -42,24 +38,23 @@ Public Class Cotacao
 
             End Using
         Catch e As HttpRequestException
-            Debug.Write($"Erro ao chamar a API do CoinMarketCap.{vbCrLf & vbCrLf & e.Message}")
+            Debug.WriteLine($"[CMC] Erro ao chamar API para {symbolORid}: {e.Message}")
             FormMain.lbLoadFromMarket.Visible = False
             FormMain.TimerBlink.Stop()
             FormMain.Cursor = Cursors.Default
             FormMain.dgPortfolio.Cursor = Cursors.Default
             Return False
-            Exit Function
         Catch ex As Exception
-            Debug.Write($"Erro ao processar a resposta: Verifique o simbolo, talvez {symbolORid} não esteja correto. " & ex.Message)
+            Debug.WriteLine($"[CMC] Erro ao processar {symbolORid}: {ex.Message}")
             FormMain.lbLoadFromMarket.Visible = False
             FormMain.TimerBlink.Stop()
             FormMain.Cursor = Cursors.Default
             FormMain.dgPortfolio.Cursor = Cursors.Default
             Return False
-            Exit Function
         End Try
 
     End Function
+
     Public Async Function CM_GetUSDBRL() As Task(Of Decimal)
 
         Try
@@ -76,7 +71,6 @@ Public Class Cotacao
 
                 Dim responseBody As String = Await response.Content.ReadAsStringAsync()
 
-                ' Processa o JSON para extrair o preço da criptomoeda
                 Dim json = JsonDocument.Parse(responseBody)
                 Dim preco As Decimal = json.RootElement _
                         .GetProperty("data") _
@@ -85,17 +79,20 @@ Public Class Cotacao
                         .GetProperty("BRL") _
                         .GetProperty("price") _
                         .GetDecimal()
+
                 Return preco
 
             End Using
         Catch e As HttpRequestException
-            Debug.Write($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}")
-            Return 0
+            Debug.WriteLine($"[CMC] Erro ao buscar USDT/BRL: {e.Message}")
+            Return 0D
         Catch ex As Exception
-            Debug.Write($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & ex.Message}")
-            Return 0
+            Debug.WriteLine($"[CMC] Erro ao processar USDT/BRL: {ex.Message}")
+            Return 0D
         End Try
+
     End Function
+
     Public Async Function CM_GetBTCDOM() As Task(Of Decimal?)
         Try
             Dim requestUrl As String
@@ -110,61 +107,50 @@ Public Class Cotacao
                 response.EnsureSuccessStatusCode()
 
                 Dim responseBody As String = Await response.Content.ReadAsStringAsync()
-
-                ' Exibe o JSON retornado para depuração
-                ' MsgBox(responseBody)
-
-                ' Processa o JSON
                 Dim json = JsonDocument.Parse(responseBody)
 
-                ' Declarar variáveis para armazenar partes do JSON
                 Dim dataArray As JsonElement
                 Dim firstElement As JsonElement
                 Dim quoteElement As JsonElement
                 Dim usdElement As JsonElement
                 Dim dominanceElement As JsonElement
 
-                ' Acesse o array "data"
                 If json.RootElement.TryGetProperty("data", dataArray) AndAlso dataArray.ValueKind = JsonValueKind.Array Then
-                    ' Verifique se o array tem pelo menos um elemento
                     If dataArray.GetArrayLength() > 0 Then
                         firstElement = dataArray(0)
 
-                        ' Acesse as propriedades internas do primeiro elemento
                         If firstElement.TryGetProperty("quote", quoteElement) AndAlso
                            quoteElement.TryGetProperty("USD", usdElement) AndAlso
                            usdElement.TryGetProperty("market_cap_dominance", dominanceElement) Then
 
-                            ' Certifique-se de que o valor é numérico antes de converter
                             If dominanceElement.ValueKind = JsonValueKind.Number Then
                                 Return dominanceElement.GetDecimal()
-                            Else
-                                Throw New InvalidCastException("O valor de 'market_cap_dominance' não é numérico.")
                             End If
-                        Else
-                            Throw New KeyNotFoundException("Estrutura do JSON inesperada: propriedades 'quote' ou 'USD' ausentes.")
+
+                            Debug.WriteLine("[CMC] market_cap_dominance não é numérico.")
+                            Return Nothing
                         End If
-                    Else
-                        Throw New KeyNotFoundException("O array 'data' está vazio.")
+
+                        Debug.WriteLine("[CMC] Estrutura de dominância inesperada: quote/USD ausentes.")
+                        Return Nothing
                     End If
-                Else
-                    Throw New KeyNotFoundException("Estrutura do JSON inesperada: 'data' não é um array.")
+
+                    Debug.WriteLine("[CMC] Array data vazio ao consultar dominância BTC.")
+                    Return Nothing
                 End If
+
+                Debug.WriteLine("[CMC] Estrutura inesperada ao consultar dominância BTC.")
+                Return Nothing
             End Using
 
         Catch e As HttpRequestException
-            MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & e.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            'Application.Exit()
-            Return False
+            Debug.WriteLine($"[CMC] Erro HTTP ao consultar dominância BTC: {e.Message}")
+            Return Nothing
         Catch ex As Exception
-            MessageBox.Show($"Erro ao chamar a API! Aguarde um momento e tente novamente.{vbCrLf & vbCrLf & ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            ' Application.Exit()
-            Return False
+            Debug.WriteLine($"[CMC] Erro ao processar dominância BTC: {ex.Message}")
+            Return Nothing
         End Try
 
-        ' Retorna Nothing em caso de falha
-        Return Nothing
     End Function
 
 End Class
-
