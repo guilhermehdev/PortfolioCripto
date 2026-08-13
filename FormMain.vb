@@ -707,7 +707,7 @@ Public Class FormMain
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
 
-            If Await Cjson.LoadCriptos(dgPortfolio) Then
+            If Await PortfolioMarketService.LoadAsync(dgPortfolio) Then
                 Await StartBinanceWebSocket()
                 Await StartGateWebSocket()
                 dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)

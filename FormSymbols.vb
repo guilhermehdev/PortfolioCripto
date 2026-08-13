@@ -97,7 +97,7 @@ Public Class FormSymbols
 
     Private Sub dgSymbols_MouseDown(sender As Object, e As MouseEventArgs) Handles dgSymbols.MouseDown
         Dim json As New JSON
-        json.captureRightClick(dgSymbols, e)
+        'json.captureRightClick(dgSymbols, e)
     End Sub
 
     Private Sub dgSymbols_CellEnter(sender As Object, e As DataGridViewCellEventArgs) Handles dgSymbols.CellEnter

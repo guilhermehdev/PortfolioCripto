@@ -253,7 +253,7 @@ Public Class FormEntradas
     End Sub
 
     Private Sub dgCriptos_MouseDown(sender As Object, e As MouseEventArgs) Handles dgCriptos.MouseDown
-        json.captureRightClick(dgCriptos, e)
+        'json.captureRightClick(dgCriptos, e)
     End Sub
 
     Private Async Sub FormEntradas_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed

@@ -1,5 +1,6 @@
 Imports System.Data
 Imports System.Globalization
+Imports System.Net.Http
 
 Public NotInheritable Class PortfolioMarketService
 
@@ -36,11 +37,14 @@ Public NotInheritable Class PortfolioMarketService
 
             Dim binanceAssets = Await b.BINANCE_GetAllAssetsFull()
             Dim gateAssets = Await gate.GATE_GetAllSpotAssets()
+            Dim portfolioSymbols As New HashSet(Of String)(allSymbols, StringComparer.OrdinalIgnoreCase)
+            gateAssets = gateAssets.Where(Function(kvp) portfolioSymbols.Contains(kvp.Key)).ToDictionary(Function(kvp) kvp.Key, Function(kvp) kvp.Value, StringComparer.OrdinalIgnoreCase)
+
+            Debug.WriteLine($"[GATE.IO] Saldos considerados no portfólio: {gateAssets.Count}")
 
             Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
 
-            Dim usdBrl As Decimal =
-                Await gec.CGECKO_GetPrice("USDT", "brl")
+            Dim usdBrl As Decimal = Await gec.CGECKO_GetPrice("USDT", "brl")
 
             If usdBrl <= 0D Then
                 Throw New Exception("Cotação USDT/BRL retornou zero. Não foi possível atualizar os valores em BRL.")
@@ -119,14 +123,34 @@ Public NotInheritable Class PortfolioMarketService
                     Case "GATE.IO"
 
                         quantity =
-                            gateAssets.GetValueOrDefault(symbol, 0D)
+        gateAssets.GetValueOrDefault(symbol, 0D)
 
-                        Dim gatePrice As Decimal =
-                            Await gate.GATE_GetCoinsPrice(symbol)
+                        Debug.WriteLine(
+        $"[GATE LOAD] {symbol} -> saldo={quantity}")
 
-                        If gatePrice > 0D Then
-                            currPrice = gatePrice
-                        End If
+                        Try
+
+                            Dim gatePrice As Decimal =
+            Await gate.GATE_GetCoinsPrice(symbol)
+
+                            Debug.WriteLine(
+            $"[GATE LOAD] {symbol} -> preço={gatePrice}")
+
+                            If gatePrice > 0D Then
+                                currPrice = gatePrice
+                            End If
+
+                        Catch ex As HttpRequestException
+
+                            Debug.WriteLine(
+            $"[GATE LOAD] ERRO HTTP {symbol}: {ex.Message}")
+
+                        Catch ex As Exception
+
+                            Debug.WriteLine(
+            $"[GATE LOAD] ERRO {symbol}: {ex}")
+
+                        End Try
 
                     Case Else
 

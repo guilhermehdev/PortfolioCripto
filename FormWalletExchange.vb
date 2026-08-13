@@ -83,7 +83,7 @@ Public Class FormWalletExchange
 
     Private Sub dgWalletExchange_MouseDown(sender As Object, e As MouseEventArgs) Handles dgWalletExchange.MouseDown
         Dim json As New JSON
-        json.captureRightClick(dgWalletExchange, e)
+        'json.captureRightClick(dgWalletExchange, e)
     End Sub
 
 End Class

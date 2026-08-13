@@ -448,44 +448,6 @@ Public Class JSON
 
     End Function
 
-    Public Function LoadJSONtoDataGrid(Optional ByVal datagrid As DataGridView = Nothing) As Object
-        Try
-
-            Dim jsonObject As JObject = JObject.Parse(loadJSONfile)
-            Dim allItems As New List(Of ItemKey)()
-
-            For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
-                If propertyPair.Value.Type = JTokenType.Array Then
-                    Dim items As List(Of Item) = propertyPair.Value.ToObject(Of List(Of Item))()
-
-                    For Each item As Item In items
-                        Dim itemkey As New ItemKey() With {
-                        .Cripto = propertyPair.Key,
-                        .InitialPrice = item.InitialPrice,
-                        .Qtd = item.Qtd,
-                        .Data = item.Data,
-                        .Wallet = item.Wallet,
-                        .LastPrice = item.LastPrice,
-                        .Symbol = item.Symbol
-                    }
-                        allItems.Add(itemkey)
-                    Next
-                End If
-            Next
-
-            bindingSource.DataSource = allItems
-
-            If datagrid IsNot Nothing Then
-                datagrid.DataSource = bindingSource
-            End If
-
-            Return allItems
-        Catch ex As Exception
-            Return False
-        End Try
-
-    End Function
-
     Public Function SomaSe(ByVal valores() As Decimal, ByVal criterios() As String, ByVal criterio As String) As Double
         Dim soma As Decimal = 0
 
@@ -767,7 +729,7 @@ Public Class JSON
             cm.ResumeBinding()
         Catch ex As Exception
             Debug.WriteLine(ex.Message)
-            cm.ResumeBinding()
+            'cm.ResumeBinding()
         End Try
 
     End Sub
