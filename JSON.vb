@@ -640,7 +640,7 @@ Public Class JSON
         ' buscada nas APIs abaixo. O SQLite guarda a posição cadastrada,
         ' preço médio, wallet, data etc.
         ' ============================================================
-        PortfolioDb.Initialize()
+        PortfolioRepository.Initialize()
 
         Dim originalDT As DataTable = PortfolioRepository.GetAll()
 
@@ -654,7 +654,7 @@ Public Class JSON
 
             If File.Exists(jsonPath) Then
 
-                PortfolioDb.MigrateFromJson(jsonPath)
+                '  PortfolioRepository.MigrateFromJson(jsonPath)
 
                 originalDT = PortfolioRepository.GetAll()
 

@@ -117,6 +117,133 @@ Public Class FormMain
 
     End Function
 
+    Private Sub UpdateGateRow(
+    symbol As String,
+    price As Decimal)
+
+        Try
+
+            For Each row As DataGridViewRow In dgPortfolio.Rows
+
+                If row.IsNewRow Then
+                    Continue For
+                End If
+
+                Dim rowSymbol As String =
+                row.Cells(0).Value?.
+                ToString().
+                Trim().
+                ToUpperInvariant()
+
+                Dim wallet As String =
+                row.Cells(2).Value?.
+                ToString().
+                Trim().
+                ToUpperInvariant()
+
+                If rowSymbol <> symbol.ToUpperInvariant() Then
+                    Continue For
+                End If
+
+                If wallet <> "GATE.IO" Then
+                    Continue For
+                End If
+
+                Dim qtd As Decimal =
+                Convert.ToDecimal(row.Cells(3).Value)
+
+                Dim precoMedio As Decimal =
+                Convert.ToDecimal(row.Cells(6).Value)
+
+                Dim valorEntradaUSD As Decimal =
+                qtd * precoMedio
+
+                Dim valorAtualUSD As Decimal =
+                qtd * price
+
+                Dim roiUSD As Decimal =
+                valorAtualUSD - valorEntradaUSD
+
+                Dim performance As Decimal = 0D
+
+                If valorEntradaUSD > 0D Then
+
+                    performance =
+                    (roiUSD / valorEntradaUSD) * 100D
+
+                End If
+
+                Dim usdBrl As Decimal =
+                Cjson.USDBRLprice
+
+                Dim valorAtualBRL As Decimal =
+                valorAtualUSD * usdBrl
+
+                Dim roiBRL As Decimal =
+                roiUSD * usdBrl
+
+                Dim x As Decimal = 0D
+
+                If valorEntradaUSD > 0D Then
+                    x = valorAtualUSD / valorEntradaUSD
+                End If
+
+                ' Preço
+                row.Cells(7).Value = price
+
+                ' Performance
+                row.Cells(1).Value =
+                $"{performance:F2}%"
+
+                ' Valor atual USD
+                row.Cells(10).Value =
+                valorAtualUSD
+
+                ' Valor atual BRL
+                row.Cells(11).Value =
+                valorAtualBRL
+
+                ' ROI USD
+                row.Cells(12).Value =
+                roiUSD
+
+                ' ROI BRL
+                row.Cells(13).Value =
+                roiBRL
+
+                ' Multiplicador
+                row.Cells(14).Value =
+                $"{x:N2} X"
+
+                Exit For
+
+            Next
+
+            ' O mesmo recálculo usado pela Binance
+            UpdateRealtimeOverview()
+
+        Catch ex As Exception
+
+            Debug.WriteLine(
+            "[GATE WS] Erro atualizando " &
+            symbol &
+            ": " &
+            ex.Message)
+
+        End Try
+
+    End Sub
+
+    Private Sub GateWs_ConnectionStateChanged(
+    connected As Boolean,
+    message As String)
+
+        Debug.WriteLine(
+        "[GATE WS] " &
+        message)
+
+    End Sub
+
     Private Sub GateWs_PriceUpdated(
     symbol As String,
     price As Decimal)
@@ -581,13 +708,9 @@ Public Class FormMain
             dgPortfolio.Cursor = Cursors.WaitCursor
 
             If Await Cjson.LoadCriptos(dgPortfolio) Then
-
                 Await StartBinanceWebSocket()
-
-                dgPortfolio.Sort(
-        dgPortfolio.Columns("ROIusd"),
-        System.ComponentModel.ListSortDirection.Descending)
-
+                Await StartGateWebSocket()
+                dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
                 Adjust()
             Else
                 lbDebug.AppendText("Status: Erro ao carregar o portfólio.")
@@ -969,6 +1092,7 @@ Public Class FormMain
 
         Try
             Await _binanceWs.StopAsync()
+            Await _gateWs.StopAsync()
         Catch
         End Try
     End Sub
