@@ -11,6 +11,7 @@ Public Class FormMain
     Dim B As New Binance
     Dim gec As New Coingecko
     Private ReadOnly _binanceWs As New BinanceWebSocket
+    Private ReadOnly _gateWs As New GateWebSocket
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -55,13 +56,14 @@ Public Class FormMain
 
         Try
 
-            AddHandler _binanceWs.PriceUpdated,
-            AddressOf BinanceWs_PriceUpdated
+            AddHandler _binanceWs.PriceUpdated, AddressOf BinanceWs_PriceUpdated
 
-            AddHandler _binanceWs.ConnectionStateChanged,
-            AddressOf BinanceWs_ConnectionStateChanged
+            AddHandler _binanceWs.ConnectionStateChanged, AddressOf BinanceWs_ConnectionStateChanged
 
             Await B.SyncBinanceTime()
+
+            AddHandler _gateWs.PriceUpdated, AddressOf GateWs_PriceUpdated
+            AddHandler _gateWs.ConnectionStateChanged, AddressOf GateWs_ConnectionStateChanged
 
             chart.removeCharts()
 
@@ -78,6 +80,60 @@ Public Class FormMain
             ex.Message)
 
         End Try
+
+    End Sub
+
+    Private Async Function StartGateWebSocket() As Task
+
+        Dim symbols As New List(Of String)
+
+        For Each row As DataGridViewRow In dgPortfolio.Rows
+
+            If row.IsNewRow Then Continue For
+
+            Dim wallet As String =
+            row.Cells(2).Value?.
+            ToString().
+            Trim().
+            ToUpperInvariant()
+
+            If wallet <> "GATE.IO" Then Continue For
+
+            Dim symbol As String =
+            row.Cells(0).Value?.
+            ToString().
+            Trim().
+            ToUpperInvariant()
+
+            If Not String.IsNullOrWhiteSpace(symbol) Then
+                symbols.Add(symbol)
+            End If
+
+        Next
+
+        If symbols.Count > 0 Then
+            Await _gateWs.StartAsync(symbols.Distinct())
+        End If
+
+    End Function
+
+    Private Sub GateWs_PriceUpdated(
+    symbol As String,
+    price As Decimal)
+
+        If Me.InvokeRequired Then
+
+            Me.BeginInvoke(
+            New Action(
+                Sub()
+                    UpdateGateRow(symbol, price)
+                End Sub))
+
+            Return
+
+        End If
+
+        UpdateGateRow(symbol, price)
 
     End Sub
 
