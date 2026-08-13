@@ -49,6 +49,19 @@ Public Class PortfolioDb
         Return DbPath
     End Function
 
+    Public Shared Function GetDatabaseRowCount() As Long
+        Initialize()
+
+        Using cn As New SqliteConnection(ConnectionString)
+            cn.Open()
+
+            Using cmd As SqliteCommand = cn.CreateCommand()
+                cmd.CommandText = "SELECT COUNT(1) FROM PortfolioItems;"
+                Return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture)
+            End Using
+        End Using
+    End Function
+
     ''' <summary>
     ''' Migra o portfolio.json atual para SQLite sem alterar o JSON original.
     ''' Pode ser executado mais de uma vez sem duplicar os registros.
