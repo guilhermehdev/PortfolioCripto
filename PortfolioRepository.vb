@@ -68,12 +68,10 @@ Public NotInheritable Class PortfolioRepository
 
     Public Shared Function GetAll() As DataTable
         Initialize()
-
         Dim table As New DataTable()
 
         Using connection As New SqliteConnection(ConnectionString)
             connection.Open()
-
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
                     "SELECT Id, Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice, CreatedAt, UpdatedAt " &
@@ -152,9 +150,9 @@ Public NotInheritable Class PortfolioRepository
                         End If
                     End Using
 
-                    Dim initialPriceText As String = initialPrice.ToString("G29", CultureInfo.InvariantCulture)
-                    Dim quantityText As String = quantity.ToString("G29", CultureInfo.InvariantCulture)
-                    Dim lastPriceText As String = lastPrice.ToString("G29", CultureInfo.InvariantCulture)
+                    Dim initialPriceValue As Double = Convert.ToDouble(initialPrice)
+                    Dim quantityValue As Double = Convert.ToDouble(quantity)
+                    Dim lastPriceValue As Double = Convert.ToDouble(lastPrice)
 
                     If existingId > 0 Then
                         Using updateCommand As SqliteCommand = connection.CreateCommand()
@@ -163,13 +161,13 @@ Public NotInheritable Class PortfolioRepository
                                 "UPDATE PortfolioItems SET " &
                                 "InitialPrice = $initialPrice, " &
                                 "Quantity = $quantity, " &
-                                "LastPrice = CAST($lastPrice AS REAL), " &
+                                "LastPrice = $lastPrice, " &
                                 "UpdatedAt = CURRENT_TIMESTAMP " &
                                 "WHERE Id = $id;"
 
-                            updateCommand.Parameters.AddWithValue("$initialPrice", initialPriceText)
-                            updateCommand.Parameters.AddWithValue("$quantity", quantityText)
-                            updateCommand.Parameters.AddWithValue("$lastPrice", lastPriceText)
+                            AddRealParameter(updateCommand, "$initialPrice", initialPriceValue)
+                            AddRealParameter(updateCommand, "$quantity", quantityValue)
+                            AddRealParameter(updateCommand, "$lastPrice", lastPriceValue)
                             updateCommand.Parameters.AddWithValue("$id", existingId)
                             updateCommand.ExecuteNonQuery()
                         End Using
@@ -179,15 +177,15 @@ Public NotInheritable Class PortfolioRepository
                             insertCommand.CommandText =
                                 "INSERT INTO PortfolioItems " &
                                 "(Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice) " &
-                                "VALUES ($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, CAST($lastPrice AS REAL));"
+                                "VALUES ($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, $lastPrice);"
 
                             insertCommand.Parameters.AddWithValue("$cripto", cripto)
                             insertCommand.Parameters.AddWithValue("$symbol", symbol)
-                            insertCommand.Parameters.AddWithValue("$initialPrice", initialPriceText)
-                            insertCommand.Parameters.AddWithValue("$quantity", quantityText)
+                            AddRealParameter(insertCommand, "$initialPrice", initialPriceValue)
+                            AddRealParameter(insertCommand, "$quantity", quantityValue)
                             insertCommand.Parameters.AddWithValue("$data", data)
                             insertCommand.Parameters.AddWithValue("$wallet", wallet)
-                            insertCommand.Parameters.AddWithValue("$lastPrice", lastPriceText)
+                            AddRealParameter(insertCommand, "$lastPrice", lastPriceValue)
                             insertCommand.ExecuteNonQuery()
                         End Using
 
@@ -212,20 +210,19 @@ Public NotInheritable Class PortfolioRepository
     Public Shared Sub UpdateLastPrice(id As Long, lastPrice As Decimal)
         Initialize()
 
+        Dim lastPriceValue As Double = Convert.ToDouble(lastPrice)
+
         Using connection As New SqliteConnection(ConnectionString)
             connection.Open()
 
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
                     "UPDATE PortfolioItems SET " &
-                    "LastPrice = CAST($lastPrice AS REAL), " &
+                    "LastPrice = $lastPrice, " &
                     "UpdatedAt = CURRENT_TIMESTAMP " &
                     "WHERE Id = $id;"
 
-                command.Parameters.AddWithValue(
-                    "$lastPrice",
-                    lastPrice.ToString("G29", CultureInfo.InvariantCulture))
-
+                AddRealParameter(command, "$lastPrice", lastPriceValue)
                 command.Parameters.AddWithValue("$id", id)
                 command.ExecuteNonQuery()
             End Using
@@ -237,12 +234,24 @@ Public NotInheritable Class PortfolioRepository
 
         Using connection As New SqliteConnection(ConnectionString)
             connection.Open()
+
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText = "DELETE FROM PortfolioItems WHERE Id = $id;"
                 command.Parameters.AddWithValue("$id", id)
                 command.ExecuteNonQuery()
             End Using
         End Using
+    End Sub
+
+    Private Shared Sub AddRealParameter(
+        command As SqliteCommand,
+        name As String,
+        value As Double)
+
+        Dim parameter As SqliteParameter =
+            command.Parameters.Add(name, SqliteType.Real)
+
+        parameter.Value = value
     End Sub
 
 End Class
