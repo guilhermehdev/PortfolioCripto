@@ -1,184 +1,176 @@
 ﻿Imports System.Globalization
-Imports Newtonsoft.Json.Linq
 
 Public Class FormEntradas
+
     Dim charts As New Charts
     Dim json As New JSON
     Dim bs As New BindingSource()
 
     Private Async Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
-        Dim key As String = ""
-        If cbCripto.SelectedValue = 0 Or Not IsNumeric(cbCripto.SelectedValue) Or cbCripto.SelectedValue = "" Then
-            key = cbCripto.Text
-        Else
-            key = cbCripto.SelectedValue
-        End If
 
-        If (String.IsNullOrWhiteSpace(tbQtd.Text) OrElse tbQtd.Text = "0") OrElse
-           (Not IsNumeric(TbPrecoEntrada.Text) OrElse TbPrecoEntrada.Text = "0") Then
-            MsgBox("Preencha todos os campos!")
-        Else
+        Try
 
-        End If
+            Dim key As String = cbCripto.Text.Trim()
+            Dim symbol As String = cbCripto.Text.Trim().ToUpperInvariant()
+            Dim wallet As String = cbWallet.Text.Trim()
 
-        If Await json.saveAportToJSONBin(key, TbPrecoEntrada.Text, tbQtd.Text, dtpDataEntrada.Text, cbWallet.Text, cbCripto.Text) Then
-            MsgBox("Salvo!")
-            loadJSONtoDatagridLocal(dgCriptos)
-        End If
+            If String.IsNullOrWhiteSpace(key) OrElse
+               String.IsNullOrWhiteSpace(symbol) OrElse
+               String.IsNullOrWhiteSpace(wallet) Then
+
+                MsgBox("Preencha todos os campos!")
+                Return
+
+            End If
+
+            Dim precoEntrada As Decimal
+            Dim qtd As Decimal
+
+            If Not TryParseDecimalBR(TbPrecoEntrada.Text, precoEntrada) OrElse
+               precoEntrada <= 0D Then
+
+                MsgBox("Informe um preço de entrada válido.")
+                Return
+
+            End If
+
+            If Not TryParseDecimalBR(tbQtd.Text, qtd) OrElse
+               qtd <= 0D Then
+
+                MsgBox("Informe uma quantidade válida.")
+                Return
+
+            End If
+
+            Dim dataEntrada As String =
+                dtpDataEntrada.Value.ToString("yyyy-MM-dd HH:mm:ss")
+
+            Dim id As Long =
+                PortfolioRepository.AddOrUpdate(
+                    key,
+                    symbol,
+                    precoEntrada,
+                    qtd,
+                    dataEntrada,
+                    wallet,
+                    0D)
+
+            If id > 0 Then
+
+                MsgBox("Salvo!")
+                LoadPortfolioGrid(dgCriptos)
+
+                If FormMain IsNot Nothing Then
+                    FormMain.lbDebug.AppendText(
+                        Environment.NewLine &
+                        "Portfolio salvo no SQLite.")
+                End If
+
+            End If
+
+        Catch ex As Exception
+
+            MsgBox("Erro ao salvar no SQLite: " & ex.Message)
+
+        End Try
 
     End Sub
 
     Private Sub FormEntradas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+
         cbCripto.SelectedItem = 0
         cbWallet.SelectedItem = 0
-        TbPrecoEntrada.Text = 0.00
-        tbQtd.Text = 0
-        loadJSONtoDatagridLocal(dgCriptos)
-        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", cbWallet, Nothing)
-        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\criptos.json", cbCripto, Nothing)
+
+        TbPrecoEntrada.Text = "0,00"
+        tbQtd.Text = "0"
+
+        LoadPortfolioGrid(dgCriptos)
+
+        ' Estes dois JSONs são apenas cadastros auxiliares de opções
+        ' (wallets e símbolos). Não são o banco do portfólio.
+        json.loadFromJSON2ComboGrid(
+            Application.StartupPath & "\JSON\wallets.json",
+            cbWallet,
+            Nothing)
+
+        json.loadFromJSON2ComboGrid(
+            Application.StartupPath & "\JSON\criptos.json",
+            cbCripto,
+            Nothing)
 
     End Sub
 
-    Private Function loadJSONtoDatagridLocal(Optional ByVal datagrid As DataGridView = Nothing)
-        Dim jsonObject As JObject = JObject.Parse(json.loadJSONfile)
-        Dim allItems As New List(Of ItemKey)()
+    Private Sub LoadPortfolioGrid(Optional datagrid As DataGridView = Nothing)
 
-        For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
-            If propertyPair.Value.Type = JTokenType.Array Then
-                Dim items As List(Of Item) = propertyPair.Value.ToObject(Of List(Of Item))()
+        Dim table As DataTable =
+            PortfolioRepository.GetAll()
 
-                For Each item As Item In items
-                    Dim itemkey As New ItemKey() With {
-                    .Cripto = propertyPair.Key,
-                    .Symbol = item.Symbol,
-                    .InitialPrice = item.InitialPrice,
-                    .Qtd = item.Qtd,
-                    .Data = item.Data,
-                    .Wallet = item.Wallet
-                }
-                    allItems.Add(itemkey)
+        bs.DataSource = table
 
-                Next
-            End If
-
-        Next
-
-        Dim fontsize As Int16 = 10
-        Dim fontname As String = "Calibri"
-        If datagrid IsNot Nothing Then
-
-            datagrid.DataSource = Nothing
-            datagrid.AutoGenerateColumns = True
-            datagrid.DataSource = allItems
-
-            ' === Configuração de colunas ===
-            ' Ocultar colunas
-            datagrid.Columns("Cripto").Visible = False
-            datagrid.Columns("LastPrice").Visible = False
-
-            ' Reordenar colunas
-            datagrid.Columns("Symbol").DisplayIndex = 0
-            datagrid.Columns("Qtd").DisplayIndex = 1
-            datagrid.Columns("InitialPrice").DisplayIndex = 2
-            datagrid.Columns("Data").DisplayIndex = 3
-            datagrid.Columns("Wallet").DisplayIndex = 4
-
-            datagrid.ColumnHeadersHeight = 40
-            datagrid.CellBorderStyle = DataGridViewCellBorderStyle.None
-            datagrid.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-            datagrid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-
-            With datagrid.ColumnHeadersDefaultCellStyle
-                .BackColor = Color.FromArgb(40, 40, 40)
-                .ForeColor = Color.Aqua
-                .Font = New Font("Calibri", 10, FontStyle.Italic)
-            End With
-
-            datagrid.Columns("Symbol").Width = 100
-            datagrid.Columns("Symbol").HeaderText = "Cripto"
-            With datagrid.Columns("Symbol").DefaultCellStyle
-                .BackColor = Color.Black
-                .ForeColor = Color.White
-                .Font = New Font(fontname, fontsize, FontStyle.Bold)
-                .Alignment = DataGridViewContentAlignment.MiddleLeft
-            End With
-
-            datagrid.Columns(1).HeaderText = "Preço médio"
-            datagrid.Columns(1).Width = 80
-            With datagrid.Columns(1).DefaultCellStyle
-                .BackColor = Color.Black
-                .ForeColor = Color.LimeGreen
-                .Font = New Font(fontname, fontsize, FontStyle.Bold)
-                .Alignment = DataGridViewContentAlignment.MiddleLeft
-            End With
-
-            datagrid.Columns(2).HeaderText = "Qtd"
-            datagrid.Columns(2).Width = 80
-            With datagrid.Columns(2).DefaultCellStyle
-                .BackColor = Color.Black
-                .Font = New Font(fontname, fontsize, FontStyle.Bold)
-                .Alignment = DataGridViewContentAlignment.MiddleLeft
-            End With
-
-            datagrid.Columns(3).Width = 80
-            With datagrid.Columns(3).DefaultCellStyle
-                .BackColor = Color.Black
-                .ForeColor = Color.White
-                .Font = New Font(fontname, fontsize, FontStyle.Bold)
-                .Alignment = DataGridViewContentAlignment.MiddleLeft
-            End With
-
-            datagrid.Columns(4).Width = 80
-            With datagrid.Columns(4).DefaultCellStyle
-                .BackColor = Color.Black
-                .ForeColor = Color.White
-                .Font = New Font(fontname, fontsize, FontStyle.Bold)
-                .Alignment = DataGridViewContentAlignment.MiddleLeft
-            End With
-
-            For Each row As DataGridViewRow In datagrid.Rows
-
-                Select Case row.Cells(4).Value
-                    Case "BINANCE"
-                        row.Cells(4).Style.ForeColor = Color.Goldenrod
-                    Case "METAMASK"
-                        row.Cells(4).Style.ForeColor = Color.DarkOrange
-                    Case "TRUSTWALLET"
-                        row.Cells(4).Style.ForeColor = Color.LawnGreen
-                    Case "PHANTOM"
-                        row.Cells(4).Style.ForeColor = Color.MediumPurple
-                    Case "BYBIT"
-                        row.Cells(4).Style.ForeColor = Color.Gainsboro
-                    Case "GATE.IO"
-                        row.Cells(4).Style.ForeColor = Color.DodgerBlue
-                    Case "MEXC"
-                        row.Cells(4).Style.ForeColor = Color.White
-                End Select
-
-                row.Height = 35
-                datagrid.ClearSelection()
-                datagrid.CurrentCell = Nothing
-
-                With row.Cells(2)
-                    .Style.Format = "C2"
-                    .Style.FormatProvider = New CultureInfo("en-US")
-                End With
-            Next
-
-            datagrid.ClearSelection()
-            datagrid.CurrentCell = Nothing
-
+        If datagrid Is Nothing Then
+            Return
         End If
 
-        bs.DataSource = allItems
-        Return allItems
+        datagrid.DataSource = Nothing
+        datagrid.AutoGenerateColumns = True
+        datagrid.DataSource = bs
 
-    End Function
+        FormatPortfolioGrid(datagrid)
 
+    End Sub
 
-    Private Sub FormatGrid(datagrid As DataGridView)
-        Dim fontsize As Int16 = 10
-        Dim fontname As String = "Calibri"
+    Private Sub FormatPortfolioGrid(datagrid As DataGridView)
+
+        If datagrid.Columns.Contains("Id") Then
+            datagrid.Columns("Id").Visible = False
+        End If
+
+        If datagrid.Columns.Contains("Cripto") Then
+            datagrid.Columns("Cripto").Visible = False
+        End If
+
+        If datagrid.Columns.Contains("LastPrice") Then
+            datagrid.Columns("LastPrice").Visible = False
+        End If
+
+        If datagrid.Columns.Contains("CreatedAt") Then
+            datagrid.Columns("CreatedAt").Visible = False
+        End If
+
+        If datagrid.Columns.Contains("UpdatedAt") Then
+            datagrid.Columns("UpdatedAt").Visible = False
+        End If
+
+        If datagrid.Columns.Contains("Symbol") Then
+            datagrid.Columns("Symbol").DisplayIndex = 0
+            datagrid.Columns("Symbol").HeaderText = "Cripto"
+            datagrid.Columns("Symbol").Width = 100
+        End If
+
+        If datagrid.Columns.Contains("Quantity") Then
+            datagrid.Columns("Quantity").DisplayIndex = 1
+            datagrid.Columns("Quantity").HeaderText = "Qtd"
+            datagrid.Columns("Quantity").Width = 90
+        End If
+
+        If datagrid.Columns.Contains("InitialPrice") Then
+            datagrid.Columns("InitialPrice").DisplayIndex = 2
+            datagrid.Columns("InitialPrice").HeaderText = "Preço médio"
+            datagrid.Columns("InitialPrice").Width = 100
+            datagrid.Columns("InitialPrice").DefaultCellStyle.Format = "N8"
+        End If
+
+        If datagrid.Columns.Contains("Data") Then
+            datagrid.Columns("Data").DisplayIndex = 3
+            datagrid.Columns("Data").HeaderText = "Data"
+            datagrid.Columns("Data").Width = 150
+        End If
+
+        If datagrid.Columns.Contains("Wallet") Then
+            datagrid.Columns("Wallet").DisplayIndex = 4
+            datagrid.Columns("Wallet").HeaderText = "Wallet"
+            datagrid.Columns("Wallet").Width = 100
+        End If
 
         datagrid.ColumnHeadersHeight = 40
         datagrid.CellBorderStyle = DataGridViewCellBorderStyle.None
@@ -191,72 +183,59 @@ Public Class FormEntradas
             .Font = New Font("Calibri", 10, FontStyle.Italic)
         End With
 
-        datagrid.Columns(0).Visible = False
-        datagrid.Columns(0).Width = 60
-        With datagrid.Columns(0).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.White
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleLeft
-        End With
+        For Each column As DataGridViewColumn In datagrid.Columns
 
-        datagrid.Columns(2).HeaderText = "Preço médio/entrada"
-        datagrid.Columns(2).Width = 90
-        With datagrid.Columns(2).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.LimeGreen
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleLeft
-        End With
+            column.DefaultCellStyle.BackColor = Color.Black
+            column.DefaultCellStyle.Font = New Font("Calibri", 10, FontStyle.Bold)
+            column.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
 
-        datagrid.Columns(3).Width = 80
-        With datagrid.Columns(3).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.Gold
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleLeft
-        End With
+        Next
 
-        datagrid.Columns(4).Width = 80
-        With datagrid.Columns(4).DefaultCellStyle
-            .BackColor = Color.Black
-            .ForeColor = Color.White
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleLeft
-        End With
+        If datagrid.Columns.Contains("Symbol") Then
+            datagrid.Columns("Symbol").DefaultCellStyle.ForeColor = Color.White
+        End If
 
-        datagrid.Columns(5).Width = 104
-        With datagrid.Columns(5).DefaultCellStyle
-            .BackColor = Color.Black
-            .Font = New Font(fontname, fontsize, FontStyle.Bold)
-            .Alignment = DataGridViewContentAlignment.MiddleCenter
-        End With
+        If datagrid.Columns.Contains("InitialPrice") Then
+            datagrid.Columns("InitialPrice").DefaultCellStyle.ForeColor = Color.LimeGreen
+        End If
+
+        If datagrid.Columns.Contains("Quantity") Then
+            datagrid.Columns("Quantity").DefaultCellStyle.ForeColor = Color.Gold
+        End If
+
+        If datagrid.Columns.Contains("Wallet") Then
+            datagrid.Columns("Wallet").DefaultCellStyle.ForeColor = Color.White
+        End If
 
         For Each row As DataGridViewRow In datagrid.Rows
 
-            Select Case row.Cells(5).Value
-                Case "Binance"
-                    row.Cells(5).Style.ForeColor = Color.Goldenrod
-                Case "Metamask"
-                    row.Cells(5).Style.ForeColor = Color.DarkOrange
-                Case "TrustWallet"
-                    row.Cells(5).Style.ForeColor = Color.LawnGreen
-                Case "Phantom"
-                    row.Cells(5).Style.ForeColor = Color.MediumPurple
-                Case "Bybit"
-                    row.Cells(5).Style.ForeColor = Color.Gainsboro
-                Case "Gate.io"
-                    row.Cells(5).Style.ForeColor = Color.DodgerBlue
-            End Select
+            If row.IsNewRow Then
+                Continue For
+            End If
+
+            If datagrid.Columns.Contains("Wallet") Then
+
+                Select Case row.Cells("Wallet").Value?.ToString().ToUpperInvariant()
+                    Case "BINANCE"
+                        row.Cells("Wallet").Style.ForeColor = Color.Goldenrod
+                    Case "METAMASK"
+                        row.Cells("Wallet").Style.ForeColor = Color.DarkOrange
+                    Case "TRUSTWALLET"
+                        row.Cells("Wallet").Style.ForeColor = Color.LawnGreen
+                    Case "PHANTOM"
+                        row.Cells("Wallet").Style.ForeColor = Color.MediumPurple
+                    Case "BYBIT"
+                        row.Cells("Wallet").Style.ForeColor = Color.Gainsboro
+                    Case "GATE.IO"
+                        row.Cells("Wallet").Style.ForeColor = Color.DodgerBlue
+                    Case "MEXC"
+                        row.Cells("Wallet").Style.ForeColor = Color.White
+                End Select
+
+            End If
 
             row.Height = 35
-            datagrid.ClearSelection()
-            datagrid.CurrentCell = Nothing
 
-            With row.Cells(2)
-                .Style.Format = "C2"
-                .Style.FormatProvider = New CultureInfo("en-US")
-            End With
         Next
 
         datagrid.ClearSelection()
@@ -264,38 +243,94 @@ Public Class FormEntradas
 
     End Sub
 
-    Private Async Sub ExcluirToolStripMenuItem_Click_1(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
-        Dim row As DataGridViewRow = dgCriptos.SelectedRows.Item(0)
-        Dim simbolToDelete As ItemKey = CType(bs.Current, ItemKey)
+    Private Sub ExcluirToolStripMenuItem_Click_1(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
 
-        Dim key As String = dgCriptos.SelectedRows.Item(0).Cells(0).Value.ToString()
-        If json.DeleteJSONFromBin(key) Then
-            bs.Remove(simbolToDelete)
-            'FormEntradas_Load(sender, e)
-            loadJSONtoDatagridLocal(dgCriptos)
+        Try
 
-        End If
+            If dgCriptos.SelectedRows.Count = 0 Then
+                MsgBox("Selecione um registro para excluir.")
+                Return
+            End If
+
+            Dim selectedRow As DataGridViewRow =
+                dgCriptos.SelectedRows(0)
+
+            Dim id As Long =
+                Convert.ToInt64(selectedRow.Cells("Id").Value)
+
+            Dim symbol As String =
+                selectedRow.Cells("Symbol").Value?.ToString()
+
+            If MessageBox.Show(
+                $"Excluir {symbol}?",
+                "Confirmar exclusão",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning) <> DialogResult.Yes Then
+
+                Return
+
+            End If
+
+            PortfolioRepository.Delete(id)
+
+            LoadPortfolioGrid(dgCriptos)
+
+        Catch ex As Exception
+
+            MsgBox("Erro ao excluir do SQLite: " & ex.Message)
+
+        End Try
 
     End Sub
+
     Private Sub ButtonCancel_Click(sender As Object, e As EventArgs) Handles ButtonCancel.Click
         Me.Close()
     End Sub
 
     Private Sub dgCriptos_CellEnter(sender As Object, e As DataGridViewCellEventArgs) Handles dgCriptos.CellEnter
+
         Try
-            cbCripto.Text = dgCriptos.SelectedRows.Item(0).Cells(6).Value.ToString
-            TbPrecoEntrada.Text = dgCriptos.SelectedRows.Item(0).Cells(1).Value.ToString.Replace(".", ",")
-            tbQtd.Text = dgCriptos.SelectedRows.Item(0).Cells(2).Value.ToString.Replace(".", ",")
-            dtpDataEntrada.Value = dgCriptos.SelectedRows.Item(0).Cells(3).Value.ToString
-            cbWallet.Text = dgCriptos.SelectedRows.Item(0).Cells(4).Value.ToString
-        Catch ex As Exception
-            ' MsgBox(ex.Message)
+
+            Dim row As DataGridViewRow = dgCriptos.SelectedRows(0)
+
+            cbCripto.Text = row.Cells("Symbol").Value?.ToString()
+
+            TbPrecoEntrada.Text =
+                Convert.ToDecimal(
+                    row.Cells("InitialPrice").Value).
+                ToString("N8", CultureInfo.GetCultureInfo("pt-BR"))
+
+            tbQtd.Text =
+                Convert.ToDecimal(
+                    row.Cells("Quantity").Value).
+                ToString("G29", CultureInfo.GetCultureInfo("pt-BR"))
+
+            If DateTime.TryParse(
+                row.Cells("Data").Value?.ToString(),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                Nothing) Then
+
+                dtpDataEntrada.Value =
+                    DateTime.Parse(
+                        row.Cells("Data").Value.ToString(),
+                        CultureInfo.InvariantCulture)
+
+            End If
+
+            cbWallet.Text =
+                row.Cells("Wallet").Value?.ToString()
+
+        Catch
+            ' Ignora navegação sem seleção completa.
         End Try
+
     End Sub
 
     Private Sub btAddWallet_Click(sender As Object, e As EventArgs) Handles btAddWallet.Click
         FormWalletExchange.Show()
     End Sub
+
     Private Sub btAddSymbol_Click(sender As Object, e As EventArgs) Handles btAddSymbol.Click
         FormSymbols.Show()
     End Sub
@@ -303,10 +338,71 @@ Public Class FormEntradas
     Private Sub dgCriptos_MouseDown(sender As Object, e As MouseEventArgs) Handles dgCriptos.MouseDown
         json.captureRightClick(dgCriptos, e)
     End Sub
+
     Private Async Sub FormEntradas_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed
-        If FormMain.msgQuestion("Deseja atualizar os gráficos?", "Aviso") Then
+
+        If FormMain.msgQuestion(
+            "Deseja atualizar os gráficos?",
+            "Aviso") Then
+
             Await FormMain.refreshMarket()
+
         End If
+
     End Sub
+
+    Private Function TryParseDecimalBR(
+        text As String,
+        ByRef value As Decimal) As Boolean
+
+        If String.IsNullOrWhiteSpace(text) Then
+            value = 0D
+            Return False
+        End If
+
+        Dim normalized As String = text.Trim()
+
+        If normalized.Contains(",") AndAlso
+           normalized.Contains(".") Then
+
+            If normalized.LastIndexOf(","c) >
+               normalized.LastIndexOf("."c) Then
+
+                normalized =
+                    normalized.Replace(".", String.Empty).
+                                Replace(",", ".")
+
+            Else
+
+                normalized =
+                    normalized.Replace(",", String.Empty)
+
+            End If
+
+            Return Decimal.TryParse(
+                normalized,
+                NumberStyles.Any,
+                CultureInfo.InvariantCulture,
+                value)
+
+        End If
+
+        If normalized.Contains(",") Then
+
+            Return Decimal.TryParse(
+                normalized,
+                NumberStyles.Any,
+                CultureInfo.GetCultureInfo("pt-BR"),
+                value)
+
+        End If
+
+        Return Decimal.TryParse(
+            normalized,
+            NumberStyles.Any,
+            CultureInfo.InvariantCulture,
+            value)
+
+    End Function
 
 End Class
