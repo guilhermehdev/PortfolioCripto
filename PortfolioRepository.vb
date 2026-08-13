@@ -19,29 +19,41 @@ Public NotInheritable Class PortfolioRepository
             connection.Open()
 
             Using command As SqliteCommand = connection.CreateCommand()
-                command.CommandText = """
-                    PRAGMA journal_mode = WAL;
-                    PRAGMA foreign_keys = ON;
+                command.CommandText = "PRAGMA journal_mode = WAL;"
+                command.ExecuteNonQuery()
 
-                    CREATE TABLE IF NOT EXISTS PortfolioItems (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        Cripto TEXT NOT NULL,
-                        Symbol TEXT NOT NULL,
-                        InitialPrice NUMERIC NOT NULL DEFAULT 0,
-                        Quantity NUMERIC NOT NULL DEFAULT 0,
-                        Data TEXT,
-                        Wallet TEXT NOT NULL,
-                        LastPrice NUMERIC NOT NULL DEFAULT 0,
-                        CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    );
+                command.CommandText = "PRAGMA foreign_keys = ON;"
+                command.ExecuteNonQuery()
+            End Using
 
-                    CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Symbol
-                        ON PortfolioItems(Symbol);
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "CREATE TABLE IF NOT EXISTS PortfolioItems (" &
+                    "Id INTEGER PRIMARY KEY AUTOINCREMENT, " &
+                    "Cripto TEXT NOT NULL, " &
+                    "Symbol TEXT NOT NULL, " &
+                    "InitialPrice NUMERIC NOT NULL DEFAULT 0, " &
+                    "Quantity NUMERIC NOT NULL DEFAULT 0, " &
+                    "Data TEXT, " &
+                    "Wallet TEXT NOT NULL, " &
+                    "LastPrice NUMERIC NOT NULL DEFAULT 0, " &
+                    "CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, " &
+                    "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
+                    ");"
+                command.ExecuteNonQuery()
+            End Using
 
-                    CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Wallet
-                        ON PortfolioItems(Wallet);
-                """
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Symbol " &
+                    "ON PortfolioItems(Symbol);"
+                command.ExecuteNonQuery()
+            End Using
+
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Wallet " &
+                    "ON PortfolioItems(Wallet);"
                 command.ExecuteNonQuery()
             End Using
         End Using
@@ -64,21 +76,9 @@ Public NotInheritable Class PortfolioRepository
             connection.Open()
 
             Using command As SqliteCommand = connection.CreateCommand()
-                command.CommandText = """
-                    SELECT
-                        Id,
-                        Cripto,
-                        Symbol,
-                        InitialPrice,
-                        Quantity,
-                        Data,
-                        Wallet,
-                        LastPrice,
-                        CreatedAt,
-                        UpdatedAt
-                    FROM PortfolioItems
-                    ORDER BY Id;
-                """
+                command.CommandText =
+                    "SELECT Id, Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice, CreatedAt, UpdatedAt " &
+                    "FROM PortfolioItems ORDER BY Id;"
 
                 Using reader = command.ExecuteReader()
                     table.Load(reader)
@@ -135,21 +135,21 @@ Public NotInheritable Class PortfolioRepository
 
                     Using findCommand As SqliteCommand = connection.CreateCommand()
                         findCommand.Transaction = transaction
-                        findCommand.CommandText = """
-                            SELECT Id
-                            FROM PortfolioItems
-                            WHERE Cripto = $cripto
-                              AND Symbol = $symbol
-                              AND Wallet = $wallet
-                              AND COALESCE(Data, '') = $data
-                            LIMIT 1;
-                        """
+                        findCommand.CommandText =
+                            "SELECT Id FROM PortfolioItems " &
+                            "WHERE Cripto = $cripto " &
+                            "AND Symbol = $symbol " &
+                            "AND Wallet = $wallet " &
+                            "AND COALESCE(Data, '') = $data " &
+                            "LIMIT 1;"
+
                         findCommand.Parameters.AddWithValue("$cripto", cripto)
                         findCommand.Parameters.AddWithValue("$symbol", symbol)
                         findCommand.Parameters.AddWithValue("$wallet", wallet)
                         findCommand.Parameters.AddWithValue("$data", data)
 
                         Dim result = findCommand.ExecuteScalar()
+
                         If result IsNot Nothing AndAlso result IsNot DBNull.Value Then
                             existingId = Convert.ToInt64(result, CultureInfo.InvariantCulture)
                         End If
@@ -158,14 +158,14 @@ Public NotInheritable Class PortfolioRepository
                     If existingId > 0 Then
                         Using updateCommand As SqliteCommand = connection.CreateCommand()
                             updateCommand.Transaction = transaction
-                            updateCommand.CommandText = """
-                                UPDATE PortfolioItems
-                                SET InitialPrice = $initialPrice,
-                                    Quantity = $quantity,
-                                    LastPrice = $lastPrice,
-                                    UpdatedAt = CURRENT_TIMESTAMP
-                                WHERE Id = $id;
-                            """
+                            updateCommand.CommandText =
+                                "UPDATE PortfolioItems SET " &
+                                "InitialPrice = $initialPrice, " &
+                                "Quantity = $quantity, " &
+                                "LastPrice = $lastPrice, " &
+                                "UpdatedAt = CURRENT_TIMESTAMP " &
+                                "WHERE Id = $id;"
+
                             updateCommand.Parameters.AddWithValue("$initialPrice", initialPrice)
                             updateCommand.Parameters.AddWithValue("$quantity", quantity)
                             updateCommand.Parameters.AddWithValue("$lastPrice", lastPrice)
@@ -175,13 +175,11 @@ Public NotInheritable Class PortfolioRepository
                     Else
                         Using insertCommand As SqliteCommand = connection.CreateCommand()
                             insertCommand.Transaction = transaction
-                            insertCommand.CommandText = """
-                                INSERT INTO PortfolioItems
-                                    (Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice)
-                                VALUES
-                                    ($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, $lastPrice);
-                                SELECT last_insert_rowid();
-                            """
+                            insertCommand.CommandText =
+                                "INSERT INTO PortfolioItems " &
+                                "(Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice) " &
+                                "VALUES ($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, $lastPrice);"
+
                             insertCommand.Parameters.AddWithValue("$cripto", cripto)
                             insertCommand.Parameters.AddWithValue("$symbol", symbol)
                             insertCommand.Parameters.AddWithValue("$initialPrice", initialPrice)
@@ -189,10 +187,9 @@ Public NotInheritable Class PortfolioRepository
                             insertCommand.Parameters.AddWithValue("$data", data)
                             insertCommand.Parameters.AddWithValue("$wallet", wallet)
                             insertCommand.Parameters.AddWithValue("$lastPrice", lastPrice)
+                            insertCommand.ExecuteNonQuery()
 
-                            existingId = Convert.ToInt64(
-                                insertCommand.ExecuteScalar(),
-                                CultureInfo.InvariantCulture)
+                            existingId = connection.LastInsertRowId
                         End Using
                     End If
 
@@ -214,12 +211,10 @@ Public NotInheritable Class PortfolioRepository
             connection.Open()
 
             Using command As SqliteCommand = connection.CreateCommand()
-                command.CommandText = """
-                    UPDATE PortfolioItems
-                    SET LastPrice = $lastPrice,
-                        UpdatedAt = CURRENT_TIMESTAMP
-                    WHERE Id = $id;
-                """
+                command.CommandText =
+                    "UPDATE PortfolioItems SET LastPrice = $lastPrice, UpdatedAt = CURRENT_TIMESTAMP " &
+                    "WHERE Id = $id;"
+
                 command.Parameters.AddWithValue("$lastPrice", lastPrice)
                 command.Parameters.AddWithValue("$id", id)
                 command.ExecuteNonQuery()
