@@ -1,11 +1,24 @@
-﻿Public Class FormWalletExchange
-    Private Sub FormWalletExchange_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Dim json As New JSON
-        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", Nothing, dgWalletExchange)
-        Me.Icon = FormMain.Icon
+Public Class FormWalletExchange
 
-        dgWalletExchange.Columns(0).Visible = False
-        dgWalletExchange.Columns(1).HeaderText = "Wallet/Exchange"
+    Private Sub FormWalletExchange_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        LoadWallets()
+        Me.Icon = FormMain.Icon
+        tbWalletExchange.Clear()
+        tbWalletExchange.Focus()
+    End Sub
+
+    Private Sub LoadWallets()
+        Dim table As DataTable = PortfolioRepository.GetWallets()
+        dgWalletExchange.DataSource = table
+
+        If dgWalletExchange.Columns.Contains("Id") Then
+            dgWalletExchange.Columns("Id").Visible = False
+        End If
+
+        If dgWalletExchange.Columns.Contains("Name") Then
+            dgWalletExchange.Columns("Name").HeaderText = "Wallet/Exchange"
+        End If
+
         dgWalletExchange.ColumnHeadersHeight = 30
         dgWalletExchange.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         dgWalletExchange.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
@@ -17,32 +30,57 @@
         End With
 
         For Each row As DataGridViewRow In dgWalletExchange.Rows
-            With row.Cells(1)
-                .Style.ForeColor = Color.Orange
-                .Style.BackColor = Color.FromArgb(20, 20, 20)
-            End With
+            If row.IsNewRow Then Continue For
+            If dgWalletExchange.Columns.Contains("Name") Then
+                row.Cells("Name").Style.ForeColor = Color.Orange
+                row.Cells("Name").Style.BackColor = Color.FromArgb(20, 20, 20)
+            End If
         Next
-
 
         dgWalletExchange.ClearSelection()
         dgWalletExchange.CurrentCell = Nothing
-        ToolStripStatusLabel1.Text = dgWalletExchange.RowCount & " Registros"
-        tbWalletExchange.Clear()
-        tbWalletExchange.Focus()
+        ToolStripStatusLabel1.Text = dgWalletExchange.Rows.Cast(Of DataGridViewRow)().Count(Function(r) Not r.IsNewRow) & " Registros"
+    End Sub
 
-    End Sub
     Private Sub btSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
-        Dim json As New JSON
-        json.AddWalletExchangeSymbolToJson(Application.StartupPath & "\JSON\wallets.json", tbWalletExchange.Text)
-        FormWalletExchange_Load(sender, e)
-        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", FormEntradas.cbWallet, Nothing)
+        If String.IsNullOrWhiteSpace(tbWalletExchange.Text) Then
+            MessageBox.Show("Preencha a wallet/exchange!", "Atenção", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            tbWalletExchange.Focus()
+            Return
+        End If
+
+        Try
+            PortfolioRepository.AddWallet(tbWalletExchange.Text)
+            LoadWallets()
+
+            If FormEntradas IsNot Nothing Then
+                FormEntradas.ReloadWalletCombo()
+            End If
+
+        Catch ex As Exception
+            MessageBox.Show("Erro ao salvar wallet: " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
     End Sub
+
     Private Sub ExcluirToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExcluirToolStripMenuItem.Click
-        Dim json As New JSON
-        json.RemoveWalletExchangeSymbolFromJson(Application.StartupPath & "\JSON\wallets.json", dgWalletExchange.SelectedRows(0).Cells(0).Value.ToString)
-        FormWalletExchange_Load(sender, e)
-        json.loadFromJSON2ComboGrid(Application.StartupPath & "\JSON\wallets.json", FormEntradas.cbWallet, Nothing)
+        Try
+            If dgWalletExchange.SelectedRows.Count = 0 Then Return
+
+            Dim id As Long =
+                Convert.ToInt64(dgWalletExchange.SelectedRows(0).Cells("Id").Value)
+
+            PortfolioRepository.DeleteWallet(id)
+            LoadWallets()
+
+            If FormEntradas IsNot Nothing Then
+                FormEntradas.ReloadWalletCombo()
+            End If
+
+        Catch ex As Exception
+            MessageBox.Show("Erro ao excluir wallet: " & ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
     End Sub
+
     Private Sub dgWalletExchange_MouseDown(sender As Object, e As MouseEventArgs) Handles dgWalletExchange.MouseDown
         Dim json As New JSON
         json.captureRightClick(dgWalletExchange, e)
