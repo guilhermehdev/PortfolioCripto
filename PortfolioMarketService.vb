@@ -32,6 +32,10 @@ Public NotInheritable Class PortfolioMarketService
             Dim gec As New Coingecko
             Dim formatter As New JSON
 
+            ' Sincroniza o relógio local com o servidor Binance.
+            ' Antes isso acontecia indiretamente no fluxo antigo do compare().
+            Await b.SyncBinanceTime()
+
             ' NÃO chama mais Binance.compare().
             ' Essa rotina antiga dependia do portfolio.json/JSONBin.
             ' O portfólio agora é exclusivamente SQLite.
