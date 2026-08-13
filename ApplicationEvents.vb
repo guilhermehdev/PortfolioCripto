@@ -18,9 +18,11 @@ Namespace My
                     "JSON",
                     "wallets.json")
 
-                ' Migração única dos catálogos antigos para o SQLite.
-                If PortfolioRepository.GetCryptoSymbolCount() = 0 OrElse
-                   PortfolioRepository.GetWalletCount() = 0 Then
+                Dim cryptoTable = PortfolioRepository.GetCryptoSymbols()
+                Dim walletTable = PortfolioRepository.GetWallets()
+
+                If (cryptoTable.Rows.Count = 0 OrElse walletTable.Rows.Count = 0) AndAlso
+                   (File.Exists(cryptoJsonPath) OrElse File.Exists(walletJsonPath)) Then
 
                     PortfolioRepository.MigrateCatalogsFromJson(
                         cryptoJsonPath,
