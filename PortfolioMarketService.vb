@@ -34,26 +34,16 @@ Public NotInheritable Class PortfolioMarketService
 
             Await b.compare()
 
-            Dim binanceAssets =
-                Await b.BINANCE_GetAllAssetsFull()
-
-            Dim mcapDict =
-                Await gec.CGECKO_MarketData(allSymbols)
-
-            Dim usdBrl As Decimal =
-                Await gec.CGECKO_GetPrice("USDT", "brl")
-
+            Dim binanceAssets = Await b.BINANCE_GetAllAssetsFull()
+            Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
+            Dim usdBrl As Decimal = Await gec.CGECKO_GetPrice("USDT", "brl")
             formatter.USDBRLprice = usdBrl
 
-            Dim dom As Decimal? =
-                Await cot.CM_GetBTCDOM()
+            Dim dom As Decimal? = Await cot.CM_GetBTCDOM()
 
-            Dim btcPriceString As String =
-                Await b.BINANCE_GetCoinsInfo("BTC")
-
+            Dim btcPriceString As String = Await b.BINANCE_GetCoinsInfo("BTC")
             Dim btcPrice As Decimal = 0D
-            Dim btcParts() As String =
-                btcPriceString.Split("|"c)
+            Dim btcParts() As String = btcPriceString.Split("|"c)
 
             If btcParts.Length > 0 Then
                 btcPrice = formatter.decimalBR(btcParts(0))
@@ -102,13 +92,9 @@ Public NotInheritable Class PortfolioMarketService
                 Select Case wallet.ToUpperInvariant()
 
                     Case "BINANCE"
+                        quantity = binanceAssets.GetValueOrDefault(symbol, 0D)
 
-                        quantity =
-                            binanceAssets.GetValueOrDefault(symbol, 0D)
-
-                        Dim priceString As String =
-                            Await b.BINANCE_GetCoinsInfo(symbol)
-
+                        Dim priceString As String = Await b.BINANCE_GetCoinsInfo(symbol)
                         If Not String.IsNullOrWhiteSpace(priceString) Then
                             Dim parts() As String = priceString.Split("|"c)
                             If parts.Length > 0 Then
@@ -117,10 +103,7 @@ Public NotInheritable Class PortfolioMarketService
                         End If
 
                     Case "GATE.IO"
-
-                        Dim gateInfo As String =
-                            Await gate.GATE_GetCoinsInfo(symbol)
-
+                        Dim gateInfo As String = Await gate.GATE_GetCoinsInfo(symbol)
                         Dim parts() As String = gateInfo.Split("|"c)
 
                         If parts.Length >= 3 Then
@@ -129,11 +112,7 @@ Public NotInheritable Class PortfolioMarketService
                         End If
 
                     Case Else
-
-                        quantity =
-                            Convert.ToDecimal(
-                                row("Quantity"),
-                                CultureInfo.InvariantCulture)
+                        quantity = Convert.ToDecimal(row("Quantity"), CultureInfo.InvariantCulture)
 
                 End Select
 
@@ -141,38 +120,21 @@ Public NotInheritable Class PortfolioMarketService
                     Continue For
                 End If
 
-                Dim initialPrice As Decimal =
-                    Convert.ToDecimal(
-                        row("InitialPrice"),
-                        CultureInfo.InvariantCulture)
-
-                Dim initialValueUSD As Decimal =
-                    quantity * initialPrice
-
-                Dim initialValueBRL As Decimal =
-                    initialValueUSD * usdBrl
-
-                Dim currentValueUSD As Decimal =
-                    quantity * currPrice
-
-                Dim currentValueBRL As Decimal =
-                    currentValueUSD * usdBrl
-
-                Dim roi As Decimal =
-                    currentValueUSD - initialValueUSD
+                Dim initialPrice As Decimal = Convert.ToDecimal(row("InitialPrice"), CultureInfo.InvariantCulture)
+                Dim initialValueUSD As Decimal = quantity * initialPrice
+                Dim initialValueBRL As Decimal = initialValueUSD * usdBrl
+                Dim currentValueUSD As Decimal = quantity * currPrice
+                Dim currentValueBRL As Decimal = currentValueUSD * usdBrl
+                Dim roi As Decimal = currentValueUSD - initialValueUSD
 
                 Dim performance As Decimal = 0D
-
                 If initialValueUSD > 0D Then
-                    performance =
-                        (roi / initialValueUSD) * 100D
+                    performance = (roi / initialValueUSD) * 100D
                 End If
 
                 Dim multiplier As Decimal = 0D
-
                 If initialValueUSD > 0D Then
-                    multiplier =
-                        currentValueUSD / initialValueUSD
+                    multiplier = currentValueUSD / initialValueUSD
                 End If
 
                 initialValue += initialValueUSD
@@ -193,7 +155,7 @@ Public NotInheritable Class PortfolioMarketService
                 newRow("vlEntradaBRL") = initialValueBRL
                 newRow("precoMedio") = initialPrice
                 newRow("precoAtual") = currPrice
-                newRow("24horas") = If(market.Change24h.HasValue, market.Change24h.Value.ToString("F2"), "0")
+                newRow("24horas") = market.Change24h.ToString("F2")
                 newRow("marketcap") = market.MarketCap
                 newRow("vlAtualUSD") = currentValueUSD
                 newRow("vlAtualBRL") = currentValueBRL
@@ -237,12 +199,10 @@ Public NotInheritable Class PortfolioMarketService
             FormMain.lbTotalBRL.Visible = True
             FormMain.lbTotalBRL.Text = formatter.BRLformat(profit * usdBrl)
             FormMain.lbTotalBRL.ForeColor = If(profit > 0D, Color.FromArgb(0, 255, 0), Color.FromArgb(255, 73, 73))
-
             FormMain.lbValoresHojeUSD.ForeColor = If(total < initialValue, Color.IndianRed, Color.GreenYellow)
             FormMain.lbValoresHojeBRL.ForeColor = If(total < initialValue, Color.IndianRed, Color.Cyan)
             FormMain.lbRoiUSD.ForeColor = If(profit < 0D, Color.Red, Color.Gold)
             FormMain.lbPerformWallet.ForeColor = If(walletPerformance < 0D, Color.Red, Color.Lime)
-
             FormMain.lbDolar.Text = formatter.BRLformat(usdBrl)
             FormMain.lbBTC.Text = formatter.USDformat(btcPrice)
             FormMain.lbDom.Text = $"{dom.GetValueOrDefault():F2}%"
@@ -281,12 +241,8 @@ Public NotInheritable Class PortfolioMarketService
 
         Catch ex As Exception
 
-            FormMain.lbDebug.AppendText(
-                "Erro ao carregar os dados: " & ex.ToString())
-
-            Debug.WriteLine(
-                "Ocorreu um erro ao carregar os dados: " & ex.Message)
-
+            FormMain.lbDebug.AppendText("Erro ao carregar os dados: " & ex.ToString())
+            Debug.WriteLine("Ocorreu um erro ao carregar os dados: " & ex.Message)
             Return False
 
         End Try
