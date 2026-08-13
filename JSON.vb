@@ -23,7 +23,7 @@ Public Class JSON
     Private ReadOnly JSONBinPut As String = $"{My.Settings.JSONBinURL}/b/{jsonbin}"
     Dim b As New Binance
     Dim gec As New Coingecko
-    Public USDBRLprice
+    Public Shared USDBRLprice As Decimal = 0D
     Public stablecoins As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
              "USDT", "USDC", "BUSD", "DAI", "TUSD", "USD", "USDP", "GUSD"
             }
@@ -71,7 +71,6 @@ Public Class JSON
                 Try
                     client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
 
-                    ' Fazer o download do JSON caso seja necessário
                     Dim response As HttpResponseMessage = Await client.GetAsync(url)
 
                     If response.IsSuccessStatusCode Then
@@ -79,10 +78,8 @@ Public Class JSON
                         Dim jObj As JObject = JObject.Parse(json)
                         Dim conteudoLimpo As JObject = CType(jObj("record"), JObject)
 
-                        ' Atualizar ultimaAtualizacao com a data/hora atual
                         conteudoLimpo("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-dd HH:mm:ss")
 
-                        ' Salvar o conteúdo atualizado no arquivo local
                         File.WriteAllText(portfolioPathFile, conteudoLimpo.ToString())
                         Debug.WriteLine("JSON atualizado com sucesso!")
                         Return True
@@ -119,19 +116,15 @@ Public Class JSON
             Using client As New HttpClient()
                 client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
 
-                ' Solicitação GET para obter apenas os metadados
                 Dim response As HttpResponseMessage = Await client.GetAsync(url)
 
                 If response.IsSuccessStatusCode Then
                     Dim json As String = Await response.Content.ReadAsStringAsync()
                     Dim metaObj As JObject = JObject.Parse(json)
 
-                    ' Verificar se o campo 'ultimaAtualizacao' existe nos metadados
                     If metaObj("record") IsNot Nothing AndAlso metaObj("record")("ultimaAtualizacao") IsNot Nothing Then
                         Dim ultimaAtualizacaoStr As String = metaObj("record")("ultimaAtualizacao").ToString()
                         Dim ultimaAtualizacao As DateTime = DateTime.Parse(ultimaAtualizacaoStr)
-
-                        ' MsgBox(My.Settings.lastUpdate & " " & ultimaAtualizacao.ToString)
 
                         If My.Settings.lastUpdate <> ultimaAtualizacao Then
 
@@ -174,7 +167,6 @@ Public Class JSON
             Try
                 jsonAtual = JObject.Parse(loadJSONfile)
 
-                ' 2. Atualizar ou adicionar item na chave correspondente
                 If jsonAtual(chave) Is Nothing Then
                     jsonAtual(chave) = New JArray()
                 End If
@@ -203,7 +195,6 @@ Public Class JSON
                     itemsArray.Add(novoItem)
                 End If
 
-                ' 3. Serializar o novo JSON e enviar via PUT
                 jsonAtual("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
 
                 Dim body As String = JsonConvert.SerializeObject(jsonAtual, Formatting.Indented)
@@ -212,14 +203,6 @@ Public Class JSON
 
                 File.WriteAllText(portfolioPathFile, jsonAtual.ToString())
                 Return True
-                'If putResponse.IsSuccessStatusCode Then
-                '    My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
-                '    My.Settings.Save()
-                '    Return True
-                'Else
-                '    Debug.Write("Erro ao salvar em JSONBin: " & putResponse.StatusCode)
-                '    Return False
-                'End If
 
             Catch ex As Exception
                 Debug.Write("Erro em AppendJSONToBin: " & ex.Message)
@@ -228,6 +211,7 @@ Public Class JSON
             End Try
         End Using
     End Function
+
     Public Function DeleteJSONFromBin(ByVal key As String) As Boolean
         Try
             Dim url As String = JSONBinPut
@@ -242,35 +226,15 @@ Public Class JSON
                     Return False
                 End If
 
-                ' Atualizar o campo ultimaAtualizacao
                 jsonLocal("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
 
-                ' Atualizando o JSONBin com o novo conteúdo (sem o Content-Type aqui)
-                ' Dim putUrl As String = $"https://api.jsonbin.io/v3/b/{jsonbin}"
-                'client.DefaultRequestHeaders.Clear()
                 client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
-
-                'Dim content As New StringContent(record.ToString(), Encoding.UTF8, "application/json")
-                'Dim putResponse As HttpResponseMessage = Await client.PutAsync(url, content)
-
-
-                'Dim body As String = JsonConvert.SerializeObject(jsonLocal, Formatting.Indented)
-                'Dim stringContent As New StringContent(body, Encoding.UTF8, "application/json")
-                'Dim putResponse = Await client.PutAsync(url, stringContent)
-
 
                 File.WriteAllText(portfolioPathFile, jsonLocal.ToString())
                 My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
                 My.Settings.Save()
                 MessageBox.Show("Removido com sucesso.")
                 Return True
-
-                'If putResponse.IsSuccessStatusCode Then
-                '   
-                'Else
-                '    MessageBox.Show("Erro ao atualizar: " & putResponse.StatusCode.ToString())
-                '    Return False
-                'End If
 
             End Using
 
@@ -281,12 +245,7 @@ Public Class JSON
         End Try
     End Function
 
-
     Public Sub loadFromJSON2ComboGrid(filePath As String, Optional combobox As System.Windows.Forms.ComboBox = Nothing, Optional grid As DataGridView = Nothing)
-
-        'Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
-
-        ' Tente ler o arquivo e pegar os dados JSON
         Dim jsonData As String = String.Empty
         Try
             jsonData = File.ReadAllText(filePath)
@@ -295,13 +254,11 @@ Public Class JSON
             Exit Sub
         End Try
 
-        ' Verifique se o conteúdo do arquivo JSON está vazio
         If String.IsNullOrEmpty(jsonData) Then
             MessageBox.Show("O arquivo JSON está vazio.")
             Exit Sub
         End If
 
-        ' Desserializar os dados JSON para uma lista de objetos usando o Newtonsoft.Json
         Dim exchanges As List(Of Exchange)
         Try
             exchanges = JsonConvert.DeserializeObject(Of List(Of Exchange))(jsonData)
@@ -323,16 +280,11 @@ Public Class JSON
     End Sub
 
     Public Sub AddWalletExchangeSymbolToJson(filePath As String, simbol_wallet As String, Optional id As String = "")
-        ' Caminho do arquivo JSON
-        ' Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
-
-        ' Verificar se o arquivo existe
         If Not File.Exists(filePath) Then
             MessageBox.Show("O arquivo JSON não foi encontrado.")
             Exit Sub
         End If
 
-        ' Tente ler o arquivo e pegar os dados JSON
         Dim jsonData As String = String.Empty
         Try
             jsonData = File.ReadAllText(filePath)
@@ -341,7 +293,6 @@ Public Class JSON
             Exit Sub
         End Try
 
-        ' Desserializar o JSON para uma lista de objetos
         Dim exchanges As List(Of Exchange)
         Try
             exchanges = JsonConvert.DeserializeObject(Of List(Of Exchange))(jsonData)
@@ -356,20 +307,16 @@ Public Class JSON
         Else
             newID = id
         End If
-        ' Criar um novo objeto Exchange e adicionar à lista
+
         Dim newExchange As New Exchange With {
             .Name = simbol_wallet.ToUpper,
             .id = newID
         }
         exchanges.Add(newExchange)
 
-        ' Serializar a lista de volta para JSON
         Try
             Dim updatedJson As String = JsonConvert.SerializeObject(exchanges, Formatting.Indented)
-
-            ' Reescrever o arquivo com os dados atualizados
             File.WriteAllText(filePath, updatedJson)
-
             MessageBox.Show("Salvo com sucesso!")
         Catch ex As Exception
             Debug.WriteLine("Erro ao salvar o arquivo JSON: " & ex.Message)
@@ -378,16 +325,11 @@ Public Class JSON
     End Sub
 
     Public Sub RemoveWalletExchangeSymbolFromJson(filePath As String, valueToRemove As String)
-        ' Caminho do arquivo JSON
-        'Dim filePath As String = Application.StartupPath & "\JSON\wallets.json"
-
-        ' Verificar se o arquivo existe
         If Not File.Exists(filePath) Then
             MessageBox.Show("O arquivo JSON não foi encontrado.")
             Exit Sub
         End If
 
-        ' Tente ler o arquivo e pegar os dados JSON
         Dim jsonData As String = String.Empty
         Try
             jsonData = File.ReadAllText(filePath)
@@ -396,7 +338,6 @@ Public Class JSON
             Exit Sub
         End Try
 
-        ' Desserializar o JSON para uma lista de objetos
         Dim exchanges As List(Of Exchange)
         Try
             exchanges = JsonConvert.DeserializeObject(Of List(Of Exchange))(jsonData)
@@ -405,16 +346,12 @@ Public Class JSON
             Exit Sub
         End Try
 
-        ' Encontrar e remover o item com o nome correspondente
         Dim exchangeToRemove As Exchange = exchanges.FirstOrDefault(Function(e) e.Name = valueToRemove)
         If exchangeToRemove IsNot Nothing Then
             exchanges.Remove(exchangeToRemove)
 
-            ' Serializar a lista de volta para JSON
             Try
                 Dim updatedJson As String = JsonConvert.SerializeObject(exchanges, Formatting.Indented)
-
-                ' Reescrever o arquivo com os dados atualizados
                 File.WriteAllText(filePath, updatedJson)
                 MessageBox.Show("Removido com sucesso!")
             Catch ex As Exception
@@ -552,12 +489,10 @@ Public Class JSON
     Public Function SomaSe(ByVal valores() As Decimal, ByVal criterios() As String, ByVal criterio As String) As Double
         Dim soma As Decimal = 0
 
-        ' Verificar se os arrays têm o mesmo tamanho
         If valores.Length <> criterios.Length Then
             Throw New ArgumentException("Os arrays de valores e critérios devem ter o mesmo tamanho.")
         End If
 
-        ' Iterar pelos arrays e somar os valores que atendem ao critério
         For i As Integer = 0 To valores.Length - 1
             If criterios(i) = criterio Then
                 soma += valores(i)
@@ -573,18 +508,15 @@ Public Class JSON
         Dim jsonTexto As String = File.ReadAllText(caminhoArquivo)
         Dim jsonObj As JObject = JObject.Parse(jsonTexto)
 
-        ' Limpa o grid
         datagrid.Rows.Clear()
         datagrid.Columns.Clear()
 
-        ' Define colunas
         datagrid.Columns.Add("Symbol", "Cripto")
         datagrid.Columns.Add("Qtd", "Quantidade")
         datagrid.Columns.Add("Wallet", "Carteira")
 
         Dim totalUsd As Decimal = 0D
 
-        ' Percorre os ativos com "USD" na chave
         For Each prop In jsonObj.Properties()
             Dim chave As String = prop.Name
 
@@ -602,10 +534,6 @@ Public Class JSON
             End If
         Next
 
-        'datagrid.Rows.Add("TOTAL", USDformat(totalUsd) & " / " & BRLformat(USDBRLprice), "")
-        'datagrid.Rows(datagrid.Rows.Count - 1).DefaultCellStyle.BackColor = Color.Black
-        'datagrid.Rows(datagrid.Rows.Count - 1).DefaultCellStyle.Font = New Font(datagrid.Font, FontStyle.Bold)
-
         datagrid.Columns(0).HeaderText = "Cripto"
         datagrid.Columns(0).Width = 40
         datagrid.Columns(1).HeaderText = "Qtd"
@@ -617,594 +545,8 @@ Public Class JSON
 
     End Sub
 
-    Public Async Function LoadCriptos(
-    datagrid As DataGridView,
-    Optional currencyCollum As String = "USD") As Task(Of Boolean)
-
-        ' ============================================================
-        ' INICIALIZAÇÃO
-        ' ============================================================
-        Dim b As New Binance
-        Await b.compare()
-
-        Dim cot As New Cotacao
-        Dim gate As New Gateio
-        Dim gec As New Coingecko
-
-        ' ============================================================
-        ' PORTFÓLIO PERSISTIDO
-        '
-        ' Agora vem do SQLite.
-        '
-        ' A quantidade REAL da conta Binance/Gate.io continua sendo
-        ' buscada nas APIs abaixo. O SQLite guarda a posição cadastrada,
-        ' preço médio, wallet, data etc.
-        ' ============================================================
-        PortfolioRepository.Initialize()
-
-        Dim originalDT As DataTable = PortfolioRepository.GetAll()
-
-        If originalDT.Rows.Count = 0 Then
-
-            ' Fallback de segurança:
-            ' caso o SQLite esteja vazio e exista o JSON,
-            ' tenta migrar novamente.
-            Dim jsonPath As String =
-            Application.StartupPath & "\JSON\portfolio.json"
-
-            If File.Exists(jsonPath) Then
-
-                '  PortfolioRepository.MigrateFromJson(jsonPath)
-
-                originalDT = PortfolioRepository.GetAll()
-
-            End If
-
-        End If
-
-        If originalDT.Rows.Count = 0 Then
-            Throw New Exception("Nenhum ativo encontrado no SQLite.")
-        End If
-
-        ' ============================================================
-        ' SÍMBOLOS DO PORTFÓLIO
-        ' ============================================================
-        Dim allSymbols As List(Of String) =
-        originalDT.AsEnumerable().
-        Select(Function(r) r("Symbol").ToString().Trim().ToUpperInvariant()).
-        Where(Function(s) Not String.IsNullOrWhiteSpace(s)).
-        Distinct().
-        ToList()
-
-        ' ============================================================
-        ' SALDOS BINANCE
-        ' Spot + Futures
-        '
-        ' NÃO ALTERAMOS ESSA LÓGICA.
-        ' ============================================================
-        Dim binanceAssets =
-        Await b.BINANCE_GetAllAssetsFull()
-
-        ' ============================================================
-        ' DADOS DE MERCADO
-        ' ============================================================
-        Dim mcapDict =
-        Await gec.CGECKO_MarketData(allSymbols)
-
-        USDBRLprice = Await gec.CGECKO_GetPrice("USDT", "brl")
-
-        Dim dom As Decimal? =
-        Await cot.CM_GetBTCDOM()
-
-        ' ============================================================
-        ' BTC PARA A VISÃO GERAL
-        ' ============================================================
-        Dim btcPriceString As String =
-        Await b.BINANCE_GetCoinsInfo("BTC")
-
-        Dim btcRes() As String =
-        btcPriceString.Split("|"c)
-
-        Dim btcPrice As String =
-        btcRes(0)
-
-        ' ============================================================
-        ' TOTAIS
-        ' ============================================================
-        Dim profit As Decimal = 0D
-        Dim initialValue As Decimal = 0D
-        Dim currValueTotal As Decimal = 0D
-        Dim cashflow As Decimal = 0D
-        Dim total As Decimal = 0D
-
-        ' ============================================================
-        ' GRÁFICOS
-        ' ============================================================
-        Dim criptoDic As New Dictionary(Of String, Decimal)
-        Dim addressDic As New Dictionary(Of String, Decimal)
-
-        Dim listAddress As New List(Of String)
-        Dim listCriptos As New List(Of String)
-
-        Dim listInitValue As New List(Of Decimal)
-        Dim listCurrValue As New List(Of Decimal)
-
-        ' ============================================================
-        ' DATATABLE DO DATAGRID
-        ' ============================================================
-        Dim newDT As New DataTable()
-
-        newDT.Columns.Add("Cripto", GetType(String))
-        newDT.Columns.Add("Perf", GetType(String))
-        newDT.Columns.Add("Wallet", GetType(String))
-        newDT.Columns.Add("Qtd", GetType(Decimal))
-        newDT.Columns.Add("vlEntradaUSD", GetType(Decimal))
-        newDT.Columns.Add("vlEntradaBRL", GetType(Decimal))
-        newDT.Columns.Add("precoMedio", GetType(Decimal))
-        newDT.Columns.Add("precoAtual", GetType(Decimal))
-        newDT.Columns.Add("24horas", GetType(String))
-        newDT.Columns.Add("marketcap", GetType(Decimal))
-        newDT.Columns.Add("vlAtualUSD", GetType(Decimal))
-        newDT.Columns.Add("vlAtualBRL", GetType(Decimal))
-        newDT.Columns.Add("ROIusd", GetType(Decimal))
-        newDT.Columns.Add("ROIbrl", GetType(Decimal))
-        newDT.Columns.Add("X", GetType(String))
-
-        Try
-
-            ' ========================================================
-            ' LOOP DO PORTFÓLIO
-            ' ========================================================
-            For Each row As DataRow In originalDT.Rows
-
-                Dim symbolUpper As String =
-                row("Symbol").ToString().Trim().ToUpperInvariant()
-
-                Dim wallet As String =
-                row("Wallet").ToString().Trim()
-
-                ' ----------------------------------------------------
-                ' DADOS DE MERCADO
-                ' ----------------------------------------------------
-                Dim mData As CoinMarketData =
-                mcapDict.GetValueOrDefault(
-                    symbolUpper,
-                    New CoinMarketData())
-
-                Dim currPrice As Decimal =
-                mData.Price
-
-                Dim marketcap As Decimal =
-                mData.MarketCap
-
-                Dim change As Decimal? =
-                mData.Change24h
-
-                ' ----------------------------------------------------
-                ' QUANTIDADE
-                '
-                ' Binance:
-                '    quantidade real da conta Binance
-                '
-                ' Gate.io:
-                '    quantidade real da conta Gate.io
-                '
-                ' Outras wallets:
-                '    quantidade persistida no SQLite
-                ' ----------------------------------------------------
-                Dim qtd As Decimal = 0D
-
-                Select Case wallet.ToUpperInvariant()
-
-                    Case "BINANCE"
-
-                        qtd =
-                        binanceAssets.GetValueOrDefault(
-                            symbolUpper,
-                            0D)
-
-                        ' Preço oficial Binance
-                        Dim priceString As String =
-                        Await b.BINANCE_GetCoinsInfo(symbolUpper)
-
-                        If Not String.IsNullOrWhiteSpace(priceString) Then
-
-                            Dim res() As String =
-                            priceString.Split("|"c)
-
-                            If res.Length > 0 Then
-                                currPrice =
-                                decimalBR(res(0))
-                            End If
-
-                        End If
-
-                    Case "GATE.IO"
-
-                        Dim gateInfo As String =
-                        Await gate.GATE_GetCoinsInfo(symbolUpper)
-
-                        Dim valores() As String =
-                        gateInfo.Split("|"c)
-
-                        If valores.Length >= 3 Then
-
-                            ' Gate:
-                            ' valores(0) = preço
-                            ' valores(1) = ...
-                            ' valores(2) = quantidade
-                            currPrice =
-                            decimalBR(valores(0))
-
-                            qtd =
-                            decimalBR(valores(2))
-
-                        End If
-
-                    Case Else
-
-                        ' Wallet externa / carteira fria:
-                        ' quantidade armazenada no SQLite
-                        qtd =
-                        Convert.ToDecimal(
-                            row("Quantity"),
-                            Globalization.CultureInfo.InvariantCulture)
-
-                End Select
-
-                ' ----------------------------------------------------
-                ' IGNORA SALDO ZERO
-                ' ----------------------------------------------------
-                If qtd <= 0D Then
-                    Continue For
-                End If
-
-                ' ----------------------------------------------------
-                ' PREÇO MÉDIO
-                ' ----------------------------------------------------
-                Dim initialPrice As Decimal =
-                Convert.ToDecimal(
-                    row("InitialPrice"),
-                    Globalization.CultureInfo.InvariantCulture)
-
-                ' ----------------------------------------------------
-                ' CÁLCULOS
-                ' ----------------------------------------------------
-                Dim initialValueUSD As Decimal =
-                qtd * initialPrice
-
-                Dim initialValueBRL As Decimal =
-                initialValueUSD * USDBRLprice
-
-                Dim currValueUSD As Decimal =
-                qtd * currPrice
-
-                Dim currValueBRL As Decimal =
-                currValueUSD * USDBRLprice
-
-                Dim roi As Decimal =
-                currValueUSD - initialValueUSD
-
-                Dim perform As Decimal = 0D
-
-                If initialValueUSD > 0D Then
-                    perform =
-                    (roi / initialValueUSD) * 100D
-                End If
-
-                ' ----------------------------------------------------
-                ' MULTIPLICADOR
-                ' ----------------------------------------------------
-                Dim x As Decimal = 0D
-
-                If initialValueUSD > 0D Then
-                    x =
-                    currValueUSD / initialValueUSD
-                End If
-
-                ' ----------------------------------------------------
-                ' TOTAIS
-                ' ----------------------------------------------------
-                initialValue += initialValueUSD
-
-                If stablecoins.Contains(symbolUpper) Then
-
-                    cashflow += currValueUSD
-
-                Else
-
-                    currValueTotal += currValueUSD
-                    profit += roi
-
-                End If
-
-                ' ----------------------------------------------------
-                ' NOVA LINHA
-                ' ----------------------------------------------------
-                Dim newRow As DataRow =
-                newDT.NewRow()
-
-                newRow("Cripto") =
-                symbolUpper
-
-                ' IMPORTANTE:
-                ' Qtd continua sendo Decimal.
-                ' Não transformamos em String.
-                newRow("Qtd") =
-                qtd
-
-                newRow("Perf") =
-                $"{perform:F2}%"
-
-                newRow("Wallet") =
-                wallet
-
-                newRow("vlEntradaUSD") =
-                initialValueUSD
-
-                newRow("vlEntradaBRL") =
-                initialValueBRL
-
-                newRow("precoMedio") =
-                initialPrice
-
-                newRow("precoAtual") =
-                currPrice
-
-                newRow("24horas") =
-                If(change.HasValue,
-                   change.Value.ToString("F2"),
-                   "0")
-
-                newRow("marketcap") =
-                marketcap
-
-                newRow("vlAtualUSD") =
-                currValueUSD
-
-                newRow("vlAtualBRL") =
-                currValueBRL
-
-                newRow("ROIusd") =
-                roi
-
-                newRow("ROIbrl") =
-                roi * USDBRLprice
-
-                If x <= 0D Then
-
-                    newRow("X") =
-                    "0 X"
-
-                Else
-
-                    newRow("X") =
-                    $"{x:N2} X"
-
-                End If
-
-                ' ----------------------------------------------------
-                ' ADICIONA AO GRID
-                ' ----------------------------------------------------
-                If initialValueUSD > 1D Then
-                    newDT.Rows.Add(newRow)
-                End If
-
-                ' ----------------------------------------------------
-                ' GRÁFICOS
-                ' ----------------------------------------------------
-                listCriptos.Add(symbolUpper)
-                listAddress.Add(wallet)
-
-                listInitValue.Add(initialValueUSD)
-                listCurrValue.Add(currValueUSD)
-
-                ' ----------------------------------------------------
-                ' ATUALIZA LASTPRICE NO SQLITE
-                '
-                ' NÃO altera quantidade.
-                ' NÃO altera preço médio.
-                ' Apenas guarda o último preço conhecido.
-                ' ----------------------------------------------------
-                Dim id As Long =
-                Convert.ToInt64(row("Id"))
-
-                PortfolioRepository.UpdateLastPrice(
-                id,
-                currPrice)
-
-            Next
-
-            ' ========================================================
-            ' TOTAIS FINAIS
-            ' ========================================================
-            total =
-            cashflow + currValueTotal
-
-            Dim percentCashFlow As Decimal =
-            If(
-                total > 0D,
-                (cashflow / total) * 100D,
-                0D)
-
-            Dim percentInvest As Decimal =
-            If(
-                total > 0D,
-                (currValueTotal / total) * 100D,
-                0D)
-
-            Dim performWallet As Decimal =
-            If(
-                initialValue > 0D,
-                (profit / initialValue) * 100D,
-                0D)
-
-            ' ========================================================
-            ' DADOS PARA GRÁFICO DE CRIPTOS
-            ' ========================================================
-            If total > 0D Then
-
-                For i As Integer = 0 To listCriptos.Count - 1
-
-                    criptoDic.Add(
-                    listCriptos(i),
-                    (listCurrValue(i) / total) * 100D)
-
-                Next
-
-            End If
-
-            ' ========================================================
-            ' DADOS PARA GRÁFICO DE WALLET
-            ' ========================================================
-            For Each addr In listAddress.Distinct()
-
-                Dim sumForAddress As Decimal = 0D
-
-                For i As Integer = 0 To listAddress.Count - 1
-
-                    If listAddress(i) = addr Then
-                        sumForAddress += listCurrValue(i)
-                    End If
-
-                Next
-
-                addressDic.Add(
-                addr,
-                sumForAddress)
-
-            Next
-
-            ' ========================================================
-            ' ATUALIZAÇÃO DA VISÃO GERAL
-            ' ========================================================
-            FormMain.lbTotalBRL.Visible = True
-
-            FormMain.lbTotalBRL.Text =
-            BRLformat(profit * USDBRLprice)
-
-            FormMain.lbTotalBRL.ForeColor =
-            If(
-                profit > 0D,
-                Color.FromArgb(0, 255, 0),
-                Color.FromArgb(255, 73, 73))
-
-            FormMain.lbValoresHojeUSD.ForeColor =
-            If(
-                total < initialValue,
-                Color.IndianRed,
-                Color.GreenYellow)
-
-            FormMain.lbValoresHojeBRL.ForeColor =
-            If(
-                total < initialValue,
-                Color.IndianRed,
-                Color.Cyan)
-
-            FormMain.lbRoiUSD.ForeColor =
-            If(
-                profit < 0D,
-                Color.Red,
-                Color.Gold)
-
-            FormMain.lbPerformWallet.ForeColor =
-            If(
-                performWallet < 0D,
-                Color.Red,
-                Color.Lime)
-
-            FormMain.lbDolar.Text =
-            BRLformat(USDBRLprice)
-
-            FormMain.lbBTC.Text =
-            USDformat(decimalBR(btcPrice))
-
-            FormMain.lbDom.Text =
-            $"{dom.GetValueOrDefault():F2}%"
-
-            FormMain.lbPerformWallet.Text =
-            $"{performWallet:F2}%"
-
-            FormMain.lbTotalEntradaUSD.Text =
-            USDformat(initialValue)
-
-            FormMain.lbTotalEntradaBRL.Text =
-            BRLformat(initialValue * USDBRLprice)
-
-            FormMain.lbValoresHojeUSD.Text =
-            USDformat(total)
-
-            FormMain.lbValoresHojeBRL.Text =
-            BRLformat(total * USDBRLprice)
-
-            FormMain.lbRoiUSD.Text =
-            USDformat(profit)
-
-            FormMain.lbCaixa.Text =
-            USDformat(cashflow)
-
-            FormMain.lbCaixaBRL.Text =
-            BRLformat(cashflow * USDBRLprice)
-
-            FormMain.lbPercentCaixa.Text =
-            $"{percentCashFlow:F2}%"
-
-            FormMain.lbPercentInvestido.Text =
-            $"{percentInvest:F2}%"
-
-            ' ========================================================
-            ' GRID
-            ' ========================================================
-            datagrid.DataSource =
-            newDT
-
-            FormatGrid(datagrid)
-
-            ' ========================================================
-            ' GRÁFICOS
-            ' ========================================================
-            If criptoDic.Count > 0 Then
-                FormMain.criptoGraph(criptoDic)
-            End If
-
-            If addressDic.Count > 0 Then
-                FormMain.addressGraph(addressDic)
-            End If
-
-            ' ========================================================
-            ' CONTROLES
-            ' ========================================================
-            hideMarketDataLabel()
-
-            My.Settings.lastView =
-            Date.Now
-
-            If currencyCollum = "USD" Then
-
-                FormMain.showUSDCollumns()
-
-            ElseIf currencyCollum = "BRL" Then
-
-                FormMain.showBRLCollumns()
-
-            End If
-
-            Return True
-
-        Catch ex As Exception
-
-            FormMain.lbDebug.AppendText(
-            "Erro ao carregar os dados: " &
-            ex.ToString())
-
-            Debug.WriteLine(
-            "Ocorreu um erro ao carregar os dados: " &
-            ex.Message)
-
-            Return False
-
-        End Try
-
+    Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task(Of Boolean)
+        Return Await PortfolioMarketService.LoadAsync(datagrid, currencyCollum)
     End Function
 
     Public Shared Sub hideMarketDataLabel()
@@ -1397,349 +739,76 @@ Public Class JSON
                     Case > 0
                         row.Cells(1).Style.ForeColor = Color.LightGreen
                     Case < 0
-                        row.Cells(1).Style.ForeColor = Color.IndianRed
-                    Case = 0
-                        row.Cells(1).Style.ForeColor = Color.Gray
+                        row.Cells(1).Style.ForeColor = Color.LightCoral
+                    Case Else
+                        row.Cells(1).Style.ForeColor = Color.WhiteSmoke
                 End Select
 
-                'Select Case row.Cells(2).Value
-                '    Case "BINANCE"
-                '        row.Cells(2).Style.ForeColor = Color.Goldenrod
-                '    Case "METAMASK"
-                '        row.Cells(2).Style.ForeColor = Color.DarkOrange
-                '    Case "TRUSTWALLET"
-                '        row.Cells(2).Style.ForeColor = Color.LawnGreen
-                '    Case "PHANTOM"
-                '        row.Cells(2).Style.ForeColor = Color.MediumPurple
-                '    Case "BYBIT"
-                '        row.Cells(2).Style.ForeColor = Color.Gainsboro
-                '    Case "GATE.IO"
-                '        row.Cells(2).Style.ForeColor = Color.DodgerBlue
-                '    Case "MEXC"
-                '        row.Cells(2).Style.ForeColor = Color.White
-
-                'End Select
-
-                Select Case CDec(row.Cells(12).Value)
-                    Case > 0
-                        row.Cells(12).Style.ForeColor = Color.Aquamarine
-                    Case < 0
-                        row.Cells(12).Style.ForeColor = Color.LightCoral
+                Select Case row.Cells(2).Value.ToString.ToUpper()
+                    Case "BINANCE"
+                        row.Cells(2).Style.ForeColor = Color.Goldenrod
+                    Case "METAMASK"
+                        row.Cells(2).Style.ForeColor = Color.DarkOrange
+                    Case "TRUSTWALLET"
+                        row.Cells(2).Style.ForeColor = Color.LawnGreen
+                    Case "PHANTOM"
+                        row.Cells(2).Style.ForeColor = Color.MediumPurple
+                    Case "BYBIT"
+                        row.Cells(2).Style.ForeColor = Color.Gainsboro
+                    Case "GATE.IO"
+                        row.Cells(2).Style.ForeColor = Color.DodgerBlue
+                    Case "MEXC"
+                        row.Cells(2).Style.ForeColor = Color.White
                 End Select
-
-                Select Case CDec(row.Cells(13).Value)
-                    Case > 0
-                        row.Cells(13).Style.ForeColor = Color.Aqua
-                    Case < 0
-                        row.Cells(13).Style.ForeColor = Color.LightCoral
-                End Select
-
-                If row.Cells(6).Value >= 1 Then
-                    With row.Cells(6)
-                        .Style.Format = "C2"
-                        .Style.FormatProvider = New CultureInfo("en-US")
-                    End With
-                Else
-                    With row.Cells(6)
-                        .Style.Format = "C6"
-                        .Style.FormatProvider = New CultureInfo("en-US")
-                    End With
-                End If
-
-                If row.Cells(7).Value > 1 Then
-                    With row.Cells(7)
-                        .Style.Format = "C2"
-                        .Style.FormatProvider = New CultureInfo("en-US")
-                    End With
-                Else
-                    With row.Cells(7)
-                        .Style.Format = "C6"
-                        .Style.FormatProvider = New CultureInfo("en-US")
-                    End With
-                End If
-
-                Dim cellValue = row.Cells(8).Value
-
-                If cellValue > 0 Then
-                    With row.Cells(8)
-                        .Style.ForeColor = Color.LimeGreen
-                    End With
-                ElseIf cellValue < 0 Then
-                    With row.Cells(8)
-                        .Style.ForeColor = Color.Red
-                    End With
-                Else
-                    With row.Cells(8)
-                        .Style.ForeColor = Color.FromArgb(20, 20, 20)
-                    End With
-                End If
-
-                If row.Cells(10).Value > 1 Then
-                    With row.Cells(10)
-                        .Style.Format = "C2"
-                        .Style.FormatProvider = New CultureInfo("en-US")
-                    End With
-                Else
-                    With row.Cells(10)
-                        .Style.Format = "C8"
-                        .Style.FormatProvider = New CultureInfo("en-US")
-                    End With
-                End If
-
-                If row.Cells(11).Value > 1 Then
-                    With row.Cells(11)
-                        .Style.Format = "C2"
-                        .Style.FormatProvider = New CultureInfo("pt-BR")
-                    End With
-                Else
-                    With row.Cells(11)
-                        .Style.Format = "C8"
-                        .Style.FormatProvider = New CultureInfo("pt-BR")
-                    End With
-                End If
-
-                Dim rowBackColor As Color
-                Dim fontColor As Color
-
-                If row.Cells(7).Value < row.Cells(6).Value Then
-                    rowBackColor = Color.FromArgb(25, 0, 0)
-                    fontColor = Color.IndianRed
-
-                    With row.Cells(7)
-                        .Style.ForeColor = Color.IndianRed
-                    End With
-                    With row.Cells(11)
-                        .Style.ForeColor = Color.IndianRed
-                    End With
-                    With row.Cells(10)
-                        .Style.ForeColor = Color.IndianRed
-                    End With
-                    With row.Cells(11)
-                        .Style.ForeColor = Color.IndianRed
-                    End With
-
-                    With row.Cells(14)
-                        .Style.BackColor = rowBackColor
-                        .Style.ForeColor = rowBackColor
-                    End With
-
-                Else
-
-                    With row.Cells(7)
-                        .Style.ForeColor = Color.LimeGreen
-                    End With
-                    With row.Cells(10)
-                        .Style.ForeColor = Color.LimeGreen
-                    End With
-                    With row.Cells(11)
-                        .Style.ForeColor = Color.LimeGreen
-                    End With
-
-                    rowBackColor = Color.FromArgb(0, 25, 0)
-                    fontColor = Color.White
-                End If
-
-                With row.Cells(7)
-                    '.Style.ForeColor = fontColor
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(8)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(9)
-                    ' .Style.ForeColor = fontColor
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(10)
-                    '.Style.ForeColor = fontColor
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(11)
-                    ' .Style.ForeColor = fontColor
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(0)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(1)
-                    '.Style.ForeColor = fontColor
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(2)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(3)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(4)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(5)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(6)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(12)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(13)
-                    .Style.BackColor = rowBackColor
-                End With
-                With row.Cells(14)
-                    .Style.BackColor = rowBackColor
-                End With
-
-                Dim mcap = row.Cells(9).Value
-                If mcap <= 100000000 Then
-                    row.Cells(9).Style.ForeColor = Color.FromArgb(135, 206, 235)
-                ElseIf mcap > 100000000 And mcap <= 300000000 Then
-                    row.Cells(9).Style.ForeColor = Color.DeepSkyBlue
-                ElseIf mcap > 300000000 And mcap <= 600000000 Then
-                    row.Cells(9).Style.ForeColor = Color.FromArgb(70, 130, 180)
-                ElseIf mcap > 600000000 And mcap <= 1000000000 Then
-                    row.Cells(9).Style.ForeColor = Color.CornflowerBlue
-                ElseIf mcap > 1000000000 And mcap <= 10000000000 Then
-                    row.Cells(9).Style.ForeColor = Color.FromArgb(65, 105, 225)
-                ElseIf mcap > 10000000000 Then
-                    row.Cells(9).Style.ForeColor = Color.BlueViolet
-                End If
-
-                datagrid.ClearSelection()
 
             Next
 
+            datagrid.ClearSelection()
+            cm.ResumeBinding()
         Catch ex As Exception
-            Debug.WriteLine("Ocorreu um erro ao carregar os dados: " & ex.Message)
+            Debug.WriteLine(ex.Message)
+            cm.ResumeBinding()
         End Try
 
-
-
     End Sub
-    'Public Function decimalBR(valor As String)
-    '    Return Decimal.Parse(valor, CultureInfo.InvariantCulture)
-    'End Function
+
     Public Function decimalBR(valor As String) As Decimal
-
-        If String.IsNullOrWhiteSpace(valor) Then
-            Return 0D
-        End If
-
-        Dim texto As String = valor.Trim()
-
+        If String.IsNullOrWhiteSpace(valor) Then Return 0D
+        Dim texto = valor.Trim()
         Dim resultado As Decimal
 
-        ' Apenas vírgula: decimal brasileiro
         If texto.Contains(",") AndAlso Not texto.Contains(".") Then
-
-            If Decimal.TryParse(
-            texto,
-            NumberStyles.Any,
-            CultureInfo.GetCultureInfo("pt-BR"),
-            resultado) Then
-
-                Return resultado
-
-            End If
-
+            If Decimal.TryParse(texto, NumberStyles.Any, CultureInfo.GetCultureInfo("pt-BR"), resultado) Then Return resultado
         End If
 
-        ' Apenas ponto: decimal padrão de APIs
         If texto.Contains(".") AndAlso Not texto.Contains(",") Then
-
-            If Decimal.TryParse(
-            texto,
-            NumberStyles.Any,
-            CultureInfo.InvariantCulture,
-            resultado) Then
-
-                Return resultado
-
-            End If
-
+            If Decimal.TryParse(texto, NumberStyles.Any, CultureInfo.InvariantCulture, resultado) Then Return resultado
         End If
 
-        ' Sem separador
         If Not texto.Contains(",") AndAlso Not texto.Contains(".") Then
-
-            If Decimal.TryParse(
-            texto,
-            NumberStyles.Any,
-            CultureInfo.InvariantCulture,
-            resultado) Then
-
-                Return resultado
-
-            End If
-
+            If Decimal.TryParse(texto, NumberStyles.Any, CultureInfo.InvariantCulture, resultado) Then Return resultado
         End If
 
-        ' Possui os dois separadores
         If texto.Contains(",") AndAlso texto.Contains(".") Then
-
             If texto.LastIndexOf(","c) > texto.LastIndexOf("."c) Then
-
-                ' 1.234,56
                 texto = texto.Replace(".", "")
                 texto = texto.Replace(",", ".")
-
             Else
-
-                ' 1,234.56
                 texto = texto.Replace(",", "")
-
             End If
 
-            If Decimal.TryParse(
-            texto,
-            NumberStyles.Any,
-            CultureInfo.InvariantCulture,
-            resultado) Then
-
-                Return resultado
-
-            End If
-
+            If Decimal.TryParse(texto, NumberStyles.Any, CultureInfo.InvariantCulture, resultado) Then Return resultado
         End If
 
         Return 0D
-
     End Function
-    Public Function USDformat(ByVal value As Decimal)
-        Return value.ToString("C", New CultureInfo("en-US"))
+
+    Public Function USDformat(valor As Decimal) As String
+        Return valor.ToString("C", CultureInfo.GetCultureInfo("en-US"))
     End Function
-    Public Function BRLformat(ByVal value As Decimal)
-        Return value.ToString("C", New CultureInfo("pt-BR"))
+
+    Public Function BRLformat(valor As Decimal) As String
+        Return valor.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))
     End Function
-    Public Sub captureRightClick(datagrid As DataGridView, e As MouseEventArgs)
-        If e.Button = MouseButtons.Right Then
 
-            Dim hitTest As DataGridView.HitTestInfo = datagrid.HitTest(e.X, e.Y)
-
-            If hitTest.Type = DataGridViewHitTestType.Cell Then
-                datagrid.ClearSelection()
-                datagrid.Rows(hitTest.RowIndex).Selected = True
-            End If
-        End If
-    End Sub
-
-End Class
-
-Public Class Item
-    Public Property InitialPrice As String
-    Public Property Qtd As String
-    Public Property Data As String
-    Public Property Wallet As String
-    Public Property LastPrice As String
-    Public Property Symbol As Object
-End Class
-
-Public Class ItemKey
-    Public Property Cripto As String
-    Public Property InitialPrice As String
-    Public Property Qtd As String
-    Public Property Data As String
-    Public Property Wallet As String
-    Public Property LastPrice As String
-    Public Property Symbol As Object
 End Class
