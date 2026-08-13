@@ -155,6 +155,15 @@ Public NotInheritable Class PortfolioRepository
                         End If
                     End Using
 
+                    Dim initialPriceText As String =
+                        initialPrice.ToString("G29", CultureInfo.InvariantCulture)
+
+                    Dim quantityText As String =
+                        quantity.ToString("G29", CultureInfo.InvariantCulture)
+
+                    Dim lastPriceText As String =
+                        lastPrice.ToString("G29", CultureInfo.InvariantCulture)
+
                     If existingId > 0 Then
                         Using updateCommand As SqliteCommand = connection.CreateCommand()
                             updateCommand.Transaction = transaction
@@ -166,9 +175,9 @@ Public NotInheritable Class PortfolioRepository
                                 "UpdatedAt = CURRENT_TIMESTAMP " &
                                 "WHERE Id = $id;"
 
-                            updateCommand.Parameters.AddWithValue("$initialPrice", initialPrice)
-                            updateCommand.Parameters.AddWithValue("$quantity", quantity)
-                            updateCommand.Parameters.AddWithValue("$lastPrice", lastPrice)
+                            updateCommand.Parameters.AddWithValue("$initialPrice", initialPriceText)
+                            updateCommand.Parameters.AddWithValue("$quantity", quantityText)
+                            updateCommand.Parameters.AddWithValue("$lastPrice", lastPriceText)
                             updateCommand.Parameters.AddWithValue("$id", existingId)
                             updateCommand.ExecuteNonQuery()
                         End Using
@@ -182,14 +191,21 @@ Public NotInheritable Class PortfolioRepository
 
                             insertCommand.Parameters.AddWithValue("$cripto", cripto)
                             insertCommand.Parameters.AddWithValue("$symbol", symbol)
-                            insertCommand.Parameters.AddWithValue("$initialPrice", initialPrice)
-                            insertCommand.Parameters.AddWithValue("$quantity", quantity)
+                            insertCommand.Parameters.AddWithValue("$initialPrice", initialPriceText)
+                            insertCommand.Parameters.AddWithValue("$quantity", quantityText)
                             insertCommand.Parameters.AddWithValue("$data", data)
                             insertCommand.Parameters.AddWithValue("$wallet", wallet)
-                            insertCommand.Parameters.AddWithValue("$lastPrice", lastPrice)
+                            insertCommand.Parameters.AddWithValue("$lastPrice", lastPriceText)
                             insertCommand.ExecuteNonQuery()
 
-                            existingId = connection.LastInsertRowId
+                            Using idCommand As SqliteCommand = connection.CreateCommand()
+                                idCommand.Transaction = transaction
+                                idCommand.CommandText = "SELECT last_insert_rowid();"
+
+                                existingId = Convert.ToInt64(
+                                    idCommand.ExecuteScalar(),
+                                    CultureInfo.InvariantCulture)
+                            End Using
                         End Using
                     End If
 
@@ -212,10 +228,18 @@ Public NotInheritable Class PortfolioRepository
 
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
-                    "UPDATE PortfolioItems SET LastPrice = $lastPrice, UpdatedAt = CURRENT_TIMESTAMP " &
+                    "UPDATE PortfolioItems SET " &
+                    "LastPrice = $lastPrice, " &
+                    "UpdatedAt = CURRENT_TIMESTAMP " &
                     "WHERE Id = $id;"
 
-                command.Parameters.AddWithValue("$lastPrice", lastPrice)
+                ' Microsoft.Data.Sqlite não possui Decimal nativo no SQLite.
+                ' Gravamos explicitamente em formato invariant para não transformar
+                ' 2.60 em 260 em ambientes pt-BR.
+                Dim lastPriceText As String =
+                    lastPrice.ToString("G29", CultureInfo.InvariantCulture)
+
+                command.Parameters.AddWithValue("$lastPrice", lastPriceText)
                 command.Parameters.AddWithValue("$id", id)
                 command.ExecuteNonQuery()
             End Using
