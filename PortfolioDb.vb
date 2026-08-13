@@ -9,33 +9,76 @@ Public Class PortfolioDb
     Private Shared ReadOnly ConnectionString As String = $"Data Source={DbPath}"
 
     Public Shared Sub Initialize()
+
         Using cn As New SqliteConnection(ConnectionString)
+
             cn.Open()
 
+            ' --------------------------------------------------------
+            ' Configurações do SQLite
+            ' --------------------------------------------------------
             Using cmd As SqliteCommand = cn.CreateCommand()
+
+                cmd.CommandText = "PRAGMA journal_mode = WAL;"
+                cmd.ExecuteNonQuery()
+
+                cmd.CommandText = "PRAGMA foreign_keys = ON;"
+                cmd.ExecuteNonQuery()
+
+            End Using
+
+            ' --------------------------------------------------------
+            ' Tabela principal
+            ' --------------------------------------------------------
+            Using cmd As SqliteCommand = cn.CreateCommand()
+
                 cmd.CommandText =
-                    "PRAGMA journal_mode = WAL;" & Environment.NewLine &
-                    "PRAGMA foreign_keys = ON;" & Environment.NewLine &
-                    "CREATE TABLE IF NOT EXISTS PortfolioItems (" &
-                    "Id INTEGER PRIMARY KEY AUTOINCREMENT," &
-                    "Cripto TEXT NOT NULL," &
-                    "Symbol TEXT NOT NULL," &
-                    "InitialPrice NUMERIC NOT NULL DEFAULT 0," &
-                    "Quantity NUMERIC NOT NULL DEFAULT 0," &
-                    "Data TEXT," &
-                    "Wallet TEXT NOT NULL," &
-                    "LastPrice NUMERIC NOT NULL DEFAULT 0," &
-                    "CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP," &
-                    "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
-                    ");" & Environment.NewLine &
-                    "CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Symbol ON PortfolioItems(Symbol);" & Environment.NewLine &
-                    "CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Wallet ON PortfolioItems(Wallet);"
+                "CREATE TABLE IF NOT EXISTS PortfolioItems (" &
+                "Id INTEGER PRIMARY KEY AUTOINCREMENT, " &
+                "Cripto TEXT NOT NULL, " &
+                "Symbol TEXT NOT NULL, " &
+                "InitialPrice NUMERIC NOT NULL DEFAULT 0, " &
+                "Quantity NUMERIC NOT NULL DEFAULT 0, " &
+                "Data TEXT, " &
+                "Wallet TEXT NOT NULL, " &
+                "LastPrice NUMERIC NOT NULL DEFAULT 0, " &
+                "CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, " &
+                "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
+                ");"
 
                 cmd.ExecuteNonQuery()
-            End Using
-        End Using
-    End Sub
 
+            End Using
+
+            ' --------------------------------------------------------
+            ' Índice Symbol
+            ' --------------------------------------------------------
+            Using cmd As SqliteCommand = cn.CreateCommand()
+
+                cmd.CommandText =
+                "CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Symbol " &
+                "ON PortfolioItems(Symbol);"
+
+                cmd.ExecuteNonQuery()
+
+            End Using
+
+            ' --------------------------------------------------------
+            ' Índice Wallet
+            ' --------------------------------------------------------
+            Using cmd As SqliteCommand = cn.CreateCommand()
+
+                cmd.CommandText =
+                "CREATE INDEX IF NOT EXISTS IX_PortfolioItems_Wallet " &
+                "ON PortfolioItems(Wallet);"
+
+                cmd.ExecuteNonQuery()
+
+            End Using
+
+        End Using
+
+    End Sub
     Public Shared Function Exists() As Boolean
         Return File.Exists(DbPath)
     End Function

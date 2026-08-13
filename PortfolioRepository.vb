@@ -174,11 +174,13 @@ Public NotInheritable Class PortfolioRepository
                         End Using
                     Else
                         Using insertCommand As SqliteCommand = connection.CreateCommand()
+
                             insertCommand.Transaction = transaction
+
                             insertCommand.CommandText =
-                                "INSERT INTO PortfolioItems " &
-                                "(Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice) " &
-                                "VALUES ($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, $lastPrice);"
+        "INSERT INTO PortfolioItems " &
+        "(Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice) " &
+        "VALUES ($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, $lastPrice);"
 
                             insertCommand.Parameters.AddWithValue("$cripto", cripto)
                             insertCommand.Parameters.AddWithValue("$symbol", symbol)
@@ -187,9 +189,21 @@ Public NotInheritable Class PortfolioRepository
                             insertCommand.Parameters.AddWithValue("$data", data)
                             insertCommand.Parameters.AddWithValue("$wallet", wallet)
                             insertCommand.Parameters.AddWithValue("$lastPrice", lastPrice)
+
                             insertCommand.ExecuteNonQuery()
 
-                            existingId = connection.LastInsertRowId
+                        End Using
+
+                        ' Recupera o ID gerado pelo SQLite
+                        Using idCommand As SqliteCommand = connection.CreateCommand()
+
+                            idCommand.Transaction = transaction
+                            idCommand.CommandText = "SELECT last_insert_rowid();"
+
+                            existingId = Convert.ToInt64(
+        idCommand.ExecuteScalar(),
+        CultureInfo.InvariantCulture)
+
                         End Using
                     End If
 
