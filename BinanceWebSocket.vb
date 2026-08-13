@@ -34,11 +34,12 @@ Public Class BinanceWebSocket
         Dim normalized As List(Of String) = symbols.
             Where(Function(s) Not String.IsNullOrWhiteSpace(s)).
             Select(Function(s) s.Trim().ToUpperInvariant()).
+            Where(Function(s) Not IsStablecoin(s)).
             Distinct().
             ToList()
 
         If normalized.Count = 0 Then
-            RaiseEvent ConnectionStateChanged(False, "Nenhum símbolo Binance para assinar.")
+            RaiseEvent ConnectionStateChanged(False, "Nenhum ativo Binance com par USDT para assinar.")
             Return
         End If
 
@@ -56,6 +57,15 @@ Public Class BinanceWebSocket
             RaiseEvent ConnectionStateChanged(False, "Erro Binance WebSocket: " & ex.Message)
         End Try
 
+    End Function
+
+    Private Shared Function IsStablecoin(symbol As String) As Boolean
+        Select Case symbol.Trim().ToUpperInvariant()
+            Case "USDT", "USDC", "BUSD", "DAI", "FDUSD", "TUSD", "USDP", "GUSD"
+                Return True
+            Case Else
+                Return False
+        End Select
     End Function
 
     Private Async Function ConnectAsync(token As CancellationToken) As Task
@@ -78,15 +88,16 @@ Public Class BinanceWebSocket
                 _socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(20)
 
                 Dim streamUrl As String = BuildCombinedStreamUrl(_symbols)
+                Debug.WriteLine("[BINANCE WS] Conectando: " & streamUrl)
 
                 Await _socket.ConnectAsync(New Uri(streamUrl), token)
-
                 connected = True
 
             Catch ex As OperationCanceledException
                 Throw
 
             Catch ex As Exception
+                Debug.WriteLine("[BINANCE WS] Falha na conexão: " & ex.Message)
 
                 If _socket IsNot Nothing Then
                     _socket.Dispose()
@@ -95,7 +106,8 @@ Public Class BinanceWebSocket
 
                 If attempt >= 5 Then
                     Throw New WebSocketException(
-                        "Não foi possível conectar ao Binance WebSocket após 5 tentativas.")
+                        "Não foi possível conectar ao Binance WebSocket após 5 tentativas.",
+                        ex)
                 End If
 
             End Try
@@ -118,8 +130,21 @@ Public Class BinanceWebSocket
 
     Private Function BuildCombinedStreamUrl(symbols As IEnumerable(Of String)) As String
 
-        Dim streams As IEnumerable(Of String) = symbols.Select(
-            Function(s) s.ToLowerInvariant() & "@ticker")
+        Dim streams As New List(Of String)
+
+        For Each symbol As String In symbols
+
+            Dim pair As String
+
+            If symbol.EndsWith("USDT", StringComparison.OrdinalIgnoreCase) Then
+                pair = symbol.ToLowerInvariant()
+            Else
+                pair = (symbol & "USDT").ToLowerInvariant()
+            End If
+
+            streams.Add(pair & "@ticker")
+
+        Next
 
         Return WebSocketBaseUrl & String.Join("/", streams)
 
@@ -150,6 +175,7 @@ Public Class BinanceWebSocket
                         If result.Count > 0 Then
                             ms.Write(buffer, 0, result.Count)
                         End If
+
                     Loop Until result.EndOfMessage
 
                     ProcessMessage(Encoding.UTF8.GetString(ms.ToArray()))
@@ -167,6 +193,7 @@ Public Class BinanceWebSocket
                 "Binance WebSocket desconectado: " & ex.Message)
 
             StartReconnect(token)
+
         End Try
 
     End Function
@@ -232,10 +259,10 @@ Public Class BinanceWebSocket
                     Return
                 End If
 
-                Dim symbol As String = symbolElement.GetString()
+                Dim pairSymbol As String = symbolElement.GetString()
                 Dim priceText As String = priceElement.GetString()
 
-                If String.IsNullOrWhiteSpace(symbol) OrElse
+                If String.IsNullOrWhiteSpace(pairSymbol) OrElse
                    String.IsNullOrWhiteSpace(priceText) Then
                     Return
                 End If
@@ -248,8 +275,20 @@ Public Class BinanceWebSocket
                     CultureInfo.InvariantCulture,
                     price) Then
 
-                    _prices(symbol) = price
-                    RaiseEvent PriceUpdated(symbol, price)
+                    Dim assetSymbol As String = pairSymbol
+
+                    If assetSymbol.EndsWith("USDT", StringComparison.OrdinalIgnoreCase) Then
+                        assetSymbol = assetSymbol.Substring(0, assetSymbol.Length - 4)
+                    End If
+
+                    _prices(assetSymbol) = price
+
+                    Debug.WriteLine(
+                        $"[BINANCE WS] {assetSymbol} = {price.ToString(CultureInfo.InvariantCulture)}")
+
+                    RaiseEvent PriceUpdated(
+                        assetSymbol,
+                        price)
 
                 End If
 
@@ -285,12 +324,12 @@ Public Class BinanceWebSocket
         If receiveTaskToWait IsNot Nothing Then
             Try
                 Await receiveTaskToWait
-            Catch ex As OperationCanceledException
-            Catch ex As Exception
+            Catch
             End Try
         End If
 
         If socketToClose IsNot Nothing Then
+
             If socketToClose.State = WebSocketState.Open OrElse
                socketToClose.State = WebSocketState.CloseReceived Then
 
@@ -302,13 +341,15 @@ Public Class BinanceWebSocket
                         WebSocketCloseStatus.NormalClosure,
                         "Encerrando",
                         closeTokenSource.Token)
-                Catch ex As Exception
+                Catch
                 End Try
 
                 closeTokenSource.Dispose()
+
             End If
 
             socketToClose.Dispose()
+
         End If
 
         If ctsToDispose IsNot Nothing Then
