@@ -1,4 +1,5 @@
-﻿Imports System.Globalization
+Imports System.Data
+Imports System.Globalization
 
 Public Class FormEntradas
 
@@ -72,16 +73,8 @@ Public Class FormEntradas
 
     Private Sub FormEntradas_Load(sender As Object, e As EventArgs) Handles MyBase.Load
 
-        cbCripto.SelectedItem = 0
-        cbWallet.SelectedItem = 0
-
-        TbPrecoEntrada.Text = "0,00"
-        tbQtd.Text = "0"
-
-        LoadPortfolioGrid(dgCriptos)
-
-        ' Estes dois JSONs são apenas cadastros auxiliares de opções
-        ' (wallets e símbolos). Não são o banco do portfólio.
+        ' Estes dois JSONs são apenas catálogos auxiliares.
+        ' Eles continuam independentes do banco do portfólio.
         json.loadFromJSON2ComboGrid(
             Application.StartupPath & "\JSON\wallets.json",
             cbWallet,
@@ -91,6 +84,24 @@ Public Class FormEntradas
             Application.StartupPath & "\JSON\criptos.json",
             cbCripto,
             Nothing)
+
+        ' Agora que os itens existem, define a seleção inicial.
+        If cbCripto.Items.Count > 0 Then
+            cbCripto.SelectedIndex = 0
+        Else
+            cbCripto.Text = ""
+        End If
+
+        If cbWallet.Items.Count > 0 Then
+            cbWallet.SelectedIndex = 0
+        Else
+            cbWallet.Text = ""
+        End If
+
+        TbPrecoEntrada.Text = "0,00"
+        tbQtd.Text = "0"
+
+        LoadPortfolioGrid(dgCriptos)
 
     End Sub
 
@@ -178,11 +189,9 @@ Public Class FormEntradas
         End With
 
         For Each column As DataGridViewColumn In datagrid.Columns
-
             column.DefaultCellStyle.BackColor = Color.Black
             column.DefaultCellStyle.Font = New Font("Calibri", 10, FontStyle.Bold)
             column.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
-
         Next
 
         If datagrid.Columns.Contains("Symbol") Then
@@ -203,9 +212,7 @@ Public Class FormEntradas
 
         For Each row As DataGridViewRow In datagrid.Rows
 
-            If row.IsNewRow Then
-                Continue For
-            End If
+            If row.IsNewRow Then Continue For
 
             If datagrid.Columns.Contains("Wallet") Then
 
@@ -246,8 +253,7 @@ Public Class FormEntradas
                 Return
             End If
 
-            Dim selectedRow As DataGridViewRow =
-                dgCriptos.SelectedRows(0)
+            Dim selectedRow As DataGridViewRow = dgCriptos.SelectedRows(0)
 
             Dim id As Long =
                 Convert.ToInt64(selectedRow.Cells("Id").Value)
@@ -260,13 +266,10 @@ Public Class FormEntradas
                 "Confirmar exclusão",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning) <> DialogResult.Yes Then
-
                 Return
-
             End If
 
             PortfolioRepository.Delete(id)
-
             LoadPortfolioGrid(dgCriptos)
 
         Catch ex As Exception
@@ -285,18 +288,18 @@ Public Class FormEntradas
 
         Try
 
+            If dgCriptos.SelectedRows.Count = 0 Then Return
+
             Dim row As DataGridViewRow = dgCriptos.SelectedRows(0)
 
             cbCripto.Text = row.Cells("Symbol").Value?.ToString()
 
             TbPrecoEntrada.Text =
-                Convert.ToDecimal(
-                    row.Cells("InitialPrice").Value).
+                Convert.ToDecimal(row.Cells("InitialPrice").Value).
                 ToString("N8", CultureInfo.GetCultureInfo("pt-BR"))
 
             tbQtd.Text =
-                Convert.ToDecimal(
-                    row.Cells("Quantity").Value).
+                Convert.ToDecimal(row.Cells("Quantity").Value).
                 ToString("G29", CultureInfo.GetCultureInfo("pt-BR"))
 
             Dim dataValue As DateTime
@@ -311,11 +314,9 @@ Public Class FormEntradas
 
             End If
 
-            cbWallet.Text =
-                row.Cells("Wallet").Value?.ToString()
+            cbWallet.Text = row.Cells("Wallet").Value?.ToString()
 
         Catch
-            ' Ignora navegação sem seleção completa.
         End Try
 
     End Sub
@@ -355,21 +356,12 @@ Public Class FormEntradas
 
         Dim normalized As String = text.Trim()
 
-        If normalized.Contains(",") AndAlso
-           normalized.Contains(".") Then
+        If normalized.Contains(",") AndAlso normalized.Contains(".") Then
 
-            If normalized.LastIndexOf(","c) >
-               normalized.LastIndexOf("."c) Then
-
-                normalized =
-                    normalized.Replace(".", String.Empty).
-                                Replace(",", ".")
-
+            If normalized.LastIndexOf(","c) > normalized.LastIndexOf("."c) Then
+                normalized = normalized.Replace(".", String.Empty).Replace(",", ".")
             Else
-
-                normalized =
-                    normalized.Replace(",", String.Empty)
-
+                normalized = normalized.Replace(",", String.Empty)
             End If
 
             Return Decimal.TryParse(
