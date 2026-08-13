@@ -193,14 +193,26 @@ Public NotInheritable Class PortfolioRepository
 
                             insertCommand.Parameters.AddWithValue("$cripto", cripto)
                             insertCommand.Parameters.AddWithValue("$symbol", symbol)
-                            insertCommand.Parameters.AddWithValue("$initialPrice", initialPriceText)
-                            insertCommand.Parameters.AddWithValue("$quantity", quantityText)
+                            insertCommand.Parameters.AddWithValue("$initialPrice", initialPrice)
+                            insertCommand.Parameters.AddWithValue("$quantity", quantity)
                             insertCommand.Parameters.AddWithValue("$data", data)
                             insertCommand.Parameters.AddWithValue("$wallet", wallet)
                             insertCommand.Parameters.AddWithValue("$lastPrice", lastPrice)
+
                             insertCommand.ExecuteNonQuery()
 
-                            existingId = connection.LastInsertRowId
+                        End Using
+
+                        ' Recupera o ID gerado pelo SQLite
+                        Using idCommand As SqliteCommand = connection.CreateCommand()
+
+                            idCommand.Transaction = transaction
+                            idCommand.CommandText = "SELECT last_insert_rowid();"
+
+                            existingId = Convert.ToInt64(
+        idCommand.ExecuteScalar(),
+        CultureInfo.InvariantCulture)
+
                         End Using
                     End If
 
