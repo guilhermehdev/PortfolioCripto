@@ -361,6 +361,9 @@ Public Class FormMain
     Private Sub UpdateRealtimeOverview()
 
         Try
+            If _marketRefreshRunning Then
+                Return
+            End If
 
             Dim totalEntradaUSD As Decimal = 0D
             Dim totalAtualUSD As Decimal = 0D
@@ -372,7 +375,7 @@ Public Class FormMain
 
             For Each row As DataGridViewRow In dgPortfolio.Rows
 
-                If row.IsNewRow OrElse Not row.Visible Then
+                If row.IsNewRow Then
                     Continue For
                 End If
 
