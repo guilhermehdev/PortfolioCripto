@@ -34,7 +34,18 @@ Public Class BinanceWebSocket
         Dim normalized As List(Of String) = symbols.
             Where(Function(s) Not String.IsNullOrWhiteSpace(s)).
             Select(Function(s) s.Trim().ToUpperInvariant()).
-            Where(Function(s) Not IsStablecoin(s)).
+            Distinct().
+            ToList()
+
+        ' BTC é usado pela visão geral mesmo quando não existe
+        ' como posição no portfólio, portanto sempre assinamos BTCUSDT.
+        If Not normalized.Contains("BTC") Then
+            normalized.Add("BTC")
+        End If
+
+        ' Stablecoins continuam fora do WebSocket.
+        normalized = normalized.
+            Where(Function(s) Not IsStablecoin(s) OrElse s = "BTC").
             Distinct().
             ToList()
 
@@ -285,6 +296,34 @@ Public Class BinanceWebSocket
 
                     Debug.WriteLine(
                         $"[BINANCE WS] {assetSymbol} = {price.ToString(CultureInfo.InvariantCulture)}")
+
+                    ' BTC alimenta diretamente o label da visão geral.
+                    ' O evento continua sendo disparado normalmente para o grid.
+                    If assetSymbol.Equals("BTC", StringComparison.OrdinalIgnoreCase) Then
+
+                        Try
+                            If FormMain.Instance IsNot Nothing AndAlso FormMain.Instance.IsHandleCreated Then
+
+                                Dim btcPriceText As String =
+                                    price.ToString("C2", CultureInfo.GetCultureInfo("en-US"))
+
+                                If FormMain.Instance.InvokeRequired Then
+                                    FormMain.Instance.BeginInvoke(
+                                        New Action(
+                                            Sub()
+                                                FormMain.Instance.lbBTC.Text = btcPriceText
+                                            End Sub))
+                                Else
+                                    FormMain.Instance.lbBTC.Text = btcPriceText
+                                End If
+
+                            End If
+                        Catch ex As Exception
+                            Debug.WriteLine(
+                                "Erro atualizando lbBTC pelo WebSocket: " & ex.Message)
+                        End Try
+
+                    End If
 
                     RaiseEvent PriceUpdated(
                         assetSymbol,
