@@ -1119,18 +1119,22 @@ Public Class FormMain
         ' ==========================================
             Case "precoAtual"
 
-                e.Value = valor.ToString("C2", CultureInfo.GetCultureInfo("en-US"))
+                e.Value = valor.ToString("C4", CultureInfo.GetCultureInfo("en-US"))
 
-                ' Compara preço atual x preço médio
-                Dim precoMedio As Decimal
+                Dim precoMedio As Decimal = 0D
+                If row.Cells("precoMedio").Value IsNot Nothing Then
+                    precoMedio = Convert.ToDecimal(row.Cells("precoMedio").Value)
+                End If
 
                 If valor > precoMedio Then
-                    e.CellStyle.ForeColor = Color.LightCoral
-                ElseIf valor < precoMedio Then
                     e.CellStyle.ForeColor = Color.LightGreen
+                ElseIf valor < precoMedio Then
+                    e.CellStyle.ForeColor = Color.LightCoral
                 Else
                     e.CellStyle.ForeColor = Color.WhiteSmoke
                 End If
+
+                e.FormattingApplied = True
 
         ' ==========================================
         ' 24 HORAS
