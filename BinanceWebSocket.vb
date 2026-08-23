@@ -37,13 +37,10 @@ Public Class BinanceWebSocket
             Distinct().
             ToList()
 
-        ' BTC é usado pela visão geral mesmo quando não existe
-        ' como posição no portfólio, portanto sempre assinamos BTCUSDT.
         If Not normalized.Contains("BTC") Then
             normalized.Add("BTC")
         End If
 
-        ' Stablecoins continuam fora do WebSocket.
         normalized = normalized.
             Where(Function(s) Not IsStablecoin(s) OrElse s = "BTC").
             Distinct().
@@ -297,24 +294,22 @@ Public Class BinanceWebSocket
                     Debug.WriteLine(
                         $"[BINANCE WS] {assetSymbol} = {price.ToString(CultureInfo.InvariantCulture)}")
 
-                    ' BTC alimenta diretamente o label da visão geral.
-                    ' O evento continua sendo disparado normalmente para o grid.
                     If assetSymbol.Equals("BTC", StringComparison.OrdinalIgnoreCase) Then
 
                         Try
-                            If FormMain.Instance IsNot Nothing AndAlso FormMain.Instance.IsHandleCreated Then
+                            If FormMain.IsHandleCreated Then
 
                                 Dim btcPriceText As String =
                                     price.ToString("C2", CultureInfo.GetCultureInfo("en-US"))
 
-                                If FormMain.Instance.InvokeRequired Then
-                                    FormMain.Instance.BeginInvoke(
+                                If FormMain.InvokeRequired Then
+                                    FormMain.BeginInvoke(
                                         New Action(
                                             Sub()
-                                                FormMain.Instance.lbBTC.Text = btcPriceText
+                                                FormMain.lbBTC.Text = btcPriceText
                                             End Sub))
                                 Else
-                                    FormMain.Instance.lbBTC.Text = btcPriceText
+                                    FormMain.lbBTC.Text = btcPriceText
                                 End If
 
                             End If
