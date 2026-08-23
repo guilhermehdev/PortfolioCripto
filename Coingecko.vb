@@ -1,29 +1,69 @@
-﻿Imports System.Net.Http
+﻿Imports System.Globalization
+Imports System.Net.Http
 Imports Newtonsoft.Json.Linq
+Imports System.Net.Http.Headers
+Imports System.Text.Json
+
+
 
 Public Class Coingecko
     Private Shared symToIdCache As Dictionary(Of String, String) = Nothing
 
     Public Async Function CGECKO_GetBTCDominance() As Task(Of Decimal)
+
         Try
 
             Using client As New HttpClient()
-                Dim url As String = "https://api.coingecko.com/api/v3/global"
-                Dim response = Await client.GetAsync(url)
 
-                If response.IsSuccessStatusCode Then
-                    Dim json As String = Await response.Content.ReadAsStringAsync()
-                    Dim jObj As JObject = JObject.Parse(json)
-                    Dim dominance As Decimal = jObj("data")("market_cap_percentage")("btc").Value(Of Decimal)()
-                    Return dominance
-                Else
-                    Throw New Exception("Erro ao consultar dominância BTC: " & response.StatusCode)
-                End If
+                client.Timeout = TimeSpan.FromSeconds(10)
+
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "CryptoScanner/1.0")
+
+                client.DefaultRequestHeaders.Accept.Add(
+                New MediaTypeWithQualityHeaderValue(
+                    "application/json"))
+
+                Dim response As HttpResponseMessage =
+                Await client.GetAsync(
+                    "https://api.coingecko.com/api/v3/global")
+
+                response.EnsureSuccessStatusCode()
+
+                Using stream =
+                Await response.Content.ReadAsStreamAsync()
+
+                    Using doc As JsonDocument =
+                    Await JsonDocument.ParseAsync(stream)
+
+                        Dim dominance As Decimal =
+                        doc.RootElement.
+                        GetProperty("data").
+                        GetProperty("market_cap_percentage").
+                        GetProperty("btc").
+                        GetDecimal()
+
+                        Debug.WriteLine(
+                        $"[COINGECKO] BTC Dominance = {dominance:F2}%")
+
+                        Return dominance
+
+                    End Using
+
+                End Using
+
             End Using
+
         Catch ex As Exception
-            Debug.Write($"Erro ao consultar dominância BTC: {ex.Message}")
-            Return False
+
+            Debug.WriteLine(
+            "[COINGECKO] Erro BTC Dominance: " &
+            ex.ToString())
+
+            Return 0D
+
         End Try
+
     End Function
 
     Private Shared PreferredIds As New Dictionary(Of String, String) From {

@@ -53,6 +53,7 @@ Public NotInheritable Class PortfolioMarketService
             formatter.USDBRLprice = usdBrl
 
             Dim dom As Decimal = Await gec.CGECKO_GetBTCDominance()
+            FormMain.lbDom.Text = If(dom > 0D, $"{dom:F2}%", "--")
 
             Dim btcPriceString As String = Await b.BINANCE_GetCoinsInfo("BTC")
             Dim btcPrice As Decimal = 0D
