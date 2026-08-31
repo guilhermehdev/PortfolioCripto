@@ -1,5 +1,6 @@
 Imports System.Data
 Imports System.Globalization
+Imports System.Windows.Forms
 
 Public NotInheritable Class PortfolioBalanceSync
 
@@ -24,11 +25,10 @@ Public NotInheritable Class PortfolioBalanceSync
         Next
 
         Dim added As Integer = 0
+        Dim ptBr As CultureInfo = CultureInfo.GetCultureInfo("pt-BR")
 
         ' ============================================================
         ' BINANCE
-        ' Usa o método já existente que retorna os ativos da conta
-        ' com valor de pelo menos US$ 1 e o respectivo preço.
         ' ============================================================
         Try
             Dim binanceInfo = Await binance.BINANCE_GetCoinsInfo()
@@ -45,52 +45,61 @@ Public NotInheritable Class PortfolioBalanceSync
                     Dim quantity As Decimal
 
                     If Not Decimal.TryParse(
-                        parts(1),
-                        NumberStyles.Float,
-                        CultureInfo.InvariantCulture,
-                        price) Then
-                        Continue For
-                    End If
+                        parts(1), NumberStyles.Float,
+                        CultureInfo.InvariantCulture, price) Then Continue For
 
                     If Not Decimal.TryParse(
-                        parts(2),
-                        NumberStyles.Float,
-                        CultureInfo.InvariantCulture,
-                        quantity) Then
-                        Continue For
-                    End If
+                        parts(2), NumberStyles.Float,
+                        CultureInfo.InvariantCulture, quantity) Then Continue For
 
-                    If quantity <= 0D OrElse quantity * price < 1D Then
-                        Continue For
-                    End If
+                    If quantity <= 0D OrElse quantity * price < 1D Then Continue For
 
                     Dim key As String = "BINANCE|" & symbol
+                    If known.Contains(key) Then Continue For
 
-                    If known.Contains(key) Then
-                        Continue For
-                    End If
+                    Dim resposta As DialogResult = MessageBox.Show(
+                        $"A moeda {symbol} foi encontrada na sua conta Binance, mas não está cadastrada no portfólio." &
+                        Environment.NewLine & Environment.NewLine &
+                        $"Quantidade: {quantity.ToString("N8", ptBr)}" &
+                        Environment.NewLine &
+                        $"Preço atual: ${price.ToString("N4", CultureInfo.InvariantCulture)}" &
+                        Environment.NewLine & Environment.NewLine &
+                        "Deseja adicionar ao portfólio?",
+                        "Nova moeda encontrada - Binance",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question)
 
-                    Dim resposta As DialogResult =
-                        MessageBox.Show(
-                            $"A moeda {symbol} foi encontrada na sua conta Binance, mas não está cadastrada no portfólio." &
-                            Environment.NewLine & Environment.NewLine &
-                            $"Quantidade: {quantity.ToString("N8", CultureInfo.GetCultureInfo("pt-BR"))}" &
-                            Environment.NewLine &
-                            $"Preço atual: ${price.ToString("N4", CultureInfo.InvariantCulture)}" &
-                            Environment.NewLine & Environment.NewLine &
-                            "Deseja adicionar ao portfólio?",
-                            "Nova moeda encontrada - Binance",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Question)
+                    If resposta <> DialogResult.Yes Then Continue For
 
-                    If resposta <> DialogResult.Yes Then
-                        Continue For
-                    End If
+                    Dim precoMedioStr As String = InputBox(
+                        $"Digite o preço de entrada/médio para {symbol}:" &
+                        Environment.NewLine &
+                        $"Preço atual: ${price.ToString("N4", CultureInfo.InvariantCulture)}",
+                        "Preço de entrada - Binance",
+                        price.ToString("N4", ptBr))
 
-                    Dim initialPrice As Decimal = price
+                    Dim initialPrice As Decimal
 
-                    If symbol = "USDT" Then
-                        initialPrice = 1D
+                    If Not Decimal.TryParse(
+                        precoMedioStr,
+                        NumberStyles.Any,
+                        ptBr,
+                        initialPrice) Then
+
+                        If Not Decimal.TryParse(
+                            precoMedioStr,
+                            NumberStyles.Any,
+                            CultureInfo.InvariantCulture,
+                            initialPrice) Then
+
+                            MessageBox.Show(
+                                $"Preço inválido. Pulando {symbol}.",
+                                "Preço inválido",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning)
+
+                            Continue For
+                        End If
                     End If
 
                     PortfolioRepository.AddOrUpdate(
@@ -116,27 +125,18 @@ Public NotInheritable Class PortfolioBalanceSync
 
         ' ============================================================
         ' GATE.IO
-        ' Usa os saldos já obtidos e consulta preço apenas dos ativos
-        ' que ainda não existem no SQLite.
         ' ============================================================
         Try
 
             For Each item In gateAssets
 
-                Dim symbol As String =
-                    item.Key.Trim().ToUpperInvariant()
-
+                Dim symbol As String = item.Key.Trim().ToUpperInvariant()
                 Dim quantity As Decimal = item.Value
 
-                If quantity <= 0D Then
-                    Continue For
-                End If
+                If quantity <= 0D Then Continue For
 
                 Dim key As String = "GATE.IO|" & symbol
-
-                If known.Contains(key) Then
-                    Continue For
-                End If
+                If known.Contains(key) Then Continue For
 
                 Dim price As Decimal = 0D
 
@@ -148,31 +148,51 @@ Public NotInheritable Class PortfolioBalanceSync
                     Continue For
                 End Try
 
-                If price <= 0D OrElse quantity * price < 1D Then
-                    Continue For
-                End If
+                If price <= 0D OrElse quantity * price < 1D Then Continue For
 
-                Dim resposta As DialogResult =
-                    MessageBox.Show(
-                        $"A moeda {symbol} foi encontrada na sua conta Gate.io, mas não está cadastrada no portfólio." &
-                        Environment.NewLine & Environment.NewLine &
-                        $"Quantidade: {quantity.ToString("N8", CultureInfo.GetCultureInfo("pt-BR"))}" &
-                        Environment.NewLine &
-                        $"Preço atual: ${price.ToString("N4", CultureInfo.InvariantCulture)}" &
-                        Environment.NewLine & Environment.NewLine &
-                        "Deseja adicionar ao portfólio?",
-                        "Nova moeda encontrada - Gate.io",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question)
+                Dim resposta As DialogResult = MessageBox.Show(
+                    $"A moeda {symbol} foi encontrada na sua conta Gate.io, mas não está cadastrada no portfólio." &
+                    Environment.NewLine & Environment.NewLine &
+                    $"Quantidade: {quantity.ToString("N8", ptBr)}" &
+                    Environment.NewLine &
+                    $"Preço atual: ${price.ToString("N4", CultureInfo.InvariantCulture)}" &
+                    Environment.NewLine & Environment.NewLine &
+                    "Deseja adicionar ao portfólio?",
+                    "Nova moeda encontrada - Gate.io",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question)
 
-                If resposta <> DialogResult.Yes Then
-                    Continue For
-                End If
+                If resposta <> DialogResult.Yes Then Continue For
 
-                Dim initialPrice As Decimal = price
+                Dim precoMedioStr As String = InputBox(
+                    $"Digite o preço de entrada/médio para {symbol}:" &
+                    Environment.NewLine &
+                    $"Preço atual: ${price.ToString("N4", CultureInfo.InvariantCulture)}",
+                    "Preço de entrada - Gate.io",
+                    price.ToString("N4", ptBr))
 
-                If symbol = "USDT" Then
-                    initialPrice = 1D
+                Dim initialPrice As Decimal
+
+                If Not Decimal.TryParse(
+                    precoMedioStr,
+                    NumberStyles.Any,
+                    ptBr,
+                    initialPrice) Then
+
+                    If Not Decimal.TryParse(
+                        precoMedioStr,
+                        NumberStyles.Any,
+                        CultureInfo.InvariantCulture,
+                        initialPrice) Then
+
+                        MessageBox.Show(
+                            $"Preço inválido. Pulando {symbol}.",
+                            "Preço inválido",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning)
+
+                        Continue For
+                    End If
                 End If
 
                 PortfolioRepository.AddOrUpdate(
