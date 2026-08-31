@@ -36,28 +36,68 @@ Public NotInheritable Class PortfolioMarketService
 
             Dim binanceAssets = Await b.BINANCE_GetAllAssetsFull()
             Dim gateAssets = Await gate.GATE_GetAllSpotAssets()
-            Dim portfolioSymbols As New HashSet(Of String)(allSymbols, StringComparer.OrdinalIgnoreCase)
-            gateAssets = gateAssets.Where(Function(kvp) portfolioSymbols.Contains(kvp.Key)).ToDictionary(Function(kvp) kvp.Key, Function(kvp) kvp.Value, StringComparer.OrdinalIgnoreCase)
 
-            Debug.WriteLine($"[GATE.IO] Saldos considerados no portfólio: {gateAssets.Count}")
+            ' Procura moedas existentes nas corretoras mas ainda não cadastradas
+            ' no portfólio e permite adicioná-las ao SQLite.
+            Await PortfolioBalanceSync.SyncAsync(
+                b,
+                gate,
+                binanceAssets,
+                gateAssets)
+
+            ' Recarrega o SQLite para incluir imediatamente as moedas adicionadas.
+            originalDT = PortfolioRepository.GetAll()
+
+            If originalDT.Rows.Count = 0 Then
+                Throw New Exception("Nenhum ativo encontrado no SQLite.")
+            End If
+
+            allSymbols =
+                originalDT.AsEnumerable().
+                Select(Function(r) r("Symbol").ToString().Trim().ToUpperInvariant()).
+                Where(Function(s) Not String.IsNullOrWhiteSpace(s)).
+                Distinct().
+                ToList()
+
+            Dim portfolioSymbols As New HashSet(Of String)(
+                allSymbols,
+                StringComparer.OrdinalIgnoreCase)
+
+            ' Mantém somente os saldos da Gate que pertencem ao portfólio.
+            gateAssets =
+                gateAssets.
+                Where(Function(kvp) portfolioSymbols.Contains(kvp.Key)).
+                ToDictionary(
+                    Function(kvp) kvp.Key,
+                    Function(kvp) kvp.Value,
+                    StringComparer.OrdinalIgnoreCase)
+
+            Debug.WriteLine(
+                $"[GATE.IO] Saldos considerados no portfólio: {gateAssets.Count}")
 
             Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
 
             Dim usdBrl As Decimal = Await gec.CGECKO_GetPrice("USDT", "brl")
 
             If usdBrl <= 0D Then
-                Throw New Exception("Cotação USDT/BRL retornou zero. Não foi possível atualizar os valores em BRL.")
+                Throw New Exception(
+                    "Cotação USDT/BRL retornou zero. Não foi possível atualizar os valores em BRL.")
             End If
 
             JSON.USDBRLprice = usdBrl
             formatter.USDBRLprice = usdBrl
 
             Dim dom As Decimal = Await gec.CGECKO_GetBTCDominance()
-            FormMain.lbDom.Text = If(dom > 0D, $"{dom:F2}%", "--")
+            FormMain.lbDom.Text =
+                If(dom > 0D, $"{dom:F2}%", "--")
 
-            Dim btcPriceString As String = Await b.BINANCE_GetCoinsInfo("BTC")
+            ' Valor inicial do BTC. Depois o WebSocket assume o realtime.
+            Dim btcPriceString As String =
+                Await b.BINANCE_GetCoinsInfo("BTC")
+
             Dim btcPrice As Decimal = 0D
-            Dim btcParts() As String = btcPriceString.Split("|"c)
+            Dim btcParts() As String =
+                btcPriceString.Split("|"c)
 
             If btcParts.Length > 0 Then
                 btcPrice = formatter.decimalBR(btcParts(0))
@@ -93,12 +133,19 @@ Public NotInheritable Class PortfolioMarketService
 
             For Each row As DataRow In originalDT.Rows
 
-                Dim id As Long = Convert.ToInt64(row("Id"), CultureInfo.InvariantCulture)
-                Dim symbol As String = row("Symbol").ToString().Trim().ToUpperInvariant()
-                Dim wallet As String = row("Wallet").ToString().Trim()
+                Dim id As Long =
+                    Convert.ToInt64(row("Id"), CultureInfo.InvariantCulture)
+
+                Dim symbol As String =
+                    row("Symbol").ToString().Trim().ToUpperInvariant()
+
+                Dim wallet As String =
+                    row("Wallet").ToString().Trim()
 
                 Dim market As CoinMarketData =
-                    mcapDict.GetValueOrDefault(symbol, New CoinMarketData())
+                    mcapDict.GetValueOrDefault(
+                        symbol,
+                        New CoinMarketData())
 
                 Dim currPrice As Decimal = market.Price
                 Dim quantity As Decimal = 0D
@@ -114,27 +161,31 @@ Public NotInheritable Class PortfolioMarketService
                             Await b.BINANCE_GetCoinsInfo(symbol)
 
                         If Not String.IsNullOrWhiteSpace(priceString) Then
-                            Dim parts() As String = priceString.Split("|"c)
+
+                            Dim parts() As String =
+                                priceString.Split("|"c)
+
                             If parts.Length > 0 Then
                                 currPrice = formatter.decimalBR(parts(0))
                             End If
+
                         End If
 
                     Case "GATE.IO"
 
                         quantity =
-        gateAssets.GetValueOrDefault(symbol, 0D)
+                            gateAssets.GetValueOrDefault(symbol, 0D)
 
                         Debug.WriteLine(
-        $"[GATE LOAD] {symbol} -> saldo={quantity}")
+                            $"[GATE LOAD] {symbol} -> saldo={quantity}")
 
                         Try
 
                             Dim gatePrice As Decimal =
-            Await gate.GATE_GetCoinsPrice(symbol)
+                                Await gate.GATE_GetCoinsPrice(symbol)
 
                             Debug.WriteLine(
-            $"[GATE LOAD] {symbol} -> preço={gatePrice}")
+                                $"[GATE LOAD] {symbol} -> preço={gatePrice}")
 
                             If gatePrice > 0D Then
                                 currPrice = gatePrice
@@ -143,12 +194,12 @@ Public NotInheritable Class PortfolioMarketService
                         Catch ex As HttpRequestException
 
                             Debug.WriteLine(
-            $"[GATE LOAD] ERRO HTTP {symbol}: {ex.Message}")
+                                $"[GATE LOAD] ERRO HTTP {symbol}: {ex.Message}")
 
                         Catch ex As Exception
 
                             Debug.WriteLine(
-            $"[GATE LOAD] ERRO {symbol}: {ex}")
+                                $"[GATE LOAD] ERRO {symbol}: {ex}")
 
                         End Try
 
@@ -162,9 +213,12 @@ Public NotInheritable Class PortfolioMarketService
                 End Select
 
                 If quantity <= 0D Then
+
                     Debug.WriteLine(
                         $"[{wallet}] {symbol}: saldo zero ou não encontrado.")
+
                     Continue For
+
                 End If
 
                 Dim initialPrice As Decimal =
@@ -216,7 +270,10 @@ Public NotInheritable Class PortfolioMarketService
                 newRow("vlAtualBRL") = currentValueBRL
                 newRow("ROIusd") = roi
                 newRow("ROIbrl") = roi * usdBrl
-                newRow("X") = If(multiplier > 0D, $"{multiplier:N2} X", "0 X")
+                newRow("X") =
+                    If(multiplier > 0D,
+                       $"{multiplier:N2} X",
+                       "0 X")
 
                 If initialValueUSD > 1D Then
                     newDT.Rows.Add(newRow)
@@ -226,35 +283,57 @@ Public NotInheritable Class PortfolioMarketService
                 listAddress.Add(wallet)
                 listCurrValue.Add(currentValueUSD)
 
-                PortfolioRepository.UpdateLastPrice(id, currPrice)
+                PortfolioRepository.UpdateLastPrice(
+                    id,
+                    currPrice)
 
             Next
 
             Dim total As Decimal = cashflow + currValueTotal
-            Dim percentCash As Decimal = If(total > 0D, (cashflow / total) * 100D, 0D)
-            Dim percentInvested As Decimal = If(total > 0D, (currValueTotal / total) * 100D, 0D)
-            Dim walletPerformance As Decimal = If(initialValue > 0D, (profit / initialValue) * 100D, 0D)
+            Dim percentCash As Decimal =
+                If(total > 0D,
+                   (cashflow / total) * 100D,
+                   0D)
+
+            Dim percentInvested As Decimal =
+                If(total > 0D,
+                   (currValueTotal / total) * 100D,
+                   0D)
+
+            Dim walletPerformance As Decimal =
+                If(initialValue > 0D,
+                   (profit / initialValue) * 100D,
+                   0D)
 
             If total > 0D Then
+
                 For i As Integer = 0 To listCriptos.Count - 1
-                    criptoDic(listCriptos(i)) = (listCurrValue(i) / total) * 100D
+                    criptoDic(listCriptos(i)) =
+                        (listCurrValue(i) / total) * 100D
                 Next
+
             End If
 
             For Each walletName In listAddress.Distinct()
+
                 Dim sum As Decimal = 0D
 
                 For i As Integer = 0 To listAddress.Count - 1
+
                     If listAddress(i) = walletName Then
                         sum += listCurrValue(i)
                     End If
+
                 Next
 
                 addressDic(walletName) = sum
+
             Next
 
             FormMain.lbTotalBRL.Visible = True
-            FormMain.lbTotalBRL.Text = formatter.BRLformat(profit * usdBrl)
+            FormMain.lbTotalBRL.Text =
+                formatter.BRLformat(profit * usdBrl)
+
             FormMain.lbTotalBRL.ForeColor =
                 If(profit > 0D,
                    Color.FromArgb(0, 255, 0),
@@ -295,6 +374,7 @@ Public NotInheritable Class PortfolioMarketService
             FormMain.lbPercentInvestido.Text = $"{percentInvested:F2}%"
 
             datagrid.DataSource = newDT
+
             If criptoDic.Count > 0 Then
                 FormMain.criptoGraph(criptoDic)
             End If
