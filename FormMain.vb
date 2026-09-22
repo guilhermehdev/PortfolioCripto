@@ -455,6 +455,11 @@ Public Class FormMain
             Me.lbTotalBRL.Text =
             Cjson.BRLformat(lucroBRL)
 
+            Me.lbTotalBRL.ForeColor =
+            If(lucroBRL > 0D,
+               Color.FromArgb(0, 255, 0),
+               Color.FromArgb(255, 73, 73))
+
             Me.lbTotalEntradaUSD.Text =
             Cjson.USDformat(totalEntradaUSD)
 
@@ -470,6 +475,25 @@ Public Class FormMain
 
             Me.lbRoiUSD.Text =
             Cjson.USDformat(lucroUSD)
+
+            ' Mantém as regras visuais sincronizadas com os valores recalculados pelo WebSocket.
+            Me.lbTotalEntradaUSD.ForeColor = Color.LimeGreen
+            Me.lbTotalEntradaBRL.ForeColor = Color.DeepSkyBlue
+
+            Me.lbValoresHojeUSD.ForeColor =
+            If(totalAtualUSD < totalEntradaUSD,
+               Color.IndianRed,
+               Color.GreenYellow)
+
+            Me.lbValoresHojeBRL.ForeColor =
+            If(totalAtualUSD < totalEntradaUSD,
+               Color.IndianRed,
+               Color.Cyan)
+
+            Me.lbRoiUSD.ForeColor =
+            If(lucroUSD < 0D,
+               Color.Red,
+               Color.Gold)
 
             Me.lbCaixa.Text =
             Cjson.USDformat(cashflowUSD)
