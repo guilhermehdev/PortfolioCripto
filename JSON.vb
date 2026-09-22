@@ -548,6 +548,8 @@ Public Class JSON
 
                 If stablecoins.Contains(symbol) Then
                     row.Visible = False
+                Else
+                    row.Visible = True
                 End If
 
                 datagrid.Columns(0).Width = 100
@@ -886,6 +888,8 @@ Public Class JSON
 
                 If stablecoins.Contains(symbol) Then
                     row.Visible = False
+                Else
+                    row.Visible = True
                 End If
 
                 datagrid.Columns(0).Width = 100

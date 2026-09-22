@@ -663,8 +663,8 @@ Public Class FormMain
             ' Recalcula visão geral
             UpdateRealtimeOverview()
 
-            ' Mantém o estilo visual
-            Cjson.FormatGrid(dgPortfolio)
+            ' A formatação do grid ocorre no carregamento/ordenação; não a repetimos a cada tick.
+            ' Isso evita alterar visibilidade e binding durante o update do WebSocket.
 
         Catch ex As Exception
 
