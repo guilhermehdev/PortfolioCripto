@@ -1647,7 +1647,7 @@ Public Class FormMain
     Private Sub btSpot_Click(sender As Object, e As EventArgs) Handles btSpot.Click
         dgPortfolio.Visible = True
         dgFuturos.Visible = False
-        btFuturos.BackColor = Color.FromArgb(40, 40, 40)
+        btFuturos.BackColor = Color.FromArgb(20, 20, 20)
         btSpot.BackColor = Color.SteelBlue
     End Sub
     Private Sub btFuturos_Click(sender As Object, e As EventArgs) Handles btFuturos.Click
@@ -1655,7 +1655,7 @@ Public Class FormMain
         dgFuturos.Visible = True
         BinanceFuturesUserDataUpdated()
         btFuturos.BackColor = Color.SteelBlue
-        btSpot.BackColor = Color.FromArgb(40, 40, 40)
+        btSpot.BackColor = Color.FromArgb(20, 20, 20)
     End Sub
 
 End Class

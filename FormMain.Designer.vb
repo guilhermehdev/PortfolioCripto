@@ -894,6 +894,7 @@ Partial Class FormMain
         ' 
         ' btFuturos
         ' 
+        btFuturos.BackColor = Color.FromArgb(CByte(20), CByte(20), CByte(20))
         btFuturos.Cursor = Cursors.Hand
         btFuturos.FlatAppearance.BorderColor = Color.Gray
         btFuturos.FlatAppearance.BorderSize = 0
@@ -906,7 +907,7 @@ Partial Class FormMain
         btFuturos.Size = New Size(75, 23)
         btFuturos.TabIndex = 39
         btFuturos.Text = "Futuros"
-        btFuturos.UseVisualStyleBackColor = True
+        btFuturos.UseVisualStyleBackColor = False
         ' 
         ' FormMain
         ' 
