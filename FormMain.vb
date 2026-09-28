@@ -12,7 +12,12 @@ Public Class FormMain
     Dim gec As New Coingecko
     Private ReadOnly _binanceWs As New BinanceWebSocket
     Private ReadOnly _gateWs As New GateWebSocket
+    Private ReadOnly _binanceFuturesMarketWs As New BinanceFuturesMarketWebSocket
+    Private ReadOnly _binanceFuturesUserWs As New BinanceFuturesUserDataWebSocket
     Private _marketRefreshRunning As Boolean = False
+    Private _futuresLoadRunning As Boolean = False
+    Private _futuresMarketSymbolsKey As String = String.Empty
+    Private _futuresUserStreamStarted As Boolean = False
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -60,11 +65,14 @@ Public Class FormMain
             AddHandler _binanceWs.PriceUpdated, AddressOf BinanceWs_PriceUpdated
 
             AddHandler _binanceWs.ConnectionStateChanged, AddressOf BinanceWs_ConnectionStateChanged
-
-            Await B.SyncBinanceTime()
-
             AddHandler _gateWs.PriceUpdated, AddressOf GateWs_PriceUpdated
             AddHandler _gateWs.ConnectionStateChanged, AddressOf GateWs_ConnectionStateChanged
+            AddHandler _binanceFuturesMarketWs.MarkPriceUpdated, AddressOf BinanceFuturesMarkPriceUpdated
+            AddHandler _binanceFuturesMarketWs.ConnectionStateChanged, AddressOf BinanceFuturesWs_ConnectionStateChanged
+            AddHandler _binanceFuturesUserWs.DataUpdated, AddressOf BinanceFuturesUserDataUpdated
+            AddHandler _binanceFuturesUserWs.ConnectionStateChanged, AddressOf BinanceFuturesWs_ConnectionStateChanged
+
+            Await B.SyncBinanceTime()
 
             chart.removeCharts()
 
@@ -1235,11 +1243,435 @@ Public Class FormMain
 
     End Sub
 
+    Private Async Sub tabsMain_Selected(sender As Object, e As TabControlEventArgs) Handles tabsMain.Selected
+        If e.TabPage Is tabFuturos Then
+            Await LoadFuturesPositionsAsync()
+        End If
+    End Sub
+
+    Private Sub tabsMain_DrawItem(sender As Object, e As DrawItemEventArgs) Handles tabsMain.DrawItem
+        If e.Index < 0 OrElse e.Index >= tabsMain.TabPages.Count Then Return
+
+        Using backgroundBrush As New SolidBrush(Color.Black)
+            e.Graphics.FillRectangle(backgroundBrush, e.Bounds)
+        End Using
+
+        Dim tabText = tabsMain.TabPages(e.Index).Text
+        TextRenderer.DrawText(
+            e.Graphics,
+            tabText,
+            tabsMain.Font,
+            e.Bounds,
+            Color.White,
+            TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter)
+
+        Using borderPen As New Pen(Color.Black)
+            Dim borderBounds = e.Bounds
+            borderBounds.Width -= 1
+            borderBounds.Height -= 1
+            e.Graphics.DrawRectangle(borderPen, borderBounds)
+        End Using
+    End Sub
+    Private Async Function LoadFuturesPositionsAsync() As Task
+        If _futuresLoadRunning Then
+            Return
+        End If
+
+        _futuresLoadRunning = True
+        dgFuturos.Cursor = Cursors.WaitCursor
+
+        Try
+            Dim positions = Await B.BINANCE_GetFuturesPositionsAsync()
+            Dim protectionOrders = Await B.BINANCE_GetFuturesProtectionOrdersAsync()
+            Dim table As New DataTable()
+
+            table.Columns.Add("Symbol", GetType(String))
+            table.Columns.Add("PositionSide", GetType(String))
+            table.Columns.Add("PositionAmount", GetType(Decimal))
+            table.Columns.Add("Notional", GetType(Decimal))
+            table.Columns.Add("EntryPrice", GetType(Decimal))
+            table.Columns.Add("MarkPrice", GetType(Decimal))
+            table.Columns.Add("UnrealizedProfit", GetType(Decimal))
+            table.Columns.Add("ROI", GetType(Decimal))
+            table.Columns.Add("TakeProfit", GetType(String))
+            table.Columns.Add("StopLoss", GetType(String))
+            table.Columns.Add("LiquidationPrice", GetType(Decimal))
+            table.Columns.Add("Leverage", GetType(Integer))
+            table.Columns.Add("InitialMargin", GetType(Decimal))
+
+            For Each position In positions
+                Dim roiMargin = GetFuturesEntryMargin(position.PositionAmount, position.EntryPrice, position.Leverage, position.InitialMargin)
+                Dim roiPercent = CalculateFuturesRoi(position.UnrealizedProfit, roiMargin)
+
+                Dim takeProfitText = GetProtectionText(protectionOrders, position, takeProfit:=True)
+                Dim stopLossText = GetProtectionText(protectionOrders, position, takeProfit:=False)
+
+                table.Rows.Add(
+                    position.Symbol,
+                    If(String.IsNullOrWhiteSpace(position.PositionSide), "-", position.PositionSide),
+                    position.PositionAmount,
+                    position.Notional,
+                    position.EntryPrice,
+                    position.MarkPrice,
+                    position.UnrealizedProfit,
+                    roiPercent,
+                    takeProfitText,
+                    stopLossText,
+                    position.LiquidationPrice,
+                    position.Leverage,
+                    roiMargin)
+            Next
+            dgFuturos.DataSource = Nothing
+            dgFuturos.DataSource = table
+            ConfigureFuturesGrid()
+            ApplyFuturesGridColors()
+
+            If Not _futuresUserStreamStarted Then
+                Await _binanceFuturesUserWs.StartAsync()
+                _futuresUserStreamStarted = True
+            End If
+            If positions.Count > 0 Then
+                Dim symbolsKey = String.Join("|", positions.Select(Function(position) position.Symbol).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(Function(symbol) symbol, StringComparer.OrdinalIgnoreCase))
+                If Not String.Equals(symbolsKey, _futuresMarketSymbolsKey, StringComparison.OrdinalIgnoreCase) Then
+                    Await _binanceFuturesMarketWs.StartAsync(positions.Select(Function(position) position.Symbol))
+                    _futuresMarketSymbolsKey = symbolsKey
+                End If
+            ElseIf Not String.IsNullOrWhiteSpace(_futuresMarketSymbolsKey) Then
+                Await _binanceFuturesMarketWs.StopAsync()
+                _futuresMarketSymbolsKey = String.Empty
+            End If
+
+        Catch ex As Exception
+            lbDebug.AppendText(
+                Environment.NewLine &
+                "Erro ao carregar posições de futuros: " & ex.Message)
+        Finally
+            dgFuturos.Cursor = Cursors.Default
+            _futuresLoadRunning = False
+        End Try
+    End Function
+
+    Private Shared Function GetFuturesEntryMargin(positionAmount As Decimal, entryPrice As Decimal, leverage As Integer, fallbackMargin As Decimal) As Decimal
+        If leverage > 0 AndAlso positionAmount <> 0D AndAlso entryPrice <> 0D Then
+            Return Math.Abs(positionAmount * entryPrice) / leverage
+        End If
+
+        Return Math.Abs(fallbackMargin)
+    End Function
+
+    Private Shared Function CalculateFuturesRoi(unrealizedProfit As Decimal, entryMargin As Decimal) As Decimal
+        If entryMargin = 0D Then Return 0D
+        Return (unrealizedProfit / entryMargin) * 100D
+    End Function
+    Private Shared Function GetFuturesPositionSideColor(rawSide As Object) As Color
+        Dim side = rawSide?.ToString().Trim()
+        If String.Equals(side, "LONG", StringComparison.OrdinalIgnoreCase) Then
+            Return Color.LimeGreen
+        End If
+        If String.Equals(side, "SHORT", StringComparison.OrdinalIgnoreCase) Then
+            Return Color.Red
+        End If
+        Return Color.White
+    End Function
+    Private Sub ApplyFuturesGridColors()
+        For Each row As DataGridViewRow In dgFuturos.Rows
+            If Not row.IsNewRow Then
+                ApplyFuturesRowColors(row)
+            End If
+        Next
+    End Sub
+
+    Private Sub ApplyFuturesRowColors(row As DataGridViewRow)
+        If row Is Nothing OrElse row.IsNewRow Then Return
+
+        row.Cells("EntryPrice").Style.ForeColor = Color.Cyan
+        row.Cells("EntryPrice").Style.SelectionForeColor = Color.Cyan
+
+        Dim sideColor = GetFuturesPositionSideColor(row.Cells("PositionSide").Value)
+        row.Cells("PositionSide").Style.ForeColor = sideColor
+        row.Cells("PositionSide").Style.SelectionForeColor = sideColor
+
+        row.Cells("TakeProfit").Style.ForeColor = Color.DeepSkyBlue
+        row.Cells("TakeProfit").Style.SelectionForeColor = Color.DeepSkyBlue
+        For Each protectionColumn In New String() {"StopLoss", "LiquidationPrice"}
+            row.Cells(protectionColumn).Style.ForeColor = Color.DarkOrange
+            row.Cells(protectionColumn).Style.SelectionForeColor = Color.DarkOrange
+        Next
+
+        Dim entryPrice As Decimal
+        Dim markPrice As Decimal
+        If TryReadFuturesDecimal(row.Cells("MarkPrice").Value, markPrice) AndAlso
+           TryReadFuturesDecimal(row.Cells("EntryPrice").Value, entryPrice) Then
+            Dim markColor = If(markPrice > entryPrice, Color.LimeGreen, Color.Red)
+            row.Cells("MarkPrice").Style.ForeColor = markColor
+            row.Cells("MarkPrice").Style.SelectionForeColor = markColor
+        End If
+
+        For Each columnName In New String() {"UnrealizedProfit", "ROI"}
+            Dim value As Decimal
+            If TryReadFuturesDecimal(row.Cells(columnName).Value, value) Then
+                Dim pnlColor = If(value > 0D, Color.LimeGreen, Color.Red)
+                row.Cells(columnName).Style.ForeColor = pnlColor
+                row.Cells(columnName).Style.SelectionForeColor = pnlColor
+            End If
+        Next
+    End Sub
+    Private Sub BinanceFuturesWs_ConnectionStateChanged(connected As Boolean, message As String)
+        If IsDisposed OrElse Disposing Then Return
+
+        If InvokeRequired Then
+            BeginInvoke(New Action(Of Boolean, String)(AddressOf BinanceFuturesWs_ConnectionStateChanged), connected, message)
+            Return
+        End If
+
+        If lbDebug IsNot Nothing Then
+            lbDebug.AppendText(Environment.NewLine & message)
+        End If
+    End Sub
+    Private Sub BinanceFuturesMarkPriceUpdated(symbol As String, markPrice As Decimal)
+        If IsDisposed OrElse Disposing Then Return
+
+        If InvokeRequired Then
+            BeginInvoke(New Action(Of String, Decimal)(AddressOf BinanceFuturesMarkPriceUpdated), symbol, markPrice)
+            Return
+        End If
+
+        For Each row As DataGridViewRow In dgFuturos.Rows
+            If row.IsNewRow OrElse Not String.Equals(row.Cells("Symbol").Value?.ToString(), symbol, StringComparison.OrdinalIgnoreCase) Then
+                Continue For
+            End If
+
+            Dim quantity As Decimal
+            Dim entryPrice As Decimal
+            Dim initialMargin As Decimal
+            Dim leverage As Integer
+            If Not TryReadFuturesDecimal(row.Cells("PositionAmount").Value, quantity) OrElse
+               Not TryReadFuturesDecimal(row.Cells("EntryPrice").Value, entryPrice) Then
+                Continue For
+            End If
+
+            TryReadFuturesDecimal(row.Cells("InitialMargin").Value, initialMargin)
+            Integer.TryParse(row.Cells("Leverage").Value?.ToString().Replace("x", String.Empty), leverage)
+            Dim quantityAbs = Math.Abs(quantity)
+            Dim positionSide = row.Cells("PositionSide").Value?.ToString()
+            Dim isShort = String.Equals(positionSide, "SHORT", StringComparison.OrdinalIgnoreCase) OrElse quantity < 0D
+            Dim pnl = If(isShort, (entryPrice - markPrice) * quantityAbs, (markPrice - entryPrice) * quantityAbs)
+            Dim notional = quantityAbs * markPrice
+            Dim entryMargin = GetFuturesEntryMargin(quantityAbs, entryPrice, leverage, initialMargin)
+            Dim roi = CalculateFuturesRoi(pnl, entryMargin)
+
+            row.Cells("MarkPrice").Value = markPrice
+            row.Cells("Notional").Value = notional
+            row.Cells("InitialMargin").Value = entryMargin
+            row.Cells("UnrealizedProfit").Value = pnl
+            row.Cells("ROI").Value = roi
+            dgFuturos.InvalidateRow(row.Index)
+            Exit For
+        Next
+    End Sub
+
+    Private Async Sub BinanceFuturesUserDataUpdated()
+        If IsDisposed OrElse Disposing OrElse tabsMain.SelectedTab IsNot tabFuturos Then Return
+
+        If InvokeRequired Then
+            BeginInvoke(New MethodInvoker(Async Sub() Await LoadFuturesPositionsAsync()))
+            Return
+        End If
+
+        Await LoadFuturesPositionsAsync()
+    End Sub
+    Private Shared Function GetProtectionText(
+        orders As List(Of BinanceFuturesProtectionOrder),
+        position As BinanceFuturesPosition,
+        takeProfit As Boolean) As String
+
+        Dim prices = orders.
+            Where(Function(order)
+                      If Not order.Symbol.Equals(position.Symbol, StringComparison.OrdinalIgnoreCase) Then
+                          Return False
+                      End If
+
+                      If Not String.IsNullOrWhiteSpace(order.PositionSide) AndAlso
+                         Not order.PositionSide.Equals("BOTH", StringComparison.OrdinalIgnoreCase) AndAlso
+                         Not position.PositionSide.Equals("BOTH", StringComparison.OrdinalIgnoreCase) AndAlso
+                         Not order.PositionSide.Equals(position.PositionSide, StringComparison.OrdinalIgnoreCase) Then
+                          Return False
+                      End If
+
+                      Dim isTakeProfitOrder = order.OrderType.Contains("TAKE_PROFIT", StringComparison.OrdinalIgnoreCase)
+                      Return If(takeProfit, isTakeProfitOrder, Not isTakeProfitOrder)
+                  End Function).
+            Select(Function(order) If(order.StopPrice <> 0D, order.StopPrice, order.Price)).
+            Where(Function(price) price > 0D).
+            Distinct().
+            OrderBy(Function(price) price).
+            Select(Function(price) price.ToString("N2", CultureInfo.GetCultureInfo("en-US"))).
+            ToList()
+
+        If prices.Count = 0 Then
+            Return "-"
+        End If
+
+        Return String.Join(" / ", prices)
+    End Function
+    Private Sub ConfigureFuturesGrid()
+        Dim headers As New Dictionary(Of String, String) From {
+            {"Symbol", "Cripto"},
+            {"PositionSide", "Lado"},
+            {"PositionAmount", "Quantidade"},
+            {"Notional", "Notional"},
+            {"EntryPrice", "Entrada"},
+            {"MarkPrice", "Preço atual"},
+            {"TakeProfit", "TP"},
+            {"StopLoss", "SL"},
+            {"UnrealizedProfit", "PnL não realizado"},
+            {"ROI", "ROI %"},
+            {"LiquidationPrice", "Liquidação"},
+            {"Leverage", "Alavancagem"},
+            {"InitialMargin", "Margem (USDT)"}
+        }
+        For Each item In headers
+            If dgFuturos.Columns.Contains(item.Key) Then
+                dgFuturos.Columns(item.Key).HeaderText = item.Value
+            End If
+        Next
+
+        If dgFuturos.Columns.Contains("Symbol") Then
+            dgFuturos.Columns("Symbol").MinimumWidth = 90
+        End If
+
+        If dgFuturos.Columns.Contains("UnrealizedProfit") Then
+            dgFuturos.Columns("UnrealizedProfit").MinimumWidth = 135
+        End If
+        If dgFuturos.Columns.Contains("InitialMargin") Then
+            dgFuturos.Columns("InitialMargin").Visible = False
+        End If
+
+        dgFuturos.Font = New Font("Calibri", 12.0F, FontStyle.Regular)
+        dgFuturos.DefaultCellStyle.Font = dgFuturos.Font
+        dgFuturos.RowHeadersDefaultCellStyle.Font = dgFuturos.Font
+        dgFuturos.RowTemplate.Height = 35
+        dgFuturos.ColumnHeadersHeight = 40
+        dgFuturos.ColumnHeadersDefaultCellStyle.Font = New Font("Calibri", 10.0F, FontStyle.Italic)
+        For Each row As DataGridViewRow In dgFuturos.Rows
+            If Not row.IsNewRow Then
+                row.Height = 35
+            End If
+        Next
+    End Sub
+
+    Private Shared Function TryReadFuturesDecimal(rawValue As Object, ByRef result As Decimal) As Boolean
+        If rawValue Is Nothing OrElse rawValue Is DBNull.Value Then
+            Return False
+        End If
+
+        If TypeOf rawValue Is Decimal Then
+            result = DirectCast(rawValue, Decimal)
+            Return True
+        End If
+
+        Dim textValue = rawValue.ToString().Replace("%", String.Empty).Replace("$", String.Empty).Trim()
+
+        If Decimal.TryParse(
+            textValue,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            result) Then
+            Return True
+        End If
+
+        Return Decimal.TryParse(
+            textValue,
+            NumberStyles.Number,
+            CultureInfo.GetCultureInfo("pt-BR"),
+            result)
+    End Function
+    Private Sub dgFuturos_CellFormatting(
+        sender As Object,
+        e As DataGridViewCellFormattingEventArgs) Handles dgFuturos.CellFormatting
+
+        If e.RowIndex < 0 OrElse e.ColumnIndex < 0 OrElse e.Value Is Nothing Then
+            Return
+        End If
+
+        Dim columnName = dgFuturos.Columns(e.ColumnIndex).Name
+        Dim value As Decimal
+        Dim leverageValue As Integer
+
+        Select Case columnName
+            Case "PositionSide"
+                Dim sideColor = GetFuturesPositionSideColor(e.Value)
+                e.CellStyle.ForeColor = sideColor
+                e.CellStyle.SelectionForeColor = sideColor
+                e.FormattingApplied = True
+            Case "PositionAmount"
+                If TryReadFuturesDecimal(e.Value, value) Then
+                    e.Value = value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
+                    e.FormattingApplied = True
+                End If
+            Case "EntryPrice"
+                If TryReadFuturesDecimal(e.Value, value) Then
+                    e.Value = "$" & value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
+                    e.CellStyle.ForeColor = Color.Cyan
+                    e.CellStyle.SelectionForeColor = Color.Cyan
+                    e.FormattingApplied = True
+                End If
+            Case "MarkPrice"
+                If TryReadFuturesDecimal(e.Value, value) Then
+                    e.Value = "$" & value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
+                    Dim entryPrice As Decimal
+                    If TryReadFuturesDecimal(dgFuturos.Rows(e.RowIndex).Cells("EntryPrice").Value, entryPrice) AndAlso value > entryPrice Then
+                        e.CellStyle.ForeColor = Color.LimeGreen
+                        e.CellStyle.SelectionForeColor = Color.LimeGreen
+                    Else
+                        e.CellStyle.ForeColor = Color.Red
+                        e.CellStyle.SelectionForeColor = Color.Red
+                    End If
+                    e.FormattingApplied = True
+                End If
+            Case "LiquidationPrice"
+                If TryReadFuturesDecimal(e.Value, value) Then
+                    e.Value = value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
+                    e.CellStyle.ForeColor = Color.DarkOrange
+                    e.CellStyle.SelectionForeColor = Color.DarkOrange
+                    e.FormattingApplied = True
+                End If
+            Case "TakeProfit"
+                e.CellStyle.ForeColor = Color.DeepSkyBlue
+                e.CellStyle.SelectionForeColor = Color.DeepSkyBlue
+            Case "StopLoss"
+                e.CellStyle.ForeColor = Color.DarkOrange
+                e.CellStyle.SelectionForeColor = Color.DarkOrange
+            Case "UnrealizedProfit", "ROI", "Notional", "InitialMargin"
+                If TryReadFuturesDecimal(e.Value, value) Then
+                    If columnName = "ROI" Then
+                        e.Value = value.ToString("N2", CultureInfo.GetCultureInfo("en-US")) & "%"
+                    ElseIf columnName = "UnrealizedProfit" Then
+                        e.Value = "$" & value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
+                    Else
+                        e.Value = value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
+                    End If
+                    If columnName = "UnrealizedProfit" OrElse columnName = "ROI" Then
+                        Dim pnlColor = If(value > 0D, Color.LimeGreen, Color.Red)
+                        e.CellStyle.ForeColor = pnlColor
+                        e.CellStyle.SelectionForeColor = pnlColor
+                    End If
+                    e.FormattingApplied = True
+                End If
+            Case "Leverage"
+                If Integer.TryParse(e.Value.ToString(), leverageValue) Then
+                    e.Value = $"{leverageValue:0}x"
+                    e.FormattingApplied = True
+                End If
+        End Select
+    End Sub
     Private Async Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
 
         Try
             Await _binanceWs.StopAsync()
             Await _gateWs.StopAsync()
+            Await _binanceFuturesMarketWs.StopAsync()
+            Await _binanceFuturesUserWs.StopAsync()
         Catch
         End Try
     End Sub

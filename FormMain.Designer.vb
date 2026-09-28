@@ -26,8 +26,15 @@ Partial Class FormMain
         Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle5 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         dgPortfolio = New DataGridView()
+        dgFuturos = New DataGridView()
+        tabsMain = New BlackTabControl()
+        tabPortfolio = New TabPage()
+        tabFuturos = New TabPage()
         PanelProfits = New Panel()
         Label15 = New Label()
         lbTotalBRL = New Label()
@@ -94,6 +101,10 @@ Partial Class FormMain
         panelDebug = New Panel()
         lbDebug = New RichTextBox()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
+        CType(dgFuturos, ComponentModel.ISupportInitialize).BeginInit()
+        tabsMain.SuspendLayout()
+        tabPortfolio.SuspendLayout()
+        tabFuturos.SuspendLayout()
         PanelProfits.SuspendLayout()
         Panel1.SuspendLayout()
         CType(PictureBox2, ComponentModel.ISupportInitialize).BeginInit()
@@ -113,9 +124,9 @@ Partial Class FormMain
         dgPortfolio.AllowUserToDeleteRows = False
         dgPortfolio.AllowUserToOrderColumns = True
         dgPortfolio.AllowUserToResizeRows = False
-        dgPortfolio.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         dgPortfolio.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgPortfolio.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgPortfolio.BorderStyle = BorderStyle.None
         dgPortfolio.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgPortfolio.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
@@ -129,14 +140,14 @@ Partial Class FormMain
         DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
         DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle2.ForeColor = Color.Bisque
+        DataGridViewCellStyle2.ForeColor = Color.White
         DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
         DataGridViewCellStyle2.SelectionForeColor = Color.Transparent
         DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
         dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
+        dgPortfolio.Dock = DockStyle.Fill
         dgPortfolio.EnableHeadersVisualStyles = False
-        dgPortfolio.Location = New Point(0, 27)
-        dgPortfolio.MinimumSize = New Size(0, 360)
+        dgPortfolio.Location = New Point(3, 3)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
@@ -154,8 +165,97 @@ Partial Class FormMain
         dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgPortfolio.ScrollBars = ScrollBars.Vertical
         dgPortfolio.SelectionMode = DataGridViewSelectionMode.CellSelect
-        dgPortfolio.Size = New Size(1167, 378)
+        dgPortfolio.Size = New Size(1153, 345)
         dgPortfolio.TabIndex = 11
+        ' 
+        ' dgFuturos
+        ' 
+        dgFuturos.AllowUserToAddRows = False
+        dgFuturos.AllowUserToDeleteRows = False
+        dgFuturos.AllowUserToOrderColumns = True
+        dgFuturos.AllowUserToResizeRows = False
+        dgFuturos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgFuturos.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgFuturos.BorderStyle = BorderStyle.None
+        dgFuturos.CellBorderStyle = DataGridViewCellBorderStyle.None
+        dgFuturos.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle4.Font = New Font("Calibri", 10F, FontStyle.Italic)
+        DataGridViewCellStyle4.ForeColor = Color.Turquoise
+        DataGridViewCellStyle4.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle4.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
+        dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
+        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle5.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle5.ForeColor = Color.White
+        DataGridViewCellStyle5.SelectionBackColor = Color.Black
+        DataGridViewCellStyle5.SelectionForeColor = Color.White
+        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.True
+        dgFuturos.DefaultCellStyle = DataGridViewCellStyle5
+        dgFuturos.Dock = DockStyle.Fill
+        dgFuturos.EnableHeadersVisualStyles = False
+        dgFuturos.Location = New Point(3, 3)
+        dgFuturos.MultiSelect = False
+        dgFuturos.Name = "dgFuturos"
+        dgFuturos.ReadOnly = True
+        DataGridViewCellStyle6.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle6.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle6.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle6.Padding = New Padding(2)
+        DataGridViewCellStyle6.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle6.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
+        dgFuturos.RowHeadersDefaultCellStyle = DataGridViewCellStyle6
+        dgFuturos.RowHeadersWidth = 4
+        dgFuturos.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.Black
+        dgFuturos.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.White
+        dgFuturos.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
+        dgFuturos.ScrollBars = ScrollBars.Vertical
+        dgFuturos.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgFuturos.Size = New Size(1153, 345)
+        dgFuturos.TabIndex = 12
+        ' 
+        ' tabsMain
+        ' 
+        tabsMain.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        tabsMain.Controls.Add(tabPortfolio)
+        tabsMain.Controls.Add(tabFuturos)
+        tabsMain.DrawMode = TabDrawMode.OwnerDrawFixed
+        tabsMain.ForeColor = Color.White
+        tabsMain.Location = New Point(0, 27)
+        tabsMain.Name = "tabsMain"
+        tabsMain.SelectedIndex = 0
+        tabsMain.Size = New Size(1167, 379)
+        tabsMain.TabIndex = 11
+        ' 
+        ' tabPortfolio
+        ' 
+        tabPortfolio.BackColor = Color.Black
+        tabPortfolio.Controls.Add(dgPortfolio)
+        tabPortfolio.Cursor = Cursors.Hand
+        tabPortfolio.ForeColor = Color.White
+        tabPortfolio.Location = New Point(4, 24)
+        tabPortfolio.Name = "tabPortfolio"
+        tabPortfolio.Padding = New Padding(3)
+        tabPortfolio.Size = New Size(1159, 351)
+        tabPortfolio.TabIndex = 0
+        tabPortfolio.Text = "Portfolio"
+        ' 
+        ' tabFuturos
+        ' 
+        tabFuturos.BackColor = Color.Black
+        tabFuturos.Controls.Add(dgFuturos)
+        tabFuturos.Cursor = Cursors.Hand
+        tabFuturos.ForeColor = Color.White
+        tabFuturos.Location = New Point(4, 24)
+        tabFuturos.Name = "tabFuturos"
+        tabFuturos.Padding = New Padding(3)
+        tabFuturos.Size = New Size(1159, 351)
+        tabFuturos.TabIndex = 1
+        tabFuturos.Text = "Futuros"
         ' 
         ' PanelProfits
         ' 
@@ -823,7 +923,7 @@ Partial Class FormMain
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         ClientSize = New Size(1167, 706)
-        Controls.Add(dgPortfolio)
+        Controls.Add(tabsMain)
         Controls.Add(PanelGraphs)
         Controls.Add(panelDebug)
         Controls.Add(Label8)
@@ -840,6 +940,10 @@ Partial Class FormMain
         StartPosition = FormStartPosition.CenterScreen
         Text = "Portfolio Cripto"
         CType(dgPortfolio, ComponentModel.ISupportInitialize).EndInit()
+        CType(dgFuturos, ComponentModel.ISupportInitialize).EndInit()
+        tabsMain.ResumeLayout(False)
+        tabPortfolio.ResumeLayout(False)
+        tabFuturos.ResumeLayout(False)
         PanelProfits.ResumeLayout(False)
         PanelProfits.PerformLayout()
         Panel1.ResumeLayout(False)
@@ -861,6 +965,10 @@ Partial Class FormMain
         PerformLayout()
     End Sub
     Friend WithEvents dgPortfolio As DataGridView
+    Friend WithEvents dgFuturos As DataGridView
+    Friend WithEvents tabsMain As BlackTabControl
+    Friend WithEvents tabPortfolio As TabPage
+    Friend WithEvents tabFuturos As TabPage
     Friend WithEvents PanelProfits As Panel
     Friend WithEvents Label5 As Label
     Friend WithEvents lbTotalBRL As Label

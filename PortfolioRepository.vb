@@ -1,4 +1,4 @@
-Imports Microsoft.Data.Sqlite
+﻿Imports Microsoft.Data.Sqlite
 Imports Newtonsoft.Json.Linq
 Imports System.Data
 Imports System.Globalization
@@ -167,7 +167,7 @@ Public NotInheritable Class PortfolioRepository
             connection.Open()
 
             Using command As SqliteCommand = connection.CreateCommand()
-                If id.HasValue Then
+                If id.HasValue AndAlso id.Value > 0 Then
                     command.CommandText =
                         "INSERT INTO CryptoSymbols(Id, Symbol) VALUES($id, $symbol) " &
                         "ON CONFLICT(Id) DO UPDATE SET Symbol = excluded.Symbol;"
@@ -236,49 +236,97 @@ Public NotInheritable Class PortfolioRepository
 
     Public Shared Sub MigrateCatalogsFromJson(cryptoJsonPath As String, walletJsonPath As String)
         Initialize()
-
-        If File.Exists(cryptoJsonPath) Then
-            Dim jsonObject As JObject = JObject.Parse(File.ReadAllText(cryptoJsonPath))
-            For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
-                If propertyPair.Value.Type <> JTokenType.Array Then Continue For
-
-                For Each item As JToken In propertyPair.Value
-                    Dim symbol As String = item("Symbol")?.ToString()
-                    Dim idToken As JToken = item("Id")
-                    Dim idValue As Integer
-
-                    If String.IsNullOrWhiteSpace(symbol) Then Continue For
-
-                    If idToken IsNot Nothing AndAlso Integer.TryParse(idToken.ToString(), idValue) Then
-                        AddCryptoSymbol(symbol, idValue)
-                    Else
-                        AddCryptoSymbol(symbol)
-                    End If
-                Next
-            Next
-        End If
-
-        If File.Exists(walletJsonPath) Then
-            Dim jsonObject As JObject = JObject.Parse(File.ReadAllText(walletJsonPath))
-            For Each propertyPair As KeyValuePair(Of String, JToken) In jsonObject
-                If propertyPair.Value.Type <> JTokenType.Array Then Continue For
-
-                For Each item As JToken In propertyPair.Value
-                    Dim name As String = item("Wallet")?.ToString()
-                    If String.IsNullOrWhiteSpace(name) Then
-                        name = item("Name")?.ToString()
-                    End If
-                    If String.IsNullOrWhiteSpace(name) Then
-                        name = item.ToString()
-                    End If
-                    If Not String.IsNullOrWhiteSpace(name) Then
-                        AddWallet(name)
-                    End If
-                Next
-            Next
-        End If
+        MigrateCryptoCatalog(cryptoJsonPath)
+        MigrateWalletCatalog(walletJsonPath)
     End Sub
 
+    Private Shared Sub MigrateCryptoCatalog(path As String)
+        If Not File.Exists(path) Then Return
+
+        Dim root As JToken = JToken.Parse(File.ReadAllText(path))
+
+        For Each item As JToken In EnumerateCatalogItems(root)
+            Dim symbol As String = GetCatalogValue(item, "Symbol")
+
+            If String.IsNullOrWhiteSpace(symbol) Then
+                symbol = GetCatalogValue(item, "Name")
+            End If
+
+            If String.IsNullOrWhiteSpace(symbol) Then Continue For
+
+            Dim idValue As Integer
+            Dim idText As String = GetCatalogValue(item, "Id")
+
+            If Integer.TryParse(idText, idValue) AndAlso idValue > 0 Then
+                AddCryptoSymbol(symbol, idValue)
+            Else
+                AddCryptoSymbol(symbol)
+            End If
+        Next
+    End Sub
+
+    Private Shared Sub MigrateWalletCatalog(path As String)
+        If Not File.Exists(path) Then Return
+
+        Dim root As JToken = JToken.Parse(File.ReadAllText(path))
+
+        For Each item As JToken In EnumerateCatalogItems(root)
+            Dim name As String = GetCatalogValue(item, "Wallet")
+
+            If String.IsNullOrWhiteSpace(name) Then
+                name = GetCatalogValue(item, "Name")
+            End If
+
+            If String.IsNullOrWhiteSpace(name) AndAlso item.Type = JTokenType.String Then
+                name = item.ToString()
+            End If
+
+            If Not String.IsNullOrWhiteSpace(name) Then
+                AddWallet(name)
+            End If
+        Next
+    End Sub
+
+    Private Shared Iterator Function EnumerateCatalogItems(root As JToken) As System.Collections.Generic.IEnumerable(Of JToken)
+        If root Is Nothing Then Return
+
+        If root.Type = JTokenType.Array Then
+            For Each item As JToken In root.Children()
+                Yield item
+            Next
+
+            Return
+        End If
+
+        If root.Type <> JTokenType.Object Then Return
+
+        For Each propertyToken As JProperty In root.Children(Of JProperty)()
+            If propertyToken.Value.Type = JTokenType.Array Then
+                For Each item As JToken In propertyToken.Value.Children()
+                    Yield item
+                Next
+            ElseIf propertyToken.Value.Type = JTokenType.Object Then
+                Yield propertyToken.Value
+            End If
+        Next
+    End Function
+
+    Private Shared Function GetCatalogValue(item As JToken, propertyName As String) As String
+        Dim itemObject As JObject = TryCast(item, JObject)
+        If itemObject Is Nothing Then Return String.Empty
+
+        For Each propertyToken As JProperty In itemObject.Properties()
+            If String.Equals(propertyToken.Name, propertyName, StringComparison.OrdinalIgnoreCase) Then
+                If propertyToken.Value Is Nothing OrElse propertyToken.Value.Type = JTokenType.Null Then
+                    Return String.Empty
+                End If
+
+                Return propertyToken.Value.ToString().Trim()
+            End If
+        Next
+
+        Return String.Empty
+    End Function
     Public Shared Function AddOrUpdate(
         cripto As String,
         symbol As String,
@@ -388,6 +436,66 @@ Public NotInheritable Class PortfolioRepository
         End Using
     End Function
 
+    Public Shared Sub UpdatePortfolioItem(
+        id As Long,
+        cripto As String,
+        symbol As String,
+        initialPrice As Decimal,
+        quantity As Decimal,
+        data As String,
+        wallet As String,
+        lastPrice As Decimal)
+
+        Initialize()
+
+        If id <= 0 Then
+            Throw New ArgumentOutOfRangeException(NameOf(id))
+        End If
+
+        cripto = If(cripto, String.Empty).Trim()
+        symbol = If(symbol, String.Empty).Trim().ToUpperInvariant()
+        wallet = If(wallet, String.Empty).Trim()
+        data = If(data, String.Empty)
+
+        If String.IsNullOrWhiteSpace(symbol) Then
+            Throw New ArgumentException("Symbol não pode ser vazio.", NameOf(symbol))
+        End If
+
+        If String.IsNullOrWhiteSpace(wallet) Then
+            Throw New ArgumentException("Wallet não pode ser vazia.", NameOf(wallet))
+        End If
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "UPDATE PortfolioItems SET " &
+                    "Cripto = $cripto, " &
+                    "Symbol = $symbol, " &
+                    "InitialPrice = $initialPrice, " &
+                    "Quantity = $quantity, " &
+                    "Data = $data, " &
+                    "Wallet = $wallet, " &
+                    "LastPrice = $lastPrice, " &
+                    "UpdatedAt = CURRENT_TIMESTAMP " &
+                    "WHERE Id = $id;"
+
+                command.Parameters.AddWithValue("$cripto", cripto)
+                command.Parameters.AddWithValue("$symbol", symbol)
+                AddRealParameter(command, "$initialPrice", Convert.ToDouble(initialPrice))
+                AddRealParameter(command, "$quantity", Convert.ToDouble(quantity))
+                command.Parameters.AddWithValue("$data", data)
+                command.Parameters.AddWithValue("$wallet", wallet)
+                AddRealParameter(command, "$lastPrice", Convert.ToDouble(lastPrice))
+                command.Parameters.AddWithValue("$id", id)
+
+                If command.ExecuteNonQuery() = 0 Then
+                    Throw New InvalidOperationException("Registro do portfólio não encontrado.")
+                End If
+            End Using
+        End Using
+    End Sub
     Public Shared Sub UpdateLastPrice(id As Long, lastPrice As Decimal)
         Initialize()
 

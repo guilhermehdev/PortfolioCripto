@@ -228,6 +228,171 @@ Public Class Binance
 
     End Function
 
+    Private Shared Function GetTokenValue(position As JObject, ParamArray names() As String) As JToken
+        For Each name In names
+            Dim value = position.GetValue(name, StringComparison.OrdinalIgnoreCase)
+            If value IsNot Nothing Then
+                Return value
+            End If
+        Next
+
+        Return Nothing
+    End Function
+
+    Private Shared Function ParseDecimalInvariant(value As JToken) As Decimal
+        If value Is Nothing OrElse value.Type = JTokenType.Null Then
+            Return 0D
+        End If
+
+        Dim parsed As Decimal
+        If Decimal.TryParse(value.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, parsed) Then
+            Return parsed
+        End If
+
+        Return 0D
+    End Function
+
+    ''' <summary>
+    ''' Lê as posições abertas da conta USD-M da Binance.
+    ''' A chamada é somente leitura e não altera ordens, margem ou posição.
+    ''' </summary>
+    Public Async Function BINANCE_GetFuturesPositionsAsync() As Task(Of List(Of BinanceFuturesPosition))
+        Dim result As New List(Of BinanceFuturesPosition)()
+
+        Try
+            ' positionRisk fornece preço de marcação, liquidação e notional.
+            Dim riskJson = Await QuerySignedAsync(
+                "/fapi/v2/positionRisk",
+                "recvWindow=60000",
+                isFutures:=True)
+
+            If String.IsNullOrWhiteSpace(riskJson) Then
+                Return result
+            End If
+
+            Dim riskToken As JToken = JToken.Parse(riskJson)
+            If riskToken.Type = JTokenType.Object AndAlso riskToken("code") IsNot Nothing Then
+                Throw New Exception($"Binance ({riskToken("code")}): {riskToken("msg")}")
+            End If
+
+            Dim rawPositions = TryCast(riskToken, JArray)
+            If rawPositions Is Nothing Then
+                Return result
+            End If
+
+            For Each raw In rawPositions.OfType(Of JObject)()
+                Dim amount = ParseDecimalInvariant(GetTokenValue(raw, "positionAmt"))
+                Dim unrealizedProfit = ParseDecimalInvariant(
+                    GetTokenValue(raw, "unRealizedProfit", "unrealizedProfit"))
+
+                ' A API devolve uma linha por contrato mesmo quando não há posição.
+                If amount = 0D AndAlso unrealizedProfit = 0D Then
+                    Continue For
+                End If
+
+                Dim leverage As Integer
+                Integer.TryParse(GetTokenValue(raw, "leverage")?.ToString(), leverage)
+
+                result.Add(New BinanceFuturesPosition With {
+                    .Symbol = If(GetTokenValue(raw, "symbol")?.ToString(), String.Empty),
+                    .PositionAmount = amount,
+                    .EntryPrice = ParseDecimalInvariant(GetTokenValue(raw, "entryPrice")),
+                    .MarkPrice = ParseDecimalInvariant(GetTokenValue(raw, "markPrice")),
+                    .UnrealizedProfit = unrealizedProfit,
+                    .LiquidationPrice = ParseDecimalInvariant(GetTokenValue(raw, "liquidationPrice")),
+                    .Leverage = leverage,
+                    .Notional = ParseDecimalInvariant(GetTokenValue(raw, "notional")),
+                    .MarginType = If(GetTokenValue(raw, "marginType")?.ToString(), String.Empty),
+                    .IsolatedMargin = ParseDecimalInvariant(GetTokenValue(raw, "isolatedMargin")),
+                    .PositionSide = If(GetTokenValue(raw, "positionSide")?.ToString(), String.Empty)
+                })
+            Next
+
+            ' initialMargin vem na resposta da conta e completa a informação da margem.
+            If result.Count > 0 Then
+                Dim accountJson = Await QuerySignedAsync(
+                    "/fapi/v2/account",
+                    "recvWindow=60000",
+                    isFutures:=True)
+
+                If Not String.IsNullOrWhiteSpace(accountJson) Then
+                    Dim account As JObject = JObject.Parse(accountJson)
+                    If account("code") Is Nothing Then
+                        For Each raw In TryCast(account("positions"), JArray)
+                            Dim symbol = GetTokenValue(DirectCast(raw, JObject), "symbol")?.ToString()
+                            Dim side = GetTokenValue(DirectCast(raw, JObject), "positionSide")?.ToString()
+
+                            For Each position In result
+                                If position.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase) AndAlso
+                                   position.PositionSide.Equals(side, StringComparison.OrdinalIgnoreCase) Then
+                                    position.InitialMargin = ParseDecimalInvariant(
+                                        GetTokenValue(DirectCast(raw, JObject), "positionInitialMargin", "initialMargin"))
+                                    Exit For
+                                End If
+                            Next
+                        Next
+                    End If
+                End If
+            End If
+
+            Return result
+        Catch ex As Exception
+            Debug.WriteLine("Erro ao trazer posições de Futuros da Binance: " & ex.Message)
+            Return result
+        End Try
+    End Function
+    ''' <summary>
+    ''' Lê as ordens abertas de proteção da conta USD-M (take profit e stop loss).
+    ''' </summary>
+    Public Async Function BINANCE_GetFuturesProtectionOrdersAsync() As Task(Of List(Of BinanceFuturesProtectionOrder))
+        Dim result As New List(Of BinanceFuturesProtectionOrder)()
+
+        Try
+            ' TP/SL criados pela interface da Binance são conditional/algo orders.
+            Dim json = Await QuerySignedAsync(
+                "/fapi/v1/openAlgoOrders",
+                "recvWindow=60000",
+                isFutures:=True)
+
+            If String.IsNullOrWhiteSpace(json) Then
+                Return result
+            End If
+
+            Dim token As JToken = JToken.Parse(json)
+            If token.Type = JTokenType.Object AndAlso token("code") IsNot Nothing Then
+                Throw New Exception($"Binance ({token("code")}): {token("msg")}")
+            End If
+
+            Dim rawOrders = TryCast(token, JArray)
+            If rawOrders Is Nothing Then
+                Return result
+            End If
+
+            For Each raw In rawOrders.OfType(Of JObject)()
+                Dim orderType = GetTokenValue(raw, "orderType", "type")?.ToString()?.ToUpperInvariant()
+                If String.IsNullOrWhiteSpace(orderType) OrElse
+                   (Not orderType.Contains("TAKE_PROFIT") AndAlso
+                    Not orderType.Contains("STOP")) Then
+                    Continue For
+                End If
+
+                result.Add(New BinanceFuturesProtectionOrder With {
+                    .Symbol = If(GetTokenValue(raw, "symbol")?.ToString(), String.Empty),
+                    .PositionSide = If(GetTokenValue(raw, "positionSide")?.ToString(), String.Empty),
+                    .Side = If(GetTokenValue(raw, "side")?.ToString(), String.Empty),
+                    .OrderType = orderType,
+                    .StopPrice = ParseDecimalInvariant(GetTokenValue(raw, "triggerPrice", "stopPrice")),
+                    .Price = ParseDecimalInvariant(GetTokenValue(raw, "price")),
+                    .Status = If(GetTokenValue(raw, "algoStatus", "status")?.ToString(), String.Empty)
+                })
+            Next
+
+            Return result
+        Catch ex As Exception
+            Debug.WriteLine("Erro ao trazer ordens TP/SL da Binance: " & ex.Message)
+            Return result
+        End Try
+    End Function
     'Private Function BINANCE_GetSpotAssets() As Task(Of Dictionary(Of String, Decimal))
     '    Dim json = QuerySigned("/api/v3/account", "recvWindow=5000")
     '    Dim account = JObject.Parse(json)

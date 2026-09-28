@@ -1,17 +1,11 @@
-﻿Imports System.Diagnostics.Eventing.Reader
-Imports System.Globalization
+﻿Imports System.Globalization
 Imports System.IO
 Imports System.Net.Http
 Imports System.Reflection
-Imports System.Runtime.InteropServices.JavaScript.JSType
 Imports System.Text
 Imports System.Text.Json
-Imports System.Windows.Forms.VisualStyles.VisualStyleElement
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
-Imports Windows.Win32.System.Diagnostics
-
-
 Public Class JSON
     Public ReadOnly portfolioPathFile As String = Application.StartupPath & "\JSON\portfolio.json"
     Private ReadOnly bindingSource As New BindingSource()
@@ -94,7 +88,7 @@ Public Class JSON
                 End Try
             End Using
         Else
-            FormAPI.ShowDialog()
+            My.Forms.FormAPI.ShowDialog()
             Return False
         End If
 
@@ -144,8 +138,8 @@ Public Class JSON
             End Using
 
         Catch ex As Exception
-            FormMain.lbDebug.Clear()
-            FormMain.lbDebug.AppendText("Status: JSONBin não respondeu! Carregando arquivo local...")
+            My.Forms.FormMain.lbDebug.Clear()
+            My.Forms.FormMain.lbDebug.AppendText("Status: JSONBin não respondeu! Carregando arquivo local...")
             Return False
         End Try
     End Function
@@ -206,7 +200,7 @@ Public Class JSON
 
             Catch ex As Exception
                 Debug.Write("Erro em AppendJSONToBin: " & ex.Message)
-                FormMain.lbDebug.Text = "Erro ao salvar em JSONBin: " & ex.Message
+                My.Forms.FormMain.lbDebug.Text = "Erro ao salvar em JSONBin: " & ex.Message
                 Return False
             End Try
         End Using
@@ -240,7 +234,7 @@ Public Class JSON
 
         Catch ex As Exception
             Debug.WriteLine("Erro em DeleteJSONFromBin: " & ex.Message)
-            FormMain.lbDebug.Text = "Erro ao deletar de JSONBin: " & ex.Message
+            My.Forms.FormMain.lbDebug.Text = "Erro ao deletar de JSONBin: " & ex.Message
             Return False
         End Try
     End Function
@@ -267,13 +261,13 @@ Public Class JSON
             Exit Sub
         End Try
 
-        If Not IsNothing(combobox) Then
+        If combobox IsNot Nothing Then
             combobox.DataSource = exchanges
             combobox.ValueMember = "id"
             combobox.DisplayMember = "Name"
         End If
 
-        If Not IsNothing(grid) Then
+        If grid IsNot Nothing Then
             grid.DataSource = exchanges
         End If
 
@@ -466,9 +460,7 @@ Public Class JSON
     End Function
 
     Public Sub loadCaixa(datagrid As DataGridView)
-        Dim caminhoArquivo As String = portfolioPathFile
-        Dim jsonTexto As String = File.ReadAllText(caminhoArquivo)
-        Dim jsonObj As JObject = JObject.Parse(jsonTexto)
+        Dim portfolioTable As DataTable = PortfolioRepository.GetAll()
 
         datagrid.Rows.Clear()
         datagrid.Columns.Clear()
@@ -477,23 +469,17 @@ Public Class JSON
         datagrid.Columns.Add("Qtd", "Quantidade")
         datagrid.Columns.Add("Wallet", "Carteira")
 
-        Dim totalUsd As Decimal = 0D
+        For Each row As DataRow In portfolioTable.Rows
+            Dim symbol As String = row("Symbol")?.ToString().Trim().ToUpperInvariant()
 
-        For Each prop In jsonObj.Properties()
-            Dim chave As String = prop.Name
-
-            If chave.ToUpper().Contains("USD") Then
-                Dim ativos = prop.Value
-
-                For Each item In ativos
-                    Dim qtd As Decimal = item("Qtd")
-                    Dim wallet As String = item("Wallet").ToString()
-                    Dim symbol As String = item("Symbol").ToString()
-
-                    datagrid.Rows.Add(symbol, qtd, wallet)
-                    totalUsd += qtd
-                Next
+            If String.IsNullOrWhiteSpace(symbol) OrElse Not stablecoins.Contains(symbol) Then
+                Continue For
             End If
+
+            Dim quantity As Decimal = Convert.ToDecimal(row("Quantity"), CultureInfo.InvariantCulture)
+            Dim wallet As String = row("Wallet")?.ToString().Trim()
+
+            datagrid.Rows.Add(symbol, quantity, wallet)
         Next
 
         datagrid.Columns(0).HeaderText = "Cripto"
@@ -504,18 +490,16 @@ Public Class JSON
         datagrid.Columns(2).Width = 100
 
         datagrid.ClearSelection()
-
     End Sub
-
     Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task(Of Boolean)
         Return Await PortfolioMarketService.LoadAsync(datagrid, currencyCollum)
     End Function
 
     Public Shared Sub hideMarketDataLabel()
-        FormMain.lbLoadFromMarket.Visible = False
-        FormMain.TimerBlink.Stop()
-        FormMain.Cursor = Cursors.Default
-        FormMain.dgPortfolio.Cursor = Cursors.Default
+        My.Forms.FormMain.lbLoadFromMarket.Visible = False
+        My.Forms.FormMain.TimerBlink.Stop()
+        My.Forms.FormMain.Cursor = Cursors.Default
+        My.Forms.FormMain.dgPortfolio.Cursor = Cursors.Default
     End Sub
 
     Public Sub FormatGrid(ByVal datagrid As DataGridView)
@@ -534,7 +518,7 @@ Public Class JSON
         End With
 
         Try
-            Dim cm As CurrencyManager = CType(FormMain.BindingContext(datagrid.DataSource), CurrencyManager)
+            Dim cm As CurrencyManager = CType(My.Forms.FormMain.BindingContext(datagrid.DataSource), CurrencyManager)
             cm.SuspendBinding()
             datagrid.ClearSelection()
 
@@ -874,7 +858,7 @@ Public Class JSON
         End With
 
         Try
-            Dim cm As CurrencyManager = CType(FormMain.BindingContext(datagrid.DataSource), CurrencyManager)
+            Dim cm As CurrencyManager = CType(My.Forms.FormMain.BindingContext(datagrid.DataSource), CurrencyManager)
             cm.SuspendBinding()
             datagrid.ClearSelection()
 

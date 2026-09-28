@@ -1,4 +1,4 @@
-Imports System.Data
+﻿Imports System.Data
 Imports System.Globalization
 
 Public Class FormEntradas
@@ -6,6 +6,8 @@ Public Class FormEntradas
     Dim charts As New Charts
     Dim json As New JSON
     Dim bs As New BindingSource()
+
+    Private _selectedPortfolioId As Long?
 
     Private Sub BtSalvarEntrada_Click(sender As Object, e As EventArgs) Handles btSalvarEntrada.Click
 
@@ -34,7 +36,30 @@ Public Class FormEntradas
 
             Dim dataEntrada As String = dtpDataEntrada.Value.ToString("yyyy-MM-dd HH:mm:ss")
 
-            Dim id As Long = PortfolioRepository.AddOrUpdate(key, symbol, precoEntrada, qtd, dataEntrada, wallet, 0D)
+            Dim id As Long
+
+            If _selectedPortfolioId.HasValue Then
+                PortfolioRepository.UpdatePortfolioItem(
+                    _selectedPortfolioId.Value,
+                    key,
+                    symbol,
+                    precoEntrada,
+                    qtd,
+                    dataEntrada,
+                    wallet,
+                    0D)
+
+                id = _selectedPortfolioId.Value
+            Else
+                id = PortfolioRepository.AddOrUpdate(
+                    key,
+                    symbol,
+                    precoEntrada,
+                    qtd,
+                    dataEntrada,
+                    wallet,
+                    0D)
+            End If
 
             If id > 0 Then
                 MsgBox("Salvo!")
@@ -90,6 +115,8 @@ Public Class FormEntradas
     End Sub
 
     Private Sub LoadPortfolioGrid(Optional datagrid As DataGridView = Nothing)
+
+        _selectedPortfolioId = Nothing
 
         Dim table As DataTable = PortfolioRepository.GetAll()
         bs.DataSource = table
@@ -212,6 +239,7 @@ Public Class FormEntradas
             End If
 
             PortfolioRepository.Delete(id)
+            _selectedPortfolioId = Nothing
             LoadPortfolioGrid(dgCriptos)
 
         Catch ex As Exception
@@ -229,6 +257,13 @@ Public Class FormEntradas
             If dgCriptos.SelectedRows.Count = 0 Then Return
 
             Dim row As DataGridViewRow = dgCriptos.SelectedRows(0)
+            Dim selectedId As Long
+            If Long.TryParse(row.Cells("Id").Value?.ToString(), selectedId) Then
+                _selectedPortfolioId = selectedId
+            Else
+                _selectedPortfolioId = Nothing
+            End If
+
             cbCripto.Text = row.Cells("Symbol").Value?.ToString()
             TbPrecoEntrada.Text = Convert.ToDecimal(row.Cells("InitialPrice").Value).ToString("N8", CultureInfo.GetCultureInfo("pt-BR"))
             tbQtd.Text = Convert.ToDecimal(row.Cells("Quantity").Value).ToString("G29", CultureInfo.GetCultureInfo("pt-BR"))
@@ -252,6 +287,37 @@ Public Class FormEntradas
         FormSymbols.Show()
     End Sub
 
+    Private Sub dgCriptos_CellFormatting(
+        sender As Object,
+        e As DataGridViewCellFormattingEventArgs) Handles dgCriptos.CellFormatting
+
+        If e.RowIndex < 0 OrElse e.ColumnIndex < 0 Then Return
+        If dgCriptos.Columns(e.ColumnIndex).Name <> "Data" Then Return
+        If e.Value Is Nothing OrElse e.Value Is DBNull.Value Then Return
+
+        Dim dateValue As DateTime
+        Dim textValue As String = e.Value.ToString()
+        Dim parsed As Boolean = DateTime.TryParse(
+            textValue,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            dateValue)
+
+        If Not parsed Then
+            parsed = DateTime.TryParse(
+                textValue,
+                CultureInfo.GetCultureInfo("pt-BR"),
+                DateTimeStyles.None,
+                dateValue)
+        End If
+
+        If parsed Then
+            e.Value = dateValue.ToString(
+                "dd/MM/yyyy HH:mm:ss",
+                CultureInfo.GetCultureInfo("pt-BR"))
+            e.FormattingApplied = True
+        End If
+    End Sub
     Private Sub dgCriptos_MouseDown(sender As Object, e As MouseEventArgs) Handles dgCriptos.MouseDown
         'json.captureRightClick(dgCriptos, e)
     End Sub
