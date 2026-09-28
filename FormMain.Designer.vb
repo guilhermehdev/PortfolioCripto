@@ -623,10 +623,10 @@ Partial Class FormMain
         dgFuturos.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgFuturos.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         DataGridViewCellStyle4.Font = New Font("Calibri", 10F, FontStyle.Italic)
         DataGridViewCellStyle4.ForeColor = Color.Turquoise
-        DataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         DataGridViewCellStyle4.SelectionForeColor = Color.Turquoise
         DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
         dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
