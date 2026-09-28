@@ -26,15 +26,11 @@ Partial Class FormMain
         Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle5 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         dgPortfolio = New DataGridView()
-        dgFuturos = New DataGridView()
-        tabsMain = New BlackTabControl()
-        tabPortfolio = New TabPage()
-        tabFuturos = New TabPage()
         PanelProfits = New Panel()
         Label15 = New Label()
         lbTotalBRL = New Label()
@@ -74,6 +70,7 @@ Partial Class FormMain
         PanelGraphs = New Panel()
         lbCaixaBRL = New Label()
         lbCaixa = New Label()
+        dgFuturos = New DataGridView()
         Panel2 = New Panel()
         CadastroToolStripMenuItem = New ToolStripMenuItem()
         CriptoToolStripMenuItem = New ToolStripMenuItem()
@@ -100,17 +97,16 @@ Partial Class FormMain
         ToolTip1 = New ToolTip(components)
         panelDebug = New Panel()
         lbDebug = New RichTextBox()
+        btSpot = New Button()
+        btFuturos = New Button()
         CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
-        CType(dgFuturos, ComponentModel.ISupportInitialize).BeginInit()
-        tabsMain.SuspendLayout()
-        tabPortfolio.SuspendLayout()
-        tabFuturos.SuspendLayout()
         PanelProfits.SuspendLayout()
         Panel1.SuspendLayout()
         CType(PictureBox2, ComponentModel.ISupportInitialize).BeginInit()
         CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
         PanelPerformance.SuspendLayout()
         PanelGraphs.SuspendLayout()
+        CType(dgFuturos, ComponentModel.ISupportInitialize).BeginInit()
         Panel2.SuspendLayout()
         MenuStrip1.SuspendLayout()
         CType(pbBRL, ComponentModel.ISupportInitialize).BeginInit()
@@ -124,6 +120,7 @@ Partial Class FormMain
         dgPortfolio.AllowUserToDeleteRows = False
         dgPortfolio.AllowUserToOrderColumns = True
         dgPortfolio.AllowUserToResizeRows = False
+        dgPortfolio.Anchor = AnchorStyles.None
         dgPortfolio.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgPortfolio.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         dgPortfolio.BorderStyle = BorderStyle.None
@@ -140,14 +137,13 @@ Partial Class FormMain
         DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
         DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle2.ForeColor = Color.White
+        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
         DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
         DataGridViewCellStyle2.SelectionForeColor = Color.Transparent
         DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
         dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
-        dgPortfolio.Dock = DockStyle.Fill
         dgPortfolio.EnableHeadersVisualStyles = False
-        dgPortfolio.Location = New Point(3, 3)
+        dgPortfolio.Location = New Point(9, 51)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
@@ -165,97 +161,8 @@ Partial Class FormMain
         dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgPortfolio.ScrollBars = ScrollBars.Vertical
         dgPortfolio.SelectionMode = DataGridViewSelectionMode.CellSelect
-        dgPortfolio.Size = New Size(1153, 345)
+        dgPortfolio.Size = New Size(1132, 356)
         dgPortfolio.TabIndex = 11
-        ' 
-        ' dgFuturos
-        ' 
-        dgFuturos.AllowUserToAddRows = False
-        dgFuturos.AllowUserToDeleteRows = False
-        dgFuturos.AllowUserToOrderColumns = True
-        dgFuturos.AllowUserToResizeRows = False
-        dgFuturos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-        dgFuturos.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        dgFuturos.BorderStyle = BorderStyle.None
-        dgFuturos.CellBorderStyle = DataGridViewCellBorderStyle.None
-        dgFuturos.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle4.Font = New Font("Calibri", 10F, FontStyle.Italic)
-        DataGridViewCellStyle4.ForeColor = Color.Turquoise
-        DataGridViewCellStyle4.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle4.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
-        dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
-        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle5.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle5.ForeColor = Color.White
-        DataGridViewCellStyle5.SelectionBackColor = Color.Black
-        DataGridViewCellStyle5.SelectionForeColor = Color.White
-        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.True
-        dgFuturos.DefaultCellStyle = DataGridViewCellStyle5
-        dgFuturos.Dock = DockStyle.Fill
-        dgFuturos.EnableHeadersVisualStyles = False
-        dgFuturos.Location = New Point(3, 3)
-        dgFuturos.MultiSelect = False
-        dgFuturos.Name = "dgFuturos"
-        dgFuturos.ReadOnly = True
-        DataGridViewCellStyle6.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle6.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle6.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle6.Padding = New Padding(2)
-        DataGridViewCellStyle6.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle6.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
-        dgFuturos.RowHeadersDefaultCellStyle = DataGridViewCellStyle6
-        dgFuturos.RowHeadersWidth = 4
-        dgFuturos.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.Black
-        dgFuturos.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.White
-        dgFuturos.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
-        dgFuturos.ScrollBars = ScrollBars.Vertical
-        dgFuturos.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgFuturos.Size = New Size(1153, 345)
-        dgFuturos.TabIndex = 12
-        ' 
-        ' tabsMain
-        ' 
-        tabsMain.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
-        tabsMain.Controls.Add(tabPortfolio)
-        tabsMain.Controls.Add(tabFuturos)
-        tabsMain.DrawMode = TabDrawMode.OwnerDrawFixed
-        tabsMain.ForeColor = Color.White
-        tabsMain.Location = New Point(0, 27)
-        tabsMain.Name = "tabsMain"
-        tabsMain.SelectedIndex = 0
-        tabsMain.Size = New Size(1167, 379)
-        tabsMain.TabIndex = 11
-        ' 
-        ' tabPortfolio
-        ' 
-        tabPortfolio.BackColor = Color.Black
-        tabPortfolio.Controls.Add(dgPortfolio)
-        tabPortfolio.Cursor = Cursors.Hand
-        tabPortfolio.ForeColor = Color.White
-        tabPortfolio.Location = New Point(4, 24)
-        tabPortfolio.Name = "tabPortfolio"
-        tabPortfolio.Padding = New Padding(3)
-        tabPortfolio.Size = New Size(1159, 351)
-        tabPortfolio.TabIndex = 0
-        tabPortfolio.Text = "Portfolio"
-        ' 
-        ' tabFuturos
-        ' 
-        tabFuturos.BackColor = Color.Black
-        tabFuturos.Controls.Add(dgFuturos)
-        tabFuturos.Cursor = Cursors.Hand
-        tabFuturos.ForeColor = Color.White
-        tabFuturos.Location = New Point(4, 24)
-        tabFuturos.Name = "tabFuturos"
-        tabFuturos.Padding = New Padding(3)
-        tabFuturos.Size = New Size(1159, 351)
-        tabFuturos.TabIndex = 1
-        tabFuturos.Text = "Futuros"
         ' 
         ' PanelProfits
         ' 
@@ -266,7 +173,7 @@ Partial Class FormMain
         PanelProfits.Controls.Add(Label5)
         PanelProfits.Location = New Point(0, 611)
         PanelProfits.Name = "PanelProfits"
-        PanelProfits.Size = New Size(1167, 40)
+        PanelProfits.Size = New Size(1151, 40)
         PanelProfits.TabIndex = 15
         ' 
         ' Label15
@@ -289,7 +196,7 @@ Partial Class FormMain
         lbTotalBRL.ForeColor = Color.Lime
         lbTotalBRL.Location = New Point(5, 1)
         lbTotalBRL.Name = "lbTotalBRL"
-        lbTotalBRL.Size = New Size(1158, 37)
+        lbTotalBRL.Size = New Size(1142, 37)
         lbTotalBRL.TabIndex = 16
         lbTotalBRL.Text = "R$ 0,00"
         lbTotalBRL.TextAlign = ContentAlignment.MiddleCenter
@@ -312,7 +219,7 @@ Partial Class FormMain
         lbLoadFromMarket.BackColor = Color.Transparent
         lbLoadFromMarket.Font = New Font("Segoe UI", 9F, FontStyle.Italic)
         lbLoadFromMarket.ForeColor = Color.OrangeRed
-        lbLoadFromMarket.Location = New Point(494, 4)
+        lbLoadFromMarket.Location = New Point(486, 4)
         lbLoadFromMarket.Name = "lbLoadFromMarket"
         lbLoadFromMarket.Size = New Size(178, 15)
         lbLoadFromMarket.TabIndex = 0
@@ -331,7 +238,7 @@ Partial Class FormMain
         Panel1.Controls.Add(lbBTC)
         Panel1.Controls.Add(Label1)
         Panel1.Controls.Add(lbDolar)
-        Panel1.Location = New Point(490, -1)
+        Panel1.Location = New Point(474, -1)
         Panel1.Name = "Panel1"
         Panel1.Size = New Size(673, 29)
         Panel1.TabIndex = 22
@@ -677,7 +584,7 @@ Partial Class FormMain
         PanelGraphs.Controls.Add(lbValoresHojeUSD)
         PanelGraphs.Location = New Point(0, 428)
         PanelGraphs.Name = "PanelGraphs"
-        PanelGraphs.Size = New Size(1167, 184)
+        PanelGraphs.Size = New Size(1151, 184)
         PanelGraphs.TabIndex = 32
         ' 
         ' lbCaixaBRL
@@ -703,13 +610,64 @@ Partial Class FormMain
         lbCaixa.TabIndex = 32
         lbCaixa.Text = "0.00"
         ' 
+        ' dgFuturos
+        ' 
+        dgFuturos.AllowUserToAddRows = False
+        dgFuturos.AllowUserToDeleteRows = False
+        dgFuturos.AllowUserToOrderColumns = True
+        dgFuturos.AllowUserToResizeRows = False
+        dgFuturos.Anchor = AnchorStyles.None
+        dgFuturos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgFuturos.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgFuturos.BorderStyle = BorderStyle.None
+        dgFuturos.CellBorderStyle = DataGridViewCellBorderStyle.None
+        dgFuturos.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle4.Font = New Font("Calibri", 10F, FontStyle.Italic)
+        DataGridViewCellStyle4.ForeColor = Color.Turquoise
+        DataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle4.SelectionForeColor = Color.Turquoise
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
+        dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
+        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle5.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle5.ForeColor = Color.White
+        DataGridViewCellStyle5.SelectionBackColor = Color.Black
+        DataGridViewCellStyle5.SelectionForeColor = Color.White
+        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.True
+        dgFuturos.DefaultCellStyle = DataGridViewCellStyle5
+        dgFuturos.EnableHeadersVisualStyles = False
+        dgFuturos.Location = New Point(9, 53)
+        dgFuturos.MultiSelect = False
+        dgFuturos.Name = "dgFuturos"
+        dgFuturos.ReadOnly = True
+        DataGridViewCellStyle6.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle6.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle6.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle6.Padding = New Padding(2)
+        DataGridViewCellStyle6.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle6.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
+        dgFuturos.RowHeadersDefaultCellStyle = DataGridViewCellStyle6
+        dgFuturos.RowHeadersWidth = 4
+        dgFuturos.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.Black
+        dgFuturos.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.White
+        dgFuturos.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
+        dgFuturos.ScrollBars = ScrollBars.Vertical
+        dgFuturos.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgFuturos.Size = New Size(1132, 354)
+        dgFuturos.TabIndex = 37
+        dgFuturos.Visible = False
+        ' 
         ' Panel2
         ' 
         Panel2.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         Panel2.Controls.Add(lbLoadFromMarket)
         Panel2.Location = New Point(0, 406)
         Panel2.Name = "Panel2"
-        Panel2.Size = New Size(1167, 25)
+        Panel2.Size = New Size(1151, 25)
         Panel2.TabIndex = 33
         ' 
         ' CadastroToolStripMenuItem
@@ -759,7 +717,7 @@ Partial Class FormMain
         ImportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {PortfolioToolStripMenuItem, WalletsExchangeToolStripMenuItem})
         ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
-        ImportarToolStripMenuItem.Size = New Size(167, 22)
+        ImportarToolStripMenuItem.Size = New Size(168, 22)
         ImportarToolStripMenuItem.Text = "Portfolio"
         ' 
         ' PortfolioToolStripMenuItem
@@ -784,7 +742,7 @@ Partial Class FormMain
         ExportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem1, ExportarToolStripMenuItem1})
         ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        ExportarToolStripMenuItem.Size = New Size(167, 22)
+        ExportarToolStripMenuItem.Size = New Size(168, 22)
         ExportarToolStripMenuItem.Text = "Wallets/Exchange"
         ' 
         ' ImportarToolStripMenuItem1
@@ -809,7 +767,7 @@ Partial Class FormMain
         CriptoToolStripMenuItem2.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem2, ExportarToolStripMenuItem2})
         CriptoToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
         CriptoToolStripMenuItem2.Name = "CriptoToolStripMenuItem2"
-        CriptoToolStripMenuItem2.Size = New Size(167, 22)
+        CriptoToolStripMenuItem2.Size = New Size(168, 22)
         CriptoToolStripMenuItem2.Text = "Cripto"
         ' 
         ' ImportarToolStripMenuItem2
@@ -849,7 +807,7 @@ Partial Class FormMain
         MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, OpçõesToolStripMenuItem, FecharToolStripMenuItem})
         MenuStrip1.Location = New Point(0, 0)
         MenuStrip1.Name = "MenuStrip1"
-        MenuStrip1.Size = New Size(1167, 24)
+        MenuStrip1.Size = New Size(1151, 24)
         MenuStrip1.TabIndex = 10
         MenuStrip1.Text = "MenuStrip1"
         ' 
@@ -897,7 +855,7 @@ Partial Class FormMain
         panelDebug.Dock = DockStyle.Bottom
         panelDebug.Location = New Point(0, 653)
         panelDebug.Name = "panelDebug"
-        panelDebug.Size = New Size(1167, 53)
+        panelDebug.Size = New Size(1151, 53)
         panelDebug.TabIndex = 18
         ' 
         ' lbDebug
@@ -913,17 +871,53 @@ Partial Class FormMain
         lbDebug.Name = "lbDebug"
         lbDebug.ReadOnly = True
         lbDebug.ScrollBars = RichTextBoxScrollBars.Vertical
-        lbDebug.Size = New Size(1158, 45)
+        lbDebug.Size = New Size(1142, 45)
         lbDebug.TabIndex = 0
         lbDebug.Text = ""
+        ' 
+        ' btSpot
+        ' 
+        btSpot.BackColor = Color.SteelBlue
+        btSpot.Cursor = Cursors.Hand
+        btSpot.FlatAppearance.BorderColor = Color.Gray
+        btSpot.FlatAppearance.BorderSize = 0
+        btSpot.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+        btSpot.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        btSpot.FlatStyle = FlatStyle.Flat
+        btSpot.ForeColor = Color.White
+        btSpot.Location = New Point(9, 28)
+        btSpot.Name = "btSpot"
+        btSpot.Size = New Size(75, 23)
+        btSpot.TabIndex = 38
+        btSpot.Text = "Spot"
+        btSpot.UseVisualStyleBackColor = False
+        ' 
+        ' btFuturos
+        ' 
+        btFuturos.Cursor = Cursors.Hand
+        btFuturos.FlatAppearance.BorderColor = Color.Gray
+        btFuturos.FlatAppearance.BorderSize = 0
+        btFuturos.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+        btFuturos.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        btFuturos.FlatStyle = FlatStyle.Flat
+        btFuturos.ForeColor = Color.White
+        btFuturos.Location = New Point(84, 28)
+        btFuturos.Name = "btFuturos"
+        btFuturos.Size = New Size(75, 23)
+        btFuturos.TabIndex = 39
+        btFuturos.Text = "Futuros"
+        btFuturos.UseVisualStyleBackColor = True
         ' 
         ' FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        ClientSize = New Size(1167, 706)
-        Controls.Add(tabsMain)
+        ClientSize = New Size(1151, 706)
+        Controls.Add(btFuturos)
+        Controls.Add(btSpot)
+        Controls.Add(dgFuturos)
+        Controls.Add(dgPortfolio)
         Controls.Add(PanelGraphs)
         Controls.Add(panelDebug)
         Controls.Add(Label8)
@@ -940,10 +934,6 @@ Partial Class FormMain
         StartPosition = FormStartPosition.CenterScreen
         Text = "Portfolio Cripto"
         CType(dgPortfolio, ComponentModel.ISupportInitialize).EndInit()
-        CType(dgFuturos, ComponentModel.ISupportInitialize).EndInit()
-        tabsMain.ResumeLayout(False)
-        tabPortfolio.ResumeLayout(False)
-        tabFuturos.ResumeLayout(False)
         PanelProfits.ResumeLayout(False)
         PanelProfits.PerformLayout()
         Panel1.ResumeLayout(False)
@@ -954,6 +944,7 @@ Partial Class FormMain
         PanelPerformance.PerformLayout()
         PanelGraphs.ResumeLayout(False)
         PanelGraphs.PerformLayout()
+        CType(dgFuturos, ComponentModel.ISupportInitialize).EndInit()
         Panel2.ResumeLayout(False)
         Panel2.PerformLayout()
         MenuStrip1.ResumeLayout(False)
@@ -965,10 +956,6 @@ Partial Class FormMain
         PerformLayout()
     End Sub
     Friend WithEvents dgPortfolio As DataGridView
-    Friend WithEvents dgFuturos As DataGridView
-    Friend WithEvents tabsMain As BlackTabControl
-    Friend WithEvents tabPortfolio As TabPage
-    Friend WithEvents tabFuturos As TabPage
     Friend WithEvents PanelProfits As Panel
     Friend WithEvents Label5 As Label
     Friend WithEvents lbTotalBRL As Label
@@ -1034,5 +1021,8 @@ Partial Class FormMain
     Friend WithEvents ToolTip1 As ToolTip
     Friend WithEvents panelDebug As Panel
     Friend WithEvents lbDebug As RichTextBox
+    Friend WithEvents dgFuturos As DataGridView
+    Friend WithEvents btSpot As Button
+    Friend WithEvents btFuturos As Button
 
 End Class

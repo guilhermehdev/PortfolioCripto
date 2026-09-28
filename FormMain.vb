@@ -1243,35 +1243,6 @@ Public Class FormMain
 
     End Sub
 
-    Private Async Sub tabsMain_Selected(sender As Object, e As TabControlEventArgs) Handles tabsMain.Selected
-        If e.TabPage Is tabFuturos Then
-            Await LoadFuturesPositionsAsync()
-        End If
-    End Sub
-
-    Private Sub tabsMain_DrawItem(sender As Object, e As DrawItemEventArgs) Handles tabsMain.DrawItem
-        If e.Index < 0 OrElse e.Index >= tabsMain.TabPages.Count Then Return
-
-        Using backgroundBrush As New SolidBrush(Color.Black)
-            e.Graphics.FillRectangle(backgroundBrush, e.Bounds)
-        End Using
-
-        Dim tabText = tabsMain.TabPages(e.Index).Text
-        TextRenderer.DrawText(
-            e.Graphics,
-            tabText,
-            tabsMain.Font,
-            e.Bounds,
-            Color.White,
-            TextFormatFlags.HorizontalCenter Or TextFormatFlags.VerticalCenter)
-
-        Using borderPen As New Pen(Color.Black)
-            Dim borderBounds = e.Bounds
-            borderBounds.Width -= 1
-            borderBounds.Height -= 1
-            e.Graphics.DrawRectangle(borderPen, borderBounds)
-        End Using
-    End Sub
     Private Async Function LoadFuturesPositionsAsync() As Task
         If _futuresLoadRunning Then
             Return
@@ -1471,7 +1442,7 @@ Public Class FormMain
     End Sub
 
     Private Async Sub BinanceFuturesUserDataUpdated()
-        If IsDisposed OrElse Disposing OrElse tabsMain.SelectedTab IsNot tabFuturos Then Return
+        If dgFuturos.Visible = False Then Return
 
         If InvokeRequired Then
             BeginInvoke(New MethodInvoker(Async Sub() Await LoadFuturesPositionsAsync()))
@@ -1505,7 +1476,7 @@ Public Class FormMain
             Where(Function(price) price > 0D).
             Distinct().
             OrderBy(Function(price) price).
-            Select(Function(price) price.ToString("N2", CultureInfo.GetCultureInfo("en-US"))).
+            Select(Function(price) "$" & price.ToString("N2", CultureInfo.GetCultureInfo("en-US"))).
             ToList()
 
         If prices.Count = 0 Then
@@ -1631,7 +1602,7 @@ Public Class FormMain
                 End If
             Case "LiquidationPrice"
                 If TryReadFuturesDecimal(e.Value, value) Then
-                    e.Value = value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
+                    e.Value = "$" & value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
                     e.CellStyle.ForeColor = Color.DarkOrange
                     e.CellStyle.SelectionForeColor = Color.DarkOrange
                     e.FormattingApplied = True
@@ -1646,10 +1617,8 @@ Public Class FormMain
                 If TryReadFuturesDecimal(e.Value, value) Then
                     If columnName = "ROI" Then
                         e.Value = value.ToString("N2", CultureInfo.GetCultureInfo("en-US")) & "%"
-                    ElseIf columnName = "UnrealizedProfit" Then
-                        e.Value = "$" & value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
                     Else
-                        e.Value = value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
+                        e.Value = "$" & value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
                     End If
                     If columnName = "UnrealizedProfit" OrElse columnName = "ROI" Then
                         Dim pnlColor = If(value > 0D, Color.LimeGreen, Color.Red)
@@ -1659,7 +1628,7 @@ Public Class FormMain
                     e.FormattingApplied = True
                 End If
             Case "Leverage"
-                If Integer.TryParse(e.Value.ToString(), leverageValue) Then
+                If Integer.TryParse(e.Value.ToString, leverageValue) Then
                     e.Value = $"{leverageValue:0}x"
                     e.FormattingApplied = True
                 End If
@@ -1675,4 +1644,18 @@ Public Class FormMain
         Catch
         End Try
     End Sub
+    Private Sub btSpot_Click(sender As Object, e As EventArgs) Handles btSpot.Click
+        dgPortfolio.Visible = True
+        dgFuturos.Visible = False
+        btFuturos.BackColor = Color.FromArgb(40, 40, 40)
+        btSpot.BackColor = Color.SteelBlue
+    End Sub
+    Private Sub btFuturos_Click(sender As Object, e As EventArgs) Handles btFuturos.Click
+        dgPortfolio.Visible = False
+        dgFuturos.Visible = True
+        BinanceFuturesUserDataUpdated()
+        btFuturos.BackColor = Color.SteelBlue
+        btSpot.BackColor = Color.FromArgb(40, 40, 40)
+    End Sub
+
 End Class
