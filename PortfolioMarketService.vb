@@ -74,10 +74,42 @@ Public NotInheritable Class PortfolioMarketService
 
             Debug.WriteLine(
                 $"[GATE.IO] Saldos considerados no portfólio: {gateAssets.Count}")
+            Dim cmc As New Cotacao()
+            Dim mcapDict As New Dictionary(Of String, CoinMarketData)(StringComparer.OrdinalIgnoreCase)
 
-            Dim mcapDict = Await gec.CGECKO_MarketData(allSymbols)
+            Dim useMarketFallback = False
 
-            Dim usdBrl As Decimal = Await gec.CGECKO_GetPrice("USDT", "brl")
+            Try
+                mcapDict = Await gec.CGECKO_MarketData(allSymbols)
+            Catch ex As Exception
+                Debug.WriteLine("[MARKET] CoinGecko indisponível: " & ex.Message)
+                useMarketFallback = True
+            End Try
+
+            If useMarketFallback Then
+                mcapDict = Await LoadFallbackMarketDataAsync(b, allSymbols, cmc)
+            End If
+
+            Dim usdBrl As Decimal = 0D
+            Try
+                usdBrl = Await gec.CGECKO_GetPrice("USDT", "brl")
+            Catch ex As Exception
+                Debug.WriteLine("[MARKET] CoinGecko USDT/BRL indisponível: " & ex.Message)
+            End Try
+
+            If usdBrl <= 0D Then
+                Try
+                    usdBrl = Await b.BINANCE_GetUSDTBRL()
+                Catch ex As Exception
+                    Debug.WriteLine("[MARKET] Binance USDT/BRL indisponível: " & ex.Message)
+                End Try
+            End If
+
+            If usdBrl <= 0D AndAlso
+               Not String.IsNullOrWhiteSpace(My.Settings.apiCMCKey) AndAlso
+               Not String.IsNullOrWhiteSpace(My.Settings.activeAPI) Then
+                usdBrl = Await cmc.CM_GetUSDBRL()
+            End If
 
             If usdBrl <= 0D Then
                 Throw New Exception(
@@ -361,7 +393,7 @@ Public NotInheritable Class PortfolioMarketService
 
             FormMain.lbDolar.Text = formatter.BRLformat(usdBrl)
             FormMain.lbBTC.Text = formatter.USDformat(btcPrice)
-            FormMain.lbDom.Text = $"{dom:F2}%"
+            FormMain.lbDom.Text = If(dom > 0D, $"{dom:F2}%", "--")
             FormMain.lbPerformWallet.Text = $"{walletPerformance:F2}%"
             FormMain.lbTotalEntradaUSD.Text = formatter.USDformat(initialValue)
             FormMain.lbTotalEntradaBRL.Text = formatter.BRLformat(initialValue * usdBrl)
@@ -408,6 +440,100 @@ Public NotInheritable Class PortfolioMarketService
 
         End Try
 
+    End Function
+
+    Private Shared Async Function LoadFallbackMarketDataAsync(
+        binance As Binance,
+        symbols As IEnumerable(Of String),
+        cmc As Cotacao) As Task(Of Dictionary(Of String, CoinMarketData))
+
+        Dim result As New Dictionary(Of String, CoinMarketData)(StringComparer.OrdinalIgnoreCase)
+        Dim useCmc = Not String.IsNullOrWhiteSpace(My.Settings.apiCMCKey) AndAlso
+                     Not String.IsNullOrWhiteSpace(My.Settings.activeAPI)
+
+        For Each symbol In symbols.Distinct(StringComparer.OrdinalIgnoreCase)
+            Dim loaded = False
+
+            If useCmc Then
+                Try
+                    Dim rawCmc = Await cmc.CM_GetCriptoPrices(symbol)
+                    Dim parts = rawCmc?.ToString().Split("|"c)
+                    Dim price As Decimal
+                    Dim marketCap As Decimal = 0D
+
+                    If parts IsNot Nothing AndAlso
+                       parts.Length >= 1 AndAlso
+                       TryParseMarketDecimal(parts(0), price) AndAlso
+                       price > 0D Then
+                        If parts.Length >= 2 Then
+                            TryParseMarketDecimal(parts(1), marketCap)
+                        End If
+
+                        result(symbol) = New CoinMarketData With {
+                            .Price = price,
+                            .MarketCap = marketCap}
+                        loaded = True
+                    End If
+                Catch ex As Exception
+                    Debug.WriteLine($"[MARKET] CoinMarketCap indisponível para {symbol}: {ex.Message}")
+                End Try
+            End If
+
+            If loaded Then Continue For
+
+            Try
+                Dim rawBinance = Await binance.BINANCE_GetCoinsInfo(symbol)
+                Dim parts = rawBinance?.ToString().Split("|"c)
+                Dim price As Decimal
+
+                If parts IsNot Nothing AndAlso
+                   parts.Length >= 1 AndAlso
+                   TryParseMarketDecimal(parts(0), price) AndAlso
+                   price > 0D Then
+                    result(symbol) = New CoinMarketData With {.Price = price}
+                End If
+            Catch ex As Exception
+                Debug.WriteLine($"[MARKET] Binance indisponível para {symbol}: {ex.Message}")
+            End Try
+        Next
+
+        Return result
+    End Function
+
+    Private Shared Function TryParseMarketDecimal(value As String, ByRef result As Decimal) As Boolean
+        If String.IsNullOrWhiteSpace(value) Then Return False
+
+        Dim text = value.Trim()
+        Dim hasComma = text.Contains(","c)
+        Dim hasDot = text.Contains("."c)
+
+        If hasComma AndAlso hasDot Then
+            If text.LastIndexOf(","c) > text.LastIndexOf("."c) Then
+                text = text.Replace(".", String.Empty).Replace(",", ".")
+            Else
+                text = text.Replace(",", String.Empty)
+            End If
+
+            Return Decimal.TryParse(
+                text,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                result)
+        End If
+
+        If hasComma Then
+            Return Decimal.TryParse(
+                text,
+                NumberStyles.Number,
+                CultureInfo.GetCultureInfo("pt-BR"),
+                result)
+        End If
+
+        Return Decimal.TryParse(
+            text,
+            NumberStyles.Float Or NumberStyles.AllowThousands,
+            CultureInfo.InvariantCulture,
+            result)
     End Function
 
 End Class
