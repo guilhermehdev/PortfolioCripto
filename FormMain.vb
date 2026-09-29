@@ -1589,7 +1589,7 @@ Public Class FormMain
                 End If
             Case "MarkPrice"
                 If TryReadFuturesDecimal(e.Value, value) Then
-                    e.Value = "$" & value.ToString("N2", CultureInfo.GetCultureInfo("en-US"))
+                    e.Value = "$" & value.ToString("N3", CultureInfo.GetCultureInfo("en-US"))
                     Dim entryPrice As Decimal
                     If TryReadFuturesDecimal(dgFuturos.Rows(e.RowIndex).Cells("EntryPrice").Value, entryPrice) AndAlso value > entryPrice Then
                         e.CellStyle.ForeColor = Color.LimeGreen
