@@ -1395,7 +1395,7 @@ Public Class FormMain
             Return
         End If
 
-        If lbDebug IsNot Nothing Then
+        If Not connected AndAlso lbDebug IsNot Nothing Then
             lbDebug.AppendText(Environment.NewLine & message)
         End If
     End Sub
@@ -1508,7 +1508,7 @@ Public Class FormMain
         Next
 
         If dgFuturos.Columns.Contains("Symbol") Then
-            dgFuturos.Columns("Symbol").MinimumWidth = 90
+            dgFuturos.Columns("Symbol").MinimumWidth = 120
         End If
 
         If dgFuturos.Columns.Contains("UnrealizedProfit") Then
@@ -1570,6 +1570,10 @@ Public Class FormMain
         Dim leverageValue As Integer
 
         Select Case columnName
+            Case "Symbol"
+                e.CellStyle.ForeColor = Color.Yellow
+                e.CellStyle.SelectionForeColor = Color.Yellow
+                e.FormattingApplied = True
             Case "PositionSide"
                 Dim sideColor = GetFuturesPositionSideColor(e.Value)
                 e.CellStyle.ForeColor = sideColor
