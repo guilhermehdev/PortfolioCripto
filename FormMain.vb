@@ -785,7 +785,11 @@ Public Class FormMain
     End Function
 
     Private Async Sub btRefresh_Click_1Async(sender As Object, e As EventArgs) Handles btRefresh.Click
-        Await refreshMarket()
+        If dgPortfolio.Visible Then
+            Await refreshMarket()
+        ElseIf dgFuturos.Visible Then
+            BinanceFuturesUserDataUpdated()
+        End If
     End Sub
 
     Private Sub dgPortfolio_Sorted(sender As Object, e As EventArgs) Handles dgPortfolio.Sorted
@@ -1657,7 +1661,6 @@ Public Class FormMain
     Private Sub btFuturos_Click(sender As Object, e As EventArgs) Handles btFuturos.Click
         dgPortfolio.Visible = False
         dgFuturos.Visible = True
-        BinanceFuturesUserDataUpdated()
         btFuturos.BackColor = Color.SteelBlue
         btSpot.BackColor = Color.FromArgb(20, 20, 20)
     End Sub
