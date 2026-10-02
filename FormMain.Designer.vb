@@ -121,7 +121,7 @@ Partial Class FormMain
         dgPortfolio.AllowUserToDeleteRows = False
         dgPortfolio.AllowUserToOrderColumns = True
         dgPortfolio.AllowUserToResizeRows = False
-        dgPortfolio.Anchor = AnchorStyles.None
+        dgPortfolio.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         dgPortfolio.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgPortfolio.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         dgPortfolio.BorderStyle = BorderStyle.None
@@ -617,7 +617,7 @@ Partial Class FormMain
         dgFuturos.AllowUserToDeleteRows = False
         dgFuturos.AllowUserToOrderColumns = True
         dgFuturos.AllowUserToResizeRows = False
-        dgFuturos.Anchor = AnchorStyles.None
+        dgFuturos.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         dgFuturos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
         dgFuturos.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
         dgFuturos.BorderStyle = BorderStyle.None
