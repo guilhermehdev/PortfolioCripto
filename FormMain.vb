@@ -1264,6 +1264,7 @@ Public Class FormMain
             table.Columns.Add("PositionSide", GetType(String))
             table.Columns.Add("PositionAmount", GetType(Decimal))
             table.Columns.Add("Notional", GetType(Decimal))
+            table.Columns.Add("InitialMargin", GetType(Decimal))
             table.Columns.Add("EntryPrice", GetType(Decimal))
             table.Columns.Add("MarkPrice", GetType(Decimal))
             table.Columns.Add("UnrealizedProfit", GetType(Decimal))
@@ -1272,7 +1273,6 @@ Public Class FormMain
             table.Columns.Add("StopLoss", GetType(String))
             table.Columns.Add("LiquidationPrice", GetType(Decimal))
             table.Columns.Add("Leverage", GetType(Integer))
-            table.Columns.Add("InitialMargin", GetType(Decimal))
 
             For Each position In positions
                 Dim roiMargin = GetFuturesEntryMargin(position.PositionAmount, position.EntryPrice, position.Leverage, position.InitialMargin)
@@ -1286,6 +1286,7 @@ Public Class FormMain
                     If(String.IsNullOrWhiteSpace(position.PositionSide), "-", position.PositionSide),
                     position.PositionAmount,
                     position.Notional,
+                    roiMargin,
                     position.EntryPrice,
                     position.MarkPrice,
                     position.UnrealizedProfit,
@@ -1293,8 +1294,7 @@ Public Class FormMain
                     takeProfitText,
                     stopLossText,
                     position.LiquidationPrice,
-                    position.Leverage,
-                    roiMargin)
+                    position.Leverage)
             Next
             dgFuturos.DataSource = Nothing
             dgFuturos.DataSource = table
@@ -1495,6 +1495,7 @@ Public Class FormMain
             {"PositionSide", "Lado"},
             {"PositionAmount", "Quantidade"},
             {"Notional", "Notional"},
+            {"InitialMargin", "Margem (USDT)"},
             {"EntryPrice", "Entrada"},
             {"MarkPrice", "Preço atual"},
             {"TakeProfit", "TP"},
@@ -1502,8 +1503,7 @@ Public Class FormMain
             {"UnrealizedProfit", "PnL não realizado"},
             {"ROI", "ROI %"},
             {"LiquidationPrice", "Liquidação"},
-            {"Leverage", "Alavancagem"},
-            {"InitialMargin", "Margem (USDT)"}
+            {"Leverage", "Alavancagem"}
         }
         For Each item In headers
             If dgFuturos.Columns.Contains(item.Key) Then
@@ -1519,7 +1519,7 @@ Public Class FormMain
             dgFuturos.Columns("UnrealizedProfit").MinimumWidth = 135
         End If
         If dgFuturos.Columns.Contains("InitialMargin") Then
-            dgFuturos.Columns("InitialMargin").Visible = False
+            dgFuturos.Columns("InitialMargin").Visible = True
         End If
 
         dgFuturos.Font = New Font("Calibri", 12.0F, FontStyle.Regular)
