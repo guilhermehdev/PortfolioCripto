@@ -34,7 +34,9 @@ Public NotInheritable Class PortfolioMarketService
 
             Await b.SyncBinanceTime()
 
-            Dim binanceAssets = Await b.BINANCE_GetAllAssetsFull()
+            ' O portfólio Spot deve usar somente a conta Spot. O saldo da
+            ' carteira Futures é tratado separadamente no dgFuturos.
+            Dim binanceAssets = Await b.BINANCE_GetSpotAssetsFull()
             Dim gateAssets = Await gate.GATE_GetAllSpotAssets()
 
             ' Procura moedas existentes nas corretoras mas ainda não cadastradas
@@ -340,8 +342,15 @@ Public NotInheritable Class PortfolioMarketService
             If total > 0D Then
 
                 For i As Integer = 0 To listCriptos.Count - 1
-                    criptoDic(listCriptos(i)) =
-                        (listCurrValue(i) / total) * 100D
+                    Dim symbol = listCriptos(i)
+                    If formatter.stablecoins.Contains(symbol) Then
+                        Continue For
+                    End If
+
+                    criptoDic(symbol) =
+                        If(currValueTotal > 0D,
+                           (listCurrValue(i) / currValueTotal) * 100D,
+                           0D)
                 Next
 
             End If
@@ -395,8 +404,10 @@ Public NotInheritable Class PortfolioMarketService
             FormMain.lbBTC.Text = formatter.USDformat(btcPrice)
             FormMain.lbDom.Text = If(dom > 0D, $"{dom:F2}%", "--")
             FormMain.lbPerformWallet.Text = $"{walletPerformance:F2}%"
-            FormMain.lbTotalEntradaUSD.Text = formatter.USDformat(initialValue)
-            FormMain.lbTotalEntradaBRL.Text = formatter.BRLformat(initialValue * usdBrl)
+            ' Spot exibe o valor atual dos ativos investidos; Caixa já é
+            ' mostrado separadamente com os stablecoins.
+            FormMain.lbTotalEntradaUSD.Text = formatter.USDformat(currValueTotal)
+            FormMain.lbTotalEntradaBRL.Text = formatter.BRLformat(currValueTotal * usdBrl)
             FormMain.lbValoresHojeUSD.Text = formatter.USDformat(total)
             FormMain.lbValoresHojeBRL.Text = formatter.BRLformat(total * usdBrl)
             FormMain.lbRoiUSD.Text = formatter.USDformat(profit)

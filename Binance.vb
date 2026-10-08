@@ -6,6 +6,14 @@ Imports System.Security.Principal
 Imports System.Text
 Imports System.Text.Json
 Imports Newtonsoft.Json.Linq
+
+Public Class BinanceFuturesAccountSummary
+    Public Property AvailableBalance As Decimal
+    Public Property InitialMargin As Decimal
+    Public Property Equity As Decimal
+    Public Property UnrealizedProfit As Decimal
+End Class
+
 Public Class Binance
     Private BinanceTimeOffset As Long = 0
 
@@ -801,8 +809,47 @@ Public Class Binance
 
     End Function
 
+    ''' <summary>
+    ''' Retorna o patrimônio da conta Futures separado do PnL das posições.
+    ''' Equity usada no resumo = saldo disponível + margem inicial reservada.
+    ''' </summary>
+    Public Async Function BINANCE_GetFuturesAccountSummaryAsync() As Task(Of BinanceFuturesAccountSummary)
+        Dim summary As New BinanceFuturesAccountSummary()
+
+        Try
+            Dim account = Await BINANCE_GetFuturesAccountAsync()
+            If account Is Nothing Then Return summary
+
+            summary.AvailableBalance = ParseDecimalInvariant(GetTokenValue(account, "availableBalance"))
+            summary.InitialMargin = ParseDecimalInvariant(GetTokenValue(account, "totalInitialMargin"))
+            summary.UnrealizedProfit = ParseDecimalInvariant(GetTokenValue(account, "totalUnrealizedProfit"))
+            summary.Equity = summary.AvailableBalance + summary.InitialMargin
+
+            If summary.Equity = 0D Then
+                summary.Equity = ParseDecimalInvariant(GetTokenValue(account, "totalMarginBalance"))
+            End If
+        Catch ex As Exception
+            Debug.WriteLine("Erro ao trazer o resumo da conta Futures: " & ex.Message)
+        End Try
+
+        Return summary
+    End Function
+
+    ''' <summary>
+    ''' Retorna somente os saldos da conta Spot.
+    ''' O saldo da carteira Futures não deve entrar no grid Spot nem no Caixa.
+    ''' </summary>
+    Public Async Function BINANCE_GetSpotAssetsFull() As Task(Of Dictionary(Of String, Decimal))
+        Dim spotAccount = Await BINANCE_GetSpotAccountAsync()
+        If spotAccount Is Nothing Then
+            Return New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+        End If
+
+        Return GetSpotAssets(spotAccount)
+    End Function
+
     Public Async Function BINANCE_GetCoinsInfo(Optional symbol As String = "") As Task(Of Object)
-        Dim account = Await Task.Run(Function() BINANCE_GetAllAssetsFull())
+        Dim account = Await BINANCE_GetSpotAssetsFull()
         Dim urlBase As String = "https://api.binance.com/api/v3/ticker/price?symbol="
 
         Using client As New HttpClient()

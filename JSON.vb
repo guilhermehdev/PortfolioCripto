@@ -460,8 +460,6 @@ Public Class JSON
     End Function
 
     Public Sub loadCaixa(datagrid As DataGridView)
-        Dim portfolioTable As DataTable = PortfolioRepository.GetAll()
-
         datagrid.Rows.Clear()
         datagrid.Columns.Clear()
 
@@ -469,18 +467,46 @@ Public Class JSON
         datagrid.Columns.Add("Qtd", "Quantidade")
         datagrid.Columns.Add("Wallet", "Carteira")
 
-        For Each row As DataRow In portfolioTable.Rows
-            Dim symbol As String = row("Symbol")?.ToString().Trim().ToUpperInvariant()
+        ' O grid Spot já contém o saldo atual recebido da corretora. Use-o
+        ' para que o popup tenha a mesma origem do label Caixa e não o
+        ' Quantity histórico gravado no SQLite.
+        Dim liveGrid As DataGridView = Nothing
+        If My.Forms.FormMain IsNot Nothing Then
+            liveGrid = My.Forms.FormMain.dgPortfolio
+        End If
 
-            If String.IsNullOrWhiteSpace(symbol) OrElse Not stablecoins.Contains(symbol) Then
-                Continue For
-            End If
+        If liveGrid IsNot Nothing AndAlso
+           liveGrid.Columns.Contains("Cripto") AndAlso
+           liveGrid.Columns.Contains("Qtd") AndAlso
+           liveGrid.Columns.Contains("Wallet") Then
 
-            Dim quantity As Decimal = Convert.ToDecimal(row("Quantity"), CultureInfo.InvariantCulture)
-            Dim wallet As String = row("Wallet")?.ToString().Trim()
+            For Each liveRow As DataGridViewRow In liveGrid.Rows
+                If liveRow.IsNewRow Then Continue For
 
-            datagrid.Rows.Add(symbol, quantity, wallet)
-        Next
+                Dim symbol As String = liveRow.Cells("Cripto").Value?.ToString().Trim().ToUpperInvariant()
+                If String.IsNullOrWhiteSpace(symbol) OrElse Not stablecoins.Contains(symbol) Then
+                    Continue For
+                End If
+
+                Dim quantity As Decimal = ReadCaixaQuantity(liveRow.Cells("Qtd").Value)
+                Dim wallet As String = liveRow.Cells("Wallet").Value?.ToString().Trim()
+                datagrid.Rows.Add(symbol, quantity, wallet)
+            Next
+        Else
+            ' Fallback para abertura antes do primeiro carregamento do mercado.
+            Dim portfolioTable As DataTable = PortfolioRepository.GetAll()
+            For Each row As DataRow In portfolioTable.Rows
+                Dim symbol As String = row("Symbol")?.ToString().Trim().ToUpperInvariant()
+
+                If String.IsNullOrWhiteSpace(symbol) OrElse Not stablecoins.Contains(symbol) Then
+                    Continue For
+                End If
+
+                Dim quantity As Decimal = ReadCaixaQuantity(row("Quantity"))
+                Dim wallet As String = row("Wallet")?.ToString().Trim()
+                datagrid.Rows.Add(symbol, quantity, wallet)
+            Next
+        End If
 
         datagrid.Columns(0).HeaderText = "Cripto"
         datagrid.Columns(0).Width = 40
@@ -491,6 +517,22 @@ Public Class JSON
 
         datagrid.ClearSelection()
     End Sub
+
+    Private Shared Function ReadCaixaQuantity(value As Object) As Decimal
+        If value Is Nothing OrElse value Is DBNull.Value Then Return 0D
+        If TypeOf value Is Decimal Then Return DirectCast(value, Decimal)
+
+        Dim quantity As Decimal
+        If Decimal.TryParse(value.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, quantity) Then
+            Return quantity
+        End If
+
+        If Decimal.TryParse(value.ToString(), NumberStyles.Any, CultureInfo.GetCultureInfo("pt-BR"), quantity) Then
+            Return quantity
+        End If
+
+        Return 0D
+    End Function
     Public Async Function LoadCriptos(datagrid As DataGridView, Optional currencyCollum As String = "USD") As Task(Of Boolean)
         Return Await PortfolioMarketService.LoadAsync(datagrid, currencyCollum)
     End Function

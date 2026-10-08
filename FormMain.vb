@@ -14,14 +14,24 @@ Public Class FormMain
     Private ReadOnly _gateWs As New GateWebSocket
     Private ReadOnly _binanceFuturesMarketWs As New BinanceFuturesMarketWebSocket
     Private ReadOnly _binanceFuturesUserWs As New BinanceFuturesUserDataWebSocket
+    Private ReadOnly _binanceSpotUserWs As New BinanceSpotUserDataWebSocket
     Private _marketRefreshRunning As Boolean = False
     Private _futuresLoadRunning As Boolean = False
     Private _futuresMarketSymbolsKey As String = String.Empty
     Private _futuresUserStreamStarted As Boolean = False
+    Private _spotUserStreamStarted As Boolean = False
+    Private _spotAccountRefreshQueued As Boolean = False
     Private _spotPnlUsd As Decimal = 0D
     Private _futuresPnlUsd As Decimal = 0D
+    Private _futuresEquityUsd As Decimal = 0D
+    Private _futuresEquityBaseUsd As Decimal = 0D
+    Private _futuresEquityLoaded As Boolean = False
     Private _spotCurrentUsd As Decimal = 0D
     Private _spotEntryUsd As Decimal = 0D
+    Private _spotCashUsd As Decimal = 0D
+    Private _spotCoinEntryUsd As Decimal = 0D
+    Private _grossInvestmentUsd As Decimal = 0D
+    Private _grossInvestmentBrl As Decimal = 0D
     Private _spotOverviewInitialized As Boolean = False
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
@@ -40,6 +50,7 @@ Public Class FormMain
     Private Sub Form1_LoadAsync(sender As Object, e As EventArgs) Handles MyBase.Load
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
+        ArrangeProfitPairs()
     End Sub
 
     Public Sub changeOnOffColor(text As String)
@@ -76,6 +87,8 @@ Public Class FormMain
             AddHandler _binanceFuturesMarketWs.ConnectionStateChanged, AddressOf BinanceFuturesWs_ConnectionStateChanged
             AddHandler _binanceFuturesUserWs.DataUpdated, AddressOf BinanceFuturesUserDataUpdated
             AddHandler _binanceFuturesUserWs.ConnectionStateChanged, AddressOf BinanceFuturesWs_ConnectionStateChanged
+            AddHandler _binanceSpotUserWs.DataUpdated, AddressOf BinanceSpotUserDataUpdated
+            AddHandler _binanceSpotUserWs.ConnectionStateChanged, AddressOf BinanceSpotWs_ConnectionStateChanged
 
             Await B.SyncBinanceTime()
 
@@ -317,6 +330,8 @@ Public Class FormMain
 
         Try
 
+            Await StartBinanceSpotUserWebSocket()
+
             Dim symbols As New List(Of String)
 
             Debug.WriteLine(
@@ -371,6 +386,20 @@ Public Class FormMain
 
     End Function
 
+    Private Async Function StartBinanceSpotUserWebSocket() As Task
+        If _spotUserStreamStarted OrElse
+           String.IsNullOrWhiteSpace(My.Settings.BinanceAPIKey) Then
+            Return
+        End If
+
+        Try
+            Await _binanceSpotUserWs.StartAsync()
+            _spotUserStreamStarted = True
+        Catch ex As Exception
+            Debug.WriteLine("Erro iniciando Binance Spot User Data: " & ex.Message)
+        End Try
+    End Function
+
     Private Sub UpdateRealtimeOverview(Optional force As Boolean = False)
 
         Try
@@ -383,6 +412,7 @@ Public Class FormMain
 
             Dim cashflowUSD As Decimal = 0D
             Dim investidoUSD As Decimal = 0D
+            Dim coinEntryUSD As Decimal = 0D
 
             Dim lucroUSD As Decimal = 0D
 
@@ -422,6 +452,7 @@ Public Class FormMain
                 Else
 
                     investidoUSD += atual
+                    coinEntryUSD += entrada
                     lucroUSD +=
                     atual - entrada
 
@@ -465,14 +496,21 @@ Public Class FormMain
             _spotPnlUsd = lucroUSD
             _spotCurrentUsd = totalAtualUSD
             _spotEntryUsd = totalEntradaUSD
+            _spotCashUsd = cashflowUSD
+            _spotCoinEntryUsd = coinEntryUSD
             _spotOverviewInitialized = True
 
+            UpdateGrossInvestmentSummary()
+
+            ' O rótulo Spot representa somente os ativos investidos atuais.
+            ' Caixa fica separado no lbCaixa; o valor de entrada permanece
+            ' em _spotEntryUsd para calcular o desempenho.
             Me.lbTotalEntradaUSD.Text =
-            Cjson.USDformat(totalEntradaUSD)
+            Cjson.USDformat(investidoUSD)
 
             Me.lbTotalEntradaBRL.Text =
             Cjson.BRLformat(
-                totalEntradaUSD * usdBrl)
+                investidoUSD * usdBrl)
 
             Me.lbValoresHojeUSD.Text =
             Cjson.USDformat(totalAtualUSD)
@@ -488,12 +526,12 @@ Public Class FormMain
             Me.lbTotalEntradaBRL.ForeColor = Color.DeepSkyBlue
 
             Me.lbValoresHojeUSD.ForeColor =
-            If(totalAtualUSD < totalEntradaUSD,
+            If(totalAtualUSD < _grossInvestmentUsd,
                Color.IndianRed,
                Color.GreenYellow)
 
             Me.lbValoresHojeBRL.ForeColor =
-            If(totalAtualUSD < totalEntradaUSD,
+            If(totalBRL < _grossInvestmentBrl,
                Color.IndianRed,
                Color.Cyan)
 
@@ -531,6 +569,7 @@ Public Class FormMain
                 Color.Lime)
 
             UpdateFuturesPnlSummary()
+            ArrangeProfitPairs()
 
         Catch ex As Exception
 
@@ -777,6 +816,7 @@ Public Class FormMain
                 Await StartBinanceWebSocket()
                 Await StartGateWebSocket()
                 dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
+                HideStablecoinPortfolioRows()
                 Adjust()
             Else
                 lbDebug.AppendText("Status: Erro ao carregar o portfólio.")
@@ -812,7 +852,8 @@ Public Class FormMain
         If dgPortfolio.Visible Then
             Await refreshMarket()
         ElseIf dgFuturos.Visible Then
-            BinanceFuturesUserDataUpdated()
+            'BinanceFuturesUserDataUpdated()
+            Await LoadFuturesPositionsAsync()
         End If
     End Sub
 
@@ -820,9 +861,16 @@ Public Class FormMain
         Dim json As New JSON
         Try
             json.FormatGrid(dgPortfolio)
+            HideStablecoinPortfolioRows()
         Catch ex As Exception
 
         End Try
+    End Sub
+
+    Private Sub dgPortfolio_DataBindingComplete(
+        sender As Object,
+        e As DataGridViewBindingCompleteEventArgs) Handles dgPortfolio.DataBindingComplete
+        HideStablecoinPortfolioRows()
     End Sub
 
     Private Sub NotifyIcon1_MouseClick(sender As Object, e As MouseEventArgs) Handles NotifyIcon1.MouseClick
@@ -849,13 +897,16 @@ Public Class FormMain
             dgPortfolio.Cursor = Cursors.WaitCursor
             Await PortfolioMarketService.LoadAsync(dgPortfolio)
             UpdateRealtimeOverview(force:=True)
+            Await StartBinanceSpotUserWebSocket()
             dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
+            HideStablecoinPortfolioRows()
             Adjust()
 
             lbAtualizaEm.Text = "Atualizado em:"
             lbRefresh.Text = My.Settings.lastView
             lbRefresh.Location = New Point(125, 7)
             json.FormatGrid(dgPortfolio)
+            HideStablecoinPortfolioRows()
         Catch ex As Exception
             Debug.WriteLine(
             "[TIMER] Erro ao atualizar mercado: " &
@@ -880,10 +931,81 @@ Public Class FormMain
     End Sub
 
     Private Sub Adjust()
-        lbTotalBRL.Location = New Point((PanelProfits.Width / 2) - (lbTotalBRL.Width / 2), 3)
         PanelGraphs.Width = Me.Width
+        ArrangeProfitPairs()
         'dgPortfolio.Height = (dgPortfolio.RowCount * 35)
         ' Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + panelDebug.Height + 65
+    End Sub
+
+    Private Sub ArrangeProfitPairs()
+        If PanelProfits Is Nothing OrElse
+           lbValoresHojeUSD Is Nothing OrElse
+           lbValoresHojeBRL Is Nothing Then
+            Return
+        End If
+
+        Const gap As Integer = 4
+
+        lbValoresSeparator.Visible = lbValoresHojeUSD.Visible AndAlso lbValoresHojeBRL.Visible
+        If lbValoresSeparator.Visible Then
+            Dim totalWidth = lbValoresHojeUSD.Width +
+                             gap +
+                             lbValoresSeparator.Width +
+                             gap +
+                             lbValoresHojeBRL.Width
+            Dim left = Math.Max(0, (PanelProfits.ClientSize.Width - totalWidth) \ 2)
+
+            lbValoresHojeUSD.Location = New Point(left, lbValoresHojeUSD.Top)
+            lbValoresSeparator.Location = New Point(
+                lbValoresHojeUSD.Right + gap,
+                lbValoresHojeUSD.Top)
+
+            lbValoresHojeBRL.Location = New Point(
+                lbValoresSeparator.Right + gap,
+                lbValoresHojeUSD.Top)
+        End If
+    End Sub
+
+    Private Sub HideStablecoinPortfolioRows()
+        If Not dgPortfolio.Columns.Contains("Cripto") Then Return
+
+        Dim currencyManager = TryCast(Me.BindingContext(dgPortfolio.DataSource), CurrencyManager)
+        Dim safePosition As Integer = -1
+
+        For Each row As DataGridViewRow In dgPortfolio.Rows
+            If row.IsNewRow Then Continue For
+
+            Dim symbol = row.Cells("Cripto").Value?.ToString().Trim().ToUpperInvariant()
+            If Not Cjson.stablecoins.Contains(symbol) Then
+                safePosition = row.Index
+                Exit For
+            End If
+        Next
+
+        ' Uma linha vinculada ao CurrencyManager não pode ser ocultada enquanto
+        ' estiver selecionada. Move a posição atual para uma moeda normal antes
+        ' de esconder USDT e os demais stablecoins.
+        If safePosition >= 0 AndAlso currencyManager IsNot Nothing Then
+            If currencyManager.Position < 0 OrElse
+               currencyManager.Position >= dgPortfolio.Rows.Count OrElse
+               Cjson.stablecoins.Contains(
+                   dgPortfolio.Rows(currencyManager.Position).Cells("Cripto").Value?.ToString().Trim().ToUpperInvariant()) Then
+                dgPortfolio.Rows(safePosition).Visible = True
+                currencyManager.Position = safePosition
+                dgPortfolio.CurrentCell = dgPortfolio.Rows(safePosition).Cells("Cripto")
+            End If
+        End If
+
+        For Each row As DataGridViewRow In dgPortfolio.Rows
+            If row.IsNewRow Then Continue For
+
+            Dim symbol = row.Cells("Cripto").Value?.ToString().Trim().ToUpperInvariant()
+            If Not Cjson.stablecoins.Contains(symbol) Then
+                row.Visible = True
+            ElseIf row.Index <> safePosition Then
+                row.Visible = False
+            End If
+        Next
     End Sub
 
     Private Sub CadastroToolStripMenuItem_MouseEnter(sender As Object, e As EventArgs) Handles CadastroToolStripMenuItem.MouseEnter
@@ -1282,6 +1404,7 @@ Public Class FormMain
 
         Try
             Dim positions = Await B.BINANCE_GetFuturesPositionsAsync()
+            Dim futuresAccount = Await B.BINANCE_GetFuturesAccountSummaryAsync()
             Dim protectionOrders = Await B.BINANCE_GetFuturesProtectionOrdersAsync()
             Await EnsureFuturesUsdBrlRateAsync()
             Dim table As New DataTable()
@@ -1326,6 +1449,12 @@ Public Class FormMain
             dgFuturos.DataSource = table
             ConfigureFuturesGrid()
             ApplyFuturesGridColors()
+
+            If futuresAccount.Equity > 0D Then
+                _futuresEquityBaseUsd = futuresAccount.Equity - futuresAccount.UnrealizedProfit
+                _futuresEquityLoaded = True
+            End If
+
             UpdateFuturesPnlSummary()
 
             If Not _futuresUserStreamStarted Then
@@ -1438,19 +1567,18 @@ Public Class FormMain
 
         _futuresPnlUsd = totalPnl
 
-        Dim pnlColor =
-            If(totalPnl > 0D,
-               Color.Lime,
-               If(totalPnl < 0D, Color.LightCoral, Color.WhiteSmoke))
+        If _futuresEquityLoaded Then
+            _futuresEquityUsd = _futuresEquityBaseUsd + totalPnl
+        Else
+            _futuresEquityUsd = totalPnl
+        End If
 
-        lbFuturosUSD.Text = Cjson.USDformat(totalPnl)
-        lbFuturosBRL.Text = Cjson.BRLformat(totalPnl * JSON.USDBRLprice)
-        lbFuturosUSD.ForeColor = pnlColor
-        lbFuturosBRL.ForeColor =
-            If(totalPnl < 0D,
-               Color.LightCoral,
-               Color.CornflowerBlue)
+        lbFuturosUSD.Text = Cjson.USDformat(_futuresEquityUsd)
+        lbFuturosBRL.Text = Cjson.BRLformat(_futuresEquityUsd * JSON.USDBRLprice)
+        lbFuturosUSD.ForeColor = Color.LimeGreen
+        lbFuturosBRL.ForeColor = Color.DeepSkyBlue
 
+        UpdateGrossInvestmentSummary()
         UpdateConsolidatedPnl()
         UpdateCombinedOverviewValues()
     End Sub
@@ -1465,12 +1593,13 @@ Public Class FormMain
             If(totalPnlBrl > 0D,
                Color.FromArgb(0, 255, 0),
                Color.FromArgb(255, 73, 73))
+        ArrangeProfitPairs()
     End Sub
 
     Private Sub UpdateCombinedOverviewValues()
         If Not _spotOverviewInitialized Then Return
 
-        Dim totalAtualUsd = _spotCurrentUsd + _futuresPnlUsd
+        Dim totalAtualUsd = _spotCurrentUsd + _futuresEquityUsd
         Dim totalAtualBrl = totalAtualUsd * JSON.USDBRLprice
         Dim lucroUsd = _spotPnlUsd + _futuresPnlUsd
         Dim performanceWallet =
@@ -1484,12 +1613,12 @@ Public Class FormMain
         lbPerformWallet.Text = $"{performanceWallet:F2}%"
 
         lbValoresHojeUSD.ForeColor =
-            If(totalAtualUsd < _spotEntryUsd,
+            If(totalAtualUsd < _grossInvestmentUsd,
                Color.IndianRed,
                Color.GreenYellow)
 
         lbValoresHojeBRL.ForeColor =
-            If(totalAtualUsd < _spotEntryUsd,
+            If(totalAtualBrl < _grossInvestmentBrl,
                Color.IndianRed,
                Color.Cyan)
 
@@ -1502,6 +1631,21 @@ Public Class FormMain
             If(performanceWallet < 0D,
                Color.Red,
                Color.Lime)
+
+        ArrangeProfitPairs()
+    End Sub
+
+    Private Sub UpdateGrossInvestmentSummary()
+        Dim futuresCashUsd = If(_futuresEquityLoaded,
+                                _futuresEquityBaseUsd,
+                                0D)
+        Dim grossInvestmentUsd =
+            _spotCashUsd + futuresCashUsd + _spotCoinEntryUsd
+        _grossInvestmentUsd = grossInvestmentUsd
+        _grossInvestmentBrl = grossInvestmentUsd * JSON.USDBRLprice
+
+        lbInvestimentoUSD.Text = Cjson.USDformat(grossInvestmentUsd)
+        lbInvestimentoBRL.Text = Cjson.BRLformat(_grossInvestmentBrl)
     End Sub
 
     Private Sub ApplyFuturesRowColors(row As DataGridViewRow)
@@ -1619,6 +1763,47 @@ Public Class FormMain
 
         Await LoadFuturesPositionsAsync()
     End Sub
+
+    Private Sub BinanceSpotWs_ConnectionStateChanged(connected As Boolean, message As String)
+        If Not connected Then
+            Debug.WriteLine(message)
+        End If
+    End Sub
+
+    Private Sub BinanceSpotUserDataUpdated()
+        If IsDisposed OrElse Disposing Then Return
+
+        If InvokeRequired Then
+            BeginInvoke(New MethodInvoker(AddressOf BinanceSpotUserDataUpdated))
+            Return
+        End If
+
+        If _spotAccountRefreshQueued Then Return
+        _spotAccountRefreshQueued = True
+        RefreshSpotAfterAccountEventAsync()
+    End Sub
+
+    Private Async Sub RefreshSpotAfterAccountEventAsync()
+        Try
+            ' Agrupa fills consecutivos da mesma ordem antes de consultar a conta.
+            Await Task.Delay(350)
+
+            Dim attempts As Integer = 0
+            While _marketRefreshRunning AndAlso attempts < 10
+                Await Task.Delay(250)
+                attempts += 1
+            End While
+
+            If Not IsDisposed AndAlso Not Disposing Then
+                Await refreshMarket()
+            End If
+        Catch ex As Exception
+            Debug.WriteLine("Erro atualizando Spot após evento de conta: " & ex.Message)
+        Finally
+            _spotAccountRefreshQueued = False
+        End Try
+    End Sub
+
     Private Shared Function GetProtectionText(
         orders As List(Of BinanceFuturesProtectionOrder),
         position As BinanceFuturesPosition,
@@ -1830,6 +2015,7 @@ Public Class FormMain
         Try
             Await _binanceWs.StopAsync()
             Await _gateWs.StopAsync()
+            Await _binanceSpotUserWs.StopAsync()
             Await _binanceFuturesMarketWs.StopAsync()
             Await _binanceFuturesUserWs.StopAsync()
         Catch
@@ -1841,11 +2027,13 @@ Public Class FormMain
         btFuturos.BackColor = Color.FromArgb(20, 20, 20)
         btSpot.BackColor = Color.SteelBlue
     End Sub
-    Private Sub btFuturos_Click(sender As Object, e As EventArgs) Handles btFuturos.Click
+    Private Async Sub btFuturos_Click(sender As Object, e As EventArgs) Handles btFuturos.Click
         dgPortfolio.Visible = False
         dgFuturos.Visible = True
         btFuturos.BackColor = Color.SteelBlue
         btSpot.BackColor = Color.FromArgb(20, 20, 20)
+
+        'Await LoadFuturesPositionsAsync()
     End Sub
 
 End Class
