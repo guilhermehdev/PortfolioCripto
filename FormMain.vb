@@ -1677,15 +1677,14 @@ Public Class FormMain
             Dim isShort = String.Equals(side, "SHORT", StringComparison.OrdinalIgnoreCase)
             Dim isLoss = If(isShort, markPrice > entryPrice, markPrice < entryPrice)
             Dim rowBackColor = If(isLoss, Color.FromArgb(25, 0, 0), Color.FromArgb(0, 25, 0))
-            Dim priceColor = If(isLoss, Color.IndianRed, Color.LimeGreen)
 
             For Each cell As DataGridViewCell In row.Cells
                 cell.Style.BackColor = rowBackColor
                 cell.Style.SelectionBackColor = rowBackColor
             Next
 
-            row.Cells("MarkPrice").Style.ForeColor = priceColor
-            row.Cells("MarkPrice").Style.SelectionForeColor = priceColor
+            row.Cells("MarkPrice").Style.ForeColor = Color.Yellow
+            row.Cells("MarkPrice").Style.SelectionForeColor = Color.Yellow
         End If
 
         For Each columnName In New String() {"UnrealizedProfit", "ROI"}
@@ -1948,14 +1947,8 @@ Public Class FormMain
             Case "MarkPrice"
                 If TryReadFuturesDecimal(e.Value, value) Then
                     e.Value = "$" & value.ToString("N3", CultureInfo.GetCultureInfo("en-US"))
-                    Dim entryPrice As Decimal
-                    If TryReadFuturesDecimal(dgFuturos.Rows(e.RowIndex).Cells("EntryPrice").Value, entryPrice) AndAlso value > entryPrice Then
-                        e.CellStyle.ForeColor = Color.LimeGreen
-                        e.CellStyle.SelectionForeColor = Color.LimeGreen
-                    Else
-                        e.CellStyle.ForeColor = Color.Red
-                        e.CellStyle.SelectionForeColor = Color.Red
-                    End If
+                    e.CellStyle.ForeColor = Color.Yellow
+                    e.CellStyle.SelectionForeColor = Color.Yellow
                     e.FormattingApplied = True
                 End If
             Case "LiquidationPrice"
