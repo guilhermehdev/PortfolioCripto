@@ -20,6 +20,9 @@ Public Class FormMain
     Private _futuresUserStreamStarted As Boolean = False
     Private _spotPnlUsd As Decimal = 0D
     Private _futuresPnlUsd As Decimal = 0D
+    Private _spotCurrentUsd As Decimal = 0D
+    Private _spotEntryUsd As Decimal = 0D
+    Private _spotOverviewInitialized As Boolean = False
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -460,6 +463,9 @@ Public Class FormMain
             ' UI
             ' =============================================
             _spotPnlUsd = lucroUSD
+            _spotCurrentUsd = totalAtualUSD
+            _spotEntryUsd = totalEntradaUSD
+            _spotOverviewInitialized = True
 
             Me.lbTotalEntradaUSD.Text =
             Cjson.USDformat(totalEntradaUSD)
@@ -1446,6 +1452,7 @@ Public Class FormMain
                Color.CornflowerBlue)
 
         UpdateConsolidatedPnl()
+        UpdateCombinedOverviewValues()
     End Sub
 
     Private Sub UpdateConsolidatedPnl()
@@ -1458,6 +1465,43 @@ Public Class FormMain
             If(totalPnlBrl > 0D,
                Color.FromArgb(0, 255, 0),
                Color.FromArgb(255, 73, 73))
+    End Sub
+
+    Private Sub UpdateCombinedOverviewValues()
+        If Not _spotOverviewInitialized Then Return
+
+        Dim totalAtualUsd = _spotCurrentUsd + _futuresPnlUsd
+        Dim totalAtualBrl = totalAtualUsd * JSON.USDBRLprice
+        Dim lucroUsd = _spotPnlUsd + _futuresPnlUsd
+        Dim performanceWallet =
+            If(_spotEntryUsd > 0D,
+               (lucroUsd / _spotEntryUsd) * 100D,
+               0D)
+
+        lbValoresHojeUSD.Text = Cjson.USDformat(totalAtualUsd)
+        lbValoresHojeBRL.Text = Cjson.BRLformat(totalAtualBrl)
+        lbRoiUSD.Text = Cjson.USDformat(lucroUsd)
+        lbPerformWallet.Text = $"{performanceWallet:F2}%"
+
+        lbValoresHojeUSD.ForeColor =
+            If(totalAtualUsd < _spotEntryUsd,
+               Color.IndianRed,
+               Color.GreenYellow)
+
+        lbValoresHojeBRL.ForeColor =
+            If(totalAtualUsd < _spotEntryUsd,
+               Color.IndianRed,
+               Color.Cyan)
+
+        lbRoiUSD.ForeColor =
+            If(lucroUsd < 0D,
+               Color.Red,
+               Color.Gold)
+
+        lbPerformWallet.ForeColor =
+            If(performanceWallet < 0D,
+               Color.Red,
+               Color.Lime)
     End Sub
 
     Private Sub ApplyFuturesRowColors(row As DataGridViewRow)

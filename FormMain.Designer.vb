@@ -23,18 +23,20 @@ Partial Class FormMain
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
         components = New ComponentModel.Container()
-        Dim DataGridViewCellStyle8 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle9 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle10 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
-        Dim DataGridViewCellStyle11 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle12 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle13 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle14 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle5 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle7 As DataGridViewCellStyle = New DataGridViewCellStyle()
         dgPortfolio = New DataGridView()
         PanelProfits = New Panel()
+        Label7 = New Label()
         Label15 = New Label()
         Label5 = New Label()
+        lbRoiUSD = New Label()
         lbTotalBRL = New Label()
         lbLoadFromMarket = New Label()
         Panel1 = New Panel()
@@ -62,11 +64,9 @@ Partial Class FormMain
         lbPerformWallet = New Label()
         Label6 = New Label()
         lbDataTotalToday = New Label()
-        Label7 = New Label()
         LabelFuturos = New Label()
         lbValoresHojeBRL = New Label()
         lbValoresHojeUSD = New Label()
-        lbRoiUSD = New Label()
         lbTotalEntradaBRL = New Label()
         lbTotalEntradaUSD = New Label()
         lbFuturosBRL = New Label()
@@ -130,35 +130,35 @@ Partial Class FormMain
         dgPortfolio.BorderStyle = BorderStyle.None
         dgPortfolio.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgPortfolio.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle8.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle8.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle8.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle8.ForeColor = Color.Turquoise
-        DataGridViewCellStyle8.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle8.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle8.WrapMode = DataGridViewTriState.True
-        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle8
-        DataGridViewCellStyle9.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle9.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle9.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle9.ForeColor = SystemColors.ControlText
-        DataGridViewCellStyle9.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle9.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle9.WrapMode = DataGridViewTriState.True
-        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle9
+        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle1.ForeColor = Color.Turquoise
+        DataGridViewCellStyle1.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle1.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
+        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle2.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
+        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
         dgPortfolio.EnableHeadersVisualStyles = False
         dgPortfolio.Location = New Point(9, 51)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
-        DataGridViewCellStyle10.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle10.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle10.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle10.Padding = New Padding(2)
-        DataGridViewCellStyle10.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle10.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle10.WrapMode = DataGridViewTriState.True
-        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle10
+        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle3.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle3.Padding = New Padding(2)
+        DataGridViewCellStyle3.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle3.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
+        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
         dgPortfolio.RowHeadersWidth = 4
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
@@ -172,24 +172,37 @@ Partial Class FormMain
         ' 
         PanelProfits.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         PanelProfits.BackColor = Color.FromArgb(CByte(56), CByte(86), CByte(35))
+        PanelProfits.Controls.Add(Label7)
         PanelProfits.Controls.Add(Label15)
         PanelProfits.Controls.Add(Label5)
+        PanelProfits.Controls.Add(lbRoiUSD)
         PanelProfits.Controls.Add(lbTotalBRL)
         PanelProfits.Location = New Point(0, 611)
         PanelProfits.Name = "PanelProfits"
         PanelProfits.Size = New Size(1151, 40)
         PanelProfits.TabIndex = 15
         ' 
+        ' Label7
+        ' 
+        Label7.AutoSize = True
+        Label7.Font = New Font("Calibri", 15.75F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        Label7.ForeColor = Color.White
+        Label7.Location = New Point(149, 8)
+        Label7.Name = "Label7"
+        Label7.Size = New Size(50, 26)
+        Label7.TabIndex = 3
+        Label7.Text = "ROI:"
+        ' 
         ' Label15
         ' 
         Label15.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
         Label15.AutoSize = True
         Label15.BackColor = Color.Transparent
-        Label15.Font = New Font("Candara", 14F, FontStyle.Bold)
-        Label15.ForeColor = Color.LawnGreen
-        Label15.Location = New Point(3, 11)
+        Label15.Font = New Font("Calibri", 15.75F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        Label15.ForeColor = Color.White
+        Label15.Location = New Point(683, 6)
         Label15.Name = "Label15"
-        Label15.Size = New Size(80, 23)
+        Label15.Size = New Size(87, 26)
         Label15.TabIndex = 17
         Label15.Text = "L/P Total"
         ' 
@@ -203,14 +216,26 @@ Partial Class FormMain
         Label5.Size = New Size(0, 30)
         Label5.TabIndex = 15
         ' 
+        ' lbRoiUSD
+        ' 
+        lbRoiUSD.AutoSize = True
+        lbRoiUSD.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
+        lbRoiUSD.ForeColor = Color.Lime
+        lbRoiUSD.Location = New Point(209, 4)
+        lbRoiUSD.Name = "lbRoiUSD"
+        lbRoiUSD.Size = New Size(58, 30)
+        lbRoiUSD.TabIndex = 26
+        lbRoiUSD.Text = "0.00"
+        ' 
         ' lbTotalBRL
         ' 
         lbTotalBRL.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        lbTotalBRL.AutoSize = True
         lbTotalBRL.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
         lbTotalBRL.ForeColor = Color.Lime
-        lbTotalBRL.Location = New Point(3, -4)
+        lbTotalBRL.Location = New Point(275, 4)
         lbTotalBRL.Name = "lbTotalBRL"
-        lbTotalBRL.Size = New Size(1142, 38)
+        lbTotalBRL.Size = New Size(91, 30)
         lbTotalBRL.TabIndex = 16
         lbTotalBRL.Text = "R$ 0,00"
         lbTotalBRL.TextAlign = ContentAlignment.MiddleCenter
@@ -218,16 +243,16 @@ Partial Class FormMain
         ' 
         ' lbLoadFromMarket
         ' 
-        lbLoadFromMarket.Anchor = AnchorStyles.Top
-        lbLoadFromMarket.AutoSize = True
+        lbLoadFromMarket.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         lbLoadFromMarket.BackColor = Color.Transparent
         lbLoadFromMarket.Font = New Font("Segoe UI", 9F, FontStyle.Italic)
         lbLoadFromMarket.ForeColor = Color.OrangeRed
-        lbLoadFromMarket.Location = New Point(486, 4)
+        lbLoadFromMarket.Location = New Point(5, 4)
         lbLoadFromMarket.Name = "lbLoadFromMarket"
-        lbLoadFromMarket.Size = New Size(178, 15)
+        lbLoadFromMarket.Size = New Size(1142, 15)
         lbLoadFromMarket.TabIndex = 0
-        lbLoadFromMarket.Text = "Carregando dados do mercado..."
+        lbLoadFromMarket.Text = "Carregando dados"
+        lbLoadFromMarket.TextAlign = ContentAlignment.MiddleCenter
         lbLoadFromMarket.Visible = False
         ' 
         ' Panel1
@@ -421,7 +446,6 @@ Partial Class FormMain
         PanelPerformance.Controls.Add(lbPerformWallet)
         PanelPerformance.Controls.Add(Label6)
         PanelPerformance.Controls.Add(lbDataTotalToday)
-        PanelPerformance.Controls.Add(Label7)
         PanelPerformance.Controls.Add(LabelFuturos)
         PanelPerformance.Location = New Point(5, 29)
         PanelPerformance.Name = "PanelPerformance"
@@ -455,11 +479,11 @@ Partial Class FormMain
         Label9.AutoSize = True
         Label9.Font = New Font("Calibri", 12F, FontStyle.Italic)
         Label9.ForeColor = Color.White
-        Label9.Location = New Point(84, 59)
+        Label9.Location = New Point(115, 59)
         Label9.Name = "Label9"
-        Label9.Size = New Size(79, 19)
+        Label9.Size = New Size(48, 19)
         Label9.TabIndex = 14
-        Label9.Text = "Caixa USD:"
+        Label9.Text = "Caixa:"
         ToolTip1.SetToolTip(Label9, "Valor em SPOT + FUTUROS")
         ' 
         ' Label16
@@ -489,11 +513,11 @@ Partial Class FormMain
         Label6.AutoSize = True
         Label6.Font = New Font("Calibri", 12F, FontStyle.Italic)
         Label6.ForeColor = Color.White
-        Label6.Location = New Point(66, 78)
+        Label6.Location = New Point(122, 78)
         Label6.Name = "Label6"
-        Label6.Size = New Size(97, 19)
+        Label6.Size = New Size(41, 19)
         Label6.TabIndex = 0
-        Label6.Text = "Investimento:"
+        Label6.Text = "Spot:"
         ' 
         ' lbDataTotalToday
         ' 
@@ -505,17 +529,6 @@ Partial Class FormMain
         lbDataTotalToday.Size = New Size(85, 19)
         lbDataTotalToday.TabIndex = 9
         lbDataTotalToday.Text = "00/00/0000"
-        ' 
-        ' Label7
-        ' 
-        Label7.AutoSize = True
-        Label7.Font = New Font("Calibri", 12F, FontStyle.Italic)
-        Label7.ForeColor = Color.White
-        Label7.Location = New Point(127, 135)
-        Label7.Name = "Label7"
-        Label7.Size = New Size(36, 19)
-        Label7.TabIndex = 3
-        Label7.Text = "ROI:"
         ' 
         ' LabelFuturos
         ' 
@@ -549,17 +562,6 @@ Partial Class FormMain
         lbValoresHojeUSD.Size = New Size(37, 19)
         lbValoresHojeUSD.TabIndex = 27
         lbValoresHojeUSD.Text = "0.00"
-        ' 
-        ' lbRoiUSD
-        ' 
-        lbRoiUSD.AutoSize = True
-        lbRoiUSD.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
-        lbRoiUSD.ForeColor = Color.Lime
-        lbRoiUSD.Location = New Point(165, 164)
-        lbRoiUSD.Name = "lbRoiUSD"
-        lbRoiUSD.Size = New Size(37, 19)
-        lbRoiUSD.TabIndex = 26
-        lbRoiUSD.Text = "0.00"
         ' 
         ' lbTotalEntradaBRL
         ' 
@@ -618,7 +620,6 @@ Partial Class FormMain
         PanelGraphs.Controls.Add(PanelPerformance)
         PanelGraphs.Controls.Add(lbTotalEntradaBRL)
         PanelGraphs.Controls.Add(lbValoresHojeBRL)
-        PanelGraphs.Controls.Add(lbRoiUSD)
         PanelGraphs.Controls.Add(lbValoresHojeUSD)
         PanelGraphs.Controls.Add(lbFuturosBRL)
         PanelGraphs.Controls.Add(lbFuturosUSD)
@@ -662,41 +663,41 @@ Partial Class FormMain
         dgFuturos.BorderStyle = BorderStyle.None
         dgFuturos.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgFuturos.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle11.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle11.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        DataGridViewCellStyle11.Font = New Font("Calibri", 10F, FontStyle.Italic)
-        DataGridViewCellStyle11.ForeColor = Color.Turquoise
-        DataGridViewCellStyle11.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        DataGridViewCellStyle11.SelectionForeColor = Color.Turquoise
-        DataGridViewCellStyle11.WrapMode = DataGridViewTriState.True
-        dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle11
-        DataGridViewCellStyle12.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle12.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle12.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle12.ForeColor = Color.White
-        DataGridViewCellStyle12.SelectionBackColor = Color.Black
-        DataGridViewCellStyle12.SelectionForeColor = Color.White
-        DataGridViewCellStyle12.WrapMode = DataGridViewTriState.True
-        dgFuturos.DefaultCellStyle = DataGridViewCellStyle12
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle4.Font = New Font("Calibri", 10F, FontStyle.Italic)
+        DataGridViewCellStyle4.ForeColor = Color.Turquoise
+        DataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle4.SelectionForeColor = Color.Turquoise
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
+        dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
+        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle5.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle5.ForeColor = Color.White
+        DataGridViewCellStyle5.SelectionBackColor = Color.Black
+        DataGridViewCellStyle5.SelectionForeColor = Color.White
+        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.True
+        dgFuturos.DefaultCellStyle = DataGridViewCellStyle5
         dgFuturos.EnableHeadersVisualStyles = False
         dgFuturos.Location = New Point(9, 53)
         dgFuturos.MultiSelect = False
         dgFuturos.Name = "dgFuturos"
         dgFuturos.ReadOnly = True
-        DataGridViewCellStyle13.BackColor = Color.Black
-        DataGridViewCellStyle13.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle13.ForeColor = Color.White
-        DataGridViewCellStyle13.Padding = New Padding(2)
-        DataGridViewCellStyle13.SelectionBackColor = Color.Black
-        DataGridViewCellStyle13.SelectionForeColor = Color.White
-        DataGridViewCellStyle13.WrapMode = DataGridViewTriState.True
-        dgFuturos.RowHeadersDefaultCellStyle = DataGridViewCellStyle13
+        DataGridViewCellStyle6.BackColor = Color.Black
+        DataGridViewCellStyle6.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle6.ForeColor = Color.White
+        DataGridViewCellStyle6.Padding = New Padding(2)
+        DataGridViewCellStyle6.SelectionBackColor = Color.Black
+        DataGridViewCellStyle6.SelectionForeColor = Color.White
+        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
+        dgFuturos.RowHeadersDefaultCellStyle = DataGridViewCellStyle6
         dgFuturos.RowHeadersWidth = 4
-        DataGridViewCellStyle14.BackColor = Color.Black
-        DataGridViewCellStyle14.ForeColor = Color.White
-        DataGridViewCellStyle14.SelectionBackColor = Color.Black
-        DataGridViewCellStyle14.SelectionForeColor = Color.White
-        dgFuturos.RowsDefaultCellStyle = DataGridViewCellStyle14
+        DataGridViewCellStyle7.BackColor = Color.Black
+        DataGridViewCellStyle7.ForeColor = Color.White
+        DataGridViewCellStyle7.SelectionBackColor = Color.Black
+        DataGridViewCellStyle7.SelectionForeColor = Color.White
+        dgFuturos.RowsDefaultCellStyle = DataGridViewCellStyle7
         dgFuturos.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.Black
         dgFuturos.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.White
         dgFuturos.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
@@ -992,7 +993,6 @@ Partial Class FormMain
         PanelGraphs.PerformLayout()
         CType(dgFuturos, ComponentModel.ISupportInitialize).EndInit()
         Panel2.ResumeLayout(False)
-        Panel2.PerformLayout()
         MenuStrip1.ResumeLayout(False)
         MenuStrip1.PerformLayout()
         CType(pbBRL, ComponentModel.ISupportInitialize).EndInit()
