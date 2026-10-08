@@ -18,6 +18,8 @@ Public Class FormMain
     Private _futuresLoadRunning As Boolean = False
     Private _futuresMarketSymbolsKey As String = String.Empty
     Private _futuresUserStreamStarted As Boolean = False
+    Private _spotPnlUsd As Decimal = 0D
+    Private _futuresPnlUsd As Decimal = 0D
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -366,10 +368,10 @@ Public Class FormMain
 
     End Function
 
-    Private Sub UpdateRealtimeOverview()
+    Private Sub UpdateRealtimeOverview(Optional force As Boolean = False)
 
         Try
-            If _marketRefreshRunning Then
+            If _marketRefreshRunning AndAlso Not force Then
                 Return
             End If
 
@@ -433,9 +435,6 @@ Public Class FormMain
             Dim totalBRL As Decimal =
             totalAtualUSD * usdBrl
 
-            Dim lucroBRL As Decimal =
-            lucroUSD * usdBrl
-
             Dim percentualCaixa As Decimal = 0D
             Dim percentualInvestido As Decimal = 0D
             Dim performanceWallet As Decimal = 0D
@@ -460,13 +459,7 @@ Public Class FormMain
             ' =============================================
             ' UI
             ' =============================================
-            Me.lbTotalBRL.Text =
-            Cjson.BRLformat(lucroBRL)
-
-            Me.lbTotalBRL.ForeColor =
-            If(lucroBRL > 0D,
-               Color.FromArgb(0, 255, 0),
-               Color.FromArgb(255, 73, 73))
+            _spotPnlUsd = lucroUSD
 
             Me.lbTotalEntradaUSD.Text =
             Cjson.USDformat(totalEntradaUSD)
@@ -530,6 +523,8 @@ Public Class FormMain
                 performanceWallet < 0D,
                 Color.Red,
                 Color.Lime)
+
+            UpdateFuturesPnlSummary()
 
         Catch ex As Exception
 
@@ -712,6 +707,28 @@ Public Class FormMain
     Private Sub dgPortfolio_MouseLeave(sender As Object, e As EventArgs) Handles dgPortfolio.MouseLeave
         dgPortfolio.ClearSelection()
         dgPortfolio.CurrentCell = Nothing
+        dgPortfolio.Cursor = Cursors.Default
+    End Sub
+
+    Private Shared Sub UpdateCurrencyColumnCursor(grid As DataGridView, rowIndex As Integer, columnIndex As Integer, columnName As String)
+        If rowIndex >= 0 AndAlso columnIndex >= 0 AndAlso
+           String.Equals(grid.Columns(columnIndex).Name, columnName, StringComparison.OrdinalIgnoreCase) Then
+            grid.Cursor = Cursors.Hand
+        Else
+            grid.Cursor = Cursors.Default
+        End If
+    End Sub
+
+    Private Sub dgPortfolio_CellMouseMove(sender As Object, e As DataGridViewCellMouseEventArgs) Handles dgPortfolio.CellMouseMove
+        UpdateCurrencyColumnCursor(dgPortfolio, e.RowIndex, e.ColumnIndex, "Cripto")
+    End Sub
+
+    Private Sub dgFuturos_CellMouseMove(sender As Object, e As DataGridViewCellMouseEventArgs) Handles dgFuturos.CellMouseMove
+        UpdateCurrencyColumnCursor(dgFuturos, e.RowIndex, e.ColumnIndex, "Symbol")
+    End Sub
+
+    Private Sub dgFuturos_MouseLeave(sender As Object, e As EventArgs) Handles dgFuturos.MouseLeave
+        dgFuturos.Cursor = Cursors.Default
     End Sub
 
     Private Sub FormMain_Resize(sender As Object, e As EventArgs) Handles MyBase.Resize
@@ -750,6 +767,7 @@ Public Class FormMain
             dgPortfolio.Cursor = Cursors.WaitCursor
 
             If Await PortfolioMarketService.LoadAsync(dgPortfolio) Then
+                UpdateRealtimeOverview(force:=True)
                 Await StartBinanceWebSocket()
                 Await StartGateWebSocket()
                 dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
@@ -824,6 +842,7 @@ Public Class FormMain
             Cursor = Cursors.WaitCursor
             dgPortfolio.Cursor = Cursors.WaitCursor
             Await PortfolioMarketService.LoadAsync(dgPortfolio)
+            UpdateRealtimeOverview(force:=True)
             dgPortfolio.Sort(dgPortfolio.Columns("ROIusd"), System.ComponentModel.ListSortDirection.Descending)
             Adjust()
 
@@ -1258,6 +1277,7 @@ Public Class FormMain
         Try
             Dim positions = Await B.BINANCE_GetFuturesPositionsAsync()
             Dim protectionOrders = Await B.BINANCE_GetFuturesProtectionOrdersAsync()
+            Await EnsureFuturesUsdBrlRateAsync()
             Dim table As New DataTable()
 
             table.Columns.Add("Symbol", GetType(String))
@@ -1300,6 +1320,7 @@ Public Class FormMain
             dgFuturos.DataSource = table
             ConfigureFuturesGrid()
             ApplyFuturesGridColors()
+            UpdateFuturesPnlSummary()
 
             If Not _futuresUserStreamStarted Then
                 Await _binanceFuturesUserWs.StartAsync()
@@ -1326,6 +1347,32 @@ Public Class FormMain
         End Try
     End Function
 
+    Private Async Function EnsureFuturesUsdBrlRateAsync() As Task
+        If JSON.USDBRLprice > 0D Then Return
+
+        Dim usdBrl As Decimal = 0D
+        Try
+            usdBrl = Await B.BINANCE_GetUSDTBRL()
+        Catch ex As Exception
+            Debug.WriteLine("[FUTURES] Binance USDT/BRL indisponível: " & ex.Message)
+        End Try
+
+        If usdBrl <= 0D AndAlso
+           Not String.IsNullOrWhiteSpace(My.Settings.apiCMCKey) AndAlso
+           Not String.IsNullOrWhiteSpace(My.Settings.activeAPI) Then
+            Try
+                Dim cmc As New Cotacao()
+                usdBrl = Await cmc.CM_GetUSDBRL()
+            Catch ex As Exception
+                Debug.WriteLine("[FUTURES] CMC USDT/BRL indisponível: " & ex.Message)
+            End Try
+        End If
+
+        If usdBrl > 0D Then
+            JSON.USDBRLprice = usdBrl
+        End If
+    End Function
+
     Private Shared Function GetFuturesEntryMargin(positionAmount As Decimal, entryPrice As Decimal, leverage As Integer, fallbackMargin As Decimal) As Decimal
         If leverage > 0 AndAlso positionAmount <> 0D AndAlso entryPrice <> 0D Then
             Return Math.Abs(positionAmount * entryPrice) / leverage
@@ -1348,6 +1395,21 @@ Public Class FormMain
         End If
         Return Color.White
     End Function
+    Private Shared Function GetFuturesProfitColor(rawValue As Object) As Color
+        Dim value As Decimal
+        If Not TryReadFuturesDecimal(rawValue, value) Then
+            Return Color.WhiteSmoke
+        End If
+
+        If value > 0D Then
+            Return Color.Lime
+        End If
+        If value < 0D Then
+            Return Color.LightCoral
+        End If
+
+        Return Color.WhiteSmoke
+    End Function
     Private Sub ApplyFuturesGridColors()
         For Each row As DataGridViewRow In dgFuturos.Rows
             If Not row.IsNewRow Then
@@ -1356,11 +1418,57 @@ Public Class FormMain
         Next
     End Sub
 
+    Private Sub UpdateFuturesPnlSummary()
+        Dim totalPnl As Decimal = 0D
+
+        For Each row As DataGridViewRow In dgFuturos.Rows
+            If row.IsNewRow Then Continue For
+
+            Dim pnl As Decimal
+            If TryReadFuturesDecimal(row.Cells("UnrealizedProfit").Value, pnl) Then
+                totalPnl += pnl
+            End If
+        Next
+
+        _futuresPnlUsd = totalPnl
+
+        Dim pnlColor =
+            If(totalPnl > 0D,
+               Color.Lime,
+               If(totalPnl < 0D, Color.LightCoral, Color.WhiteSmoke))
+
+        lbFuturosUSD.Text = Cjson.USDformat(totalPnl)
+        lbFuturosBRL.Text = Cjson.BRLformat(totalPnl * JSON.USDBRLprice)
+        lbFuturosUSD.ForeColor = pnlColor
+        lbFuturosBRL.ForeColor =
+            If(totalPnl < 0D,
+               Color.LightCoral,
+               Color.CornflowerBlue)
+
+        UpdateConsolidatedPnl()
+    End Sub
+
+    Private Sub UpdateConsolidatedPnl()
+        Dim totalPnlUsd = _spotPnlUsd + _futuresPnlUsd
+        Dim totalPnlBrl = totalPnlUsd * JSON.USDBRLprice
+
+        lbTotalBRL.Visible = True
+        lbTotalBRL.Text = Cjson.BRLformat(totalPnlBrl)
+        lbTotalBRL.ForeColor =
+            If(totalPnlBrl > 0D,
+               Color.FromArgb(0, 255, 0),
+               Color.FromArgb(255, 73, 73))
+    End Sub
+
     Private Sub ApplyFuturesRowColors(row As DataGridViewRow)
         If row Is Nothing OrElse row.IsNewRow Then Return
 
         row.Cells("EntryPrice").Style.ForeColor = Color.Cyan
         row.Cells("EntryPrice").Style.SelectionForeColor = Color.Cyan
+
+        Dim symbolColor = GetFuturesProfitColor(row.Cells("UnrealizedProfit").Value)
+        row.Cells("Symbol").Style.ForeColor = symbolColor
+        row.Cells("Symbol").Style.SelectionForeColor = symbolColor
 
         Dim sideColor = GetFuturesPositionSideColor(row.Cells("PositionSide").Value)
         row.Cells("PositionSide").Style.ForeColor = sideColor
@@ -1377,9 +1485,19 @@ Public Class FormMain
         Dim markPrice As Decimal
         If TryReadFuturesDecimal(row.Cells("MarkPrice").Value, markPrice) AndAlso
            TryReadFuturesDecimal(row.Cells("EntryPrice").Value, entryPrice) Then
-            Dim markColor = If(markPrice > entryPrice, Color.LimeGreen, Color.Red)
-            row.Cells("MarkPrice").Style.ForeColor = markColor
-            row.Cells("MarkPrice").Style.SelectionForeColor = markColor
+            Dim side = row.Cells("PositionSide").Value?.ToString().Trim()
+            Dim isShort = String.Equals(side, "SHORT", StringComparison.OrdinalIgnoreCase)
+            Dim isLoss = If(isShort, markPrice > entryPrice, markPrice < entryPrice)
+            Dim rowBackColor = If(isLoss, Color.FromArgb(25, 0, 0), Color.FromArgb(0, 25, 0))
+            Dim priceColor = If(isLoss, Color.IndianRed, Color.LimeGreen)
+
+            For Each cell As DataGridViewCell In row.Cells
+                cell.Style.BackColor = rowBackColor
+                cell.Style.SelectionBackColor = rowBackColor
+            Next
+
+            row.Cells("MarkPrice").Style.ForeColor = priceColor
+            row.Cells("MarkPrice").Style.SelectionForeColor = priceColor
         End If
 
         For Each columnName In New String() {"UnrealizedProfit", "ROI"}
@@ -1440,6 +1558,8 @@ Public Class FormMain
             row.Cells("InitialMargin").Value = entryMargin
             row.Cells("UnrealizedProfit").Value = pnl
             row.Cells("ROI").Value = roi
+            ApplyFuturesRowColors(row)
+            UpdateFuturesPnlSummary()
             dgFuturos.InvalidateRow(row.Index)
             Exit For
         Next
@@ -1575,8 +1695,9 @@ Public Class FormMain
 
         Select Case columnName
             Case "Symbol"
-                e.CellStyle.ForeColor = Color.Yellow
-                e.CellStyle.SelectionForeColor = Color.Yellow
+                Dim symbolColor = GetFuturesProfitColor(dgFuturos.Rows(e.RowIndex).Cells("UnrealizedProfit").Value)
+                e.CellStyle.ForeColor = symbolColor
+                e.CellStyle.SelectionForeColor = symbolColor
                 e.FormattingApplied = True
             Case "PositionSide"
                 Dim sideColor = GetFuturesPositionSideColor(e.Value)
@@ -1641,6 +1762,24 @@ Public Class FormMain
                     e.FormattingApplied = True
                 End If
         End Select
+    End Sub
+    Private Sub dgFuturos_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgFuturos.CellClick
+        If e.RowIndex < 0 OrElse e.ColumnIndex < 0 OrElse
+           Not String.Equals(dgFuturos.Columns(e.ColumnIndex).Name, "Symbol", StringComparison.OrdinalIgnoreCase) Then
+            Return
+        End If
+
+        Dim symbol = dgFuturos.Rows(e.RowIndex).Cells("Symbol").Value?.ToString().Trim()
+        If String.IsNullOrWhiteSpace(symbol) Then Return
+
+        If symbol.EndsWith("USDT", StringComparison.OrdinalIgnoreCase) Then
+            symbol = symbol.Substring(0, symbol.Length - 4)
+        End If
+
+        If Not String.IsNullOrWhiteSpace(symbol) Then
+            Dim f As New FormBrowser(symbol)
+            f.Show()
+        End If
     End Sub
     Private Async Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
 
