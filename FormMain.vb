@@ -1422,6 +1422,8 @@ Public Class FormMain
             table.Columns.Add("StopLoss", GetType(String))
             table.Columns.Add("LiquidationPrice", GetType(Decimal))
             table.Columns.Add("Leverage", GetType(Integer))
+            table.Columns.Add("ExitPercent", GetType(Decimal))
+            table.Columns.Add("ExitPrice", GetType(Decimal))
 
             For Each position In positions
                 Dim roiMargin = GetFuturesEntryMargin(position.PositionAmount, position.EntryPrice, position.Leverage, position.InitialMargin)
@@ -1443,7 +1445,9 @@ Public Class FormMain
                     takeProfitText,
                     stopLossText,
                     position.LiquidationPrice,
-                    position.Leverage)
+                    position.Leverage,
+                    100D,
+                    0D)
             Next
             dgFuturos.DataSource = Nothing
             dgFuturos.DataSource = table
@@ -1838,6 +1842,19 @@ Public Class FormMain
         Return String.Join(" / ", prices)
     End Function
     Private Sub ConfigureFuturesGrid()
+        If dgFuturos.Columns.Contains("ExitPercent") AndAlso Not TypeOf dgFuturos.Columns("ExitPercent") Is DataGridViewNumericUpDownColumn Then
+            Dim index = dgFuturos.Columns("ExitPercent").Index
+            dgFuturos.Columns.Remove("ExitPercent")
+            Dim percentColumn As New DataGridViewNumericUpDownColumn With {.Name = "ExitPercent", .DataPropertyName = "ExitPercent", .HeaderText = "% saída", .Minimum = 1D, .Maximum = 100D, .Increment = 1D}
+            dgFuturos.Columns.Insert(index, percentColumn)
+        End If
+        If dgFuturos.Columns.Contains("ExitPrice") Then
+            dgFuturos.Columns("ExitPrice").HeaderText = "Preço limite"
+        End If
+        If Not dgFuturos.Columns.Contains("ExitOrder") Then
+            Dim exitColumn As New DataGridViewButtonColumn With {.Name = "ExitOrder", .HeaderText = "Ação", .Text = "Executar saída", .UseColumnTextForButtonValue = True, .AutoSizeMode = DataGridViewAutoSizeColumnMode.None, .Width = 125}
+            dgFuturos.Columns.Add(exitColumn)
+        End If
         Dim headers As New Dictionary(Of String, String) From {
             {"Symbol", "Cripto"},
             {"PositionSide", "Lado"},
@@ -1869,6 +1886,8 @@ Public Class FormMain
         If dgFuturos.Columns.Contains("InitialMargin") Then
             dgFuturos.Columns("InitialMargin").Visible = True
         End If
+        dgFuturos.Columns("ExitPercent").MinimumWidth = 75
+        dgFuturos.Columns("ExitPrice").MinimumWidth = 110
 
         dgFuturos.Font = New Font("Calibri", 12.0F, FontStyle.Regular)
         dgFuturos.DefaultCellStyle.Font = dgFuturos.Font
@@ -1881,6 +1900,47 @@ Public Class FormMain
                 row.Height = 35
             End If
         Next
+    End Sub
+
+    Private Async Sub dgFuturos_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgFuturos.CellContentClick
+        If e.RowIndex < 0 OrElse e.ColumnIndex < 0 OrElse dgFuturos.Columns(e.ColumnIndex).Name <> "ExitOrder" Then Return
+        Dim row = dgFuturos.Rows(e.RowIndex)
+        Dim symbol = row.Cells("Symbol").Value?.ToString().Trim().ToUpperInvariant()
+        Dim positionSide = row.Cells("PositionSide").Value?.ToString().Trim().ToUpperInvariant()
+        Dim quantity As Decimal
+        Dim percent As Decimal
+        Dim price As Decimal
+        If Not TryReadFuturesDecimal(row.Cells("PositionAmount").Value, quantity) OrElse quantity = 0D Then
+            MessageBox.Show("A posição não possui quantidade disponível.", "Saída", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+        If Not TryReadFuturesDecimal(row.Cells("ExitPercent").Value, percent) OrElse percent <= 0D OrElse percent > 100D Then
+            MessageBox.Show("Informe um percentual entre 1 e 100.", "Saída", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        If Not TryReadFuturesDecimal(row.Cells("ExitPrice").Value, price) OrElse price <= 0D Then
+            MessageBox.Show("Informe o preço limite obrigatório.", "Saída", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        If positionSide <> "LONG" AndAlso positionSide <> "SHORT" Then
+            MessageBox.Show("A posição não possui lado LONG/SHORT válido.", "Saída", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+        Dim exitQuantity = Math.Abs(quantity) * percent / 100D
+        If exitQuantity > Math.Abs(quantity) Then exitQuantity = Math.Abs(quantity)
+        Dim sideText = If(positionSide = "LONG", "vender", "comprar")
+        If MessageBox.Show($"Enviar ordem para {sideText} {exitQuantity:0.########} {symbol} a {price:0.########}?" & Environment.NewLine & "A ordem será somente de redução (reduceOnly).", "Confirmar saída", MessageBoxButtons.YesNo, MessageBoxIcon.Question) <> DialogResult.Yes Then Return
+        Try
+            dgFuturos.Cursor = Cursors.WaitCursor
+            Await B.BINANCE_CloseFuturesPositionAsync(symbol, positionSide, exitQuantity, price)
+            lbDebug.AppendText(Environment.NewLine & $"Saída enviada: {symbol} {positionSide} {percent:0.##}% a {price:0.########}.")
+            Await LoadFuturesPositionsAsync()
+        Catch ex As Exception
+            lbDebug.AppendText(Environment.NewLine & "Erro ao enviar saída: " & ex.Message)
+            MessageBox.Show(ex.Message, "Erro na saída", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            dgFuturos.Cursor = Cursors.Default
+        End Try
     End Sub
 
     Private Shared Function TryReadFuturesDecimal(rawValue As Object, ByRef result As Decimal) As Boolean

@@ -1,6 +1,7 @@
 ﻿Imports System.Globalization
 Imports System.IO
 Imports System.Net.Http
+Imports System.Net.Http.Headers
 Imports System.Security.Cryptography
 Imports System.Security.Principal
 Imports System.Text
@@ -234,6 +235,57 @@ Public Class Binance
 
         End Try
 
+    End Function
+
+    Public Async Function BINANCE_CloseFuturesPositionAsync(
+        symbol As String,
+        positionSide As String,
+        quantity As Decimal,
+        limitPrice As Decimal) As Task(Of String)
+
+        If String.IsNullOrWhiteSpace(symbol) OrElse quantity <= 0D OrElse limitPrice <= 0D Then
+            Throw New ArgumentException("Símbolo, quantidade e preço limite devem ser maiores que zero.")
+        End If
+
+        Dim normalizedSide = positionSide.Trim().ToUpperInvariant()
+        If normalizedSide <> "LONG" AndAlso normalizedSide <> "SHORT" Then
+            Throw New ArgumentException("A posição precisa ser LONG ou SHORT para usar o botão de saída.")
+        End If
+
+        Dim side = If(normalizedSide = "LONG", "SELL", "BUY")
+        Dim query = String.Join("&", {
+            "symbol=" & Uri.EscapeDataString(symbol.Trim().ToUpperInvariant()),
+            "side=" & side,
+            "positionSide=" & normalizedSide,
+            "type=LIMIT",
+            "timeInForce=GTC",
+            "quantity=" & quantity.ToString("0.################", CultureInfo.InvariantCulture),
+            "price=" & limitPrice.ToString("0.################", CultureInfo.InvariantCulture),
+            "reduceOnly=true",
+            "recvWindow=60000"
+        })
+
+        Dim apiKey = My.Settings.BinanceAPIKey
+        Dim secret = My.Settings.BinanceSecretKey
+        Dim timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + BinanceTimeOffset
+        Dim signedQuery = query & "&timestamp=" & timestamp
+        Using hmac As New HMACSHA256(Encoding.UTF8.GetBytes(secret))
+            signedQuery &= "&signature=" & BitConverter.ToString(hmac.ComputeHash(Encoding.UTF8.GetBytes(signedQuery))).Replace("-", "").ToLowerInvariant()
+        End Using
+
+        Using cli As New HttpClient()
+            cli.BaseAddress = New Uri("https://fapi.binance.com")
+            cli.DefaultRequestHeaders.Add("X-MBX-APIKEY", apiKey)
+            Using content As New StringContent(String.Empty, Encoding.UTF8, "application/x-www-form-urlencoded")
+                Dim response = Await cli.PostAsync("/fapi/v1/order?" & signedQuery, content)
+                Dim json = Await response.Content.ReadAsStringAsync()
+                Dim obj = JObject.Parse(json)
+                If obj("code") IsNot Nothing Then
+                    Throw New Exception($"Binance ({obj("code")}): {obj("msg")}")
+                End If
+                Return json
+            End Using
+        End Using
     End Function
 
     Private Shared Function GetTokenValue(position As JObject, ParamArray names() As String) As JToken
