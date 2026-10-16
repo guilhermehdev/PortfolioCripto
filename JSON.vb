@@ -559,6 +559,15 @@ Public Class JSON
             .Font = New Font("Calibri", 10, FontStyle.Italic)
         End With
 
+        ' A coluna Qtd pertence ao DataTable do portfólio e deve continuar
+        ' visível mesmo quando o DataSource é reconstruído pelos refreshes.
+        ' Identifique-a pelo nome para não depender da posição das colunas
+        ' auxiliares de preço limite e fechamento.
+        If datagrid.Columns.Contains("Qtd") Then
+            datagrid.Columns("Qtd").Visible = True
+            datagrid.Columns("Qtd").HeaderText = "Qtd"
+        End If
+
         Try
             Dim cm As CurrencyManager = CType(My.Forms.FormMain.BindingContext(datagrid.DataSource), CurrencyManager)
             cm.SuspendBinding()

@@ -1861,6 +1861,7 @@ Public Class FormMain
         Try
             json.FormatGrid(dgPortfolio)
             ConfigurePortfolioCloseColumns()
+            EnsurePortfolioQuantityColumnVisible()
             HideStablecoinPortfolioRows()
         Catch ex As Exception
 
@@ -1870,7 +1871,24 @@ Public Class FormMain
     Private Sub dgPortfolio_DataBindingComplete(
         sender As Object,
         e As DataGridViewBindingCompleteEventArgs) Handles dgPortfolio.DataBindingComplete
+        EnsurePortfolioQuantityColumnVisible()
         HideStablecoinPortfolioRows()
+    End Sub
+
+    Private Sub EnsurePortfolioQuantityColumnVisible()
+        If dgPortfolio Is Nothing OrElse
+           Not dgPortfolio.Columns.Contains("Qtd") Then
+            Return
+        End If
+
+        ' O DataGridView mantém as colunas auxiliares de fechamento entre as
+        ' trocas de DataSource. Usar índices fixos nessas trocas pode acabar
+        ' ocultando a coluna Qtd quando a ordem interna muda. Reforce o estado
+        ' pelo nome da coluna, que permanece estável.
+        Dim quantityColumn = dgPortfolio.Columns("Qtd")
+        quantityColumn.Visible = True
+        quantityColumn.HeaderText = "Qtd"
+        quantityColumn.Width = 95
     End Sub
 
     Public Sub ConfigurePortfolioCloseColumns()
@@ -2203,14 +2221,14 @@ Public Class FormMain
     Public Sub showUSDCollumns()
         Dim json As New JSON
         Try
+            SetPortfolioColumnVisible("vlEntradaUSD", True)
+            SetPortfolioColumnVisible("vlAtualUSD", True)
+            SetPortfolioColumnVisible("ROIusd", True)
 
-            dgPortfolio.Columns(4).Visible = True
-            dgPortfolio.Columns(10).Visible = True
-            dgPortfolio.Columns(12).Visible = True
-
-            dgPortfolio.Columns(5).Visible = False
-            dgPortfolio.Columns(11).Visible = False
-            dgPortfolio.Columns(13).Visible = False
+            SetPortfolioColumnVisible("vlEntradaBRL", False)
+            SetPortfolioColumnVisible("vlAtualBRL", False)
+            SetPortfolioColumnVisible("ROIbrl", False)
+            EnsurePortfolioQuantityColumnVisible()
 
             json.FormatGrid(dgPortfolio)
             ConfigurePortfolioCloseColumns()
@@ -2223,13 +2241,14 @@ Public Class FormMain
     Public Sub showBRLCollumns()
         Dim json As New JSON
         Try
-            dgPortfolio.Columns(4).Visible = False
-            dgPortfolio.Columns(10).Visible = False
-            dgPortfolio.Columns(12).Visible = False
+            SetPortfolioColumnVisible("vlEntradaUSD", False)
+            SetPortfolioColumnVisible("vlAtualUSD", False)
+            SetPortfolioColumnVisible("ROIusd", False)
 
-            dgPortfolio.Columns(5).Visible = True
-            dgPortfolio.Columns(11).Visible = True
-            dgPortfolio.Columns(13).Visible = True
+            SetPortfolioColumnVisible("vlEntradaBRL", True)
+            SetPortfolioColumnVisible("vlAtualBRL", True)
+            SetPortfolioColumnVisible("ROIbrl", True)
+            EnsurePortfolioQuantityColumnVisible()
 
             json.FormatGrid(dgPortfolio)
             ConfigurePortfolioCloseColumns()
@@ -2238,6 +2257,15 @@ Public Class FormMain
 
         End Try
 
+    End Sub
+
+    Private Sub SetPortfolioColumnVisible(columnName As String, visible As Boolean)
+        If dgPortfolio Is Nothing OrElse
+           Not dgPortfolio.Columns.Contains(columnName) Then
+            Return
+        End If
+
+        dgPortfolio.Columns(columnName).Visible = visible
     End Sub
 
     Private Sub pbUSD_Click(sender As Object, e As EventArgs) Handles pbUSD.Click
