@@ -46,13 +46,13 @@ Partial Class FormMain
         Panel1 = New Panel()
         lbAtualizaEm = New Label()
         lbRefresh = New Label()
-        btRefresh = New Button()
         Label4 = New Label()
         lbDom = New Label()
         Label3 = New Label()
         lbBTC = New Label()
         Label1 = New Label()
         lbDolar = New Label()
+        btRefresh = New Button()
         NotifyIcon1 = New NotifyIcon(components)
         TimerRefresh = New Timer(components)
         TimerCountdown = New Timer(components)
@@ -345,24 +345,6 @@ Partial Class FormMain
         lbRefresh.TabIndex = 0
         lbRefresh.Text = "00:00"
         ' 
-        ' btRefresh
-        ' 
-        btRefresh.BackColor = Color.OrangeRed
-        btRefresh.BackgroundImageLayout = ImageLayout.Stretch
-        btRefresh.Cursor = Cursors.Hand
-        btRefresh.FlatAppearance.BorderSize = 0
-        btRefresh.FlatStyle = FlatStyle.Flat
-        btRefresh.Font = New Font("Calibri", 10F)
-        btRefresh.ForeColor = Color.White
-        btRefresh.ImageAlign = ContentAlignment.MiddleRight
-        btRefresh.Location = New Point(420, 1)
-        btRefresh.Name = "btRefresh"
-        btRefresh.Size = New Size(123, 27)
-        btRefresh.TabIndex = 27
-        btRefresh.Text = "Atualizar posições"
-        ToolTip1.SetToolTip(btRefresh, "Atualizar Mercado")
-        btRefresh.UseVisualStyleBackColor = False
-        ' 
         ' Label4
         ' 
         Label4.AutoSize = True
@@ -440,6 +422,24 @@ Partial Class FormMain
         lbDolar.Size = New Size(45, 19)
         lbDolar.TabIndex = 21
         lbDolar.Text = "$0.00"
+        ' 
+        ' btRefresh
+        ' 
+        btRefresh.BackColor = Color.DeepSkyBlue
+        btRefresh.BackgroundImageLayout = ImageLayout.Stretch
+        btRefresh.Cursor = Cursors.Hand
+        btRefresh.FlatAppearance.BorderSize = 0
+        btRefresh.FlatStyle = FlatStyle.Flat
+        btRefresh.Font = New Font("Calibri", 10F)
+        btRefresh.ForeColor = Color.White
+        btRefresh.ImageAlign = ContentAlignment.MiddleRight
+        btRefresh.Location = New Point(426, 1)
+        btRefresh.Name = "btRefresh"
+        btRefresh.Size = New Size(117, 27)
+        btRefresh.TabIndex = 27
+        btRefresh.Text = "Atualizar posições"
+        ToolTip1.SetToolTip(btRefresh, "Atualizar Mercado")
+        btRefresh.UseVisualStyleBackColor = False
         ' 
         ' NotifyIcon1
         ' 
