@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="My" GeneratedClassName="MySettings" UseMySettingsClassName="true">
+  <Profiles />
+  <Settings>
+    <Setting Name="apiCMCKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="apiUrlHistorical" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest</Value>
+    </Setting>
+    <Setting Name="apiUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest</Value>
+    </Setting>
+    <Setting Name="apiUrlSandbox" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://sandbox-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest</Value>
+    </Setting>
+    <Setting Name="lastView" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="activeAPI" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="lastUpdate" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="JSONBinURL" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="JSONBinMasterKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="JSONBinID" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="BinanceAPIKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)"></Value>
+    </Setting>
+    <Setting Name="BinanceSecretKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)"></Value>
+    </Setting>
+    <Setting Name="GateAPIKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)"></Value>
+    </Setting>
+    <Setting Name="GateSecretKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)"></Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

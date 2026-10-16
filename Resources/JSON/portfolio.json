@@ -1,0 +1,56 @@
+{
+  "ATH": [
+    {
+      "InitialPrice": 0.0795,
+      "Qtd": 174.29,
+      "Data": "13/12/2024",
+      "Wallet": "MEXC",
+      "LastPrice": 0.03521326
+    }
+  ],
+  "USDT": [
+    {
+      "InitialPrice": 0.998,
+      "Qtd": 281.0,
+      "Data": "01/01/2025",
+      "Wallet": "OUTROS",
+      "LastPrice": 0.99996099
+    }
+  ],
+  "BTC": [
+    {
+      "InitialPrice": 88231.24,
+      "Qtd": 0.00227929,
+      "Data": "27/01/2025",
+      "Wallet": "TrustWallet",
+      "LastPrice": 87415.30607259
+    }
+  ],
+  "VIRTUAL": [
+    {
+      "InitialPrice": 1.146,
+      "Qtd": 78.09,
+      "Data": "28/01/2025",
+      "Wallet": "Gate.io",
+      "LastPrice": 0.8094453
+    }
+  ],
+  "ETH": [
+    {
+      "InitialPrice": 2241.0,
+      "Qtd": 0.06112044,
+      "Data": "05/02/2025",
+      "Wallet": "TrustWallet",
+      "LastPrice": 2091.83453827
+    }
+  ],
+  "TOMI": [
+    {
+      "InitialPrice": 0.003645,
+      "Qtd": 5480.00,
+      "Data": "28/02/2025",
+      "Wallet": "Gate.io",
+      "LastPrice": 0.00313257
+    }
+  ]
+}

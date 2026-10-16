@@ -1,0 +1,1237 @@
+﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
+Partial Class FormMain
+    Inherits System.Windows.Forms.Form
+
+    'Form overrides dispose to clean up the component list.
+    <System.Diagnostics.DebuggerNonUserCode()>
+    Protected Overrides Sub Dispose(ByVal disposing As Boolean)
+        Try
+            If disposing AndAlso components IsNot Nothing Then
+                components.Dispose()
+            End If
+        Finally
+            MyBase.Dispose(disposing)
+        End Try
+    End Sub
+
+    'Required by the Windows Form Designer
+    Private components As System.ComponentModel.IContainer
+
+    'NOTE: The following procedure is required by the Windows Form Designer
+    'It can be modified using the Windows Form Designer.  
+    'Do not modify it using the code editor.
+    <System.Diagnostics.DebuggerStepThrough()>
+    Private Sub InitializeComponent()
+        components = New ComponentModel.Container()
+        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
+        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle5 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle7 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        dgPortfolio = New DataGridView()
+        PanelProfits = New Panel()
+        Label15 = New Label()
+        Label5 = New Label()
+        lbRoiSeparator = New Label()
+        lbValoresSeparator = New Label()
+        lbValoresHojeBRL = New Label()
+        lbValoresHojeUSD = New Label()
+        Label7 = New Label()
+        lbRoiUSD = New Label()
+        lbTotalBRL = New Label()
+        lbLoadFromMarket = New Label()
+        Panel1 = New Panel()
+        lbAtualizaEm = New Label()
+        lbRefresh = New Label()
+        btRefresh = New Button()
+        Label4 = New Label()
+        lbDom = New Label()
+        Label3 = New Label()
+        lbBTC = New Label()
+        Label1 = New Label()
+        lbDolar = New Label()
+        NotifyIcon1 = New NotifyIcon(components)
+        TimerRefresh = New Timer(components)
+        TimerCountdown = New Timer(components)
+        TimerBlink = New Timer(components)
+        PictureBox2 = New PictureBox()
+        PictureBox1 = New PictureBox()
+        PanelPerformance = New Panel()
+        Label10 = New Label()
+        lbPercentInvestido = New Label()
+        lbPercentCaixa = New Label()
+        Label9 = New Label()
+        Label16 = New Label()
+        lbPerformWallet = New Label()
+        Label6 = New Label()
+        lbDataTotalToday = New Label()
+        LabelFuturos = New Label()
+        lbInvestimentoBRL = New Label()
+        lbInvestimentoUSD = New Label()
+        lbTotalEntradaBRL = New Label()
+        lbTotalEntradaUSD = New Label()
+        lbFuturosBRL = New Label()
+        lbFuturosUSD = New Label()
+        PanelGraphs = New Panel()
+        lbCaixaBRL = New Label()
+        lbCaixa = New Label()
+        PanelOrdens = New Panel()
+        dgFuturos = New DataGridView()
+        Panel2 = New Panel()
+        CadastroToolStripMenuItem = New ToolStripMenuItem()
+        CriptoToolStripMenuItem = New ToolStripMenuItem()
+        SimbolosToolStripMenuItem = New ToolStripMenuItem()
+        CustodiaToolStripMenuItem = New ToolStripMenuItem()
+        OpçõesToolStripMenuItem = New ToolStripMenuItem()
+        IntervaloToolStripMenuItem = New ToolStripMenuItem()
+        JSONToolStripMenuItem = New ToolStripMenuItem()
+        ImportarToolStripMenuItem = New ToolStripMenuItem()
+        PortfolioToolStripMenuItem = New ToolStripMenuItem()
+        WalletsExchangeToolStripMenuItem = New ToolStripMenuItem()
+        ExportarToolStripMenuItem = New ToolStripMenuItem()
+        ImportarToolStripMenuItem1 = New ToolStripMenuItem()
+        ExportarToolStripMenuItem1 = New ToolStripMenuItem()
+        CriptoToolStripMenuItem2 = New ToolStripMenuItem()
+        ImportarToolStripMenuItem2 = New ToolStripMenuItem()
+        ExportarToolStripMenuItem2 = New ToolStripMenuItem()
+        APIToolStripMenuItem = New ToolStripMenuItem()
+        FecharToolStripMenuItem = New ToolStripMenuItem()
+        MenuStrip1 = New MenuStrip()
+        pbBRL = New PictureBox()
+        pbUSD = New PictureBox()
+        OpenFileDialog1 = New OpenFileDialog()
+        SaveFileDialog1 = New SaveFileDialog()
+        Label8 = New Label()
+        ToolTip1 = New ToolTip(components)
+        panelDebug = New Panel()
+        lbDebug = New RichTextBox()
+        btSpot = New Button()
+        btFuturos = New Button()
+        btVisaoGeral = New Button()
+        btOrdensSpot = New Button()
+        PanelFuturos = New Panel()
+        btOrdensFuturo = New Button()
+        CType(dgPortfolio, ComponentModel.ISupportInitialize).BeginInit()
+        PanelProfits.SuspendLayout()
+        Panel1.SuspendLayout()
+        CType(PictureBox2, ComponentModel.ISupportInitialize).BeginInit()
+        CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
+        PanelPerformance.SuspendLayout()
+        PanelGraphs.SuspendLayout()
+        CType(dgFuturos, ComponentModel.ISupportInitialize).BeginInit()
+        MenuStrip1.SuspendLayout()
+        CType(pbBRL, ComponentModel.ISupportInitialize).BeginInit()
+        CType(pbUSD, ComponentModel.ISupportInitialize).BeginInit()
+        panelDebug.SuspendLayout()
+        SuspendLayout()
+        ' 
+        ' dgPortfolio
+        ' 
+        dgPortfolio.AllowUserToAddRows = False
+        dgPortfolio.AllowUserToDeleteRows = False
+        dgPortfolio.AllowUserToOrderColumns = True
+        dgPortfolio.AllowUserToResizeRows = False
+        dgPortfolio.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        dgPortfolio.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgPortfolio.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgPortfolio.BorderStyle = BorderStyle.None
+        dgPortfolio.CellBorderStyle = DataGridViewCellBorderStyle.None
+        dgPortfolio.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
+        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle1.ForeColor = Color.Turquoise
+        DataGridViewCellStyle1.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle1.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
+        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle2.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
+        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
+        dgPortfolio.EnableHeadersVisualStyles = False
+        dgPortfolio.Location = New Point(9, 51)
+        dgPortfolio.MultiSelect = False
+        dgPortfolio.Name = "dgPortfolio"
+        dgPortfolio.ReadOnly = True
+        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle3.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle3.Padding = New Padding(2)
+        DataGridViewCellStyle3.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle3.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
+        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
+        dgPortfolio.RowHeadersWidth = 4
+        dgPortfolio.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
+        dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
+        dgPortfolio.ScrollBars = ScrollBars.Vertical
+        dgPortfolio.SelectionMode = DataGridViewSelectionMode.CellSelect
+        dgPortfolio.Size = New Size(1132, 375)
+        dgPortfolio.TabIndex = 11
+        ' 
+        ' PanelProfits
+        ' 
+        PanelProfits.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        PanelProfits.BackColor = Color.FromArgb(CByte(56), CByte(86), CByte(35))
+        PanelProfits.Controls.Add(Label15)
+        PanelProfits.Controls.Add(Label5)
+        PanelProfits.Controls.Add(lbRoiSeparator)
+        PanelProfits.Controls.Add(lbValoresSeparator)
+        PanelProfits.Controls.Add(lbValoresHojeBRL)
+        PanelProfits.Controls.Add(lbValoresHojeUSD)
+        PanelProfits.Location = New Point(0, 611)
+        PanelProfits.Name = "PanelProfits"
+        PanelProfits.Size = New Size(1151, 40)
+        PanelProfits.TabIndex = 15
+        ' 
+        ' Label15
+        ' 
+        Label15.AutoSize = True
+        Label15.BackColor = Color.Transparent
+        Label15.Font = New Font("Calibri", 15.75F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        Label15.ForeColor = Color.GreenYellow
+        Label15.Location = New Point(9, 7)
+        Label15.Name = "Label15"
+        Label15.Size = New Size(93, 26)
+        Label15.TabIndex = 17
+        Label15.Text = "L/P Total:"
+        ' 
+        ' Label5
+        ' 
+        Label5.AutoSize = True
+        Label5.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
+        Label5.ForeColor = Color.White
+        Label5.Location = New Point(7, 3)
+        Label5.Name = "Label5"
+        Label5.Size = New Size(0, 30)
+        Label5.TabIndex = 15
+        ' 
+        ' lbRoiSeparator
+        ' 
+        lbRoiSeparator.AutoSize = True
+        lbRoiSeparator.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
+        lbRoiSeparator.ForeColor = Color.White
+        lbRoiSeparator.Location = New Point(498, 3)
+        lbRoiSeparator.Name = "lbRoiSeparator"
+        lbRoiSeparator.Size = New Size(23, 30)
+        lbRoiSeparator.TabIndex = 37
+        lbRoiSeparator.Text = "/"
+        lbRoiSeparator.Visible = False
+        ' 
+        ' lbValoresSeparator
+        ' 
+        lbValoresSeparator.AutoSize = True
+        lbValoresSeparator.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
+        lbValoresSeparator.ForeColor = Color.White
+        lbValoresSeparator.Location = New Point(516, 5)
+        lbValoresSeparator.Name = "lbValoresSeparator"
+        lbValoresSeparator.Size = New Size(23, 30)
+        lbValoresSeparator.TabIndex = 38
+        lbValoresSeparator.Text = "/"
+        ' 
+        ' lbValoresHojeBRL
+        ' 
+        lbValoresHojeBRL.AutoSize = True
+        lbValoresHojeBRL.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
+        lbValoresHojeBRL.ForeColor = Color.DeepSkyBlue
+        lbValoresHojeBRL.Location = New Point(826, 5)
+        lbValoresHojeBRL.Name = "lbValoresHojeBRL"
+        lbValoresHojeBRL.Size = New Size(58, 30)
+        lbValoresHojeBRL.TabIndex = 28
+        lbValoresHojeBRL.Text = "0,00"
+        ' 
+        ' lbValoresHojeUSD
+        ' 
+        lbValoresHojeUSD.AutoSize = True
+        lbValoresHojeUSD.Font = New Font("Segoe UI", 16F, FontStyle.Bold)
+        lbValoresHojeUSD.ForeColor = Color.LimeGreen
+        lbValoresHojeUSD.Location = New Point(679, 5)
+        lbValoresHojeUSD.Name = "lbValoresHojeUSD"
+        lbValoresHojeUSD.Size = New Size(58, 30)
+        lbValoresHojeUSD.TabIndex = 27
+        lbValoresHojeUSD.Text = "0.00"
+        ' 
+        ' Label7
+        ' 
+        Label7.AutoSize = True
+        Label7.Font = New Font("Calibri", 12F)
+        Label7.ForeColor = Color.White
+        Label7.Location = New Point(131, 137)
+        Label7.Name = "Label7"
+        Label7.Size = New Size(37, 19)
+        Label7.TabIndex = 3
+        Label7.Text = "ROI:"
+        ' 
+        ' lbRoiUSD
+        ' 
+        lbRoiUSD.AutoSize = True
+        lbRoiUSD.Font = New Font("Calibri", 12F)
+        lbRoiUSD.ForeColor = Color.Lime
+        lbRoiUSD.Location = New Point(166, 137)
+        lbRoiUSD.Name = "lbRoiUSD"
+        lbRoiUSD.Size = New Size(37, 19)
+        lbRoiUSD.TabIndex = 26
+        lbRoiUSD.Text = "0.00"
+        ' 
+        ' lbTotalBRL
+        ' 
+        lbTotalBRL.AutoSize = True
+        lbTotalBRL.Font = New Font("Calibri", 12F)
+        lbTotalBRL.ForeColor = Color.Lime
+        lbTotalBRL.Location = New Point(272, 137)
+        lbTotalBRL.Name = "lbTotalBRL"
+        lbTotalBRL.Size = New Size(37, 19)
+        lbTotalBRL.TabIndex = 16
+        lbTotalBRL.Text = "0,00"
+        lbTotalBRL.TextAlign = ContentAlignment.MiddleCenter
+        ' 
+        ' lbLoadFromMarket
+        ' 
+        lbLoadFromMarket.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        lbLoadFromMarket.BackColor = Color.Transparent
+        lbLoadFromMarket.Font = New Font("Segoe UI", 9F, FontStyle.Italic)
+        lbLoadFromMarket.ForeColor = Color.OrangeRed
+        lbLoadFromMarket.Location = New Point(4, 433)
+        lbLoadFromMarket.Name = "lbLoadFromMarket"
+        lbLoadFromMarket.Size = New Size(1142, 15)
+        lbLoadFromMarket.TabIndex = 0
+        lbLoadFromMarket.Text = "Carregando dados"
+        lbLoadFromMarket.TextAlign = ContentAlignment.MiddleCenter
+        lbLoadFromMarket.Visible = False
+        ' 
+        ' Panel1
+        ' 
+        Panel1.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        Panel1.Controls.Add(lbAtualizaEm)
+        Panel1.Controls.Add(lbRefresh)
+        Panel1.Controls.Add(Label4)
+        Panel1.Controls.Add(lbDom)
+        Panel1.Controls.Add(Label3)
+        Panel1.Controls.Add(lbBTC)
+        Panel1.Controls.Add(Label1)
+        Panel1.Controls.Add(lbDolar)
+        Panel1.Location = New Point(474, -1)
+        Panel1.Name = "Panel1"
+        Panel1.Size = New Size(673, 29)
+        Panel1.TabIndex = 22
+        ' 
+        ' lbAtualizaEm
+        ' 
+        lbAtualizaEm.AutoSize = True
+        lbAtualizaEm.ForeColor = Color.White
+        lbAtualizaEm.Location = New Point(77, 8)
+        lbAtualizaEm.Name = "lbAtualizaEm"
+        lbAtualizaEm.Size = New Size(27, 15)
+        lbAtualizaEm.TabIndex = 28
+        lbAtualizaEm.Text = "em:"
+        ' 
+        ' lbRefresh
+        ' 
+        lbRefresh.AutoSize = True
+        lbRefresh.Font = New Font("Segoe UI", 9F, FontStyle.Bold)
+        lbRefresh.ForeColor = Color.Gold
+        lbRefresh.Location = New Point(110, 9)
+        lbRefresh.Name = "lbRefresh"
+        lbRefresh.Size = New Size(38, 15)
+        lbRefresh.TabIndex = 0
+        lbRefresh.Text = "00:00"
+        ' 
+        ' btRefresh
+        ' 
+        btRefresh.BackColor = Color.OrangeRed
+        btRefresh.BackgroundImageLayout = ImageLayout.Stretch
+        btRefresh.Cursor = Cursors.Hand
+        btRefresh.FlatAppearance.BorderSize = 0
+        btRefresh.FlatStyle = FlatStyle.Flat
+        btRefresh.Font = New Font("Calibri", 10F)
+        btRefresh.ForeColor = Color.White
+        btRefresh.ImageAlign = ContentAlignment.MiddleRight
+        btRefresh.Location = New Point(420, 1)
+        btRefresh.Name = "btRefresh"
+        btRefresh.Size = New Size(123, 27)
+        btRefresh.TabIndex = 27
+        btRefresh.Text = "Atualizar posições"
+        ToolTip1.SetToolTip(btRefresh, "Atualizar Mercado")
+        btRefresh.UseVisualStyleBackColor = False
+        ' 
+        ' Label4
+        ' 
+        Label4.AutoSize = True
+        Label4.BackColor = Color.Transparent
+        Label4.FlatStyle = FlatStyle.Flat
+        Label4.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        Label4.ForeColor = Color.LightGray
+        Label4.Location = New Point(539, 4)
+        Label4.Name = "Label4"
+        Label4.Size = New Size(75, 19)
+        Label4.TabIndex = 26
+        Label4.Text = "Dom BTC:"
+        ' 
+        ' lbDom
+        ' 
+        lbDom.AutoSize = True
+        lbDom.BackColor = Color.Transparent
+        lbDom.FlatStyle = FlatStyle.Flat
+        lbDom.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        lbDom.ForeColor = Color.DeepSkyBlue
+        lbDom.Location = New Point(610, 4)
+        lbDom.Name = "lbDom"
+        lbDom.Size = New Size(29, 19)
+        lbDom.TabIndex = 25
+        lbDom.Text = "0%"
+        ' 
+        ' Label3
+        ' 
+        Label3.AutoSize = True
+        Label3.BackColor = Color.Transparent
+        Label3.FlatStyle = FlatStyle.Flat
+        Label3.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        Label3.ForeColor = Color.LightGray
+        Label3.Location = New Point(411, 4)
+        Label3.Name = "Label3"
+        Label3.Size = New Size(39, 19)
+        Label3.TabIndex = 24
+        Label3.Text = "BTC:"
+        ' 
+        ' lbBTC
+        ' 
+        lbBTC.AutoSize = True
+        lbBTC.BackColor = Color.Transparent
+        lbBTC.FlatStyle = FlatStyle.Flat
+        lbBTC.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        lbBTC.ForeColor = Color.DarkOrange
+        lbBTC.Location = New Point(445, 4)
+        lbBTC.Name = "lbBTC"
+        lbBTC.Size = New Size(45, 19)
+        lbBTC.TabIndex = 23
+        lbBTC.Text = "$0.00"
+        ' 
+        ' Label1
+        ' 
+        Label1.AutoSize = True
+        Label1.BackColor = Color.Transparent
+        Label1.FlatStyle = FlatStyle.Flat
+        Label1.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        Label1.ForeColor = Color.LightGray
+        Label1.Location = New Point(306, 4)
+        Label1.Name = "Label1"
+        Label1.Size = New Size(51, 19)
+        Label1.TabIndex = 22
+        Label1.Text = "Dolar:"
+        ' 
+        ' lbDolar
+        ' 
+        lbDolar.AutoSize = True
+        lbDolar.BackColor = Color.Transparent
+        lbDolar.FlatStyle = FlatStyle.Flat
+        lbDolar.Font = New Font("Segoe UI", 10F, FontStyle.Bold)
+        lbDolar.ForeColor = Color.GreenYellow
+        lbDolar.Location = New Point(352, 4)
+        lbDolar.Name = "lbDolar"
+        lbDolar.Size = New Size(45, 19)
+        lbDolar.TabIndex = 21
+        lbDolar.Text = "$0.00"
+        ' 
+        ' NotifyIcon1
+        ' 
+        NotifyIcon1.BalloonTipIcon = ToolTipIcon.Info
+        NotifyIcon1.Icon = CType(resources.GetObject("NotifyIcon1.Icon"), Icon)
+        NotifyIcon1.Visible = True
+        ' 
+        ' TimerRefresh
+        ' 
+        TimerRefresh.Interval = 1000
+        ' 
+        ' TimerCountdown
+        ' 
+        TimerCountdown.Interval = 1000
+        ' 
+        ' TimerBlink
+        ' 
+        ' 
+        ' PictureBox2
+        ' 
+        PictureBox2.Image = CType(resources.GetObject("PictureBox2.Image"), Image)
+        PictureBox2.Location = New Point(275, 35)
+        PictureBox2.Name = "PictureBox2"
+        PictureBox2.Size = New Size(35, 25)
+        PictureBox2.SizeMode = PictureBoxSizeMode.StretchImage
+        PictureBox2.TabIndex = 31
+        PictureBox2.TabStop = False
+        ' 
+        ' PictureBox1
+        ' 
+        PictureBox1.Image = CType(resources.GetObject("PictureBox1.Image"), Image)
+        PictureBox1.Location = New Point(168, 35)
+        PictureBox1.Name = "PictureBox1"
+        PictureBox1.Size = New Size(35, 25)
+        PictureBox1.SizeMode = PictureBoxSizeMode.StretchImage
+        PictureBox1.TabIndex = 30
+        PictureBox1.TabStop = False
+        ' 
+        ' PanelPerformance
+        ' 
+        PanelPerformance.Controls.Add(Label10)
+        PanelPerformance.Controls.Add(lbPercentInvestido)
+        PanelPerformance.Controls.Add(lbPercentCaixa)
+        PanelPerformance.Controls.Add(Label9)
+        PanelPerformance.Controls.Add(Label16)
+        PanelPerformance.Controls.Add(lbPerformWallet)
+        PanelPerformance.Controls.Add(Label6)
+        PanelPerformance.Controls.Add(lbDataTotalToday)
+        PanelPerformance.Controls.Add(LabelFuturos)
+        PanelPerformance.Location = New Point(5, 4)
+        PanelPerformance.Name = "PanelPerformance"
+        PanelPerformance.Size = New Size(159, 155)
+        PanelPerformance.TabIndex = 29
+        ' 
+        ' Label10
+        ' 
+        Label10.AutoSize = True
+        Label10.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        Label10.ForeColor = Color.White
+        Label10.Location = New Point(66, 56)
+        Label10.Name = "Label10"
+        Label10.Size = New Size(97, 19)
+        Label10.TabIndex = 35
+        Label10.Text = "Investimento:"
+        ToolTip1.SetToolTip(Label10, "Caixa Spot + caixa Futures sem PnL + valor de compra das moedas")
+        ' 
+        ' lbPercentInvestido
+        ' 
+        lbPercentInvestido.AutoSize = True
+        lbPercentInvestido.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        lbPercentInvestido.ForeColor = Color.LimeGreen
+        lbPercentInvestido.Location = New Point(10, 103)
+        lbPercentInvestido.Name = "lbPercentInvestido"
+        lbPercentInvestido.Size = New Size(28, 19)
+        lbPercentInvestido.TabIndex = 16
+        lbPercentInvestido.Text = "0%"
+        ' 
+        ' lbPercentCaixa
+        ' 
+        lbPercentCaixa.AutoSize = True
+        lbPercentCaixa.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        lbPercentCaixa.ForeColor = Color.White
+        lbPercentCaixa.Location = New Point(10, 75)
+        lbPercentCaixa.Name = "lbPercentCaixa"
+        lbPercentCaixa.Size = New Size(28, 19)
+        lbPercentCaixa.TabIndex = 15
+        lbPercentCaixa.Text = "0%"
+        ' 
+        ' Label9
+        ' 
+        Label9.AutoSize = True
+        Label9.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        Label9.ForeColor = Color.White
+        Label9.Location = New Point(115, 75)
+        Label9.Name = "Label9"
+        Label9.Size = New Size(48, 19)
+        Label9.TabIndex = 14
+        Label9.Text = "Caixa:"
+        ToolTip1.SetToolTip(Label9, "Valor em SPOT + FUTUROS")
+        ' 
+        ' Label16
+        ' 
+        Label16.AutoSize = True
+        Label16.Font = New Font("Calibri", 13F, FontStyle.Italic)
+        Label16.ForeColor = Color.White
+        Label16.Location = New Point(5, 4)
+        Label16.Name = "Label16"
+        Label16.Size = New Size(105, 22)
+        Label16.TabIndex = 12
+        Label16.Text = "Desempenho"
+        ' 
+        ' lbPerformWallet
+        ' 
+        lbPerformWallet.AutoSize = True
+        lbPerformWallet.Font = New Font("Calibri", 20F, FontStyle.Italic)
+        lbPerformWallet.ForeColor = Color.GreenYellow
+        lbPerformWallet.Location = New Point(5, 26)
+        lbPerformWallet.Name = "lbPerformWallet"
+        lbPerformWallet.Size = New Size(48, 33)
+        lbPerformWallet.TabIndex = 13
+        lbPerformWallet.Text = "0%"
+        ' 
+        ' Label6
+        ' 
+        Label6.AutoSize = True
+        Label6.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        Label6.ForeColor = Color.White
+        Label6.Location = New Point(122, 94)
+        Label6.Name = "Label6"
+        Label6.Size = New Size(41, 19)
+        Label6.TabIndex = 0
+        Label6.Text = "Spot:"
+        ' 
+        ' lbDataTotalToday
+        ' 
+        lbDataTotalToday.AutoSize = True
+        lbDataTotalToday.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        lbDataTotalToday.ForeColor = Color.DarkOrange
+        lbDataTotalToday.Location = New Point(10, 132)
+        lbDataTotalToday.Name = "lbDataTotalToday"
+        lbDataTotalToday.Size = New Size(85, 19)
+        lbDataTotalToday.TabIndex = 9
+        lbDataTotalToday.Text = "00/00/0000"
+        lbDataTotalToday.Visible = False
+        ' 
+        ' LabelFuturos
+        ' 
+        LabelFuturos.AutoSize = True
+        LabelFuturos.Font = New Font("Calibri", 12F, FontStyle.Italic)
+        LabelFuturos.ForeColor = Color.White
+        LabelFuturos.Location = New Point(103, 113)
+        LabelFuturos.Name = "LabelFuturos"
+        LabelFuturos.Size = New Size(60, 19)
+        LabelFuturos.TabIndex = 34
+        LabelFuturos.Text = "Futuros:"
+        ' 
+        ' lbInvestimentoBRL
+        ' 
+        lbInvestimentoBRL.AutoSize = True
+        lbInvestimentoBRL.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
+        lbInvestimentoBRL.ForeColor = Color.Gold
+        lbInvestimentoBRL.Location = New Point(272, 61)
+        lbInvestimentoBRL.Name = "lbInvestimentoBRL"
+        lbInvestimentoBRL.Size = New Size(37, 19)
+        lbInvestimentoBRL.TabIndex = 41
+        lbInvestimentoBRL.Text = "0,00"
+        ' 
+        ' lbInvestimentoUSD
+        ' 
+        lbInvestimentoUSD.AutoSize = True
+        lbInvestimentoUSD.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
+        lbInvestimentoUSD.ForeColor = Color.Yellow
+        lbInvestimentoUSD.Location = New Point(165, 61)
+        lbInvestimentoUSD.Name = "lbInvestimentoUSD"
+        lbInvestimentoUSD.Size = New Size(37, 19)
+        lbInvestimentoUSD.TabIndex = 40
+        lbInvestimentoUSD.Text = "0.00"
+        ' 
+        ' lbTotalEntradaBRL
+        ' 
+        lbTotalEntradaBRL.AutoSize = True
+        lbTotalEntradaBRL.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
+        lbTotalEntradaBRL.ForeColor = Color.DeepSkyBlue
+        lbTotalEntradaBRL.Location = New Point(272, 98)
+        lbTotalEntradaBRL.Name = "lbTotalEntradaBRL"
+        lbTotalEntradaBRL.Size = New Size(37, 19)
+        lbTotalEntradaBRL.TabIndex = 25
+        lbTotalEntradaBRL.Text = "0,00"
+        ' 
+        ' lbTotalEntradaUSD
+        ' 
+        lbTotalEntradaUSD.AutoSize = True
+        lbTotalEntradaUSD.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
+        lbTotalEntradaUSD.ForeColor = Color.LimeGreen
+        lbTotalEntradaUSD.Location = New Point(165, 98)
+        lbTotalEntradaUSD.Name = "lbTotalEntradaUSD"
+        lbTotalEntradaUSD.Size = New Size(37, 19)
+        lbTotalEntradaUSD.TabIndex = 24
+        lbTotalEntradaUSD.Text = "0.00"
+        ' 
+        ' lbFuturosBRL
+        ' 
+        lbFuturosBRL.AutoSize = True
+        lbFuturosBRL.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
+        lbFuturosBRL.ForeColor = Color.DeepSkyBlue
+        lbFuturosBRL.Location = New Point(272, 117)
+        lbFuturosBRL.Name = "lbFuturosBRL"
+        lbFuturosBRL.Size = New Size(37, 19)
+        lbFuturosBRL.TabIndex = 35
+        lbFuturosBRL.Text = "0,00"
+        ' 
+        ' lbFuturosUSD
+        ' 
+        lbFuturosUSD.AutoSize = True
+        lbFuturosUSD.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
+        lbFuturosUSD.ForeColor = Color.LimeGreen
+        lbFuturosUSD.Location = New Point(165, 117)
+        lbFuturosUSD.Name = "lbFuturosUSD"
+        lbFuturosUSD.Size = New Size(37, 19)
+        lbFuturosUSD.TabIndex = 36
+        lbFuturosUSD.Text = "0.00"
+        ' 
+        ' PanelGraphs
+        ' 
+        PanelGraphs.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        PanelGraphs.BackColor = Color.FromArgb(CByte(30), CByte(30), CByte(30))
+        PanelGraphs.Controls.Add(Label7)
+        PanelGraphs.Controls.Add(lbCaixaBRL)
+        PanelGraphs.Controls.Add(lbRoiUSD)
+        PanelGraphs.Controls.Add(lbTotalBRL)
+        PanelGraphs.Controls.Add(lbCaixa)
+        PanelGraphs.Controls.Add(PictureBox2)
+        PanelGraphs.Controls.Add(PictureBox1)
+        PanelGraphs.Controls.Add(lbInvestimentoUSD)
+        PanelGraphs.Controls.Add(lbTotalEntradaUSD)
+        PanelGraphs.Controls.Add(PanelPerformance)
+        PanelGraphs.Controls.Add(lbInvestimentoBRL)
+        PanelGraphs.Controls.Add(lbTotalEntradaBRL)
+        PanelGraphs.Controls.Add(lbFuturosBRL)
+        PanelGraphs.Controls.Add(lbFuturosUSD)
+        PanelGraphs.Location = New Point(0, 453)
+        PanelGraphs.Name = "PanelGraphs"
+        PanelGraphs.Size = New Size(1151, 159)
+        PanelGraphs.TabIndex = 32
+        ' 
+        ' lbCaixaBRL
+        ' 
+        lbCaixaBRL.AutoSize = True
+        lbCaixaBRL.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
+        lbCaixaBRL.ForeColor = Color.Ivory
+        lbCaixaBRL.Location = New Point(272, 79)
+        lbCaixaBRL.Name = "lbCaixaBRL"
+        lbCaixaBRL.Size = New Size(37, 19)
+        lbCaixaBRL.TabIndex = 33
+        lbCaixaBRL.Text = "0.00"
+        ' 
+        ' lbCaixa
+        ' 
+        lbCaixa.AutoSize = True
+        lbCaixa.Cursor = Cursors.Hand
+        lbCaixa.Font = New Font("Calibri", 12F, FontStyle.Bold Or FontStyle.Italic)
+        lbCaixa.ForeColor = Color.Ivory
+        lbCaixa.Location = New Point(165, 79)
+        lbCaixa.Name = "lbCaixa"
+        lbCaixa.Size = New Size(37, 19)
+        lbCaixa.TabIndex = 32
+        lbCaixa.Text = "0.00"
+        ' 
+        ' PanelOrdens
+        ' 
+        PanelOrdens.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        PanelOrdens.BackColor = Color.FromArgb(CByte(30), CByte(30), CByte(30))
+        PanelOrdens.Location = New Point(0, 453)
+        PanelOrdens.Name = "PanelOrdens"
+        PanelOrdens.Size = New Size(1151, 159)
+        PanelOrdens.TabIndex = 42
+        PanelOrdens.Visible = False
+        ' 
+        ' dgFuturos
+        ' 
+        dgFuturos.AllowUserToAddRows = False
+        dgFuturos.AllowUserToDeleteRows = False
+        dgFuturos.AllowUserToOrderColumns = True
+        dgFuturos.AllowUserToResizeRows = False
+        dgFuturos.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        dgFuturos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgFuturos.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgFuturos.BorderStyle = BorderStyle.None
+        dgFuturos.CellBorderStyle = DataGridViewCellBorderStyle.None
+        dgFuturos.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle4.Font = New Font("Calibri", 10F, FontStyle.Italic)
+        DataGridViewCellStyle4.ForeColor = Color.Turquoise
+        DataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle4.SelectionForeColor = Color.Turquoise
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
+        dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
+        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle5.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle5.ForeColor = Color.White
+        DataGridViewCellStyle5.SelectionBackColor = Color.Black
+        DataGridViewCellStyle5.SelectionForeColor = Color.White
+        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.True
+        dgFuturos.DefaultCellStyle = DataGridViewCellStyle5
+        dgFuturos.EnableHeadersVisualStyles = False
+        dgFuturos.Location = New Point(9, 53)
+        dgFuturos.MultiSelect = False
+        dgFuturos.Name = "dgFuturos"
+        dgFuturos.ReadOnly = True
+        DataGridViewCellStyle6.BackColor = Color.Black
+        DataGridViewCellStyle6.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle6.ForeColor = Color.White
+        DataGridViewCellStyle6.Padding = New Padding(2)
+        DataGridViewCellStyle6.SelectionBackColor = Color.Black
+        DataGridViewCellStyle6.SelectionForeColor = Color.White
+        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
+        dgFuturos.RowHeadersDefaultCellStyle = DataGridViewCellStyle6
+        dgFuturos.RowHeadersWidth = 4
+        DataGridViewCellStyle7.BackColor = Color.Black
+        DataGridViewCellStyle7.ForeColor = Color.White
+        DataGridViewCellStyle7.SelectionBackColor = Color.Black
+        DataGridViewCellStyle7.SelectionForeColor = Color.White
+        dgFuturos.RowsDefaultCellStyle = DataGridViewCellStyle7
+        dgFuturos.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.Black
+        dgFuturos.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.White
+        dgFuturos.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
+        dgFuturos.ScrollBars = ScrollBars.Vertical
+        dgFuturos.SelectionMode = DataGridViewSelectionMode.FullRowSelect
+        dgFuturos.Size = New Size(1132, 375)
+        dgFuturos.TabIndex = 37
+        dgFuturos.Visible = False
+        ' 
+        ' Panel2
+        ' 
+        Panel2.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        Panel2.Location = New Point(0, 406)
+        Panel2.Name = "Panel2"
+        Panel2.Size = New Size(1151, 25)
+        Panel2.TabIndex = 33
+        ' 
+        ' CadastroToolStripMenuItem
+        ' 
+        CadastroToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {CriptoToolStripMenuItem, SimbolosToolStripMenuItem, CustodiaToolStripMenuItem})
+        CadastroToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        CadastroToolStripMenuItem.Name = "CadastroToolStripMenuItem"
+        CadastroToolStripMenuItem.Size = New Size(66, 20)
+        CadastroToolStripMenuItem.Text = "Cadastro"
+        ' 
+        ' CriptoToolStripMenuItem
+        ' 
+        CriptoToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        CriptoToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        CriptoToolStripMenuItem.Name = "CriptoToolStripMenuItem"
+        CriptoToolStripMenuItem.Size = New Size(123, 22)
+        CriptoToolStripMenuItem.Text = "Aportes "
+        ' 
+        ' SimbolosToolStripMenuItem
+        ' 
+        SimbolosToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        SimbolosToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        SimbolosToolStripMenuItem.Name = "SimbolosToolStripMenuItem"
+        SimbolosToolStripMenuItem.Size = New Size(123, 22)
+        SimbolosToolStripMenuItem.Text = "Simbolos"
+        ' 
+        ' CustodiaToolStripMenuItem
+        ' 
+        CustodiaToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        CustodiaToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        CustodiaToolStripMenuItem.Name = "CustodiaToolStripMenuItem"
+        CustodiaToolStripMenuItem.Size = New Size(123, 22)
+        CustodiaToolStripMenuItem.Text = "Custodia"
+        ' 
+        ' OpçõesToolStripMenuItem
+        ' 
+        OpçõesToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {IntervaloToolStripMenuItem, JSONToolStripMenuItem, APIToolStripMenuItem})
+        OpçõesToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        OpçõesToolStripMenuItem.Name = "OpçõesToolStripMenuItem"
+        OpçõesToolStripMenuItem.Size = New Size(96, 20)
+        OpçõesToolStripMenuItem.Text = "Configurações"
+        ' 
+        ' IntervaloToolStripMenuItem
+        ' 
+        IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
+        IntervaloToolStripMenuItem.Size = New Size(120, 22)
+        IntervaloToolStripMenuItem.Text = "Intervalo"
+        ' 
+        ' JSONToolStripMenuItem
+        ' 
+        JSONToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        JSONToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem, ExportarToolStripMenuItem, CriptoToolStripMenuItem2})
+        JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
+        JSONToolStripMenuItem.Size = New Size(120, 22)
+        JSONToolStripMenuItem.Text = "JSON"
+        ' 
+        ' ImportarToolStripMenuItem
+        ' 
+        ImportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ImportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {PortfolioToolStripMenuItem, WalletsExchangeToolStripMenuItem})
+        ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
+        ImportarToolStripMenuItem.Size = New Size(167, 22)
+        ImportarToolStripMenuItem.Text = "Portfolio"
+        ' 
+        ' PortfolioToolStripMenuItem
+        ' 
+        PortfolioToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        PortfolioToolStripMenuItem.ForeColor = SystemColors.ControlLightLight
+        PortfolioToolStripMenuItem.Name = "PortfolioToolStripMenuItem"
+        PortfolioToolStripMenuItem.Size = New Size(120, 22)
+        PortfolioToolStripMenuItem.Text = "Importar"
+        ' 
+        ' WalletsExchangeToolStripMenuItem
+        ' 
+        WalletsExchangeToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        WalletsExchangeToolStripMenuItem.ForeColor = SystemColors.ControlLightLight
+        WalletsExchangeToolStripMenuItem.Name = "WalletsExchangeToolStripMenuItem"
+        WalletsExchangeToolStripMenuItem.Size = New Size(120, 22)
+        WalletsExchangeToolStripMenuItem.Text = "Exportar"
+        ' 
+        ' ExportarToolStripMenuItem
+        ' 
+        ExportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ExportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem1, ExportarToolStripMenuItem1})
+        ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
+        ExportarToolStripMenuItem.Size = New Size(167, 22)
+        ExportarToolStripMenuItem.Text = "Wallets/Exchange"
+        ' 
+        ' ImportarToolStripMenuItem1
+        ' 
+        ImportarToolStripMenuItem1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ImportarToolStripMenuItem1.ForeColor = SystemColors.ControlLightLight
+        ImportarToolStripMenuItem1.Name = "ImportarToolStripMenuItem1"
+        ImportarToolStripMenuItem1.Size = New Size(120, 22)
+        ImportarToolStripMenuItem1.Text = "Importar"
+        ' 
+        ' ExportarToolStripMenuItem1
+        ' 
+        ExportarToolStripMenuItem1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ExportarToolStripMenuItem1.ForeColor = SystemColors.ControlLightLight
+        ExportarToolStripMenuItem1.Name = "ExportarToolStripMenuItem1"
+        ExportarToolStripMenuItem1.Size = New Size(120, 22)
+        ExportarToolStripMenuItem1.Text = "Exportar"
+        ' 
+        ' CriptoToolStripMenuItem2
+        ' 
+        CriptoToolStripMenuItem2.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        CriptoToolStripMenuItem2.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem2, ExportarToolStripMenuItem2})
+        CriptoToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
+        CriptoToolStripMenuItem2.Name = "CriptoToolStripMenuItem2"
+        CriptoToolStripMenuItem2.Size = New Size(167, 22)
+        CriptoToolStripMenuItem2.Text = "Cripto"
+        ' 
+        ' ImportarToolStripMenuItem2
+        ' 
+        ImportarToolStripMenuItem2.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ImportarToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
+        ImportarToolStripMenuItem2.Name = "ImportarToolStripMenuItem2"
+        ImportarToolStripMenuItem2.Size = New Size(120, 22)
+        ImportarToolStripMenuItem2.Text = "Importar"
+        ' 
+        ' ExportarToolStripMenuItem2
+        ' 
+        ExportarToolStripMenuItem2.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ExportarToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
+        ExportarToolStripMenuItem2.Name = "ExportarToolStripMenuItem2"
+        ExportarToolStripMenuItem2.Size = New Size(120, 22)
+        ExportarToolStripMenuItem2.Text = "Exportar"
+        ' 
+        ' APIToolStripMenuItem
+        ' 
+        APIToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        APIToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        APIToolStripMenuItem.Name = "APIToolStripMenuItem"
+        APIToolStripMenuItem.Size = New Size(120, 22)
+        APIToolStripMenuItem.Text = "API"
+        ' 
+        ' FecharToolStripMenuItem
+        ' 
+        FecharToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        FecharToolStripMenuItem.Name = "FecharToolStripMenuItem"
+        FecharToolStripMenuItem.Size = New Size(54, 20)
+        FecharToolStripMenuItem.Text = "Fechar"
+        ' 
+        ' MenuStrip1
+        ' 
+        MenuStrip1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, OpçõesToolStripMenuItem, FecharToolStripMenuItem})
+        MenuStrip1.Location = New Point(0, 0)
+        MenuStrip1.Name = "MenuStrip1"
+        MenuStrip1.Size = New Size(1151, 24)
+        MenuStrip1.TabIndex = 10
+        MenuStrip1.Text = "MenuStrip1"
+        ' 
+        ' pbBRL
+        ' 
+        pbBRL.Cursor = Cursors.Hand
+        pbBRL.Image = CType(resources.GetObject("pbBRL.Image"), Image)
+        pbBRL.Location = New Point(1117, 33)
+        pbBRL.Name = "pbBRL"
+        pbBRL.Size = New Size(25, 15)
+        pbBRL.SizeMode = PictureBoxSizeMode.StretchImage
+        pbBRL.TabIndex = 34
+        pbBRL.TabStop = False
+        ' 
+        ' pbUSD
+        ' 
+        pbUSD.Cursor = Cursors.Hand
+        pbUSD.Image = CType(resources.GetObject("pbUSD.Image"), Image)
+        pbUSD.Location = New Point(1088, 33)
+        pbUSD.Name = "pbUSD"
+        pbUSD.Size = New Size(25, 15)
+        pbUSD.SizeMode = PictureBoxSizeMode.StretchImage
+        pbUSD.TabIndex = 35
+        pbUSD.TabStop = False
+        ' 
+        ' SaveFileDialog1
+        ' 
+        SaveFileDialog1.DefaultExt = "json"
+        SaveFileDialog1.Filter = "json files (*.json)|*.json"
+        ' 
+        ' Label8
+        ' 
+        Label8.AutoSize = True
+        Label8.ForeColor = SystemColors.ControlLightLight
+        Label8.Location = New Point(1041, 33)
+        Label8.Name = "Label8"
+        Label8.Size = New Size(47, 15)
+        Label8.TabIndex = 36
+        Label8.Text = "Moeda:"
+        ' 
+        ' panelDebug
+        ' 
+        panelDebug.BackColor = Color.Black
+        panelDebug.Controls.Add(lbDebug)
+        panelDebug.Dock = DockStyle.Bottom
+        panelDebug.Location = New Point(0, 653)
+        panelDebug.Name = "panelDebug"
+        panelDebug.Size = New Size(1151, 53)
+        panelDebug.TabIndex = 18
+        ' 
+        ' lbDebug
+        ' 
+        lbDebug.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        lbDebug.BackColor = SystemColors.MenuText
+        lbDebug.BorderStyle = BorderStyle.None
+        lbDebug.Font = New Font("Verdana", 11F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        lbDebug.ForeColor = Color.White
+        lbDebug.ImeMode = ImeMode.Disable
+        lbDebug.Location = New Point(5, 0)
+        lbDebug.Margin = New Padding(2, 3, 3, 3)
+        lbDebug.Name = "lbDebug"
+        lbDebug.ReadOnly = True
+        lbDebug.ScrollBars = RichTextBoxScrollBars.Vertical
+        lbDebug.Size = New Size(1142, 53)
+        lbDebug.TabIndex = 0
+        lbDebug.Text = ""
+        ' 
+        ' btSpot
+        ' 
+        btSpot.BackColor = Color.SteelBlue
+        btSpot.Cursor = Cursors.Hand
+        btSpot.FlatAppearance.BorderColor = Color.Gray
+        btSpot.FlatAppearance.BorderSize = 0
+        btSpot.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+        btSpot.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        btSpot.FlatStyle = FlatStyle.Flat
+        btSpot.ForeColor = Color.White
+        btSpot.Location = New Point(9, 28)
+        btSpot.Name = "btSpot"
+        btSpot.Size = New Size(75, 23)
+        btSpot.TabIndex = 38
+        btSpot.Text = "Spot"
+        btSpot.UseVisualStyleBackColor = False
+        ' 
+        ' btFuturos
+        ' 
+        btFuturos.BackColor = Color.FromArgb(CByte(20), CByte(20), CByte(20))
+        btFuturos.Cursor = Cursors.Hand
+        btFuturos.FlatAppearance.BorderColor = Color.Gray
+        btFuturos.FlatAppearance.BorderSize = 0
+        btFuturos.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+        btFuturos.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        btFuturos.FlatStyle = FlatStyle.Flat
+        btFuturos.ForeColor = Color.White
+        btFuturos.Location = New Point(84, 28)
+        btFuturos.Name = "btFuturos"
+        btFuturos.Size = New Size(75, 23)
+        btFuturos.TabIndex = 39
+        btFuturos.Text = "Futuros"
+        btFuturos.UseVisualStyleBackColor = False
+        ' 
+        ' btVisaoGeral
+        ' 
+        btVisaoGeral.BackColor = Color.SteelBlue
+        btVisaoGeral.Cursor = Cursors.Hand
+        btVisaoGeral.FlatAppearance.BorderColor = Color.Gray
+        btVisaoGeral.FlatAppearance.BorderSize = 0
+        btVisaoGeral.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+        btVisaoGeral.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        btVisaoGeral.FlatStyle = FlatStyle.Flat
+        btVisaoGeral.ForeColor = Color.White
+        btVisaoGeral.Location = New Point(5, 432)
+        btVisaoGeral.Name = "btVisaoGeral"
+        btVisaoGeral.Size = New Size(75, 23)
+        btVisaoGeral.TabIndex = 40
+        btVisaoGeral.Text = "Visão geral"
+        btVisaoGeral.UseVisualStyleBackColor = False
+        ' 
+        ' btOrdensSpot
+        ' 
+        btOrdensSpot.BackColor = Color.FromArgb(CByte(20), CByte(20), CByte(20))
+        btOrdensSpot.Cursor = Cursors.Hand
+        btOrdensSpot.FlatAppearance.BorderColor = Color.Gray
+        btOrdensSpot.FlatAppearance.BorderSize = 0
+        btOrdensSpot.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+        btOrdensSpot.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        btOrdensSpot.FlatStyle = FlatStyle.Flat
+        btOrdensSpot.ForeColor = Color.White
+        btOrdensSpot.Location = New Point(80, 432)
+        btOrdensSpot.Name = "btOrdensSpot"
+        btOrdensSpot.Size = New Size(100, 23)
+        btOrdensSpot.TabIndex = 41
+        btOrdensSpot.Text = "Ordens Spot"
+        btOrdensSpot.UseVisualStyleBackColor = False
+        ' 
+        ' PanelFuturos
+        ' 
+        PanelFuturos.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        PanelFuturos.BackColor = Color.FromArgb(CByte(30), CByte(30), CByte(30))
+        PanelFuturos.Location = New Point(0, 453)
+        PanelFuturos.Name = "PanelFuturos"
+        PanelFuturos.Size = New Size(1151, 159)
+        PanelFuturos.TabIndex = 43
+        PanelFuturos.Visible = False
+        ' 
+        ' btOrdensFuturo
+        ' 
+        btOrdensFuturo.BackColor = Color.FromArgb(CByte(20), CByte(20), CByte(20))
+        btOrdensFuturo.Cursor = Cursors.Hand
+        btOrdensFuturo.FlatAppearance.BorderColor = Color.Gray
+        btOrdensFuturo.FlatAppearance.BorderSize = 0
+        btOrdensFuturo.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+        btOrdensFuturo.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        btOrdensFuturo.FlatStyle = FlatStyle.Flat
+        btOrdensFuturo.ForeColor = Color.White
+        btOrdensFuturo.Location = New Point(180, 432)
+        btOrdensFuturo.Name = "btOrdensFuturo"
+        btOrdensFuturo.Size = New Size(100, 23)
+        btOrdensFuturo.TabIndex = 44
+        btOrdensFuturo.Text = "Ordens Futuros"
+        btOrdensFuturo.UseVisualStyleBackColor = False
+        ' 
+        ' FormMain
+        ' 
+        AutoScaleDimensions = New SizeF(7F, 15F)
+        AutoScaleMode = AutoScaleMode.Font
+        BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        ClientSize = New Size(1151, 706)
+        Controls.Add(PanelFuturos)
+        Controls.Add(btOrdensFuturo)
+        Controls.Add(btRefresh)
+        Controls.Add(PanelOrdens)
+        Controls.Add(btOrdensSpot)
+        Controls.Add(btVisaoGeral)
+        Controls.Add(lbLoadFromMarket)
+        Controls.Add(btFuturos)
+        Controls.Add(btSpot)
+        Controls.Add(dgFuturos)
+        Controls.Add(dgPortfolio)
+        Controls.Add(PanelGraphs)
+        Controls.Add(panelDebug)
+        Controls.Add(Label8)
+        Controls.Add(pbUSD)
+        Controls.Add(pbBRL)
+        Controls.Add(PanelProfits)
+        Controls.Add(Panel1)
+        Controls.Add(MenuStrip1)
+        Controls.Add(Panel2)
+        Font = New Font("Segoe UI", 9F)
+        Icon = CType(resources.GetObject("$this.Icon"), Icon)
+        MainMenuStrip = MenuStrip1
+        Name = "FormMain"
+        StartPosition = FormStartPosition.CenterScreen
+        Text = "Portfolio Cripto"
+        CType(dgPortfolio, ComponentModel.ISupportInitialize).EndInit()
+        PanelProfits.ResumeLayout(False)
+        PanelProfits.PerformLayout()
+        Panel1.ResumeLayout(False)
+        Panel1.PerformLayout()
+        CType(PictureBox2, ComponentModel.ISupportInitialize).EndInit()
+        CType(PictureBox1, ComponentModel.ISupportInitialize).EndInit()
+        PanelPerformance.ResumeLayout(False)
+        PanelPerformance.PerformLayout()
+        PanelGraphs.ResumeLayout(False)
+        PanelGraphs.PerformLayout()
+        CType(dgFuturos, ComponentModel.ISupportInitialize).EndInit()
+        MenuStrip1.ResumeLayout(False)
+        MenuStrip1.PerformLayout()
+        CType(pbBRL, ComponentModel.ISupportInitialize).EndInit()
+        CType(pbUSD, ComponentModel.ISupportInitialize).EndInit()
+        panelDebug.ResumeLayout(False)
+        ResumeLayout(False)
+        PerformLayout()
+    End Sub
+    Friend WithEvents dgPortfolio As DataGridView
+    Friend WithEvents PanelProfits As Panel
+    Friend WithEvents Label5 As Label
+    Friend WithEvents lbRoiSeparator As Label
+    Friend WithEvents lbValoresSeparator As Label
+    Friend WithEvents lbTotalBRL As Label
+    Friend WithEvents LabelFuturos As Label
+    Friend WithEvents lbFuturosUSD As Label
+    Friend WithEvents lbFuturosBRL As Label
+    Friend WithEvents Panel1 As Panel
+    Friend WithEvents btRefresh As Button
+    Friend WithEvents Label4 As Label
+    Friend WithEvents lbDom As Label
+    Friend WithEvents Label3 As Label
+    Friend WithEvents lbBTC As Label
+    Friend WithEvents Label1 As Label
+    Friend WithEvents lbDolar As Label
+    Friend WithEvents NotifyIcon1 As NotifyIcon
+    Friend WithEvents TimerRefresh As Timer
+    Friend WithEvents lbRefresh As Label
+    Friend WithEvents TimerCountdown As Timer
+    Friend WithEvents lbLoadFromMarket As Label
+    Friend WithEvents Label15 As Label
+    Friend WithEvents lbAtualizaEm As Label
+    Friend WithEvents TimerBlink As Timer
+    Friend WithEvents PictureBox2 As PictureBox
+    Friend WithEvents PictureBox1 As PictureBox
+    Friend WithEvents PanelPerformance As Panel
+    Friend WithEvents Label16 As Label
+    Friend WithEvents lbPerformWallet As Label
+    Friend WithEvents Label6 As Label
+    Friend WithEvents lbDataTotalToday As Label
+    Friend WithEvents Label7 As Label
+    Friend WithEvents lbValoresHojeBRL As Label
+    Friend WithEvents lbValoresHojeUSD As Label
+    Friend WithEvents lbRoiUSD As Label
+    Friend WithEvents lbTotalEntradaBRL As Label
+    Friend WithEvents lbTotalEntradaUSD As Label
+    Friend WithEvents PanelGraphs As Panel
+    Friend WithEvents Panel2 As Panel
+    Friend WithEvents CadastroToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents CriptoToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents OpçõesToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents IntervaloToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents JSONToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents FecharToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents MenuStrip1 As MenuStrip
+    Friend WithEvents pbBRL As PictureBox
+    Friend WithEvents pbUSD As PictureBox
+    Friend WithEvents ImportarToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents OpenFileDialog1 As OpenFileDialog
+    Friend WithEvents SaveFileDialog1 As SaveFileDialog
+    Friend WithEvents Label8 As Label
+    Friend WithEvents PortfolioToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents WalletsExchangeToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents CriptoToolStripMenuItem2 As ToolStripMenuItem
+    Friend WithEvents ImportarToolStripMenuItem2 As ToolStripMenuItem
+    Friend WithEvents ExportarToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents ImportarToolStripMenuItem1 As ToolStripMenuItem
+    Friend WithEvents ExportarToolStripMenuItem1 As ToolStripMenuItem
+    Friend WithEvents ExportarToolStripMenuItem2 As ToolStripMenuItem
+    Friend WithEvents APIToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents lbCaixa As Label
+    Friend WithEvents Label9 As Label
+    Friend WithEvents lbCaixaBRL As Label
+    Friend WithEvents lbPercentInvestido As Label
+    Friend WithEvents lbPercentCaixa As Label
+    Friend WithEvents ToolTip1 As ToolTip
+    Friend WithEvents panelDebug As Panel
+    Friend WithEvents lbDebug As RichTextBox
+    Friend WithEvents dgFuturos As DataGridView
+    Friend WithEvents btSpot As Button
+    Friend WithEvents btFuturos As Button
+    Friend WithEvents Label10 As Label
+    Friend WithEvents lbInvestimentoUSD As Label
+    Friend WithEvents lbInvestimentoBRL As Label
+    Friend WithEvents btVisaoGeral As Button
+    Friend WithEvents btOrdensSpot As Button
+    Friend WithEvents PanelOrdens As Panel
+    Friend WithEvents SimbolosToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents CustodiaToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents PanelFuturos As Panel
+    Friend WithEvents btOrdensFuturo As Button
+
+End Class
