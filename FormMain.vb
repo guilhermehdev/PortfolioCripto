@@ -658,6 +658,7 @@ Public Class FormMain
         _btTradeBot.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
         AddHandler _btTradeBot.Click, AddressOf btTradeBot_Click
         Controls.Add(_btTradeBot)
+        ArrangeSpotBotButton()
 
         AddHandler _spotTradeBot.SignalGenerated, AddressOf SpotTradeBot_SignalGenerated
         AddHandler _spotTradeBot.SimulationUpdated, AddressOf SpotTradeBot_SimulationUpdated
@@ -766,6 +767,14 @@ Public Class FormMain
         btOrdensSpot.BringToFront()
         btOrdensFuturo.BringToFront()
         _btTradeBot.BringToFront()
+    End Sub
+
+    Private Sub ArrangeSpotBotButton()
+        If _btTradeBot Is Nothing OrElse btOrdensFuturo Is Nothing Then
+            Return
+        End If
+
+        _btTradeBot.Location = New Point(btOrdensFuturo.Right, btOrdensFuturo.Top)
     End Sub
 
     Private Sub ApplySpotBotControls()
@@ -2153,6 +2162,7 @@ Public Class FormMain
                 ArrangeFuturesOrdersPanel(True)
             End If
 
+            ArrangeSpotBotButton()
             If _panelSpotBot IsNot Nothing AndAlso _panelSpotBot.Visible Then
                 ArrangeSpotBotPanel(True)
             End If
