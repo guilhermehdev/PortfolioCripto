@@ -18,11 +18,18 @@ Public NotInheritable Class SpotTradeBotEngine
     Private _simulationLosingTrades As Integer
     Private _simulationLastAction As String = String.Empty
     Private _running As Boolean
+    Private _activeRunId As Long
 
     Public Event SignalGenerated As EventHandler(Of SpotBotSignalEventArgs)
     Public Event SimulationUpdated As EventHandler(Of SpotBotSimulationEventArgs)
 
     Public Sub New()
+        Try
+            SpotTradeBotRepository.Initialize()
+        Catch ex As Exception
+            Debug.WriteLine("Erro inicializando persistência do Tradebot: " & ex.Message)
+        End Try
+
         RegisterStrategy(New SpotBotEmaCrossoverStrategy())
         RegisterStrategy(New SpotBotRsiStrategy())
         RegisterStrategy(New SpotBotBreakoutStrategy())
@@ -80,15 +87,42 @@ Public NotInheritable Class SpotTradeBotEngine
     End Sub
 
     Public Sub Start()
+        Dim configurationSnapshot As SpotBotConfiguration
+
         SyncLock _sync
+            If _running Then Return
             _running = True
+            configurationSnapshot = CopyConfiguration(_configuration)
         End SyncLock
+
+        Try
+            Dim runId = SpotTradeBotRepository.StartRun(configurationSnapshot)
+            SyncLock _sync
+                _activeRunId = runId
+            End SyncLock
+        Catch ex As Exception
+            Debug.WriteLine("Erro iniciando persistência da simulação: " & ex.Message)
+        End Try
     End Sub
 
     Public Sub [Stop]()
+        Dim runId As Long
+        Dim snapshot As SpotBotSimulationSnapshot
+
         SyncLock _sync
             _running = False
+            runId = _activeRunId
+            snapshot = BuildSimulationSnapshotLocked(_configuration)
+            _activeRunId = 0
         End SyncLock
+
+        If runId <= 0 Then Return
+
+        Try
+            SpotTradeBotRepository.UpdateRun(runId, snapshot, "STOPPED", DateTime.UtcNow)
+        Catch ex As Exception
+            Debug.WriteLine("Erro salvando resultado da simulação: " & ex.Message)
+        End Try
     End Sub
 
     Public Sub ResetHistory(Optional symbol As String = Nothing)
@@ -133,8 +167,11 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim history As List(Of SpotBotPricePoint) = Nothing
         Dim rsiHistory As List(Of SpotBotPricePoint) = Nothing
         Dim rsiPriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
+        Dim closedCandle As SpotBotPricePoint = Nothing
+        Dim candleClosed As Boolean
         Dim enabledStrategies As List(Of SpotBotStrategyKind)
         Dim configurationSnapshot As SpotBotConfiguration
+        Dim activeRunId As Long
 
         SyncLock _sync
             If Not _running Then Return Nothing
@@ -150,12 +187,15 @@ Public NotInheritable Class SpotTradeBotEngine
                 history.RemoveRange(0, history.Count - maximum)
             End If
 
-            rsiHistory = GetOrCreateRsiCandleHistory(normalizedSymbol)
-            UpdateRsiCandle(normalizedSymbol, observedAt, price, rsiHistory)
-            rsiPriceSnapshot = rsiHistory.ToArray()
-
             enabledStrategies = _configuration.EnabledStrategies.ToList()
+            If enabledStrategies.Contains(SpotBotStrategyKind.Rsi) Then
+                rsiHistory = GetOrCreateRsiCandleHistory(normalizedSymbol)
+                candleClosed = UpdateRsiCandle(normalizedSymbol, observedAt, price, rsiHistory, closedCandle)
+                rsiPriceSnapshot = rsiHistory.ToArray()
+            End If
+
             configurationSnapshot = CopyConfiguration(_configuration)
+            activeRunId = _activeRunId
         End SyncLock
 
         If enabledStrategies.Count = 0 Then Return Nothing
@@ -200,8 +240,31 @@ Public NotInheritable Class SpotTradeBotEngine
             End SyncLock
         End If
 
-        Dim simulationSnapshot = ApplySimulation(normalizedSymbol, price, acceptedSignal, configurationSnapshot)
+        Dim completedTrade As SpotBotSimulationTrade = Nothing
+        Dim simulationSnapshot = ApplySimulation(normalizedSymbol, price, acceptedSignal, configurationSnapshot, completedTrade)
         RaiseEvent SimulationUpdated(Me, New SpotBotSimulationEventArgs(simulationSnapshot))
+
+        If activeRunId > 0 Then
+            Try
+                If candleClosed AndAlso closedCandle IsNot Nothing Then
+                    SpotTradeBotRepository.SaveCandle(
+                        activeRunId,
+                        normalizedSymbol,
+                        closedCandle.TimestampUtc,
+                        closedCandle.Price)
+                End If
+
+                If completedTrade IsNot Nothing Then
+                    SpotTradeBotRepository.SaveTrade(activeRunId, completedTrade)
+                End If
+
+                If candleClosed OrElse completedTrade IsNot Nothing OrElse acceptedSignal IsNot Nothing Then
+                    SpotTradeBotRepository.UpdateRun(activeRunId, simulationSnapshot, "RUNNING")
+                End If
+            Catch ex As Exception
+                Debug.WriteLine("Erro salvando dados da simulação: " & ex.Message)
+            End Try
+        End If
 
         If acceptedSignal Is Nothing Then Return Nothing
 
@@ -213,7 +276,8 @@ Public NotInheritable Class SpotTradeBotEngine
         symbol As String,
         price As Decimal,
         signal As SpotBotSignal,
-        configuration As SpotBotConfiguration) As SpotBotSimulationSnapshot
+        configuration As SpotBotConfiguration,
+        ByRef completedTrade As SpotBotSimulationTrade) As SpotBotSimulationSnapshot
 
         SyncLock _sync
             Dim position As SimulationPosition = Nothing
@@ -236,7 +300,8 @@ Public NotInheritable Class SpotTradeBotEngine
                                     .Quantity = notional / price,
                                     .EntryPrice = price,
                                     .CostBasis = notional + fee,
-                                    .LastPrice = price
+                                    .LastPrice = price,
+                                    .EntryTimestampUtc = signal.TimestampUtc
                                 }
                                 _simulationPositions(symbol) = position
                                 _simulationQuoteBalance -= notional + fee
@@ -253,6 +318,19 @@ Public NotInheritable Class SpotTradeBotEngine
                             Dim fee = gross * feeRate
                             Dim net = gross - fee
                             Dim tradePnl = net - position.CostBasis
+
+                            completedTrade = New SpotBotSimulationTrade With {
+                                .Symbol = symbol,
+                                .Quantity = position.Quantity,
+                                .EntryPrice = position.EntryPrice,
+                                .ExitPrice = price,
+                                .CostBasis = position.CostBasis,
+                                .GrossProceeds = gross,
+                                .Fees = fee,
+                                .Pnl = tradePnl,
+                                .OpenedAtUtc = position.EntryTimestampUtc,
+                                .ClosedAtUtc = signal.TimestampUtc
+                            }
 
                             _simulationQuoteBalance += net
                             _simulationRealizedPnl += tradePnl
@@ -333,11 +411,12 @@ Public NotInheritable Class SpotTradeBotEngine
         Return history
     End Function
 
-    Private Sub UpdateRsiCandle(
+    Private Function UpdateRsiCandle(
         symbol As String,
         timestampUtc As DateTime,
         price As Decimal,
-        history As List(Of SpotBotPricePoint))
+        history As List(Of SpotBotPricePoint),
+        ByRef closedCandle As SpotBotPricePoint) As Boolean
 
         Dim candleStart = TruncateToMinute(timestampUtc)
         Dim currentCandle As RsiCandleState = Nothing
@@ -348,19 +427,20 @@ Public NotInheritable Class SpotTradeBotEngine
                 .Close = price
             }
             _rsiCurrentCandles(symbol) = currentCandle
-            Return
+            Return False
         End If
 
         If candleStart < currentCandle.StartUtc Then
-            Return
+            Return False
         End If
 
         If candleStart = currentCandle.StartUtc Then
             currentCandle.Close = price
-            Return
+            Return False
         End If
 
-        history.Add(New SpotBotPricePoint(currentCandle.StartUtc, currentCandle.Close))
+        closedCandle = New SpotBotPricePoint(currentCandle.StartUtc, currentCandle.Close)
+        history.Add(closedCandle)
         Dim maximumCandles = Math.Max(30, _configuration.MaximumPriceHistory)
         If history.Count > maximumCandles Then
             history.RemoveRange(0, history.Count - maximumCandles)
@@ -370,7 +450,8 @@ Public NotInheritable Class SpotTradeBotEngine
             .StartUtc = candleStart,
             .Close = price
         }
-    End Sub
+        Return True
+    End Function
 
     Private Shared Function TruncateToMinute(timestampUtc As DateTime) As DateTime
         Return New DateTime(
@@ -507,6 +588,7 @@ Public NotInheritable Class SpotTradeBotEngine
         Public Property EntryPrice As Decimal
         Public Property CostBasis As Decimal
         Public Property LastPrice As Decimal
+        Public Property EntryTimestampUtc As DateTime
     End Class
 
     Private NotInheritable Class RsiCandleState

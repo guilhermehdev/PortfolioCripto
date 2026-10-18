@@ -115,6 +115,19 @@ Public NotInheritable Class SpotBotSimulationSnapshot
     End Property
 End Class
 
+Public NotInheritable Class SpotBotSimulationTrade
+    Public Property Symbol As String = String.Empty
+    Public Property Quantity As Decimal
+    Public Property EntryPrice As Decimal
+    Public Property ExitPrice As Decimal
+    Public Property CostBasis As Decimal
+    Public Property GrossProceeds As Decimal
+    Public Property Fees As Decimal
+    Public Property Pnl As Decimal
+    Public Property OpenedAtUtc As DateTime
+    Public Property ClosedAtUtc As DateTime
+End Class
+
 Public NotInheritable Class SpotBotSimulationEventArgs
     Inherits EventArgs
 
