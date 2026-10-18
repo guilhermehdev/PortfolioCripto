@@ -73,6 +73,11 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property GridSpacingPercent As Decimal = 1D
     Public Property GridReferencePrice As Decimal
 
+    ' Parâmetros da carteira virtual usada pelo modo de simulação.
+    Public Property SimulationStartingQuote As Decimal = 1000D
+    Public Property SimulationAllocationPercent As Decimal = 10D
+    Public Property SimulationFeeRate As Decimal = 0.001D
+
     ' O motor começa sempre em simulação. A execução real será conectada
     ' depois de validarmos os sinais e os limites de risco.
     Public Property SimulationOnly As Boolean = True
@@ -86,6 +91,38 @@ Public NotInheritable Class SpotBotSignalEventArgs
     End Sub
 
     Public ReadOnly Property Signal As SpotBotSignal
+End Class
+
+Public NotInheritable Class SpotBotSimulationSnapshot
+    Public Property StartingQuote As Decimal
+    Public Property QuoteBalance As Decimal
+    Public Property OpenValue As Decimal
+    Public Property RealizedPnl As Decimal
+    Public Property UnrealizedPnl As Decimal
+    Public Property Equity As Decimal
+    Public Property TotalPnl As Decimal
+    Public Property CompletedTrades As Integer
+    Public Property WinningTrades As Integer
+    Public Property LosingTrades As Integer
+    Public Property OpenPositions As Integer
+    Public Property LastAction As String = String.Empty
+
+    Public ReadOnly Property WinRatePercent As Decimal
+        Get
+            If CompletedTrades <= 0 Then Return 0D
+            Return WinningTrades * 100D / CompletedTrades
+        End Get
+    End Property
+End Class
+
+Public NotInheritable Class SpotBotSimulationEventArgs
+    Inherits EventArgs
+
+    Public Sub New(snapshot As SpotBotSimulationSnapshot)
+        Me.Snapshot = snapshot
+    End Sub
+
+    Public ReadOnly Property Snapshot As SpotBotSimulationSnapshot
 End Class
 
 Public Interface ISpotBotStrategy

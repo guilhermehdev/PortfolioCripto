@@ -78,10 +78,16 @@ Public Class FormMain
     Private _botLog As RichTextBox
     Private _botCombination As ComboBox
     Private _botConfirmations As NumericUpDown
+    Private _botStartingQuote As NumericUpDown
+    Private _botAllocation As NumericUpDown
+    Private _botFee As NumericUpDown
+    Private _botSimulationSummary As Label
     Private _botStart As Button
     Private _botStop As Button
     Private _btTradeBot As Button
     Private ReadOnly _botStrategyChecks As New Dictionary(Of SpotBotStrategyKind, CheckBox)()
+    Private _lastBotSummaryUpdateUtc As DateTime
+    Private _lastBotSimulationAction As String = String.Empty
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -588,10 +594,22 @@ Public Class FormMain
         AddHandler _botStop.Click, AddressOf SpotBotStop_Click
         editor.Controls.Add(_botStop)
 
+        AddBotLabel(editor, "Saldo virtual (USDT)", 240, 55, 110)
+        _botStartingQuote = CreateBotNumeric(1000D, 0D, 100000000D, 2, 240, 74, 98)
+        editor.Controls.Add(_botStartingQuote)
+
+        AddBotLabel(editor, "Alocação (%)", 348, 55, 86)
+        _botAllocation = CreateBotNumeric(10D, 0D, 100D, 2, 348, 74, 82)
+        editor.Controls.Add(_botAllocation)
+
+        AddBotLabel(editor, "Taxa (%)", 440, 55, 70)
+        _botFee = CreateBotNumeric(0.1D, 0D, 5D, 3, 440, 74, 70)
+        editor.Controls.Add(_botFee)
+
         Dim hint As New Label With {
             .AutoSize = True,
             .ForeColor = Color.LightGray,
-            .Location = New Point(240, 62),
+            .Location = New Point(520, 78),
             .Text = "Os períodos usam as amostras recebidas pelo WebSocket."
         }
         editor.Controls.Add(hint)
@@ -608,7 +626,20 @@ Public Class FormMain
             .ScrollBars = RichTextBoxScrollBars.Vertical
         }
 
+        _botSimulationSummary = New Label With {
+            .Name = "lbSpotBotSimulationSummary",
+            .Dock = DockStyle.Top,
+            .Height = 26,
+            .BackColor = Color.FromArgb(20, 20, 20),
+            .ForeColor = Color.Gold,
+            .Font = New Font("Calibri", 10.0F, FontStyle.Bold),
+            .TextAlign = ContentAlignment.MiddleLeft,
+            .Padding = New Padding(4, 0, 4, 0),
+            .Text = "Simulação: aguardando início"
+        }
+
         _panelSpotBot.Controls.Add(_botLog)
+        _panelSpotBot.Controls.Add(_botSimulationSummary)
         _panelSpotBot.Controls.Add(editor)
         Controls.Add(_panelSpotBot)
 
@@ -629,6 +660,7 @@ Public Class FormMain
         Controls.Add(_btTradeBot)
 
         AddHandler _spotTradeBot.SignalGenerated, AddressOf SpotTradeBot_SignalGenerated
+        AddHandler _spotTradeBot.SimulationUpdated, AddressOf SpotTradeBot_SimulationUpdated
     End Sub
 
     Private Sub AddBotStrategyCheckBox(
@@ -689,6 +721,28 @@ Public Class FormMain
         Return button
     End Function
 
+    Private Shared Function CreateBotNumeric(
+        value As Decimal,
+        minimum As Decimal,
+        maximum As Decimal,
+        decimalPlaces As Integer,
+        left As Integer,
+        top As Integer,
+        width As Integer) As NumericUpDown
+
+        Return New NumericUpDown With {
+            .DecimalPlaces = decimalPlaces,
+            .Increment = If(decimalPlaces = 0, 1D, 0.1D),
+            .Minimum = minimum,
+            .Maximum = maximum,
+            .Value = value,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .Location = New Point(left, top),
+            .Width = width
+        }
+    End Function
+
     Private Sub ArrangeSpotBotPanel(showBot As Boolean)
         If _panelSpotBot Is Nothing OrElse PanelGraphs Is Nothing Then
             Return
@@ -732,6 +786,9 @@ Public Class FormMain
         End Select
 
         _spotTradeBot.Configuration.RequiredConfirmations = CInt(_botConfirmations.Value)
+        _spotTradeBot.Configuration.SimulationStartingQuote = _botStartingQuote.Value
+        _spotTradeBot.Configuration.SimulationAllocationPercent = _botAllocation.Value
+        _spotTradeBot.Configuration.SimulationFeeRate = _botFee.Value / 100D
         _spotTradeBot.Configuration.SimulationOnly = True
     End Sub
 
@@ -746,6 +803,11 @@ Public Class FormMain
         _spotTradeBot.Start()
         _botStart.Enabled = False
         _botStop.Enabled = True
+        _lastBotSimulationAction = String.Empty
+        _botSimulationSummary.ForeColor = Color.Gold
+        _botSimulationSummary.Text =
+            $"Simulação | Patrimônio: {_spotTradeBot.Configuration.SimulationStartingQuote:0.00} USDT | " &
+            "P/L: 0.00 | Trades: 0 | Acerto: 0.0% | Abertas: 0"
         AppendSpotBotLog("Bot Spot iniciado em modo SIMULAÇÃO.", Color.LimeGreen)
         AppendSpotBotLog("Estratégias: " & String.Join(", ", _spotTradeBot.Configuration.EnabledStrategies), Color.LightGray)
     End Sub
@@ -771,6 +833,32 @@ Public Class FormMain
             $"{signal.TimestampUtc.ToLocalTime():HH:mm:ss} {directionText} {signal.Symbol} @ {signal.Price:0.########} " &
             $"({signal.Confirmations}/{signal.ActiveStrategies}) - {String.Join(" | ", signal.Reasons)}",
             If(signal.Direction = SpotBotSignalDirection.Buy, Color.LimeGreen, Color.IndianRed))
+    End Sub
+
+    Private Sub SpotTradeBot_SimulationUpdated(sender As Object, e As SpotBotSimulationEventArgs)
+        If e Is Nothing OrElse e.Snapshot Is Nothing OrElse _botSimulationSummary Is Nothing Then Return
+
+        If InvokeRequired Then
+            BeginInvoke(New MethodInvoker(Sub() SpotTradeBot_SimulationUpdated(Me, e)))
+            Return
+        End If
+
+        Dim nowUtc = DateTime.UtcNow
+        If nowUtc - _lastBotSummaryUpdateUtc < TimeSpan.FromMilliseconds(250) AndAlso
+           String.Equals(_lastBotSimulationAction, e.Snapshot.LastAction, StringComparison.Ordinal) Then
+            Return
+        End If
+
+        _lastBotSummaryUpdateUtc = nowUtc
+        _lastBotSimulationAction = e.Snapshot.LastAction
+        Dim pnlColor = If(e.Snapshot.TotalPnl >= 0D, Color.LimeGreen, Color.IndianRed)
+        _botSimulationSummary.ForeColor = pnlColor
+        _botSimulationSummary.Text =
+            $"Simulação | Patrimônio: {e.Snapshot.Equity:0.00} USDT | " &
+            $"P/L: {e.Snapshot.TotalPnl:+0.00;-0.00;0.00} | " &
+            $"Trades: {e.Snapshot.CompletedTrades} | " &
+            $"Acerto: {e.Snapshot.WinRatePercent:0.0}% | " &
+            $"Abertas: {e.Snapshot.OpenPositions}"
     End Sub
 
     Private Sub AppendSpotBotLog(message As String, color As Color)

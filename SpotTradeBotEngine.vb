@@ -7,17 +7,29 @@ Public NotInheritable Class SpotTradeBotEngine
     Private ReadOnly _strategies As New Dictionary(Of SpotBotStrategyKind, ISpotBotStrategy)()
     Private ReadOnly _priceHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _lastSignals As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _simulationPositions As New Dictionary(Of String, SimulationPosition)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _configuration As New SpotBotConfiguration()
+    Private _simulationQuoteBalance As Decimal
+    Private _simulationRealizedPnl As Decimal
+    Private _simulationCompletedTrades As Integer
+    Private _simulationWinningTrades As Integer
+    Private _simulationLosingTrades As Integer
+    Private _simulationLastAction As String = String.Empty
     Private _running As Boolean
+
+    Public Event SignalGenerated As EventHandler(Of SpotBotSignalEventArgs)
+    Public Event SimulationUpdated As EventHandler(Of SpotBotSimulationEventArgs)
 
     Public Sub New()
         RegisterStrategy(New SpotBotEmaCrossoverStrategy())
         RegisterStrategy(New SpotBotRsiStrategy())
         RegisterStrategy(New SpotBotBreakoutStrategy())
         RegisterStrategy(New SpotBotGridStrategy())
-    End Sub
 
-    Public Event SignalGenerated As EventHandler(Of SpotBotSignalEventArgs)
+        SyncLock _sync
+            ResetSimulationLocked()
+        End SyncLock
+    End Sub
 
     Public ReadOnly Property Configuration As SpotBotConfiguration
         Get
@@ -82,6 +94,7 @@ Public NotInheritable Class SpotTradeBotEngine
             If String.IsNullOrWhiteSpace(symbol) Then
                 _priceHistory.Clear()
                 _lastSignals.Clear()
+                ResetSimulationLocked()
             Else
                 Dim normalized = NormalizeSymbol(symbol)
                 _priceHistory.Remove(normalized)
@@ -153,23 +166,132 @@ Public NotInheritable Class SpotTradeBotEngine
         Next
 
         Dim signal = CombineSignals(normalizedSymbol, price, observedAt, strategySignals, configurationSnapshot)
-        If signal Is Nothing OrElse signal.Direction = SpotBotSignalDirection.Hold Then
-            Return Nothing
+        Dim acceptedSignal As SpotBotSignal = Nothing
+
+        If signal IsNot Nothing AndAlso signal.Direction <> SpotBotSignalDirection.Hold Then
+            Dim cooldownKey = $"{normalizedSymbol}|{signal.Direction}"
+            Dim cooldownBlocked = False
+
+            SyncLock _sync
+                Dim previousSignalAt As DateTime
+                cooldownBlocked = _lastSignals.TryGetValue(cooldownKey, previousSignalAt) AndAlso
+                                  observedAt - previousSignalAt < configurationSnapshot.Cooldown
+                If Not cooldownBlocked Then
+                    _lastSignals(cooldownKey) = observedAt
+                    acceptedSignal = signal
+                End If
+            End SyncLock
         End If
 
-        Dim cooldownKey = $"{normalizedSymbol}|{signal.Direction}"
+        Dim simulationSnapshot = ApplySimulation(normalizedSymbol, price, acceptedSignal, configurationSnapshot)
+        RaiseEvent SimulationUpdated(Me, New SpotBotSimulationEventArgs(simulationSnapshot))
+
+        If acceptedSignal Is Nothing Then Return Nothing
+
+        RaiseEvent SignalGenerated(Me, New SpotBotSignalEventArgs(acceptedSignal))
+        Return acceptedSignal
+    End Function
+
+    Private Function ApplySimulation(
+        symbol As String,
+        price As Decimal,
+        signal As SpotBotSignal,
+        configuration As SpotBotConfiguration) As SpotBotSimulationSnapshot
+
         SyncLock _sync
-            Dim previousSignalAt As DateTime
-            If _lastSignals.TryGetValue(cooldownKey, previousSignalAt) AndAlso
-               observedAt - previousSignalAt < configurationSnapshot.Cooldown Then
-                Return Nothing
+            Dim position As SimulationPosition = Nothing
+            If _simulationPositions.TryGetValue(symbol, position) Then
+                position.LastPrice = price
             End If
 
-            _lastSignals(cooldownKey) = observedAt
-        End SyncLock
+            If signal IsNot Nothing AndAlso signal.SimulationOnly Then
+                Select Case signal.Direction
+                    Case SpotBotSignalDirection.Buy
+                        If position Is Nothing Then
+                            Dim feeRate = Math.Max(0D, configuration.SimulationFeeRate)
+                            Dim allocationPercent = Math.Min(100D, Math.Max(0D, configuration.SimulationAllocationPercent))
+                            Dim requestedNotional = _simulationQuoteBalance * allocationPercent / 100D
+                            Dim notional = Math.Min(requestedNotional, _simulationQuoteBalance / (1D + feeRate))
 
-        RaiseEvent SignalGenerated(Me, New SpotBotSignalEventArgs(signal))
-        Return signal
+                            If notional > 0D Then
+                                Dim fee = notional * feeRate
+                                position = New SimulationPosition With {
+                                    .Quantity = notional / price,
+                                    .EntryPrice = price,
+                                    .CostBasis = notional + fee,
+                                    .LastPrice = price
+                                }
+                                _simulationPositions(symbol) = position
+                                _simulationQuoteBalance -= notional + fee
+                                _simulationLastAction = $"COMPRA simulada {symbol}: {position.Quantity:0.########} @ {price:0.########}"
+                            End If
+                        Else
+                            _simulationLastAction = $"COMPRA ignorada {symbol}: posição já aberta"
+                        End If
+
+                    Case SpotBotSignalDirection.Sell
+                        If position IsNot Nothing Then
+                            Dim feeRate = Math.Max(0D, configuration.SimulationFeeRate)
+                            Dim gross = position.Quantity * price
+                            Dim fee = gross * feeRate
+                            Dim net = gross - fee
+                            Dim tradePnl = net - position.CostBasis
+
+                            _simulationQuoteBalance += net
+                            _simulationRealizedPnl += tradePnl
+                            _simulationCompletedTrades += 1
+                            If tradePnl > 0D Then
+                                _simulationWinningTrades += 1
+                            ElseIf tradePnl < 0D Then
+                                _simulationLosingTrades += 1
+                            End If
+
+                            _simulationPositions.Remove(symbol)
+                            _simulationLastAction = $"VENDA simulada {symbol}: P/L {tradePnl:+0.00;-0.00;0.00} USDT"
+                        Else
+                            _simulationLastAction = $"VENDA ignorada {symbol}: sem posição aberta"
+                        End If
+                End Select
+            End If
+
+            Return BuildSimulationSnapshotLocked(configuration)
+        End SyncLock
+    End Function
+
+    Private Sub ResetSimulationLocked()
+        _simulationPositions.Clear()
+        _simulationQuoteBalance = Math.Max(0D, _configuration.SimulationStartingQuote)
+        _simulationRealizedPnl = 0D
+        _simulationCompletedTrades = 0
+        _simulationWinningTrades = 0
+        _simulationLosingTrades = 0
+        _simulationLastAction = "Carteira virtual reiniciada"
+    End Sub
+
+    Private Function BuildSimulationSnapshotLocked(configuration As SpotBotConfiguration) As SpotBotSimulationSnapshot
+        Dim openValue = 0D
+        Dim unrealizedPnl = 0D
+
+        For Each position In _simulationPositions.Values
+            openValue += position.Quantity * position.LastPrice
+            unrealizedPnl += position.Quantity * position.LastPrice - position.CostBasis
+        Next
+
+        Dim equity = _simulationQuoteBalance + openValue
+        Return New SpotBotSimulationSnapshot With {
+            .StartingQuote = configuration.SimulationStartingQuote,
+            .QuoteBalance = _simulationQuoteBalance,
+            .OpenValue = openValue,
+            .RealizedPnl = _simulationRealizedPnl,
+            .UnrealizedPnl = unrealizedPnl,
+            .Equity = equity,
+            .TotalPnl = equity - configuration.SimulationStartingQuote,
+            .CompletedTrades = _simulationCompletedTrades,
+            .WinningTrades = _simulationWinningTrades,
+            .LosingTrades = _simulationLosingTrades,
+            .OpenPositions = _simulationPositions.Count,
+            .LastAction = _simulationLastAction
+        }
     End Function
 
     Public Function GetPriceHistory(symbol As String) As IReadOnlyList(Of SpotBotPricePoint)
@@ -181,6 +303,12 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
 
             Return history.ToArray()
+        End SyncLock
+    End Function
+
+    Public Function GetSimulationSnapshot() As SpotBotSimulationSnapshot
+        SyncLock _sync
+            Return BuildSimulationSnapshotLocked(_configuration)
         End SyncLock
     End Function
 
@@ -280,6 +408,9 @@ Public NotInheritable Class SpotTradeBotEngine
             .BreakoutPeriod = source.BreakoutPeriod,
             .GridSpacingPercent = source.GridSpacingPercent,
             .GridReferencePrice = source.GridReferencePrice,
+            .SimulationStartingQuote = source.SimulationStartingQuote,
+            .SimulationAllocationPercent = source.SimulationAllocationPercent,
+            .SimulationFeeRate = source.SimulationFeeRate,
             .SimulationOnly = source.SimulationOnly
         }
 
@@ -293,4 +424,11 @@ Public NotInheritable Class SpotTradeBotEngine
     Private Shared Function NormalizeSymbol(symbol As String) As String
         Return If(symbol, String.Empty).Trim().ToUpperInvariant()
     End Function
+
+    Private NotInheritable Class SimulationPosition
+        Public Property Quantity As Decimal
+        Public Property EntryPrice As Decimal
+        Public Property CostBasis As Decimal
+        Public Property LastPrice As Decimal
+    End Class
 End Class
