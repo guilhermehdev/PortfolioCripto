@@ -6,6 +6,8 @@ Public NotInheritable Class SpotTradeBotEngine
     Private ReadOnly _sync As New Object()
     Private ReadOnly _strategies As New Dictionary(Of SpotBotStrategyKind, ISpotBotStrategy)()
     Private ReadOnly _priceHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _rsiCandleHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _rsiCurrentCandles As New Dictionary(Of String, RsiCandleState)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _lastSignals As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _simulationPositions As New Dictionary(Of String, SimulationPosition)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _configuration As New SpotBotConfiguration()
@@ -93,11 +95,15 @@ Public NotInheritable Class SpotTradeBotEngine
         SyncLock _sync
             If String.IsNullOrWhiteSpace(symbol) Then
                 _priceHistory.Clear()
+                _rsiCandleHistory.Clear()
+                _rsiCurrentCandles.Clear()
                 _lastSignals.Clear()
                 ResetSimulationLocked()
             Else
                 Dim normalized = NormalizeSymbol(symbol)
                 _priceHistory.Remove(normalized)
+                _rsiCandleHistory.Remove(normalized)
+                _rsiCurrentCandles.Remove(normalized)
                 For Each key In _lastSignals.Keys.
                     Where(Function(item) item.StartsWith(normalized & "|", StringComparison.OrdinalIgnoreCase)).
                     ToList()
@@ -125,6 +131,8 @@ Public NotInheritable Class SpotTradeBotEngine
         End If
 
         Dim history As List(Of SpotBotPricePoint) = Nothing
+        Dim rsiHistory As List(Of SpotBotPricePoint) = Nothing
+        Dim rsiPriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim enabledStrategies As List(Of SpotBotStrategyKind)
         Dim configurationSnapshot As SpotBotConfiguration
 
@@ -142,6 +150,10 @@ Public NotInheritable Class SpotTradeBotEngine
                 history.RemoveRange(0, history.Count - maximum)
             End If
 
+            rsiHistory = GetOrCreateRsiCandleHistory(normalizedSymbol)
+            UpdateRsiCandle(normalizedSymbol, observedAt, price, rsiHistory)
+            rsiPriceSnapshot = rsiHistory.ToArray()
+
             enabledStrategies = _configuration.EnabledStrategies.ToList()
             configurationSnapshot = CopyConfiguration(_configuration)
         End SyncLock
@@ -158,7 +170,12 @@ Public NotInheritable Class SpotTradeBotEngine
             End SyncLock
 
             If strategy IsNot Nothing Then
-                Dim strategySignal = strategy.Evaluate(normalizedSymbol, priceSnapshot, configurationSnapshot)
+                Dim strategyPrices As IReadOnlyList(Of SpotBotPricePoint) = priceSnapshot
+                If kind = SpotBotStrategyKind.Rsi Then
+                    strategyPrices = rsiPriceSnapshot
+                End If
+
+                Dim strategySignal = strategy.Evaluate(normalizedSymbol, strategyPrices, configurationSnapshot)
                 If strategySignal IsNot Nothing Then
                     strategySignals.Add(strategySignal)
                 End If
@@ -306,6 +323,66 @@ Public NotInheritable Class SpotTradeBotEngine
         End SyncLock
     End Function
 
+    Private Function GetOrCreateRsiCandleHistory(symbol As String) As List(Of SpotBotPricePoint)
+        Dim history As List(Of SpotBotPricePoint) = Nothing
+        If Not _rsiCandleHistory.TryGetValue(symbol, history) Then
+            history = New List(Of SpotBotPricePoint)()
+            _rsiCandleHistory(symbol) = history
+        End If
+
+        Return history
+    End Function
+
+    Private Sub UpdateRsiCandle(
+        symbol As String,
+        timestampUtc As DateTime,
+        price As Decimal,
+        history As List(Of SpotBotPricePoint))
+
+        Dim candleStart = TruncateToMinute(timestampUtc)
+        Dim currentCandle As RsiCandleState = Nothing
+
+        If Not _rsiCurrentCandles.TryGetValue(symbol, currentCandle) Then
+            currentCandle = New RsiCandleState With {
+                .StartUtc = candleStart,
+                .Close = price
+            }
+            _rsiCurrentCandles(symbol) = currentCandle
+            Return
+        End If
+
+        If candleStart < currentCandle.StartUtc Then
+            Return
+        End If
+
+        If candleStart = currentCandle.StartUtc Then
+            currentCandle.Close = price
+            Return
+        End If
+
+        history.Add(New SpotBotPricePoint(currentCandle.StartUtc, currentCandle.Close))
+        Dim maximumCandles = Math.Max(30, _configuration.MaximumPriceHistory)
+        If history.Count > maximumCandles Then
+            history.RemoveRange(0, history.Count - maximumCandles)
+        End If
+
+        _rsiCurrentCandles(symbol) = New RsiCandleState With {
+            .StartUtc = candleStart,
+            .Close = price
+        }
+    End Sub
+
+    Private Shared Function TruncateToMinute(timestampUtc As DateTime) As DateTime
+        Return New DateTime(
+            timestampUtc.Year,
+            timestampUtc.Month,
+            timestampUtc.Day,
+            timestampUtc.Hour,
+            timestampUtc.Minute,
+            0,
+            DateTimeKind.Utc)
+    End Function
+
     Public Function GetSimulationSnapshot() As SpotBotSimulationSnapshot
         SyncLock _sync
             Return BuildSimulationSnapshotLocked(_configuration)
@@ -430,5 +507,10 @@ Public NotInheritable Class SpotTradeBotEngine
         Public Property EntryPrice As Decimal
         Public Property CostBasis As Decimal
         Public Property LastPrice As Decimal
+    End Class
+
+    Private NotInheritable Class RsiCandleState
+        Public Property StartUtc As DateTime
+        Public Property Close As Decimal
     End Class
 End Class

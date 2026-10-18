@@ -93,11 +93,13 @@ Public NotInheritable Class SpotBotRsiStrategy
             Return HoldSignal("histórico insuficiente para o RSI")
         End If
 
+        ' O motor fornece fechamentos de candles de um minuto para o RSI.
+        ' A suavização de Wilder evita que um único tick altere o sinal inteiro.
         Dim averageGain = 0D
         Dim averageLoss = 0D
-        Dim firstChange = prices.Count - period
+        Dim firstChange = 1
 
-        For index = firstChange To prices.Count - 1
+        For index = firstChange To firstChange + period - 1
             Dim change = prices(index).Price - prices(index - 1).Price
             If change >= 0D Then
                 averageGain += change
@@ -108,6 +110,14 @@ Public NotInheritable Class SpotBotRsiStrategy
 
         averageGain /= period
         averageLoss /= period
+
+        For index = firstChange + period To prices.Count - 1
+            Dim change = prices(index).Price - prices(index - 1).Price
+            Dim gain = If(change > 0D, change, 0D)
+            Dim loss = If(change < 0D, -change, 0D)
+            averageGain = ((averageGain * (period - 1)) + gain) / period
+            averageLoss = ((averageLoss * (period - 1)) + loss) / period
+        Next
 
         Dim rsi As Decimal
         If averageLoss = 0D Then

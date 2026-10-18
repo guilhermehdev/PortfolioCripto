@@ -610,7 +610,7 @@ Public Class FormMain
             .AutoSize = True,
             .ForeColor = Color.LightGray,
             .Location = New Point(520, 78),
-            .Text = "Os períodos usam as amostras recebidas pelo WebSocket."
+            .Text = "RSI usa candles de 1 minuto; as demais estratégias usam as amostras do WebSocket."
         }
         editor.Controls.Add(hint)
 
