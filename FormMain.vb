@@ -73,6 +73,15 @@ Public Class FormMain
     Private _catalogWarningShown As Boolean
     Private _binanceCatalogPromptRunning As Boolean
     Private _credentialsMenuItem As ToolStripMenuItem
+    Private ReadOnly _spotTradeBot As New SpotTradeBotEngine()
+    Private _panelSpotBot As Panel
+    Private _botLog As RichTextBox
+    Private _botCombination As ComboBox
+    Private _botConfirmations As NumericUpDown
+    Private _botStart As Button
+    Private _botStop As Button
+    Private _btTradeBot As Button
+    Private ReadOnly _botStrategyChecks As New Dictionary(Of SpotBotStrategyKind, CheckBox)()
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -91,6 +100,7 @@ Public Class FormMain
         ConfigureCredentialsMenu()
         ConfigureSpotOrdersPanel()
         ConfigureFuturesOrdersPanel()
+        ConfigureSpotBotPanel()
         _portfolioGridDefaultHeight = dgPortfolio.Height
         _futuresGridDefaultHeight = dgFuturos.Height
         ArrangeOrdersPanel(False)
@@ -502,6 +512,274 @@ Public Class FormMain
 
         PanelFuturos.Controls.Add(_dgOrdensFuturos)
         PanelFuturos.Controls.Add(editor)
+    End Sub
+
+    Private Sub ConfigureSpotBotPanel()
+        If _panelSpotBot IsNot Nothing Then
+            Return
+        End If
+
+        _panelSpotBot = New Panel With {
+            .Name = "PanelSpotBot",
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .Padding = New Padding(14, 0, 14, 0),
+            .Visible = False
+        }
+
+        Dim editor As New Panel With {
+            .Dock = DockStyle.Top,
+            .Height = 94,
+            .BackColor = Color.FromArgb(30, 30, 30)
+        }
+
+        AddBotLabel(editor, "Estratégias ativas", 6, 3, 150)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.EmaCrossover, "EMA", 6, 24, 100)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Rsi, "RSI", 112, 24, 80)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Breakout, "Rompimento", 198, 24, 118)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Grid, "Grade", 322, 24, 80)
+
+        AddBotLabel(editor, "Combinação", 420, 3, 100)
+        _botCombination = New ComboBox With {
+            .Name = "cbSpotBotCombination",
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Location = New Point(420, 24),
+            .Width = 190
+        }
+        _botCombination.Items.AddRange(New Object() {
+            "Qualquer estratégia",
+            "Todas as estratégias",
+            "Mínimo de confirmações",
+            "Pontuação ponderada"
+        })
+        _botCombination.SelectedIndex = 2
+        editor.Controls.Add(_botCombination)
+
+        AddBotLabel(editor, "Confirmações", 620, 3, 100)
+        _botConfirmations = New NumericUpDown With {
+            .Name = "nudSpotBotConfirmations",
+            .Minimum = 1,
+            .Maximum = 4,
+            .Value = 2,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .Location = New Point(620, 24),
+            .Width = 64
+        }
+        editor.Controls.Add(_botConfirmations)
+
+        Dim simulationLabel As New Label With {
+            .AutoSize = True,
+            .ForeColor = Color.Gold,
+            .Font = New Font("Calibri", 10.0F, FontStyle.Bold),
+            .Location = New Point(704, 28),
+            .Text = "SIMULAÇÃO — nenhuma ordem será enviada"
+        }
+        editor.Controls.Add(simulationLabel)
+
+        _botStart = CreateBotButton("Iniciar bot", 6, 58, 110, Color.DarkGreen)
+        AddHandler _botStart.Click, AddressOf SpotBotStart_Click
+        editor.Controls.Add(_botStart)
+
+        _botStop = CreateBotButton("Parar bot", 122, 58, 100, Color.IndianRed)
+        _botStop.Enabled = False
+        AddHandler _botStop.Click, AddressOf SpotBotStop_Click
+        editor.Controls.Add(_botStop)
+
+        Dim hint As New Label With {
+            .AutoSize = True,
+            .ForeColor = Color.LightGray,
+            .Location = New Point(240, 62),
+            .Text = "Os períodos usam as amostras recebidas pelo WebSocket."
+        }
+        editor.Controls.Add(hint)
+
+        _botLog = New RichTextBox With {
+            .Name = "rtbSpotBotLog",
+            .Dock = DockStyle.Fill,
+            .BackColor = Color.Black,
+            .ForeColor = Color.White,
+            .BorderStyle = BorderStyle.FixedSingle,
+            .ReadOnly = True,
+            .DetectUrls = False,
+            .Font = New Font("Consolas", 10.0F),
+            .ScrollBars = RichTextBoxScrollBars.Vertical
+        }
+
+        _panelSpotBot.Controls.Add(_botLog)
+        _panelSpotBot.Controls.Add(editor)
+        Controls.Add(_panelSpotBot)
+
+        _btTradeBot = New Button With {
+            .Name = "btTradeBot",
+            .Text = "Tradebot",
+            .BackColor = Color.FromArgb(20, 20, 20),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Cursor = Cursors.Hand,
+            .Location = New Point(280, 432),
+            .Size = New Size(85, 23)
+        }
+        _btTradeBot.FlatAppearance.BorderSize = 0
+        _btTradeBot.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        _btTradeBot.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+        AddHandler _btTradeBot.Click, AddressOf btTradeBot_Click
+        Controls.Add(_btTradeBot)
+
+        AddHandler _spotTradeBot.SignalGenerated, AddressOf SpotTradeBot_SignalGenerated
+    End Sub
+
+    Private Sub AddBotStrategyCheckBox(
+        editor As Panel,
+        kind As SpotBotStrategyKind,
+        text As String,
+        left As Integer,
+        top As Integer,
+        width As Integer)
+
+        Dim check As New CheckBox With {
+            .Name = $"chkSpotBot{kind}",
+            .Text = text,
+            .AutoSize = False,
+            .Width = width,
+            .Height = 24,
+            .Location = New Point(left, top),
+            .ForeColor = Color.White,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .FlatStyle = FlatStyle.Flat,
+            .Cursor = Cursors.Hand
+        }
+        editor.Controls.Add(check)
+        _botStrategyChecks(kind) = check
+    End Sub
+
+    Private Shared Sub AddBotLabel(editor As Panel, text As String, left As Integer, top As Integer, width As Integer)
+        editor.Controls.Add(New Label With {
+            .AutoSize = False,
+            .Width = width,
+            .Height = 20,
+            .Location = New Point(left, top),
+            .ForeColor = Color.Aqua,
+            .Font = New Font("Calibri", 10.0F, FontStyle.Italic),
+            .Text = text
+        })
+    End Sub
+
+    Private Shared Function CreateBotButton(
+        text As String,
+        left As Integer,
+        top As Integer,
+        width As Integer,
+        backColor As Color) As Button
+
+        Dim button As New Button With {
+            .Text = text,
+            .BackColor = backColor,
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Cursor = Cursors.Hand,
+            .Location = New Point(left, top),
+            .Size = New Size(width, 26)
+        }
+        button.FlatAppearance.BorderSize = 0
+        button.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        button.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+        Return button
+    End Function
+
+    Private Sub ArrangeSpotBotPanel(showBot As Boolean)
+        If _panelSpotBot Is Nothing OrElse PanelGraphs Is Nothing Then
+            Return
+        End If
+
+        If Not showBot Then
+            _panelSpotBot.Visible = False
+            Return
+        End If
+
+        Dim panelTop = Math.Max(PanelGraphs.Top, _btTradeBot.Bottom + 2)
+        Dim panelBottom = PanelProfits.Top
+        Dim panelHeight = Math.Max(150, panelBottom - panelTop)
+        _panelSpotBot.Padding = New Padding(14, 0, 14, 0)
+        _panelSpotBot.Location = New Point(0, panelTop)
+        _panelSpotBot.Size = New Size(Me.ClientSize.Width, panelHeight)
+        _panelSpotBot.Visible = True
+        _panelSpotBot.BringToFront()
+
+        btVisaoGeral.BringToFront()
+        btOrdensSpot.BringToFront()
+        btOrdensFuturo.BringToFront()
+        _btTradeBot.BringToFront()
+    End Sub
+
+    Private Sub ApplySpotBotControls()
+        _spotTradeBot.DisableAllStrategies()
+        For Each item In _botStrategyChecks
+            _spotTradeBot.SetStrategyEnabled(item.Key, item.Value.Checked)
+        Next
+
+        Select Case _botCombination.SelectedIndex
+            Case 0
+                _spotTradeBot.Configuration.CombinationMode = SpotBotCombinationMode.Any
+            Case 1
+                _spotTradeBot.Configuration.CombinationMode = SpotBotCombinationMode.All
+            Case 3
+                _spotTradeBot.Configuration.CombinationMode = SpotBotCombinationMode.WeightedScore
+            Case Else
+                _spotTradeBot.Configuration.CombinationMode = SpotBotCombinationMode.MinimumConfirmations
+        End Select
+
+        _spotTradeBot.Configuration.RequiredConfirmations = CInt(_botConfirmations.Value)
+        _spotTradeBot.Configuration.SimulationOnly = True
+    End Sub
+
+    Private Sub SpotBotStart_Click(sender As Object, e As EventArgs)
+        ApplySpotBotControls()
+        If _spotTradeBot.Configuration.EnabledStrategies.Count = 0 Then
+            AppendSpotBotLog("Selecione pelo menos uma estratégia antes de iniciar.", Color.Gold)
+            Return
+        End If
+
+        _spotTradeBot.ResetHistory()
+        _spotTradeBot.Start()
+        _botStart.Enabled = False
+        _botStop.Enabled = True
+        AppendSpotBotLog("Bot Spot iniciado em modo SIMULAÇÃO.", Color.LimeGreen)
+        AppendSpotBotLog("Estratégias: " & String.Join(", ", _spotTradeBot.Configuration.EnabledStrategies), Color.LightGray)
+    End Sub
+
+    Private Sub SpotBotStop_Click(sender As Object, e As EventArgs)
+        _spotTradeBot.Stop()
+        _botStart.Enabled = True
+        _botStop.Enabled = False
+        AppendSpotBotLog("Bot Spot parado.", Color.IndianRed)
+    End Sub
+
+    Private Sub SpotTradeBot_SignalGenerated(sender As Object, e As SpotBotSignalEventArgs)
+        If e Is Nothing OrElse e.Signal Is Nothing Then Return
+
+        If InvokeRequired Then
+            BeginInvoke(New MethodInvoker(Sub() SpotTradeBot_SignalGenerated(Me, e)))
+            Return
+        End If
+
+        Dim signal = e.Signal
+        Dim directionText = If(signal.Direction = SpotBotSignalDirection.Buy, "COMPRA", "VENDA")
+        AppendSpotBotLog(
+            $"{signal.TimestampUtc.ToLocalTime():HH:mm:ss} {directionText} {signal.Symbol} @ {signal.Price:0.########} " &
+            $"({signal.Confirmations}/{signal.ActiveStrategies}) - {String.Join(" | ", signal.Reasons)}",
+            If(signal.Direction = SpotBotSignalDirection.Buy, Color.LimeGreen, Color.IndianRed))
+    End Sub
+
+    Private Sub AppendSpotBotLog(message As String, color As Color)
+        If _botLog Is Nothing Then Return
+        _botLog.SelectionStart = _botLog.TextLength
+        _botLog.SelectionLength = 0
+        _botLog.SelectionColor = color
+        _botLog.AppendText(message & Environment.NewLine)
+        _botLog.ScrollToCaret()
     End Sub
 
     Private Sub ArrangeOrdersPanel(showOrders As Boolean)
@@ -1636,6 +1914,7 @@ Public Class FormMain
                     UpdateBinanceRow(symbol, price)
                     UpdateSpotOrdersCurrentPrice(symbol, price)
                     UpdateSpotOrderCurrentPrice()
+                    ProcessSpotBotPrice(symbol, price)
                 End Sub))
 
             Return
@@ -1645,7 +1924,13 @@ Public Class FormMain
         UpdateBinanceRow(symbol, price)
         UpdateSpotOrdersCurrentPrice(symbol, price)
         UpdateSpotOrderCurrentPrice()
+        ProcessSpotBotPrice(symbol, price)
 
+    End Sub
+
+    Private Sub ProcessSpotBotPrice(symbol As String, price As Decimal)
+        If Not _spotTradeBot.IsRunning Then Return
+        _spotTradeBot.ProcessPrice(symbol, price)
     End Sub
 
     Private Sub dgPortfolio_MouseLeave(sender As Object, e As EventArgs) Handles dgPortfolio.MouseLeave
@@ -1776,6 +2061,10 @@ Public Class FormMain
 
             If PanelFuturos.Visible Then
                 ArrangeFuturesOrdersPanel(True)
+            End If
+
+            If _panelSpotBot IsNot Nothing AndAlso _panelSpotBot.Visible Then
+                ArrangeSpotBotPanel(True)
             End If
 
             Me.CenterToScreen()
@@ -4994,6 +5283,7 @@ Public Class FormMain
     Private Async Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
 
         Try
+            _spotTradeBot.Stop()
             Await _binanceWs.StopAsync()
             Await _gateWs.StopAsync()
             Await _binanceSpotUserWs.StopAsync()
@@ -5021,32 +5311,51 @@ Public Class FormMain
         PanelGraphs.Visible = True
         PanelOrdens.Visible = False
         PanelFuturos.Visible = False
+        ArrangeSpotBotPanel(False)
         ArrangeOrdersPanel(False)
         ArrangeFuturesOrdersPanel(False)
         btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
+        _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
         btVisaoGeral.BackColor = Color.SteelBlue
     End Sub
     Private Async Sub btOrdensSpot_Click(sender As Object, e As EventArgs) Handles btOrdensSpot.Click
         PanelGraphs.Visible = False
         PanelOrdens.Visible = True
         PanelFuturos.Visible = False
+        ArrangeSpotBotPanel(False)
         ArrangeOrdersPanel(True)
         ArrangeFuturesOrdersPanel(False)
         btOrdensSpot.BackColor = Color.SteelBlue
         btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
+        _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
         Await LoadSpotOrdersAsync()
     End Sub
     Private Async Sub btOrdensFuturo_Click(sender As Object, e As EventArgs) Handles btOrdensFuturo.Click
         PanelGraphs.Visible = False
         PanelOrdens.Visible = False
+        ArrangeSpotBotPanel(False)
         ArrangeFuturesOrdersPanel(True)
         ArrangeOrdersPanel(False)
         btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.SteelBlue
+        _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
         Await LoadFuturesOrdersAsync()
+    End Sub
+
+    Private Sub btTradeBot_Click(sender As Object, e As EventArgs)
+        PanelGraphs.Visible = False
+        PanelOrdens.Visible = False
+        PanelFuturos.Visible = False
+        ArrangeOrdersPanel(False)
+        ArrangeFuturesOrdersPanel(False)
+        ArrangeSpotBotPanel(True)
+        btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
+        btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
+        btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
+        _btTradeBot.BackColor = Color.SteelBlue
     End Sub
 
     Private Sub SimbolosToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SimbolosToolStripMenuItem.Click
