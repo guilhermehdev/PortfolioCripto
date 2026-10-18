@@ -807,7 +807,7 @@ Public Class FormMain
         _botSimulationSummary.ForeColor = Color.Gold
         _botSimulationSummary.Text =
             $"Simulação | Patrimônio: {_spotTradeBot.Configuration.SimulationStartingQuote:0.00} USDT | " &
-            "P/L: 0.00 | Trades: 0 | Acerto: 0.0% | Abertas: 0"
+            "P/L: 0.00 (realizado 0.00 / aberto 0.00) | Trades: 0 | Acerto: 0.0% | Abertas: 0"
         AppendSpotBotLog("Bot Spot iniciado em modo SIMULAÇÃO.", Color.LimeGreen)
         AppendSpotBotLog("Estratégias: " & String.Join(", ", _spotTradeBot.Configuration.EnabledStrategies), Color.LightGray)
     End Sub
@@ -855,7 +855,9 @@ Public Class FormMain
         _botSimulationSummary.ForeColor = pnlColor
         _botSimulationSummary.Text =
             $"Simulação | Patrimônio: {e.Snapshot.Equity:0.00} USDT | " &
-            $"P/L: {e.Snapshot.TotalPnl:+0.00;-0.00;0.00} | " &
+            $"P/L: {e.Snapshot.TotalPnl:+0.00;-0.00;0.00} " &
+            $"(realizado {e.Snapshot.RealizedPnl:+0.00;-0.00;0.00} / " &
+            $"aberto {e.Snapshot.UnrealizedPnl:+0.00;-0.00;0.00}) | " &
             $"Trades: {e.Snapshot.CompletedTrades} | " &
             $"Acerto: {e.Snapshot.WinRatePercent:0.0}% | " &
             $"Abertas: {e.Snapshot.OpenPositions}"
