@@ -966,6 +966,8 @@ Public Class FormMain
 
         Try
 
+            EnsureBinanceCredentials()
+
             CheckCatalogsOnStartup()
 
             AddHandler _binanceWs.PriceUpdated, AddressOf BinanceWs_PriceUpdated
@@ -1000,6 +1002,17 @@ Public Class FormMain
 
         End Try
 
+    End Sub
+
+    Private Sub EnsureBinanceCredentials()
+        If Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceAPIKey) AndAlso
+           Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceSecretKey) Then
+            Return
+        End If
+
+        Using credentialsForm As New FormExchangeCredentials()
+            credentialsForm.ShowDialog(Me)
+        End Using
     End Sub
 
     Private Sub CheckCatalogsOnStartup()
