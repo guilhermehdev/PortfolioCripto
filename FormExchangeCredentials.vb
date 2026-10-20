@@ -1,3 +1,5 @@
+Imports System.Security.Cryptography
+
 Public Class FormExchangeCredentials
     Inherits Form
 
@@ -55,6 +57,18 @@ Public Class FormExchangeCredentials
         Controls.Add(_gateSecret)
         _gateStatus = CreateStatusLabel(150, 291)
         Controls.Add(_gateStatus)
+
+        Dim importButton As New Button With {
+            .Text = "Importar",
+            .Location = New Point(75, 315),
+            .Size = New Size(80, 28),
+            .BackColor = Color.FromArgb(55, 75, 105),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat
+        }
+        importButton.FlatAppearance.BorderSize = 0
+        AddHandler importButton.Click, AddressOf ImportButton_Click
+        Controls.Add(importButton)
 
         Dim exportButton As New Button With {
             .Text = "Exportar",
@@ -154,6 +168,62 @@ Public Class FormExchangeCredentials
         End Using
     End Sub
 
+    Private Sub ImportButton_Click(sender As Object, e As EventArgs)
+        Using dialog As New OpenFileDialog With {
+            .Title = "Importar credenciais criptografadas",
+            .Filter = "Exportação de credenciais (*.pcexport)|*.pcexport|Todos os arquivos (*.*)|*.*",
+            .CheckFileExists = True,
+            .Multiselect = False,
+            .InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        }
+            If dialog.ShowDialog(Me) <> DialogResult.OK Then Return
+
+            Using passwordForm As New CredentialImportPasswordForm()
+                If passwordForm.ShowDialog(Me) <> DialogResult.OK Then Return
+
+                Try
+                    Dim imported = ExchangeCredentialsExportService.ImportEncrypted(dialog.FileName, passwordForm.Password)
+                    Dim hasBinance = Not String.IsNullOrWhiteSpace(imported.BinanceAPIKey)
+                    Dim hasGate = Not String.IsNullOrWhiteSpace(imported.GateAPIKey)
+                    If Not hasBinance AndAlso Not hasGate Then
+                        MessageBox.Show("O arquivo não possui credenciais configuradas.", "Importar credenciais", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        Return
+                    End If
+
+                    Dim exchanges = String.Join(" e ", New String() {
+                        If(hasBinance, "Binance", String.Empty),
+                        If(hasGate, "Gate.io", String.Empty)
+                    }.Where(Function(item) Not String.IsNullOrWhiteSpace(item)))
+                    Dim confirmation = MessageBox.Show(
+                        $"Importar as credenciais de {exchanges}? Isso substituirá as credenciais atuais dessas exchanges neste PC.",
+                        "Importar credenciais",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning)
+                    If confirmation <> DialogResult.Yes Then Return
+
+                    If hasBinance Then ExchangeCredentials.SaveBinanceCredentials(imported.BinanceAPIKey, imported.BinanceSecretKey)
+                    If hasGate Then ExchangeCredentials.SaveGateCredentials(imported.GateAPIKey, imported.GateSecretKey)
+
+                    UpdateStatusLabels()
+                    MessageBox.Show(
+                        "Credenciais importadas para o Gerenciador de Credenciais do Windows.",
+                        "Importar credenciais",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information)
+                    DialogResult = DialogResult.OK
+                Catch ex As CryptographicException
+                    MessageBox.Show(ex.Message, "Importar credenciais", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Catch ex As Exception
+                    MessageBox.Show(
+                        "Erro ao importar as credenciais: " & ex.Message,
+                        "Importar credenciais",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error)
+                End Try
+            End Using
+        End Using
+    End Sub
+
     Private Shared Sub SaveExchange(exchangeName As String, apiKey As String, secretKey As String, saveAction As Action(Of String, String))
         Dim hasApi = Not String.IsNullOrWhiteSpace(apiKey)
         Dim hasSecret = Not String.IsNullOrWhiteSpace(secretKey)
@@ -193,6 +263,75 @@ Public Class FormExchangeCredentials
     Private Shared Function CreateStatusLabel(x As Integer, y As Integer) As Label
         Return New Label With {.AutoSize = True, .Location = New Point(x, y), .Font = New Font("Segoe UI", 8.0F, FontStyle.Italic), .Text = String.Empty}
     End Function
+End Class
+
+Friend NotInheritable Class CredentialImportPasswordForm
+    Inherits Form
+
+    Private ReadOnly _password As TextBox
+
+    Public Sub New()
+        Text = "Senha da importação"
+        StartPosition = FormStartPosition.CenterParent
+        FormBorderStyle = FormBorderStyle.FixedDialog
+        MaximizeBox = False
+        MinimizeBox = False
+        ShowInTaskbar = False
+        ClientSize = New Size(390, 140)
+        BackColor = Color.FromArgb(35, 35, 35)
+        ForeColor = Color.White
+
+        Controls.Add(New Label With {
+            .AutoSize = False,
+            .Location = New Point(16, 14),
+            .Size = New Size(355, 36),
+            .ForeColor = Color.Gainsboro,
+            .Text = "Informe a senha usada na exportação."
+        })
+        Controls.Add(New Label With {.AutoSize = True, .Location = New Point(16, 65), .Text = "Senha:"})
+        _password = New TextBox With {
+            .Location = New Point(100, 61),
+            .Size = New Size(260, 23),
+            .BackColor = Color.FromArgb(55, 55, 55),
+            .ForeColor = Color.White,
+            .BorderStyle = BorderStyle.FixedSingle,
+            .UseSystemPasswordChar = True
+        }
+        Controls.Add(_password)
+
+        Dim okButton As New Button With {
+            .Text = "Importar",
+            .Location = New Point(205, 101),
+            .Size = New Size(80, 28),
+            .BackColor = Color.DarkGreen,
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .DialogResult = DialogResult.OK
+        }
+        okButton.FlatAppearance.BorderSize = 0
+        Controls.Add(okButton)
+
+        Dim cancelButton As New Button With {
+            .Text = "Cancelar",
+            .Location = New Point(295, 101),
+            .Size = New Size(80, 28),
+            .BackColor = Color.FromArgb(75, 75, 75),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .DialogResult = DialogResult.Cancel
+        }
+        cancelButton.FlatAppearance.BorderSize = 0
+        Controls.Add(cancelButton)
+
+        AcceptButton = okButton
+        CancelButton = cancelButton
+    End Sub
+
+    Public ReadOnly Property Password As String
+        Get
+            Return _password.Text
+        End Get
+    End Property
 End Class
 
 Friend NotInheritable Class CredentialExportPasswordForm

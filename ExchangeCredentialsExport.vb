@@ -61,6 +61,92 @@ Public NotInheritable Class ExchangeCredentialsExportService
         File.WriteAllText(filePath, JsonSerializer.Serialize(envelope, options), New UTF8Encoding(False))
     End Sub
 
+    Public Shared Function ImportEncrypted(filePath As String, password As String) As ExchangeCredentialsImportResult
+        If String.IsNullOrWhiteSpace(filePath) OrElse Not File.Exists(filePath) Then
+            Throw New FileNotFoundException("O arquivo de credenciais não foi encontrado.", filePath)
+        End If
+
+        If String.IsNullOrWhiteSpace(password) Then
+            Throw New ArgumentException("A senha de importação é obrigatória.", NameOf(password))
+        End If
+
+        Dim envelope As ExchangeCredentialsExportEnvelope
+        Try
+            envelope = JsonSerializer.Deserialize(Of ExchangeCredentialsExportEnvelope)(File.ReadAllText(filePath))
+        Catch ex As Exception
+            Throw New InvalidDataException("O arquivo de credenciais é inválido.", ex)
+        End Try
+
+        If envelope Is Nothing OrElse
+           envelope.Version <> ExportVersion OrElse
+           Not String.Equals(envelope.Kdf, "PBKDF2-SHA256", StringComparison.Ordinal) OrElse
+           envelope.Iterations <> KdfIterations Then
+            Throw New InvalidDataException("O formato do arquivo de credenciais não é compatível.")
+        End If
+
+        Dim salt = DecodeBase64(envelope.Salt, "salt")
+        Dim nonce = DecodeBase64(envelope.Nonce, "nonce")
+        Dim tag = DecodeBase64(envelope.Tag, "tag")
+        Dim ciphertext = DecodeBase64(envelope.Ciphertext, "conteúdo")
+        If salt.Length <> 32 OrElse nonce.Length <> NonceSize OrElse tag.Length <> TagSize OrElse ciphertext.Length = 0 Then
+            Throw New InvalidDataException("O arquivo de credenciais está incompleto ou corrompido.")
+        End If
+
+        Dim key = Rfc2898DeriveBytes.Pbkdf2(
+            password,
+            salt,
+            envelope.Iterations,
+            HashAlgorithmName.SHA256,
+            KeySize)
+        Dim plaintext(ciphertext.Length - 1) As Byte
+
+        Try
+            Using aes As New AesGcm(key, TagSize)
+                aes.Decrypt(nonce, ciphertext, tag, plaintext)
+            End Using
+        Catch ex As CryptographicException
+            Throw New CryptographicException("Não foi possível abrir o arquivo. Verifique a senha.", ex)
+        Finally
+            CryptographicOperations.ZeroMemory(key)
+        End Try
+
+        Dim payload As ExchangeCredentialsPayload
+        Try
+            payload = JsonSerializer.Deserialize(Of ExchangeCredentialsPayload)(Encoding.UTF8.GetString(plaintext))
+        Catch ex As Exception
+            Throw New InvalidDataException("O conteúdo descriptografado é inválido.", ex)
+        Finally
+            CryptographicOperations.ZeroMemory(plaintext)
+        End Try
+
+        If payload Is Nothing Then Throw New InvalidDataException("O conteúdo descriptografado está vazio.")
+        ValidateCredentialPair(payload.BinanceAPIKey, payload.BinanceSecretKey, "Binance")
+        ValidateCredentialPair(payload.GateAPIKey, payload.GateSecretKey, "Gate.io")
+
+        Return New ExchangeCredentialsImportResult(
+            payload.BinanceAPIKey,
+            payload.BinanceSecretKey,
+            payload.GateAPIKey,
+            payload.GateSecretKey)
+    End Function
+
+    Private Shared Function DecodeBase64(value As String, fieldName As String) As Byte()
+        Try
+            If String.IsNullOrWhiteSpace(value) Then Throw New FormatException()
+            Return Convert.FromBase64String(value)
+        Catch ex As FormatException
+            Throw New InvalidDataException($"O campo {fieldName} do arquivo de credenciais é inválido.", ex)
+        End Try
+    End Function
+
+    Private Shared Sub ValidateCredentialPair(apiKey As String, secretKey As String, exchangeName As String)
+        Dim hasApi = Not String.IsNullOrWhiteSpace(apiKey)
+        Dim hasSecret = Not String.IsNullOrWhiteSpace(secretKey)
+        If hasApi Xor hasSecret Then
+            Throw New InvalidDataException($"O arquivo possui apenas uma das chaves da {exchangeName}.")
+        End If
+    End Sub
+
     Private NotInheritable Class ExchangeCredentialsPayload
         Public Property BinanceAPIKey As String = String.Empty
         Public Property BinanceSecretKey As String = String.Empty
@@ -77,4 +163,18 @@ Public NotInheritable Class ExchangeCredentialsExportService
         Public Property Tag As String = String.Empty
         Public Property Ciphertext As String = String.Empty
     End Class
+End Class
+
+Public NotInheritable Class ExchangeCredentialsImportResult
+    Public Sub New(binanceApiKey As String, binanceSecretKey As String, gateApiKey As String, gateSecretKey As String)
+        Me.BinanceAPIKey = binanceApiKey
+        Me.BinanceSecretKey = binanceSecretKey
+        Me.GateAPIKey = gateApiKey
+        Me.GateSecretKey = gateSecretKey
+    End Sub
+
+    Public ReadOnly Property BinanceAPIKey As String
+    Public ReadOnly Property BinanceSecretKey As String
+    Public ReadOnly Property GateAPIKey As String
+    Public ReadOnly Property GateSecretKey As String
 End Class
