@@ -549,6 +549,8 @@ Public Class JSON
         Dim fontname As String = "Calibri"
 
         datagrid.ColumnHeadersHeight = 40
+        datagrid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None
+        datagrid.RowTemplate.Height = 35
         datagrid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal
         datagrid.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         datagrid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
@@ -887,6 +889,12 @@ Public Class JSON
 
             datagrid.ClearSelection()
             cm.ResumeBinding()
+
+            ' Reforce a altura depois de liberar o binding. O DataGridView pode
+            ' recalcular a primeira linha quando o DataSource é atualizado.
+            For Each row As DataGridViewRow In datagrid.Rows
+                If Not row.IsNewRow Then row.Height = 35
+            Next
         Catch ex As Exception
             Debug.WriteLine(ex.Message)
             'cm.ResumeBinding()
