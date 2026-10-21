@@ -76,11 +76,19 @@ Public Class FormMain
     Private ReadOnly _spotTradeBot As New SpotTradeBotEngine()
     Private _panelSpotBot As Panel
     Private _botLog As RichTextBox
+    Private _dgSpotBotPositions As DataGridView
     Private _botCombination As ComboBox
     Private _botConfirmations As NumericUpDown
     Private _botStartingQuote As NumericUpDown
     Private _botAllocation As NumericUpDown
     Private _botFee As NumericUpDown
+    Private _botTakeProfit As NumericUpDown
+    Private _botStopLoss As NumericUpDown
+    Private _botUniverseMode As ComboBox
+    Private _botUniverseMaxAssets As NumericUpDown
+    Private _botUniverseMinVolume As NumericUpDown
+    Private _botUniverseButton As Button
+    Private ReadOnly _spotBotUniverseSymbols As New List(Of String)()
     Private _botSimulationSummary As Label
     Private _botStart As Button
     Private _botStop As Button
@@ -112,6 +120,7 @@ Public Class FormMain
         ArrangeOrdersPanel(False)
         Setup()
         lbDataTotalToday.Text = Date.Today & ":"
+        Adjust()
         ArrangeProfitPairs()
     End Sub
 
@@ -534,15 +543,29 @@ Public Class FormMain
 
         Dim editor As New Panel With {
             .Dock = DockStyle.Top,
-            .Height = 94,
+            .Height = 105,
             .BackColor = Color.FromArgb(30, 30, 30)
         }
+
+        Dim universeSettings As SpotBotUniverseSettings
+        Try
+            universeSettings = PortfolioRepository.GetSpotBotUniverseSettings()
+        Catch ex As Exception
+            universeSettings = New SpotBotUniverseSettings()
+            Debug.WriteLine("Erro carregando configurações do universo do Tradebot: " & ex.Message)
+        End Try
 
         AddBotLabel(editor, "Estratégias ativas", 6, 3, 150)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.EmaCrossover, "EMA", 6, 24, 100)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Rsi, "RSI", 112, 24, 80)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Breakout, "Rompimento", 198, 24, 118)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Grid, "Grade", 322, 24, 80)
+
+        If _spotTradeBot.HasRestoredState Then
+            For Each strategyCheck In _botStrategyChecks
+                strategyCheck.Value.Checked = _spotTradeBot.Configuration.EnabledStrategies.Contains(strategyCheck.Key)
+            Next
+        End If
 
         AddBotLabel(editor, "Combinação", 420, 3, 100)
         _botCombination = New ComboBox With {
@@ -560,7 +583,10 @@ Public Class FormMain
             "Mínimo de confirmações",
             "Pontuação ponderada"
         })
-        _botCombination.SelectedIndex = 2
+        _botCombination.SelectedIndex = If(
+            _spotTradeBot.HasRestoredState,
+            CInt(_spotTradeBot.Configuration.CombinationMode),
+            2)
         editor.Controls.Add(_botCombination)
 
         AddBotLabel(editor, "Confirmações", 620, 3, 100)
@@ -574,14 +600,40 @@ Public Class FormMain
             .Location = New Point(620, 24),
             .Width = 64
         }
+        If _spotTradeBot.HasRestoredState Then
+            _botConfirmations.Value = Math.Min(
+                _botConfirmations.Maximum,
+                Math.Max(_botConfirmations.Minimum, _spotTradeBot.Configuration.RequiredConfirmations))
+        End If
         editor.Controls.Add(_botConfirmations)
 
+        AddBotLabel(editor, "Universo", 704, 3, 100)
+        _botUniverseMode = New ComboBox With {
+            .Name = "cbSpotBotUniverseMode",
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Location = New Point(704, 24),
+            .Width = 120
+        }
+        _botUniverseMode.Items.AddRange(New Object() {"Manual", "Top volume"})
+        _botUniverseMode.SelectedIndex = If(universeSettings.Mode = SpotBotUniverseMode.TopVolume, 1, 0)
+        AddHandler _botUniverseMode.SelectedIndexChanged, AddressOf SpotBotUniverseModeChanged
+        editor.Controls.Add(_botUniverseMode)
+
+        _botUniverseButton = CreateBotButton("Selecionar...", 830, 24, 102, Color.FromArgb(55, 75, 105))
+        AddHandler _botUniverseButton.Click, AddressOf SpotBotUniverseButton_Click
+        editor.Controls.Add(_botUniverseButton)
+
         Dim simulationLabel As New Label With {
-            .AutoSize = True,
+            .AutoSize = False,
+            .Width = 205,
+            .Height = 24,
             .ForeColor = Color.Gold,
-            .Font = New Font("Calibri", 10.0F, FontStyle.Bold),
-            .Location = New Point(704, 28),
-            .Text = "SIMULAÇÃO — nenhuma ordem será enviada"
+            .Font = New Font("Calibri", 9.0F, FontStyle.Bold),
+            .Location = New Point(940, 26),
+            .Text = "SIMULAÇÃO — sem ordens reais"
         }
         editor.Controls.Add(simulationLabel)
 
@@ -598,33 +650,119 @@ Public Class FormMain
         _botStartingQuote = CreateBotNumeric(1000D, 0D, 100000000D, 2, 240, 74, 98)
         editor.Controls.Add(_botStartingQuote)
 
+        If _spotTradeBot.HasRestoredState Then
+            Dim restoredSnapshot = _spotTradeBot.GetSimulationSnapshot()
+            _botStartingQuote.Value = Math.Min(
+                _botStartingQuote.Maximum,
+                Math.Max(_botStartingQuote.Minimum, restoredSnapshot.StartingQuote))
+        End If
+
         AddBotLabel(editor, "Alocação (%)", 348, 55, 86)
         _botAllocation = CreateBotNumeric(10D, 0D, 100D, 2, 348, 74, 82)
+        If _spotTradeBot.HasRestoredState Then
+            _botAllocation.Value = Math.Min(
+                _botAllocation.Maximum,
+                Math.Max(_botAllocation.Minimum, _spotTradeBot.Configuration.SimulationAllocationPercent))
+        End If
         editor.Controls.Add(_botAllocation)
 
         AddBotLabel(editor, "Taxa (%)", 440, 55, 70)
         _botFee = CreateBotNumeric(0.1D, 0D, 5D, 3, 440, 74, 70)
+        If _spotTradeBot.HasRestoredState Then
+            _botFee.Value = Math.Min(
+                _botFee.Maximum,
+                Math.Max(_botFee.Minimum, _spotTradeBot.Configuration.SimulationFeeRate * 100D))
+        End If
         editor.Controls.Add(_botFee)
 
+        AddBotLabel(editor, "TP (%)", 520, 55, 75)
+        _botTakeProfit = CreateBotNumeric(2D, 0D, 100D, 2, 520, 74, 75)
+        editor.Controls.Add(_botTakeProfit)
+
+        AddBotLabel(editor, "SL (%)", 604, 55, 75)
+        _botStopLoss = CreateBotNumeric(1D, 0D, 100D, 2, 604, 74, 75)
+        editor.Controls.Add(_botStopLoss)
+
+        AddBotLabel(editor, "Máx. ativos", 704, 55, 90)
+        _botUniverseMaxAssets = CreateBotNumeric(universeSettings.MaxAssets, 1D, 500D, 0, 704, 74, 75)
+        editor.Controls.Add(_botUniverseMaxAssets)
+
+        AddBotLabel(editor, "Volume mínimo", 790, 55, 105)
+        _botUniverseMinVolume = CreateBotNumeric(universeSettings.MinimumQuoteVolume, 0D, 1000000000000D, 0, 790, 74, 112)
+        editor.Controls.Add(_botUniverseMinVolume)
+
         Dim hint As New Label With {
-            .AutoSize = True,
+            .AutoSize = False,
+            .Width = 205,
+            .Height = 34,
             .ForeColor = Color.LightGray,
-            .Location = New Point(520, 78),
-            .Text = "RSI usa candles de 1 minuto; as demais estratégias usam as amostras do WebSocket."
+            .Location = New Point(940, 67),
+            .Text = "RSI usa candles de 1 minuto."
         }
         editor.Controls.Add(hint)
 
         _botLog = New RichTextBox With {
             .Name = "rtbSpotBotLog",
-            .Dock = DockStyle.Fill,
+            .Dock = DockStyle.Bottom,
             .BackColor = Color.Black,
             .ForeColor = Color.White,
             .BorderStyle = BorderStyle.FixedSingle,
             .ReadOnly = True,
             .DetectUrls = False,
             .Font = New Font("Consolas", 10.0F),
-            .ScrollBars = RichTextBoxScrollBars.Vertical
+            .ScrollBars = RichTextBoxScrollBars.Vertical,
+            .Height = 80
         }
+
+        _dgSpotBotPositions = New DataGridView With {
+            .Name = "dgSpotBotPositions",
+            .Dock = DockStyle.Top,
+            .Height = 150,
+            .AllowUserToAddRows = False,
+            .AllowUserToDeleteRows = False,
+            .AllowUserToResizeRows = False,
+            .AllowUserToOrderColumns = False,
+            .AutoGenerateColumns = False,
+            .AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+            .BackgroundColor = Color.FromArgb(64, 64, 64),
+            .BorderStyle = BorderStyle.FixedSingle,
+            .CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+            .ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+            .EnableHeadersVisualStyles = False,
+            .ReadOnly = True,
+            .MultiSelect = False,
+            .SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            .RowHeadersVisible = False,
+            .ScrollBars = ScrollBars.Vertical
+        }
+        _dgSpotBotPositions.ColumnHeadersDefaultCellStyle = New DataGridViewCellStyle With {
+            .Alignment = DataGridViewContentAlignment.MiddleLeft,
+            .BackColor = Color.FromArgb(40, 40, 40),
+            .Font = New Font("Calibri", 9.0F, FontStyle.Italic),
+            .ForeColor = Color.Turquoise,
+            .SelectionBackColor = Color.FromArgb(40, 40, 40),
+            .SelectionForeColor = Color.Turquoise,
+            .WrapMode = DataGridViewTriState.False
+        }
+        _dgSpotBotPositions.DefaultCellStyle = New DataGridViewCellStyle With {
+            .Alignment = DataGridViewContentAlignment.MiddleLeft,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .Font = New Font("Calibri", 10.0F),
+            .ForeColor = Color.White,
+            .SelectionBackColor = Color.FromArgb(64, 64, 64),
+            .SelectionForeColor = Color.White,
+            .WrapMode = DataGridViewTriState.False
+        }
+        _dgSpotBotPositions.RowTemplate.Height = 28
+        _dgSpotBotPositions.ColumnHeadersHeight = 25
+        AddSpotBotPositionColumn("Symbol", "Cripto")
+        AddSpotBotPositionColumn("Side", "Lado")
+        AddSpotBotPositionColumn("Quantity", "Qtd")
+        AddSpotBotPositionColumn("Notional", "Notional")
+        AddSpotBotPositionColumn("EntryPrice", "Entrada")
+        AddSpotBotPositionColumn("CurrentPrice", "Preço atual")
+        AddSpotBotPositionColumn("UnrealizedPnl", "PnL")
+        AddSpotBotPositionColumn("RoiPercent", "ROI %")
 
         _botSimulationSummary = New Label With {
             .Name = "lbSpotBotSimulationSummary",
@@ -639,6 +777,7 @@ Public Class FormMain
         }
 
         _panelSpotBot.Controls.Add(_botLog)
+        _panelSpotBot.Controls.Add(_dgSpotBotPositions)
         _panelSpotBot.Controls.Add(_botSimulationSummary)
         _panelSpotBot.Controls.Add(editor)
         Controls.Add(_panelSpotBot)
@@ -662,6 +801,138 @@ Public Class FormMain
 
         AddHandler _spotTradeBot.SignalGenerated, AddressOf SpotTradeBot_SignalGenerated
         AddHandler _spotTradeBot.SimulationUpdated, AddressOf SpotTradeBot_SimulationUpdated
+        UpdateSpotBotUniverseButtonText()
+    End Sub
+
+    Private Sub SpotBotUniverseModeChanged(sender As Object, e As EventArgs)
+        UpdateSpotBotUniverseButtonText()
+    End Sub
+
+    Private Sub UpdateSpotBotUniverseButtonText()
+        If _botUniverseButton Is Nothing OrElse _botUniverseMode Is Nothing Then Return
+        _botUniverseButton.Text = If(_botUniverseMode.SelectedIndex = 0, "Selecionar...", "Atualizar")
+    End Sub
+
+    Private Async Sub SpotBotUniverseButton_Click(sender As Object, e As EventArgs)
+        If _botUniverseMode Is Nothing Then Return
+
+        If _botUniverseMode.SelectedIndex = 0 Then
+            Dim candidates = GetManualSpotBotUniverseCandidates()
+            If candidates.Count = 0 Then
+                MessageBox.Show(
+                    "Cadastre moedas em Cadastro > Símbolos antes de montar o universo manual.",
+                    "Universo do Tradebot",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim selected = PortfolioRepository.GetSpotBotManualUniverseSymbols()
+            If selected.Count = 0 Then selected = candidates.ToList()
+
+            Using dialog As New SpotTradeBotUniverseForm(candidates, selected)
+                If dialog.ShowDialog(Me) <> DialogResult.OK Then Return
+                PortfolioRepository.SaveSpotBotManualUniverseSymbols(dialog.SelectedSymbols)
+                _spotBotUniverseSymbols.Clear()
+                _spotBotUniverseSymbols.AddRange(dialog.SelectedSymbols)
+                _spotTradeBot.Configuration.ManualUniverseSymbols.Clear()
+                For Each symbol In dialog.SelectedSymbols
+                    _spotTradeBot.Configuration.ManualUniverseSymbols.Add(symbol)
+                Next
+                AppendSpotBotLog($"Universo manual salvo: {dialog.SelectedSymbols.Count} ativo(s).", Color.LightGray)
+            End Using
+            Return
+        End If
+
+        Try
+            Dim symbols = Await B.BINANCE_GetTopSpotSymbolsByVolumeAsync(
+                CInt(_botUniverseMaxAssets.Value),
+                _botUniverseMinVolume.Value)
+            _spotBotUniverseSymbols.Clear()
+            _spotBotUniverseSymbols.AddRange(symbols)
+            AppendSpotBotLog($"Universo Top volume atualizado: {symbols.Count} ativo(s).", Color.LightGray)
+            If _spotTradeBot.IsRunning Then Await StartBinanceWebSocket()
+        Catch ex As Exception
+            AppendSpotBotLog("Erro carregando o universo Top volume: " & ex.Message, Color.IndianRed)
+        End Try
+    End Sub
+
+    Private Function GetManualSpotBotUniverseCandidates() As List(Of String)
+        Dim symbols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        Try
+            Dim table = PortfolioRepository.GetCryptoSymbols()
+            For Each databaseRow As DataRow In table.Rows
+                AddSpotBotUniverseSymbol(symbols, databaseRow("Symbol")?.ToString())
+            Next
+        Catch ex As Exception
+            Debug.WriteLine("Erro carregando moedas manuais do Tradebot: " & ex.Message)
+        End Try
+
+        If dgPortfolio IsNot Nothing AndAlso dgPortfolio.Columns.Contains("Cripto") Then
+            For Each row As DataGridViewRow In dgPortfolio.Rows
+                If row.IsNewRow Then Continue For
+                AddSpotBotUniverseSymbol(symbols, row.Cells("Cripto").Value?.ToString())
+            Next
+        End If
+
+        Return symbols.OrderBy(Function(item) item, StringComparer.OrdinalIgnoreCase).ToList()
+    End Function
+
+    Private Sub AddSpotBotUniverseSymbol(symbols As HashSet(Of String), rawSymbol As String)
+        Dim symbol = GetSpotBaseAsset(rawSymbol)
+        If String.IsNullOrWhiteSpace(symbol) OrElse Cjson.stablecoins.Contains(symbol) Then Return
+        symbols.Add(symbol)
+    End Sub
+
+    Private Async Function ResolveSpotBotUniverseAsync() As Task(Of List(Of String))
+        Dim mode = If(_botUniverseMode IsNot Nothing AndAlso _botUniverseMode.SelectedIndex = 1,
+                      SpotBotUniverseMode.TopVolume,
+                      SpotBotUniverseMode.Manual)
+        Dim maxAssets = If(_botUniverseMaxAssets Is Nothing, 20, CInt(_botUniverseMaxAssets.Value))
+        Dim minimumVolume = If(_botUniverseMinVolume Is Nothing, 1000000D, _botUniverseMinVolume.Value)
+        Dim symbols As New List(Of String)()
+
+        If mode = SpotBotUniverseMode.TopVolume Then
+            symbols = Await B.BINANCE_GetTopSpotSymbolsByVolumeAsync(maxAssets, minimumVolume)
+        Else
+            symbols = PortfolioRepository.GetSpotBotManualUniverseSymbols()
+            If symbols.Count = 0 Then symbols = GetManualSpotBotUniverseCandidates()
+        End If
+
+        symbols = symbols.
+            Select(Function(item) GetSpotBaseAsset(item)).
+            Where(Function(item) Not String.IsNullOrWhiteSpace(item) AndAlso Not Cjson.stablecoins.Contains(item)).
+            Distinct(StringComparer.OrdinalIgnoreCase).
+            Take(Math.Max(1, maxAssets)).
+            ToList()
+
+        PortfolioRepository.SaveSpotBotUniverseSettings(New SpotBotUniverseSettings With {
+            .Mode = mode,
+            .MaxAssets = maxAssets,
+            .MinimumQuoteVolume = minimumVolume
+        })
+
+        _spotTradeBot.Configuration.UniverseMode = mode
+        _spotTradeBot.Configuration.UniverseMaxAssets = maxAssets
+        _spotTradeBot.Configuration.UniverseMinimumQuoteVolume = minimumVolume
+        _spotTradeBot.Configuration.ManualUniverseSymbols.Clear()
+        For Each symbol In symbols
+            _spotTradeBot.Configuration.ManualUniverseSymbols.Add(symbol)
+        Next
+
+        _spotBotUniverseSymbols.Clear()
+        _spotBotUniverseSymbols.AddRange(symbols)
+        Return symbols
+    End Function
+
+    Private Sub AddSpotBotPositionColumn(name As String, headerText As String)
+        _dgSpotBotPositions.Columns.Add(New DataGridViewTextBoxColumn With {
+            .Name = name,
+            .HeaderText = headerText,
+            .SortMode = DataGridViewColumnSortMode.NotSortable,
+            .AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+        })
     End Sub
 
     Private Sub AddBotStrategyCheckBox(
@@ -777,7 +1048,7 @@ Public Class FormMain
         _btTradeBot.Location = New Point(btOrdensFuturo.Right, btOrdensFuturo.Top)
     End Sub
 
-    Private Sub ApplySpotBotControls()
+    Private Sub ApplySpotBotControls(Optional preserveRestoredStartingQuote As Boolean = False)
         _spotTradeBot.DisableAllStrategies()
         For Each item In _botStrategyChecks
             _spotTradeBot.SetStrategyEnabled(item.Key, item.Value.Checked)
@@ -795,29 +1066,83 @@ Public Class FormMain
         End Select
 
         _spotTradeBot.Configuration.RequiredConfirmations = CInt(_botConfirmations.Value)
-        _spotTradeBot.Configuration.SimulationStartingQuote = _botStartingQuote.Value
+        If Not preserveRestoredStartingQuote Then
+            _spotTradeBot.Configuration.SimulationStartingQuote = _botStartingQuote.Value
+        End If
         _spotTradeBot.Configuration.SimulationAllocationPercent = _botAllocation.Value
         _spotTradeBot.Configuration.SimulationFeeRate = _botFee.Value / 100D
+        _spotTradeBot.Configuration.TakeProfitPercent = _botTakeProfit.Value
+        _spotTradeBot.Configuration.StopLossPercent = _botStopLoss.Value
         _spotTradeBot.Configuration.SimulationOnly = True
+
+        _spotTradeBot.Configuration.UniverseMode = If(_botUniverseMode.SelectedIndex = 1,
+                                                      SpotBotUniverseMode.TopVolume,
+                                                      SpotBotUniverseMode.Manual)
+        _spotTradeBot.Configuration.UniverseMaxAssets = CInt(_botUniverseMaxAssets.Value)
+        _spotTradeBot.Configuration.UniverseMinimumQuoteVolume = _botUniverseMinVolume.Value
     End Sub
 
-    Private Sub SpotBotStart_Click(sender As Object, e As EventArgs)
-        ApplySpotBotControls()
+    Private Async Sub SpotBotStart_Click(sender As Object, e As EventArgs)
+        Dim resumePreviousSimulation = False
+        If _spotTradeBot.HasRestoredState Then
+            Dim answer = MessageBox.Show(
+                "Foi encontrada uma simulação anterior com posições abertas." & Environment.NewLine &
+                "Sim = continuar essa simulação; Não = iniciar uma nova; Cancelar = voltar.",
+                "Tradebot",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button1)
+
+            If answer = DialogResult.Cancel Then Return
+            resumePreviousSimulation = answer = DialogResult.Yes
+        End If
+
+        ApplySpotBotControls(resumePreviousSimulation)
         If _spotTradeBot.Configuration.EnabledStrategies.Count = 0 Then
             AppendSpotBotLog("Selecione pelo menos uma estratégia antes de iniciar.", Color.Gold)
             Return
         End If
 
-        _spotTradeBot.ResetHistory()
+        Dim universe As List(Of String)
+        Try
+            universe = Await ResolveSpotBotUniverseAsync()
+        Catch ex As Exception
+            AppendSpotBotLog("Erro carregando o universo do Tradebot: " & ex.Message, Color.IndianRed)
+            Return
+        End Try
+
+        If universe.Count = 0 Then
+            AppendSpotBotLog("Nenhum ativo foi encontrado para o universo selecionado.", Color.Gold)
+            Return
+        End If
+
+        If Not resumePreviousSimulation Then
+            _spotTradeBot.ResetHistory()
+        End If
+        UpdateSpotBotPositionsGrid(_spotTradeBot.GetOpenPositions())
         _spotTradeBot.Start()
+        _botUniverseMode.Enabled = False
+        _botUniverseMaxAssets.Enabled = False
+        _botUniverseMinVolume.Enabled = False
+        _botUniverseButton.Enabled = False
+        _botTakeProfit.Enabled = False
+        _botStopLoss.Enabled = False
+        Await StartBinanceWebSocket()
         _botStart.Enabled = False
         _botStop.Enabled = True
         _lastBotSimulationAction = String.Empty
-        _botSimulationSummary.ForeColor = Color.Gold
-        _botSimulationSummary.Text =
-            $"Simulação | Patrimônio: {_spotTradeBot.Configuration.SimulationStartingQuote:0.00} USDT | " &
-            "P/L: 0.00 (realizado 0.00 / aberto 0.00) | Trades: 0 | Acerto: 0.0% | Abertas: 0"
-        AppendSpotBotLog("Bot Spot iniciado em modo SIMULAÇÃO.", Color.LimeGreen)
+        RenderSpotBotSimulationSummary(_spotTradeBot.GetSimulationSnapshot())
+        AppendSpotBotLog(
+            If(resumePreviousSimulation,
+               "Bot Spot retomado em modo SIMULAÇÃO.",
+               "Bot Spot iniciado em modo SIMULAÇÃO."),
+            Color.LimeGreen)
+        AppendSpotBotLog(
+            $"Proteções: TP {_spotTradeBot.Configuration.TakeProfitPercent:0.##}% | " &
+            $"SL {_spotTradeBot.Configuration.StopLossPercent:0.##}% " &
+            "(0% desativa).",
+            Color.LightGray)
+        AppendSpotBotLog($"Universo: {universe.Count} ativo(s) ({If(_spotTradeBot.Configuration.UniverseMode = SpotBotUniverseMode.TopVolume, "Top volume", "Manual")}).", Color.LightGray)
         AppendSpotBotLog("Estratégias: " & String.Join(", ", _spotTradeBot.Configuration.EnabledStrategies), Color.LightGray)
     End Sub
 
@@ -825,6 +1150,12 @@ Public Class FormMain
         _spotTradeBot.Stop()
         _botStart.Enabled = True
         _botStop.Enabled = False
+        _botUniverseMode.Enabled = True
+        _botUniverseMaxAssets.Enabled = True
+        _botUniverseMinVolume.Enabled = True
+        _botUniverseButton.Enabled = True
+        _botTakeProfit.Enabled = True
+        _botStopLoss.Enabled = True
         AppendSpotBotLog("Bot Spot parado.", Color.IndianRed)
     End Sub
 
@@ -845,12 +1176,18 @@ Public Class FormMain
     End Sub
 
     Private Sub SpotTradeBot_SimulationUpdated(sender As Object, e As SpotBotSimulationEventArgs)
-        If e Is Nothing OrElse e.Snapshot Is Nothing OrElse _botSimulationSummary Is Nothing Then Return
+        If e Is Nothing OrElse e.Snapshot Is Nothing Then Return
 
         If InvokeRequired Then
             BeginInvoke(New MethodInvoker(Sub() SpotTradeBot_SimulationUpdated(Me, e)))
             Return
         End If
+
+        If _dgSpotBotPositions IsNot Nothing Then
+            UpdateSpotBotPositionsGrid(_spotTradeBot.GetOpenPositions())
+        End If
+
+        If _botSimulationSummary Is Nothing Then Return
 
         Dim nowUtc = DateTime.UtcNow
         If nowUtc - _lastBotSummaryUpdateUtc < TimeSpan.FromMilliseconds(250) AndAlso
@@ -858,18 +1195,103 @@ Public Class FormMain
             Return
         End If
 
+        Dim previousAction = _lastBotSimulationAction
         _lastBotSummaryUpdateUtc = nowUtc
         _lastBotSimulationAction = e.Snapshot.LastAction
-        Dim pnlColor = If(e.Snapshot.TotalPnl >= 0D, Color.LimeGreen, Color.IndianRed)
+        If Not String.Equals(previousAction, e.Snapshot.LastAction, StringComparison.Ordinal) AndAlso
+           (e.Snapshot.LastAction.StartsWith("TP ", StringComparison.OrdinalIgnoreCase) OrElse
+            e.Snapshot.LastAction.StartsWith("SL ", StringComparison.OrdinalIgnoreCase)) Then
+            AppendSpotBotLog(
+                e.Snapshot.LastAction,
+                If(e.Snapshot.LastAction.StartsWith("TP ", StringComparison.OrdinalIgnoreCase),
+                   Color.LimeGreen,
+                   Color.IndianRed))
+        End If
+        RenderSpotBotSimulationSummary(e.Snapshot)
+    End Sub
+
+    Private Sub RenderSpotBotSimulationSummary(snapshot As SpotBotSimulationSnapshot)
+        If snapshot Is Nothing OrElse _botSimulationSummary Is Nothing Then Return
+
+        Dim pnlColor = If(snapshot.TotalPnl >= 0D, Color.LimeGreen, Color.IndianRed)
         _botSimulationSummary.ForeColor = pnlColor
         _botSimulationSummary.Text =
-            $"Simulação | Patrimônio: {e.Snapshot.Equity:0.00} USDT | " &
-            $"P/L: {e.Snapshot.TotalPnl:+0.00;-0.00;0.00} " &
-            $"(realizado {e.Snapshot.RealizedPnl:+0.00;-0.00;0.00} / " &
-            $"aberto {e.Snapshot.UnrealizedPnl:+0.00;-0.00;0.00}) | " &
-            $"Trades: {e.Snapshot.CompletedTrades} | " &
-            $"Acerto: {e.Snapshot.WinRatePercent:0.0}% | " &
-            $"Abertas: {e.Snapshot.OpenPositions}"
+            $"Simulação | Patrimônio: {snapshot.Equity:0.00} USDT | " &
+            $"P/L: {snapshot.TotalPnl:+0.00;-0.00;0.00} " &
+            $"(realizado {snapshot.RealizedPnl:+0.00;-0.00;0.00} / " &
+            $"aberto {snapshot.UnrealizedPnl:+0.00;-0.00;0.00}) | " &
+            $"Trades: {snapshot.CompletedTrades} | " &
+            $"Acerto: {snapshot.WinRatePercent:0.0}% | " &
+            $"Abertas: {snapshot.OpenPositions}"
+    End Sub
+
+    Private Sub UpdateSpotBotPositionsGrid(positions As IReadOnlyList(Of SpotBotOpenPosition))
+        If _dgSpotBotPositions Is Nothing Then Return
+
+        Dim safePositions = If(positions, Array.Empty(Of SpotBotOpenPosition)())
+        Dim rebuild = _dgSpotBotPositions.Rows.Count <> safePositions.Count
+
+        If Not rebuild Then
+            For index = 0 To safePositions.Count - 1
+                Dim existingSymbol = _dgSpotBotPositions.Rows(index).Cells("Symbol").Value?.ToString()
+                If Not String.Equals(existingSymbol, safePositions(index).Symbol, StringComparison.OrdinalIgnoreCase) Then
+                    rebuild = True
+                    Exit For
+                End If
+            Next
+        End If
+
+        If rebuild Then
+            _dgSpotBotPositions.SuspendLayout()
+            Try
+                _dgSpotBotPositions.Rows.Clear()
+                For Each position In safePositions
+                    _dgSpotBotPositions.Rows.Add()
+                Next
+            Finally
+                _dgSpotBotPositions.ResumeLayout()
+            End Try
+        End If
+
+        For index = 0 To safePositions.Count - 1
+            Dim position = safePositions(index)
+            Dim row = _dgSpotBotPositions.Rows(index)
+            row.Cells("Symbol").Value = position.Symbol
+            row.Cells("Side").Value = position.Side
+            row.Cells("Quantity").Value = position.Quantity.ToString("0.########", CultureInfo.InvariantCulture)
+            row.Cells("Notional").Value = FormatSpotBotUsd(position.Notional, 2)
+            row.Cells("EntryPrice").Value = FormatSpotBotUsd(position.EntryPrice, 4)
+            row.Cells("CurrentPrice").Value = FormatSpotBotUsd(position.CurrentPrice, 4)
+            row.Cells("UnrealizedPnl").Value = FormatSpotBotUsd(position.UnrealizedPnl, 2)
+            row.Cells("RoiPercent").Value = position.RoiPercent.ToString("0.00;-0.00;0.00", CultureInfo.InvariantCulture) & "%"
+            ApplySpotBotPositionRowStyle(row, position.UnrealizedPnl)
+        Next
+    End Sub
+
+    Private Shared Function FormatSpotBotUsd(value As Decimal, decimals As Integer) As String
+        Dim format = "0." & New String("0"c, Math.Max(0, decimals))
+        If value < 0D Then
+            Return "-$" & Math.Abs(value).ToString(format, CultureInfo.InvariantCulture)
+        End If
+        Return "$" & value.ToString(format, CultureInfo.InvariantCulture)
+    End Function
+
+    Private Shared Sub ApplySpotBotPositionRowStyle(row As DataGridViewRow, unrealizedPnl As Decimal)
+        Dim positive = unrealizedPnl >= 0D
+        Dim rowBackColor = If(positive, Color.FromArgb(0, 25, 0), Color.FromArgb(25, 0, 0))
+        Dim fontColor = Color.White
+        Dim pnlColor = If(positive, Color.LimeGreen, Color.IndianRed)
+
+        row.DefaultCellStyle.BackColor = rowBackColor
+        row.DefaultCellStyle.ForeColor = fontColor
+        row.DefaultCellStyle.SelectionBackColor = rowBackColor
+        row.DefaultCellStyle.SelectionForeColor = fontColor
+        row.Cells("Symbol").Style.ForeColor = pnlColor
+        row.Cells("Side").Style.ForeColor = Color.LimeGreen
+        row.Cells("EntryPrice").Style.ForeColor = Color.Cyan
+        row.Cells("CurrentPrice").Style.ForeColor = pnlColor
+        row.Cells("UnrealizedPnl").Style.ForeColor = pnlColor
+        row.Cells("RoiPercent").Style.ForeColor = pnlColor
     End Sub
 
     Private Sub AppendSpotBotLog(message As String, color As Color)
@@ -1541,6 +1963,12 @@ Public Class FormMain
                 Next
             End If
 
+            For Each botSymbol In _spotBotUniverseSymbols
+                If Not String.IsNullOrWhiteSpace(botSymbol) Then
+                    symbols.Add(botSymbol.Trim().ToUpperInvariant())
+                End If
+            Next
+
             symbols =
             symbols.Distinct().ToList()
 
@@ -2042,8 +2470,19 @@ Public Class FormMain
 
     Private Sub ProcessSpotBotPrice(symbol As String, price As Decimal)
         If Not _spotTradeBot.IsRunning Then Return
+        If Not IsSpotBotUniverseSymbol(symbol) Then Return
         _spotTradeBot.ProcessPrice(symbol, price)
     End Sub
+
+    Private Function IsSpotBotUniverseSymbol(symbol As String) As Boolean
+        Dim baseSymbol = GetSpotBaseAsset(symbol)
+        If String.IsNullOrWhiteSpace(baseSymbol) Then Return False
+        Return _spotBotUniverseSymbols.Any(
+            Function(item) String.Equals(
+                GetSpotBaseAsset(item),
+                baseSymbol,
+                StringComparison.OrdinalIgnoreCase))
+    End Function
 
     Private Sub dgPortfolio_MouseLeave(sender As Object, e As EventArgs) Handles dgPortfolio.MouseLeave
         dgPortfolio.ClearSelection()
@@ -2458,6 +2897,17 @@ Public Class FormMain
         PanelGraphs.Width = Me.Width
         Const gridRightMargin As Integer = 8
 
+        If PanelProfits IsNot Nothing AndAlso
+           PanelGraphs IsNot Nothing AndAlso
+           panelDebug IsNot Nothing Then
+            Dim contentBottom = Me.ClientSize.Height - panelDebug.Height
+            Dim minimumProfitTop = PanelGraphs.Top + 265
+            Dim profitTop = Math.Max(minimumProfitTop, contentBottom - PanelProfits.Height)
+            PanelProfits.Location = New Point(0, profitTop)
+            PanelGraphs.Height = Math.Max(265, profitTop - PanelGraphs.Top)
+            CenterPanelGraphsItems()
+        End If
+
         If Me.ClientSize.Width > dgPortfolio.Left + gridRightMargin Then
             dgPortfolio.Width = Me.ClientSize.Width - dgPortfolio.Left - gridRightMargin
         End If
@@ -2470,6 +2920,43 @@ Public Class FormMain
         ArrangeProfitPairs()
         'dgPortfolio.Height = (dgPortfolio.RowCount * 35)
         ' Me.Height = MenuStrip1.Height + dgPortfolio.Height + PanelGraphs.Height + PanelProfits.Height + panelDebug.Height + 65
+    End Sub
+
+    Private Sub CenterPanelGraphsItems()
+        If PanelGraphs Is Nothing OrElse PanelGraphs.Controls.Count = 0 Then
+            Return
+        End If
+
+        ' Os gráficos e os indicadores são adicionados em momentos diferentes.
+        ' Calculamos o retângulo de todos os controles visíveis e deslocamos o
+        ' conjunto, preservando o espaçamento horizontal e vertical entre eles.
+        Dim items As New List(Of Control)()
+        Dim top As Integer = Integer.MaxValue
+        Dim bottom As Integer = Integer.MinValue
+
+        For Each item As Control In PanelGraphs.Controls
+            If Not item.Visible OrElse item.Dock <> DockStyle.None Then
+                Continue For
+            End If
+
+            items.Add(item)
+            top = Math.Min(top, item.Top)
+            bottom = Math.Max(bottom, item.Bottom)
+        Next
+
+        If items.Count = 0 Then
+            Return
+        End If
+
+        Dim contentHeight = bottom - top
+        Dim offset = ((PanelGraphs.ClientSize.Height - contentHeight) \ 2) - top
+        If offset = 0 Then
+            Return
+        End If
+
+        For Each item As Control In items
+            item.Top += offset
+        Next
     End Sub
 
     Private Sub ArrangeProfitPairs()
@@ -5465,6 +5952,10 @@ Public Class FormMain
         ArrangeOrdersPanel(False)
         ArrangeFuturesOrdersPanel(False)
         ArrangeSpotBotPanel(True)
+        UpdateSpotBotPositionsGrid(_spotTradeBot.GetOpenPositions())
+        If _spotTradeBot.IsRunning OrElse _spotTradeBot.HasRestoredState Then
+            RenderSpotBotSimulationSummary(_spotTradeBot.GetSimulationSnapshot())
+        End If
         btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)

@@ -19,6 +19,7 @@ Public NotInheritable Class SpotTradeBotEngine
     Private _simulationLastAction As String = String.Empty
     Private _running As Boolean
     Private _activeRunId As Long
+    Private _restoredStatePending As Boolean
 
     Public Event SignalGenerated As EventHandler(Of SpotBotSignalEventArgs)
     Public Event SimulationUpdated As EventHandler(Of SpotBotSimulationEventArgs)
@@ -35,8 +36,18 @@ Public NotInheritable Class SpotTradeBotEngine
         RegisterStrategy(New SpotBotBreakoutStrategy())
         RegisterStrategy(New SpotBotGridStrategy())
 
+        Dim persistedState As SpotBotPersistedSimulationState = Nothing
+        Try
+            persistedState = SpotTradeBotRepository.LoadLatestRestorableState()
+        Catch ex As Exception
+            Debug.WriteLine("Erro carregando a última simulação do Tradebot: " & ex.Message)
+        End Try
+
         SyncLock _sync
             ResetSimulationLocked()
+            If persistedState IsNot Nothing Then
+                RestoreSimulationLocked(persistedState)
+            End If
         End SyncLock
     End Sub
 
@@ -50,6 +61,14 @@ Public NotInheritable Class SpotTradeBotEngine
         Get
             SyncLock _sync
                 Return _running
+            End SyncLock
+        End Get
+    End Property
+
+    Public ReadOnly Property HasRestoredState As Boolean
+        Get
+            SyncLock _sync
+                Return _restoredStatePending AndAlso _simulationPositions.Count > 0
             End SyncLock
         End Get
     End Property
@@ -88,18 +107,34 @@ Public NotInheritable Class SpotTradeBotEngine
 
     Public Sub Start()
         Dim configurationSnapshot As SpotBotConfiguration
+        Dim runId As Long
+        Dim resumeExisting As Boolean
 
         SyncLock _sync
             If _running Then Return
             _running = True
             configurationSnapshot = CopyConfiguration(_configuration)
+            resumeExisting = _restoredStatePending AndAlso _activeRunId > 0
+            runId = _activeRunId
         End SyncLock
 
         Try
-            Dim runId = SpotTradeBotRepository.StartRun(configurationSnapshot)
+            If Not resumeExisting Then
+                runId = SpotTradeBotRepository.StartRun(configurationSnapshot)
+            End If
+
             SyncLock _sync
                 _activeRunId = runId
+                _restoredStatePending = False
             End SyncLock
+
+            If resumeExisting Then
+                SpotTradeBotRepository.UpdateRun(
+                    runId,
+                    GetSimulationSnapshot(),
+                    "RUNNING")
+                SpotTradeBotRepository.SaveOpenPositions(runId, GetOpenPositions())
+            End If
         Catch ex As Exception
             Debug.WriteLine("Erro iniciando persistência da simulação: " & ex.Message)
         End Try
@@ -114,11 +149,13 @@ Public NotInheritable Class SpotTradeBotEngine
             runId = _activeRunId
             snapshot = BuildSimulationSnapshotLocked(_configuration)
             _activeRunId = 0
+            _restoredStatePending = False
         End SyncLock
 
         If runId <= 0 Then Return
 
         Try
+            SpotTradeBotRepository.SaveOpenPositions(runId, GetOpenPositions())
             SpotTradeBotRepository.UpdateRun(runId, snapshot, "STOPPED", DateTime.UtcNow)
         Catch ex As Exception
             Debug.WriteLine("Erro salvando resultado da simulação: " & ex.Message)
@@ -133,6 +170,10 @@ Public NotInheritable Class SpotTradeBotEngine
                 _rsiCurrentCandles.Clear()
                 _lastSignals.Clear()
                 ResetSimulationLocked()
+                If Not _running Then
+                    _activeRunId = 0
+                    _restoredStatePending = False
+                End If
             Else
                 Dim normalized = NormalizeSymbol(symbol)
                 _priceHistory.Remove(normalized)
@@ -143,6 +184,11 @@ Public NotInheritable Class SpotTradeBotEngine
                     ToList()
                     _lastSignals.Remove(key)
                 Next
+
+                If Not _running Then
+                    _activeRunId = 0
+                    _restoredStatePending = False
+                End If
             End If
         End SyncLock
     End Sub
@@ -241,7 +287,15 @@ Public NotInheritable Class SpotTradeBotEngine
         End If
 
         Dim completedTrade As SpotBotSimulationTrade = Nothing
-        Dim simulationSnapshot = ApplySimulation(normalizedSymbol, price, acceptedSignal, configurationSnapshot, completedTrade)
+        Dim automaticExit As Boolean
+        Dim simulationSnapshot = ApplySimulation(
+            normalizedSymbol,
+            price,
+            observedAt,
+            acceptedSignal,
+            configurationSnapshot,
+            completedTrade,
+            automaticExit)
         RaiseEvent SimulationUpdated(Me, New SpotBotSimulationEventArgs(simulationSnapshot))
 
         If activeRunId > 0 Then
@@ -260,10 +314,15 @@ Public NotInheritable Class SpotTradeBotEngine
 
                 If candleClosed OrElse completedTrade IsNot Nothing OrElse acceptedSignal IsNot Nothing Then
                     SpotTradeBotRepository.UpdateRun(activeRunId, simulationSnapshot, "RUNNING")
+                    SpotTradeBotRepository.SaveOpenPositions(activeRunId, GetOpenPositions())
                 End If
             Catch ex As Exception
                 Debug.WriteLine("Erro salvando dados da simulação: " & ex.Message)
             End Try
+        End If
+
+        If automaticExit Then
+            acceptedSignal = Nothing
         End If
 
         If acceptedSignal Is Nothing Then Return Nothing
@@ -275,14 +334,49 @@ Public NotInheritable Class SpotTradeBotEngine
     Private Function ApplySimulation(
         symbol As String,
         price As Decimal,
+        timestampUtc As DateTime,
         signal As SpotBotSignal,
         configuration As SpotBotConfiguration,
-        ByRef completedTrade As SpotBotSimulationTrade) As SpotBotSimulationSnapshot
+        ByRef completedTrade As SpotBotSimulationTrade,
+        ByRef automaticExit As Boolean) As SpotBotSimulationSnapshot
 
         SyncLock _sync
+            automaticExit = False
             Dim position As SimulationPosition = Nothing
             If _simulationPositions.TryGetValue(symbol, position) Then
                 position.LastPrice = price
+            End If
+
+            If position IsNot Nothing AndAlso position.EntryPrice > 0D Then
+                Dim variationPercent = (price - position.EntryPrice) / position.EntryPrice * 100D
+                Dim takeProfitPercent = Math.Max(0D, configuration.TakeProfitPercent)
+                Dim stopLossPercent = Math.Max(0D, configuration.StopLossPercent)
+
+                If takeProfitPercent > 0D AndAlso variationPercent >= takeProfitPercent Then
+                    CloseSimulationPosition(
+                        symbol,
+                        price,
+                        timestampUtc,
+                        position,
+                        configuration,
+                        "TP",
+                        completedTrade)
+                    automaticExit = True
+                    Return BuildSimulationSnapshotLocked(configuration)
+                End If
+
+                If stopLossPercent > 0D AndAlso variationPercent <= -stopLossPercent Then
+                    CloseSimulationPosition(
+                        symbol,
+                        price,
+                        timestampUtc,
+                        position,
+                        configuration,
+                        "SL",
+                        completedTrade)
+                    automaticExit = True
+                    Return BuildSimulationSnapshotLocked(configuration)
+                End If
             End If
 
             If signal IsNot Nothing AndAlso signal.SimulationOnly Then
@@ -297,6 +391,7 @@ Public NotInheritable Class SpotTradeBotEngine
                             If notional > 0D Then
                                 Dim fee = notional * feeRate
                                 position = New SimulationPosition With {
+                                    .Symbol = symbol,
                                     .Quantity = notional / price,
                                     .EntryPrice = price,
                                     .CostBasis = notional + fee,
@@ -313,36 +408,14 @@ Public NotInheritable Class SpotTradeBotEngine
 
                     Case SpotBotSignalDirection.Sell
                         If position IsNot Nothing Then
-                            Dim feeRate = Math.Max(0D, configuration.SimulationFeeRate)
-                            Dim gross = position.Quantity * price
-                            Dim fee = gross * feeRate
-                            Dim net = gross - fee
-                            Dim tradePnl = net - position.CostBasis
-
-                            completedTrade = New SpotBotSimulationTrade With {
-                                .Symbol = symbol,
-                                .Quantity = position.Quantity,
-                                .EntryPrice = position.EntryPrice,
-                                .ExitPrice = price,
-                                .CostBasis = position.CostBasis,
-                                .GrossProceeds = gross,
-                                .Fees = fee,
-                                .Pnl = tradePnl,
-                                .OpenedAtUtc = position.EntryTimestampUtc,
-                                .ClosedAtUtc = signal.TimestampUtc
-                            }
-
-                            _simulationQuoteBalance += net
-                            _simulationRealizedPnl += tradePnl
-                            _simulationCompletedTrades += 1
-                            If tradePnl > 0D Then
-                                _simulationWinningTrades += 1
-                            ElseIf tradePnl < 0D Then
-                                _simulationLosingTrades += 1
-                            End If
-
-                            _simulationPositions.Remove(symbol)
-                            _simulationLastAction = $"VENDA simulada {symbol}: P/L {tradePnl:+0.00;-0.00;0.00} USDT"
+                            CloseSimulationPosition(
+                                symbol,
+                                price,
+                                timestampUtc,
+                                position,
+                                configuration,
+                                "VENDA",
+                                completedTrade)
                         Else
                             _simulationLastAction = $"VENDA ignorada {symbol}: sem posição aberta"
                         End If
@@ -353,6 +426,50 @@ Public NotInheritable Class SpotTradeBotEngine
         End SyncLock
     End Function
 
+    Private Sub CloseSimulationPosition(
+        symbol As String,
+        price As Decimal,
+        timestampUtc As DateTime,
+        position As SimulationPosition,
+        configuration As SpotBotConfiguration,
+        exitReason As String,
+        ByRef completedTrade As SpotBotSimulationTrade)
+
+        Dim feeRate = Math.Max(0D, configuration.SimulationFeeRate)
+        Dim gross = position.Quantity * price
+        Dim fee = gross * feeRate
+        Dim net = gross - fee
+        Dim tradePnl = net - position.CostBasis
+
+        completedTrade = New SpotBotSimulationTrade With {
+            .Symbol = symbol,
+            .Quantity = position.Quantity,
+            .EntryPrice = position.EntryPrice,
+            .ExitPrice = price,
+            .CostBasis = position.CostBasis,
+            .GrossProceeds = gross,
+            .Fees = fee,
+            .Pnl = tradePnl,
+            .OpenedAtUtc = position.EntryTimestampUtc,
+            .ClosedAtUtc = timestampUtc
+        }
+
+        _simulationQuoteBalance += net
+        _simulationRealizedPnl += tradePnl
+        _simulationCompletedTrades += 1
+        If tradePnl > 0D Then
+            _simulationWinningTrades += 1
+        ElseIf tradePnl < 0D Then
+            _simulationLosingTrades += 1
+        End If
+
+        _simulationPositions.Remove(symbol)
+        Dim actionText = If(exitReason.Equals("TP", StringComparison.OrdinalIgnoreCase),
+                            "TP",
+                            If(exitReason.Equals("SL", StringComparison.OrdinalIgnoreCase), "SL", "VENDA"))
+        _simulationLastAction = $"{actionText} simulado {symbol}: P/L {tradePnl:+0.00;-0.00;0.00} USDT"
+    End Sub
+
     Private Sub ResetSimulationLocked()
         _simulationPositions.Clear()
         _simulationQuoteBalance = Math.Max(0D, _configuration.SimulationStartingQuote)
@@ -361,6 +478,56 @@ Public NotInheritable Class SpotTradeBotEngine
         _simulationWinningTrades = 0
         _simulationLosingTrades = 0
         _simulationLastAction = "Carteira virtual reiniciada"
+    End Sub
+
+    Private Sub RestoreSimulationLocked(state As SpotBotPersistedSimulationState)
+        If state Is Nothing OrElse state.Snapshot Is Nothing OrElse state.Positions Is Nothing OrElse
+           state.Positions.Count = 0 Then
+            Return
+        End If
+
+        _configuration.SimulationStartingQuote = Math.Max(0D, state.Snapshot.StartingQuote)
+        _configuration.EnabledStrategies.Clear()
+        For Each strategy In state.EnabledStrategies
+            _configuration.EnabledStrategies.Add(strategy)
+        Next
+        _configuration.CombinationMode = state.CombinationMode
+        _configuration.RequiredConfirmations = Math.Max(1, state.RequiredConfirmations)
+        _configuration.SimulationAllocationPercent = Math.Max(0D, Math.Min(100D, state.AllocationPercent))
+        _configuration.SimulationFeeRate = Math.Max(0D, state.FeeRate)
+        _simulationQuoteBalance = Math.Max(0D, state.Snapshot.QuoteBalance)
+        _simulationRealizedPnl = state.Snapshot.RealizedPnl
+        _simulationCompletedTrades = state.Snapshot.CompletedTrades
+        _simulationWinningTrades = state.Snapshot.WinningTrades
+        _simulationLosingTrades = state.Snapshot.LosingTrades
+        _simulationLastAction = If(String.IsNullOrWhiteSpace(state.Snapshot.LastAction),
+                                    "Simulação restaurada",
+                                    state.Snapshot.LastAction)
+        _simulationPositions.Clear()
+
+        For Each persistedPosition In state.Positions
+            If persistedPosition Is Nothing OrElse String.IsNullOrWhiteSpace(persistedPosition.Symbol) OrElse
+               persistedPosition.Quantity <= 0D OrElse persistedPosition.EntryPrice <= 0D Then
+                Continue For
+            End If
+
+            _simulationPositions(NormalizeSymbol(persistedPosition.Symbol)) = New SimulationPosition With {
+                .Symbol = NormalizeSymbol(persistedPosition.Symbol),
+                .Quantity = persistedPosition.Quantity,
+                .EntryPrice = persistedPosition.EntryPrice,
+                .CostBasis = persistedPosition.CostBasis,
+                .LastPrice = If(persistedPosition.CurrentPrice > 0D, persistedPosition.CurrentPrice, persistedPosition.EntryPrice),
+                .EntryTimestampUtc = persistedPosition.OpenedAtUtc
+            }
+        Next
+
+        If _simulationPositions.Count = 0 Then
+            ResetSimulationLocked()
+            Return
+        End If
+
+        _activeRunId = state.RunId
+        _restoredStatePending = True
     End Sub
 
     Private Function BuildSimulationSnapshotLocked(configuration As SpotBotConfiguration) As SpotBotSimulationSnapshot
@@ -470,6 +637,30 @@ Public NotInheritable Class SpotTradeBotEngine
         End SyncLock
     End Function
 
+    Public Function GetOpenPositions() As IReadOnlyList(Of SpotBotOpenPosition)
+        SyncLock _sync
+            Return _simulationPositions.Values.
+                Select(Function(position)
+                           Dim notional = position.Quantity * position.LastPrice
+                           Dim unrealizedPnl = notional - position.CostBasis
+                           Return New SpotBotOpenPosition With {
+                               .Symbol = position.Symbol,
+                               .Side = "LONG",
+                               .Quantity = position.Quantity,
+                               .EntryPrice = position.EntryPrice,
+                               .CurrentPrice = position.LastPrice,
+                               .CostBasis = position.CostBasis,
+                               .Notional = notional,
+                               .UnrealizedPnl = unrealizedPnl,
+                               .RoiPercent = If(position.CostBasis = 0D, 0D, unrealizedPnl / position.CostBasis * 100D),
+                               .OpenedAtUtc = position.EntryTimestampUtc
+                           }
+                       End Function).
+                OrderBy(Function(position) position.Symbol, StringComparer.OrdinalIgnoreCase).
+                ToList()
+        End SyncLock
+    End Function
+
     Private Function CombineSignals(
         symbol As String,
         price As Decimal,
@@ -569,11 +760,20 @@ Public NotInheritable Class SpotTradeBotEngine
             .SimulationStartingQuote = source.SimulationStartingQuote,
             .SimulationAllocationPercent = source.SimulationAllocationPercent,
             .SimulationFeeRate = source.SimulationFeeRate,
-            .SimulationOnly = source.SimulationOnly
+            .TakeProfitPercent = source.TakeProfitPercent,
+            .StopLossPercent = source.StopLossPercent,
+            .SimulationOnly = source.SimulationOnly,
+            .UniverseMode = source.UniverseMode,
+            .UniverseMaxAssets = source.UniverseMaxAssets,
+            .UniverseMinimumQuoteVolume = source.UniverseMinimumQuoteVolume
         }
 
         For Each kind In source.EnabledStrategies
             copy.EnabledStrategies.Add(kind)
+        Next
+
+        For Each symbol In source.ManualUniverseSymbols
+            copy.ManualUniverseSymbols.Add(symbol)
         Next
 
         Return copy
@@ -584,6 +784,7 @@ Public NotInheritable Class SpotTradeBotEngine
     End Function
 
     Private NotInheritable Class SimulationPosition
+        Public Property Symbol As String
         Public Property Quantity As Decimal
         Public Property EntryPrice As Decimal
         Public Property CostBasis As Decimal

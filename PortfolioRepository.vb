@@ -1,8 +1,10 @@
 ﻿Imports Microsoft.Data.Sqlite
 Imports Newtonsoft.Json.Linq
+Imports System.Collections.Generic
 Imports System.Data
 Imports System.Globalization
 Imports System.IO
+Imports System.Linq
 
 Public NotInheritable Class PortfolioRepository
 
@@ -92,6 +94,32 @@ Public NotInheritable Class PortfolioRepository
                     "CREATE TABLE IF NOT EXISTS BinanceIgnoredAssets (" &
                     "Symbol TEXT PRIMARY KEY COLLATE NOCASE, " &
                     "IgnoredAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
+                    ");"
+                command.ExecuteNonQuery()
+            End Using
+
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "CREATE TABLE IF NOT EXISTS SpotBotUniverseSettings (" &
+                    "Id INTEGER PRIMARY KEY CHECK(Id = 1), " &
+                    "Mode INTEGER NOT NULL DEFAULT 0, " &
+                    "MaxAssets INTEGER NOT NULL DEFAULT 20, " &
+                    "MinimumQuoteVolume REAL NOT NULL DEFAULT 1000000, " &
+                    "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
+                    ");"
+                command.ExecuteNonQuery()
+                command.CommandText =
+                    "INSERT OR IGNORE INTO SpotBotUniverseSettings(Id, Mode, MaxAssets, MinimumQuoteVolume) " &
+                    "VALUES(1, 0, 20, 1000000);"
+                command.ExecuteNonQuery()
+            End Using
+
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "CREATE TABLE IF NOT EXISTS SpotBotUniverseSymbols (" &
+                    "Symbol TEXT PRIMARY KEY COLLATE NOCASE, " &
+                    "Enabled INTEGER NOT NULL DEFAULT 1, " &
+                    "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                     ");"
                 command.ExecuteNonQuery()
             End Using
@@ -213,6 +241,111 @@ Public NotInheritable Class PortfolioRepository
 
         Return ignored
     End Function
+
+    Public Shared Function GetSpotBotUniverseSettings() As SpotBotUniverseSettings
+        Initialize()
+        Dim settings As New SpotBotUniverseSettings()
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "SELECT Mode, MaxAssets, MinimumQuoteVolume " &
+                    "FROM SpotBotUniverseSettings WHERE Id = 1;"
+                Using reader = command.ExecuteReader()
+                    If reader.Read() Then
+                        Dim modeValue = If(reader.IsDBNull(0), 0, reader.GetInt32(0))
+                        If [Enum].IsDefined(GetType(SpotBotUniverseMode), modeValue) Then
+                            settings.Mode = DirectCast(modeValue, SpotBotUniverseMode)
+                        End If
+
+                        settings.MaxAssets = Math.Max(1, Math.Min(500, If(reader.IsDBNull(1), 20, reader.GetInt32(1))))
+                        settings.MinimumQuoteVolume = Math.Max(0D, If(reader.IsDBNull(2), 1000000D, Convert.ToDecimal(reader.GetDouble(2), CultureInfo.InvariantCulture)))
+                    End If
+                End Using
+            End Using
+        End Using
+
+        Return settings
+    End Function
+
+    Public Shared Sub SaveSpotBotUniverseSettings(settings As SpotBotUniverseSettings)
+        If settings Is Nothing Then Throw New ArgumentNullException(NameOf(settings))
+        Initialize()
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "INSERT INTO SpotBotUniverseSettings(Id, Mode, MaxAssets, MinimumQuoteVolume, UpdatedAt) " &
+                    "VALUES(1, $mode, $maxAssets, $minimumQuoteVolume, CURRENT_TIMESTAMP) " &
+                    "ON CONFLICT(Id) DO UPDATE SET Mode = excluded.Mode, MaxAssets = excluded.MaxAssets, " &
+                    "MinimumQuoteVolume = excluded.MinimumQuoteVolume, UpdatedAt = CURRENT_TIMESTAMP;"
+                command.Parameters.AddWithValue("$mode", CInt(settings.Mode))
+                command.Parameters.AddWithValue("$maxAssets", Math.Max(1, Math.Min(500, settings.MaxAssets)))
+                Dim volumeParameter = command.Parameters.Add("$minimumQuoteVolume", SqliteType.Real)
+                volumeParameter.Value = Convert.ToDouble(Math.Max(0D, settings.MinimumQuoteVolume), CultureInfo.InvariantCulture)
+                command.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Public Shared Function GetSpotBotManualUniverseSymbols() As List(Of String)
+        Initialize()
+        Dim symbols As New List(Of String)()
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText = "SELECT Symbol FROM SpotBotUniverseSymbols WHERE Enabled = 1 ORDER BY Symbol;"
+                Using reader = command.ExecuteReader()
+                    While reader.Read()
+                        If Not reader.IsDBNull(0) Then
+                            Dim symbol = reader.GetString(0).Trim().ToUpperInvariant()
+                            If Not String.IsNullOrWhiteSpace(symbol) Then symbols.Add(symbol)
+                        End If
+                    End While
+                End Using
+            End Using
+        End Using
+
+        Return symbols
+    End Function
+
+    Public Shared Sub SaveSpotBotManualUniverseSymbols(symbols As IEnumerable(Of String))
+        Initialize()
+        Dim normalized As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        If symbols IsNot Nothing Then
+            For Each symbol In symbols
+                Dim value = If(symbol, String.Empty).Trim().ToUpperInvariant()
+                If Not String.IsNullOrWhiteSpace(value) Then normalized.Add(value)
+            Next
+        End If
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+            Using transaction = connection.BeginTransaction()
+                Using deleteCommand As SqliteCommand = connection.CreateCommand()
+                    deleteCommand.Transaction = transaction
+                    deleteCommand.CommandText = "DELETE FROM SpotBotUniverseSymbols;"
+                    deleteCommand.ExecuteNonQuery()
+                End Using
+
+                For Each symbol In normalized.OrderBy(Function(item) item, StringComparer.OrdinalIgnoreCase)
+                    Using insertCommand As SqliteCommand = connection.CreateCommand()
+                        insertCommand.Transaction = transaction
+                        insertCommand.CommandText =
+                            "INSERT INTO SpotBotUniverseSymbols(Symbol, Enabled, UpdatedAt) " &
+                            "VALUES($symbol, 1, CURRENT_TIMESTAMP);"
+                        insertCommand.Parameters.AddWithValue("$symbol", symbol)
+                        insertCommand.ExecuteNonQuery()
+                    End Using
+                Next
+
+                transaction.Commit()
+            End Using
+        End Using
+    End Sub
 
     Public Shared Sub IgnoreBinanceAsset(symbol As String)
         Initialize()

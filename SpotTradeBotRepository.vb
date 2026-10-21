@@ -89,6 +89,25 @@ Public NotInheritable Class SpotTradeBotRepository
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
+                        "CREATE TABLE IF NOT EXISTS SpotBotOpenPositions (" &
+                        "Id INTEGER PRIMARY KEY AUTOINCREMENT, " &
+                        "RunId INTEGER NOT NULL, " &
+                        "Symbol TEXT NOT NULL, " &
+                        "Side TEXT NOT NULL DEFAULT 'LONG', " &
+                        "Quantity REAL NOT NULL, " &
+                        "EntryPrice REAL NOT NULL, " &
+                        "CurrentPrice REAL NOT NULL, " &
+                        "CostBasis REAL NOT NULL, " &
+                        "OpenedAtUtc TEXT NOT NULL, " &
+                        "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, " &
+                        "UNIQUE(RunId, Symbol), " &
+                        "FOREIGN KEY(RunId) REFERENCES SpotBotRuns(Id) ON DELETE CASCADE" &
+                        ");"
+                    command.ExecuteNonQuery()
+                End Using
+
+                Using command As SqliteCommand = connection.CreateCommand()
+                    command.CommandText =
                         "CREATE INDEX IF NOT EXISTS IX_SpotBotCandles_RunSymbol " &
                         "ON SpotBotCandles(RunId, Symbol, CandleStartUtc);"
                     command.ExecuteNonQuery()
@@ -196,6 +215,51 @@ Public NotInheritable Class SpotTradeBotRepository
         End Using
     End Sub
 
+    Public Shared Sub SaveOpenPositions(runId As Long, positions As IReadOnlyList(Of SpotBotOpenPosition))
+        If runId <= 0 Then Return
+        Initialize()
+
+        Using connection As New SqliteConnection(GetConnectionString())
+            connection.Open()
+            Using transaction = connection.BeginTransaction()
+                Using deleteCommand As SqliteCommand = connection.CreateCommand()
+                    deleteCommand.Transaction = transaction
+                    deleteCommand.CommandText = "DELETE FROM SpotBotOpenPositions WHERE RunId = $runId;"
+                    deleteCommand.Parameters.AddWithValue("$runId", runId)
+                    deleteCommand.ExecuteNonQuery()
+                End Using
+
+                If positions IsNot Nothing Then
+                    For Each position In positions
+                        If position Is Nothing OrElse String.IsNullOrWhiteSpace(position.Symbol) OrElse
+                           position.Quantity <= 0D OrElse position.EntryPrice <= 0D Then
+                            Continue For
+                        End If
+
+                        Using insertCommand As SqliteCommand = connection.CreateCommand()
+                            insertCommand.Transaction = transaction
+                            insertCommand.CommandText =
+                                "INSERT INTO SpotBotOpenPositions(" &
+                                "RunId, Symbol, Side, Quantity, EntryPrice, CurrentPrice, CostBasis, OpenedAtUtc) " &
+                                "VALUES($runId, $symbol, $side, $quantity, $entryPrice, $currentPrice, $costBasis, $openedAtUtc);"
+                            insertCommand.Parameters.AddWithValue("$runId", runId)
+                            insertCommand.Parameters.AddWithValue("$symbol", position.Symbol.Trim().ToUpperInvariant())
+                            insertCommand.Parameters.AddWithValue("$side", If(String.IsNullOrWhiteSpace(position.Side), "LONG", position.Side.Trim().ToUpperInvariant()))
+                            AddRealParameter(insertCommand, "$quantity", position.Quantity)
+                            AddRealParameter(insertCommand, "$entryPrice", position.EntryPrice)
+                            AddRealParameter(insertCommand, "$currentPrice", If(position.CurrentPrice > 0D, position.CurrentPrice, position.EntryPrice))
+                            AddRealParameter(insertCommand, "$costBasis", position.CostBasis)
+                            insertCommand.Parameters.AddWithValue("$openedAtUtc", UtcText(position.OpenedAtUtc))
+                            insertCommand.ExecuteNonQuery()
+                        End Using
+                    Next
+                End If
+
+                transaction.Commit()
+            End Using
+        End Using
+    End Sub
+
     Public Shared Sub UpdateRun(
         runId As Long,
         snapshot As SpotBotSimulationSnapshot,
@@ -257,6 +321,96 @@ Public NotInheritable Class SpotTradeBotRepository
         Return table
     End Function
 
+    Public Shared Function LoadLatestRestorableState() As SpotBotPersistedSimulationState
+        Initialize()
+
+        Using connection As New SqliteConnection(GetConnectionString())
+            connection.Open()
+
+            Dim state As SpotBotPersistedSimulationState = Nothing
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "SELECT Id, Status, EnabledStrategies, CombinationMode, RequiredConfirmations, " &
+                    "StartingQuote, AllocationPercent, FeeRate, QuoteBalance, OpenValue, RealizedPnl, " &
+                    "UnrealizedPnl, Equity, TotalPnl, CompletedTrades, WinningTrades, LosingTrades, " &
+                    "OpenPositions, LastAction " &
+                    "FROM SpotBotRuns ORDER BY Id DESC LIMIT 1;"
+
+                Using reader = command.ExecuteReader()
+                    If Not reader.Read() Then Return Nothing
+
+                    state = New SpotBotPersistedSimulationState With {
+                        .RunId = reader.GetInt64(0),
+                        .Status = If(reader.IsDBNull(1), String.Empty, reader.GetString(1)),
+                        .CombinationMode = CType(reader.GetInt32(3), SpotBotCombinationMode),
+                        .RequiredConfirmations = reader.GetInt32(4),
+                        .AllocationPercent = ReadDecimal(reader, 6),
+                        .FeeRate = ReadDecimal(reader, 7),
+                        .Snapshot = New SpotBotSimulationSnapshot With {
+                            .StartingQuote = ReadDecimal(reader, 5),
+                            .QuoteBalance = ReadDecimal(reader, 8),
+                            .OpenValue = ReadDecimal(reader, 9),
+                            .RealizedPnl = ReadDecimal(reader, 10),
+                            .UnrealizedPnl = ReadDecimal(reader, 11),
+                            .Equity = ReadDecimal(reader, 12),
+                            .TotalPnl = ReadDecimal(reader, 13),
+                            .CompletedTrades = reader.GetInt32(14),
+                            .WinningTrades = reader.GetInt32(15),
+                            .LosingTrades = reader.GetInt32(16),
+                            .OpenPositions = reader.GetInt32(17),
+                            .LastAction = If(reader.IsDBNull(18), String.Empty, reader.GetString(18))
+                        }
+                    }
+
+                    If Not reader.IsDBNull(2) Then
+                        For Each strategyText In reader.GetString(2).Split(","c, StringSplitOptions.RemoveEmptyEntries)
+                            Dim strategy As SpotBotStrategyKind
+                            If [Enum].TryParse(strategyText.Trim(), True, strategy) Then
+                                state.EnabledStrategies.Add(strategy)
+                            End If
+                        Next
+                    End If
+                End Using
+            End Using
+
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "SELECT Symbol, Side, Quantity, EntryPrice, CurrentPrice, CostBasis, OpenedAtUtc " &
+                    "FROM SpotBotOpenPositions WHERE RunId = $runId ORDER BY Symbol;"
+                command.Parameters.AddWithValue("$runId", state.RunId)
+
+                Using reader = command.ExecuteReader()
+                    While reader.Read()
+                        Dim openedAt = ParseUtc(reader.GetString(6))
+                        Dim entryPrice = ReadDecimal(reader, 3)
+                        Dim currentPrice = ReadDecimal(reader, 4)
+                        Dim quantity = ReadDecimal(reader, 2)
+                        Dim costBasis = ReadDecimal(reader, 5)
+                        Dim notional = quantity * currentPrice
+                        Dim unrealizedPnl = notional - costBasis
+
+                        state.Positions.Add(New SpotBotOpenPosition With {
+                            .Symbol = reader.GetString(0),
+                            .Side = If(reader.IsDBNull(1), "LONG", reader.GetString(1)),
+                            .Quantity = quantity,
+                            .EntryPrice = entryPrice,
+                            .CurrentPrice = currentPrice,
+                            .CostBasis = costBasis,
+                            .Notional = notional,
+                            .UnrealizedPnl = unrealizedPnl,
+                            .RoiPercent = If(costBasis = 0D, 0D, unrealizedPnl / costBasis * 100D),
+                            .OpenedAtUtc = openedAt
+                        })
+                    End While
+                End Using
+            End Using
+
+            If state.Positions.Count = 0 Then Return Nothing
+            state.Snapshot.OpenPositions = state.Positions.Count
+            Return state
+        End Using
+    End Function
+
     Private Shared Function GetConnectionString() As String
         Return $"Data Source={PortfolioRepository.GetDatabasePath()}"
     End Function
@@ -269,5 +423,21 @@ Public NotInheritable Class SpotTradeBotRepository
         Dim parameter = command.Parameters.Add(name, SqliteType.Real)
         parameter.Value = Convert.ToDouble(value, CultureInfo.InvariantCulture)
     End Sub
+
+    Private Shared Function ReadDecimal(reader As SqliteDataReader, ordinal As Integer) As Decimal
+        If reader.IsDBNull(ordinal) Then Return 0D
+        Return Convert.ToDecimal(reader.GetValue(ordinal), CultureInfo.InvariantCulture)
+    End Function
+
+    Private Shared Function ParseUtc(value As String) As DateTime
+        Dim parsed As DateTime
+        If DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, parsed) Then
+            Return If(parsed.Kind = DateTimeKind.Unspecified,
+                      DateTime.SpecifyKind(parsed, DateTimeKind.Utc),
+                      parsed.ToUniversalTime())
+        End If
+
+        Return DateTime.UtcNow
+    End Function
 
 End Class

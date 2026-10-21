@@ -134,14 +134,14 @@ Partial Class FormMain
         dgPortfolio.AllowUserToDeleteRows = False
         dgPortfolio.AllowUserToOrderColumns = True
         dgPortfolio.AllowUserToResizeRows = False
-        dgPortfolio.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        dgPortfolio.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         dgPortfolio.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-        dgPortfolio.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgPortfolio.BackgroundColor = Color.FromArgb(64, 64, 64)
         dgPortfolio.BorderStyle = BorderStyle.None
         dgPortfolio.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgPortfolio.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         DataGridViewCellStyle8.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle8.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle8.BackColor = Color.FromArgb(64, 64, 64)
         DataGridViewCellStyle8.Font = New Font("Segoe UI", 9F)
         DataGridViewCellStyle8.ForeColor = Color.Turquoise
         DataGridViewCellStyle8.SelectionBackColor = Color.Transparent
@@ -149,7 +149,7 @@ Partial Class FormMain
         DataGridViewCellStyle8.WrapMode = DataGridViewTriState.True
         dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle8
         DataGridViewCellStyle9.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle9.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle9.BackColor = Color.FromArgb(64, 64, 64)
         DataGridViewCellStyle9.Font = New Font("Segoe UI", 9F)
         DataGridViewCellStyle9.ForeColor = SystemColors.ControlText
         DataGridViewCellStyle9.SelectionBackColor = Color.Transparent
@@ -161,7 +161,7 @@ Partial Class FormMain
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
-        DataGridViewCellStyle10.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle10.BackColor = Color.FromArgb(64, 64, 64)
         DataGridViewCellStyle10.Font = New Font("Segoe UI", 9F)
         DataGridViewCellStyle10.ForeColor = SystemColors.ButtonHighlight
         DataGridViewCellStyle10.Padding = New Padding(2)
@@ -171,7 +171,7 @@ Partial Class FormMain
         dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle10
         dgPortfolio.RowHeadersWidth = 4
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
-        dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(64, 64, 64)
         dgPortfolio.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgPortfolio.ScrollBars = ScrollBars.Vertical
         dgPortfolio.SelectionMode = DataGridViewSelectionMode.CellSelect
@@ -181,14 +181,14 @@ Partial Class FormMain
         ' PanelProfits
         ' 
         PanelProfits.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
-        PanelProfits.BackColor = Color.FromArgb(CByte(56), CByte(86), CByte(35))
+        PanelProfits.BackColor = Color.FromArgb(56, 86, 35)
         PanelProfits.Controls.Add(Label15)
         PanelProfits.Controls.Add(Label5)
         PanelProfits.Controls.Add(lbRoiSeparator)
         PanelProfits.Controls.Add(lbValoresSeparator)
         PanelProfits.Controls.Add(lbValoresHojeBRL)
         PanelProfits.Controls.Add(lbValoresHojeUSD)
-        PanelProfits.Location = New Point(0, 606)
+        PanelProfits.Location = New Point(0, 695)
         PanelProfits.Name = "PanelProfits"
         PanelProfits.Size = New Size(1151, 40)
         PanelProfits.TabIndex = 15
@@ -197,7 +197,7 @@ Partial Class FormMain
         ' 
         Label15.AutoSize = True
         Label15.BackColor = Color.Transparent
-        Label15.Font = New Font("Calibri", 15.75F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        Label15.Font = New Font("Calibri", 15.75F, FontStyle.Bold, GraphicsUnit.Point, 0)
         Label15.ForeColor = Color.GreenYellow
         Label15.Location = New Point(9, 7)
         Label15.Name = "Label15"
@@ -665,7 +665,7 @@ Partial Class FormMain
         ' PanelGraphs
         ' 
         PanelGraphs.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
-        PanelGraphs.BackColor = Color.FromArgb(CByte(30), CByte(30), CByte(30))
+        PanelGraphs.BackColor = Color.FromArgb(30, 30, 30)
         PanelGraphs.Controls.Add(lbCaixaBRL)
         PanelGraphs.Controls.Add(lbRoiUSD)
         PanelGraphs.Controls.Add(lbTotalBRL)
@@ -682,7 +682,7 @@ Partial Class FormMain
         PanelGraphs.Controls.Add(lbFuturosUSD)
         PanelGraphs.Location = New Point(0, 340)
         PanelGraphs.Name = "PanelGraphs"
-        PanelGraphs.Size = New Size(1151, 265)
+        PanelGraphs.Size = New Size(1151, 355)
         PanelGraphs.TabIndex = 32
         ' 
         ' lbCaixaBRL
@@ -711,7 +711,7 @@ Partial Class FormMain
         ' PanelOrdens
         ' 
         PanelOrdens.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
-        PanelOrdens.BackColor = Color.FromArgb(CByte(30), CByte(30), CByte(30))
+        PanelOrdens.BackColor = Color.FromArgb(30, 30, 30)
         PanelOrdens.Location = New Point(0, 339)
         PanelOrdens.Name = "PanelOrdens"
         PanelOrdens.Size = New Size(1151, 263)
@@ -724,22 +724,22 @@ Partial Class FormMain
         dgFuturos.AllowUserToDeleteRows = False
         dgFuturos.AllowUserToOrderColumns = True
         dgFuturos.AllowUserToResizeRows = False
-        dgFuturos.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+        dgFuturos.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         dgFuturos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-        dgFuturos.BackgroundColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        dgFuturos.BackgroundColor = Color.FromArgb(64, 64, 64)
         dgFuturos.BorderStyle = BorderStyle.None
         dgFuturos.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgFuturos.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
         DataGridViewCellStyle11.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle11.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle11.BackColor = Color.FromArgb(40, 40, 40)
         DataGridViewCellStyle11.Font = New Font("Calibri", 10F, FontStyle.Italic)
         DataGridViewCellStyle11.ForeColor = Color.Turquoise
-        DataGridViewCellStyle11.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle11.SelectionBackColor = Color.FromArgb(40, 40, 40)
         DataGridViewCellStyle11.SelectionForeColor = Color.Turquoise
         DataGridViewCellStyle11.WrapMode = DataGridViewTriState.True
         dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle11
         DataGridViewCellStyle12.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle12.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle12.BackColor = Color.FromArgb(64, 64, 64)
         DataGridViewCellStyle12.Font = New Font("Calibri", 12F)
         DataGridViewCellStyle12.ForeColor = Color.White
         DataGridViewCellStyle12.SelectionBackColor = Color.Black
@@ -792,7 +792,7 @@ Partial Class FormMain
         ' 
         ' CriptoToolStripMenuItem
         ' 
-        CriptoToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        CriptoToolStripMenuItem.BackColor = Color.FromArgb(31, 33, 32)
         CriptoToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         CriptoToolStripMenuItem.Name = "CriptoToolStripMenuItem"
         CriptoToolStripMenuItem.Size = New Size(123, 22)
@@ -800,7 +800,7 @@ Partial Class FormMain
         ' 
         ' SimbolosToolStripMenuItem
         ' 
-        SimbolosToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        SimbolosToolStripMenuItem.BackColor = Color.FromArgb(31, 33, 32)
         SimbolosToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         SimbolosToolStripMenuItem.Name = "SimbolosToolStripMenuItem"
         SimbolosToolStripMenuItem.Size = New Size(123, 22)
@@ -808,7 +808,7 @@ Partial Class FormMain
         ' 
         ' CustodiaToolStripMenuItem
         ' 
-        CustodiaToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        CustodiaToolStripMenuItem.BackColor = Color.FromArgb(31, 33, 32)
         CustodiaToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         CustodiaToolStripMenuItem.Name = "CustodiaToolStripMenuItem"
         CustodiaToolStripMenuItem.Size = New Size(123, 22)
@@ -824,7 +824,7 @@ Partial Class FormMain
         ' 
         ' IntervaloToolStripMenuItem
         ' 
-        IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        IntervaloToolStripMenuItem.BackColor = Color.FromArgb(31, 33, 32)
         IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
         IntervaloToolStripMenuItem.Size = New Size(120, 22)
@@ -832,7 +832,7 @@ Partial Class FormMain
         ' 
         ' JSONToolStripMenuItem
         ' 
-        JSONToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        JSONToolStripMenuItem.BackColor = Color.FromArgb(31, 33, 32)
         JSONToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem, ExportarToolStripMenuItem, CriptoToolStripMenuItem2})
         JSONToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         JSONToolStripMenuItem.Name = "JSONToolStripMenuItem"
@@ -841,7 +841,7 @@ Partial Class FormMain
         ' 
         ' ImportarToolStripMenuItem
         ' 
-        ImportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ImportarToolStripMenuItem.BackColor = Color.FromArgb(31, 33, 32)
         ImportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {PortfolioToolStripMenuItem, WalletsExchangeToolStripMenuItem})
         ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
@@ -850,7 +850,7 @@ Partial Class FormMain
         ' 
         ' PortfolioToolStripMenuItem
         ' 
-        PortfolioToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        PortfolioToolStripMenuItem.BackColor = Color.FromArgb(31, 33, 32)
         PortfolioToolStripMenuItem.ForeColor = SystemColors.ControlLightLight
         PortfolioToolStripMenuItem.Name = "PortfolioToolStripMenuItem"
         PortfolioToolStripMenuItem.Size = New Size(120, 22)
@@ -858,7 +858,7 @@ Partial Class FormMain
         ' 
         ' WalletsExchangeToolStripMenuItem
         ' 
-        WalletsExchangeToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        WalletsExchangeToolStripMenuItem.BackColor = Color.FromArgb(31, 33, 32)
         WalletsExchangeToolStripMenuItem.ForeColor = SystemColors.ControlLightLight
         WalletsExchangeToolStripMenuItem.Name = "WalletsExchangeToolStripMenuItem"
         WalletsExchangeToolStripMenuItem.Size = New Size(120, 22)
@@ -866,7 +866,7 @@ Partial Class FormMain
         ' 
         ' ExportarToolStripMenuItem
         ' 
-        ExportarToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ExportarToolStripMenuItem.BackColor = Color.FromArgb(31, 33, 32)
         ExportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem1, ExportarToolStripMenuItem1})
         ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
@@ -875,7 +875,7 @@ Partial Class FormMain
         ' 
         ' ImportarToolStripMenuItem1
         ' 
-        ImportarToolStripMenuItem1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ImportarToolStripMenuItem1.BackColor = Color.FromArgb(31, 33, 32)
         ImportarToolStripMenuItem1.ForeColor = SystemColors.ControlLightLight
         ImportarToolStripMenuItem1.Name = "ImportarToolStripMenuItem1"
         ImportarToolStripMenuItem1.Size = New Size(120, 22)
@@ -883,7 +883,7 @@ Partial Class FormMain
         ' 
         ' ExportarToolStripMenuItem1
         ' 
-        ExportarToolStripMenuItem1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ExportarToolStripMenuItem1.BackColor = Color.FromArgb(31, 33, 32)
         ExportarToolStripMenuItem1.ForeColor = SystemColors.ControlLightLight
         ExportarToolStripMenuItem1.Name = "ExportarToolStripMenuItem1"
         ExportarToolStripMenuItem1.Size = New Size(120, 22)
@@ -891,7 +891,7 @@ Partial Class FormMain
         ' 
         ' CriptoToolStripMenuItem2
         ' 
-        CriptoToolStripMenuItem2.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        CriptoToolStripMenuItem2.BackColor = Color.FromArgb(31, 33, 32)
         CriptoToolStripMenuItem2.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem2, ExportarToolStripMenuItem2})
         CriptoToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
         CriptoToolStripMenuItem2.Name = "CriptoToolStripMenuItem2"
@@ -900,7 +900,7 @@ Partial Class FormMain
         ' 
         ' ImportarToolStripMenuItem2
         ' 
-        ImportarToolStripMenuItem2.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ImportarToolStripMenuItem2.BackColor = Color.FromArgb(31, 33, 32)
         ImportarToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
         ImportarToolStripMenuItem2.Name = "ImportarToolStripMenuItem2"
         ImportarToolStripMenuItem2.Size = New Size(120, 22)
@@ -908,7 +908,7 @@ Partial Class FormMain
         ' 
         ' ExportarToolStripMenuItem2
         ' 
-        ExportarToolStripMenuItem2.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        ExportarToolStripMenuItem2.BackColor = Color.FromArgb(31, 33, 32)
         ExportarToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
         ExportarToolStripMenuItem2.Name = "ExportarToolStripMenuItem2"
         ExportarToolStripMenuItem2.Size = New Size(120, 22)
@@ -916,7 +916,7 @@ Partial Class FormMain
         ' 
         ' APIToolStripMenuItem
         ' 
-        APIToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        APIToolStripMenuItem.BackColor = Color.FromArgb(31, 33, 32)
         APIToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         APIToolStripMenuItem.Name = "APIToolStripMenuItem"
         APIToolStripMenuItem.Size = New Size(120, 22)
@@ -931,7 +931,7 @@ Partial Class FormMain
         ' 
         ' MenuStrip1
         ' 
-        MenuStrip1.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        MenuStrip1.BackColor = Color.FromArgb(31, 33, 32)
         MenuStrip1.Items.AddRange(New ToolStripItem() {CadastroToolStripMenuItem, OpçõesToolStripMenuItem, FecharToolStripMenuItem})
         MenuStrip1.Location = New Point(0, 0)
         MenuStrip1.Name = "MenuStrip1"
@@ -981,7 +981,7 @@ Partial Class FormMain
         panelDebug.BackColor = Color.Black
         panelDebug.Controls.Add(lbDebug)
         panelDebug.Dock = DockStyle.Bottom
-        panelDebug.Location = New Point(0, 644)
+        panelDebug.Location = New Point(0, 735)
         panelDebug.Name = "panelDebug"
         panelDebug.Size = New Size(1151, 75)
         panelDebug.TabIndex = 18
@@ -991,7 +991,7 @@ Partial Class FormMain
         lbDebug.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         lbDebug.BackColor = SystemColors.MenuText
         lbDebug.BorderStyle = BorderStyle.None
-        lbDebug.Font = New Font("Verdana", 11F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        lbDebug.Font = New Font("Verdana", 11F, FontStyle.Italic, GraphicsUnit.Point, 0)
         lbDebug.ForeColor = Color.White
         lbDebug.ImeMode = ImeMode.Disable
         lbDebug.Location = New Point(11, 3)
@@ -1022,7 +1022,7 @@ Partial Class FormMain
         ' 
         ' btFuturos
         ' 
-        btFuturos.BackColor = Color.FromArgb(CByte(20), CByte(20), CByte(20))
+        btFuturos.BackColor = Color.FromArgb(20, 20, 20)
         btFuturos.Cursor = Cursors.Hand
         btFuturos.FlatAppearance.BorderColor = Color.Gray
         btFuturos.FlatAppearance.BorderSize = 0
@@ -1056,7 +1056,7 @@ Partial Class FormMain
         ' 
         ' btOrdensSpot
         ' 
-        btOrdensSpot.BackColor = Color.FromArgb(CByte(20), CByte(20), CByte(20))
+        btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensSpot.Cursor = Cursors.Hand
         btOrdensSpot.FlatAppearance.BorderColor = Color.Gray
         btOrdensSpot.FlatAppearance.BorderSize = 0
@@ -1074,7 +1074,7 @@ Partial Class FormMain
         ' PanelFuturos
         ' 
         PanelFuturos.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
-        PanelFuturos.BackColor = Color.FromArgb(CByte(30), CByte(30), CByte(30))
+        PanelFuturos.BackColor = Color.FromArgb(30, 30, 30)
         PanelFuturos.Location = New Point(0, 340)
         PanelFuturos.Name = "PanelFuturos"
         PanelFuturos.Size = New Size(1151, 265)
@@ -1083,7 +1083,7 @@ Partial Class FormMain
         ' 
         ' btOrdensFuturo
         ' 
-        btOrdensFuturo.BackColor = Color.FromArgb(CByte(20), CByte(20), CByte(20))
+        btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.Cursor = Cursors.Hand
         btOrdensFuturo.FlatAppearance.BorderColor = Color.Gray
         btOrdensFuturo.FlatAppearance.BorderSize = 0
@@ -1102,8 +1102,8 @@ Partial Class FormMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        ClientSize = New Size(1151, 719)
+        BackColor = Color.FromArgb(40, 40, 40)
+        ClientSize = New Size(1151, 810)
         Controls.Add(PanelGraphs)
         Controls.Add(PanelFuturos)
         Controls.Add(btOrdensFuturo)

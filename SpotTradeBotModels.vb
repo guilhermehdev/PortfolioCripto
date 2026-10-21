@@ -21,6 +21,11 @@ Public Enum SpotBotStrategyKind
     Grid = 3
 End Enum
 
+Public Enum SpotBotUniverseMode
+    Manual = 0
+    TopVolume = 1
+End Enum
+
 Public NotInheritable Class SpotBotPricePoint
     Public Sub New(timestampUtc As DateTime, price As Decimal)
         Me.TimestampUtc = timestampUtc
@@ -77,10 +82,23 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property SimulationStartingQuote As Decimal = 1000D
     Public Property SimulationAllocationPercent As Decimal = 10D
     Public Property SimulationFeeRate As Decimal = 0.001D
+    Public Property TakeProfitPercent As Decimal = 2D
+    Public Property StopLossPercent As Decimal = 1D
 
     ' O motor começa sempre em simulação. A execução real será conectada
     ' depois de validarmos os sinais e os limites de risco.
     Public Property SimulationOnly As Boolean = True
+
+    Public Property UniverseMode As SpotBotUniverseMode = SpotBotUniverseMode.Manual
+    Public Property UniverseMaxAssets As Integer = 20
+    Public Property UniverseMinimumQuoteVolume As Decimal = 1000000D
+    Public Property ManualUniverseSymbols As HashSet(Of String) = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+End Class
+
+Public NotInheritable Class SpotBotUniverseSettings
+    Public Property Mode As SpotBotUniverseMode = SpotBotUniverseMode.Manual
+    Public Property MaxAssets As Integer = 20
+    Public Property MinimumQuoteVolume As Decimal = 1000000D
 End Class
 
 Public NotInheritable Class SpotBotSignalEventArgs
@@ -126,6 +144,31 @@ Public NotInheritable Class SpotBotSimulationTrade
     Public Property Pnl As Decimal
     Public Property OpenedAtUtc As DateTime
     Public Property ClosedAtUtc As DateTime
+End Class
+
+Public NotInheritable Class SpotBotOpenPosition
+    Public Property Symbol As String = String.Empty
+    Public Property Side As String = "LONG"
+    Public Property Quantity As Decimal
+    Public Property EntryPrice As Decimal
+    Public Property CurrentPrice As Decimal
+    Public Property CostBasis As Decimal
+    Public Property Notional As Decimal
+    Public Property UnrealizedPnl As Decimal
+    Public Property RoiPercent As Decimal
+    Public Property OpenedAtUtc As DateTime
+End Class
+
+Public NotInheritable Class SpotBotPersistedSimulationState
+    Public Property RunId As Long
+    Public Property Status As String = String.Empty
+    Public Property Snapshot As SpotBotSimulationSnapshot
+    Public Property Positions As New List(Of SpotBotOpenPosition)
+    Public Property EnabledStrategies As New HashSet(Of SpotBotStrategyKind)()
+    Public Property CombinationMode As SpotBotCombinationMode = SpotBotCombinationMode.MinimumConfirmations
+    Public Property RequiredConfirmations As Integer = 2
+    Public Property AllocationPercent As Decimal = 10D
+    Public Property FeeRate As Decimal = 0.001D
 End Class
 
 Public NotInheritable Class SpotBotSimulationEventArgs

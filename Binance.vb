@@ -50,6 +50,12 @@ Public Class BinanceSpotSymbolFilters
     Public Property TickSize As Decimal
 End Class
 
+Public Class BinanceSpotUniverseCandidate
+    Public Property Symbol As String = String.Empty
+    Public Property BaseAsset As String = String.Empty
+    Public Property QuoteVolume As Decimal
+End Class
+
 Public Class Binance
     Private BinanceTimeOffset As Long = 0
 
@@ -502,6 +508,85 @@ Public Class Binance
             Debug.WriteLine("Erro lendo filtros da ordem Spot: " & ex.Message)
             Return Nothing
         End Try
+    End Function
+
+    Public Async Function BINANCE_GetTopSpotSymbolsByVolumeAsync(
+        maxAssets As Integer,
+        minimumQuoteVolume As Decimal) As Task(Of List(Of String))
+
+        Dim result As New List(Of String)()
+        Dim requestedCount = Math.Max(1, Math.Min(500, maxAssets))
+        Dim minimumVolume = Math.Max(0D, minimumQuoteVolume)
+
+        Using client As New HttpClient()
+            client.DefaultRequestHeaders.Add("User-Agent", "PortfolioCripto/1.0")
+
+            Dim exchangeInfoText = Await client.GetStringAsync("https://api.binance.com/api/v3/exchangeInfo")
+            Dim tickerText = Await client.GetStringAsync("https://api.binance.com/api/v3/ticker/24hr")
+            Dim exchangeInfo = JObject.Parse(exchangeInfoText)
+            Dim tickerArray = TryCast(JToken.Parse(tickerText), JArray)
+            If tickerArray Is Nothing Then Return result
+
+            Dim volumes As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+            For Each ticker In tickerArray
+                Dim symbol = ticker("symbol")?.ToString()?.Trim().ToUpperInvariant()
+                If String.IsNullOrWhiteSpace(symbol) Then Continue For
+                volumes(symbol) = ParseDecimalInvariant(ticker("quoteVolume"))
+            Next
+
+            Dim candidates As New List(Of BinanceSpotUniverseCandidate)()
+            For Each symbolInfo In TryCast(exchangeInfo("symbols"), JArray)
+                Dim symbol = symbolInfo("symbol")?.ToString()?.Trim().ToUpperInvariant()
+                Dim baseAsset = symbolInfo("baseAsset")?.ToString()?.Trim().ToUpperInvariant()
+                Dim quoteAsset = symbolInfo("quoteAsset")?.ToString()?.Trim().ToUpperInvariant()
+                Dim status = symbolInfo("status")?.ToString()?.Trim().ToUpperInvariant()
+                Dim spotAllowed = symbolInfo("isSpotTradingAllowed")
+
+                If String.IsNullOrWhiteSpace(symbol) OrElse
+                   String.IsNullOrWhiteSpace(baseAsset) OrElse
+                   quoteAsset <> "USDT" OrElse
+                   status <> "TRADING" OrElse
+                   (spotAllowed IsNot Nothing AndAlso Not spotAllowed.Value(Of Boolean)()) OrElse
+                   IsStablecoinAsset(baseAsset) OrElse
+                   IsLeveragedToken(baseAsset) Then
+                    Continue For
+                End If
+
+                Dim quoteVolume As Decimal = 0D
+                If Not volumes.TryGetValue(symbol, quoteVolume) OrElse quoteVolume < minimumVolume Then
+                    Continue For
+                End If
+
+                candidates.Add(New BinanceSpotUniverseCandidate With {
+                    .Symbol = symbol,
+                    .BaseAsset = baseAsset,
+                    .QuoteVolume = quoteVolume
+                })
+            Next
+
+            result.AddRange(
+                candidates.OrderByDescending(Function(item) item.QuoteVolume).
+                Take(requestedCount).
+                Select(Function(item) item.BaseAsset))
+        End Using
+
+        Return result
+    End Function
+
+    Private Shared Function IsLeveragedToken(baseAsset As String) As Boolean
+        Return baseAsset.EndsWith("UP", StringComparison.OrdinalIgnoreCase) OrElse
+               baseAsset.EndsWith("DOWN", StringComparison.OrdinalIgnoreCase) OrElse
+               baseAsset.EndsWith("BULL", StringComparison.OrdinalIgnoreCase) OrElse
+               baseAsset.EndsWith("BEAR", StringComparison.OrdinalIgnoreCase)
+    End Function
+
+    Private Shared Function IsStablecoinAsset(baseAsset As String) As Boolean
+        Select Case baseAsset.Trim().ToUpperInvariant()
+            Case "USDT", "USDC", "BUSD", "DAI", "FDUSD", "TUSD", "USD", "USDP", "GUSD"
+                Return True
+            Case Else
+                Return False
+        End Select
     End Function
 
     Public Async Function BINANCE_GetFuturesOpenOrdersAsync(
