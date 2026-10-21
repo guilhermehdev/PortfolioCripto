@@ -1416,12 +1416,8 @@ Public Class FormMain
             changeOnOffColor("Pronto")
 
         Catch ex As Exception
-
             lbDebug.Clear()
-            lbDebug.AppendText(
-            "Erro ao carregar o portfólio: " &
-            ex.Message)
-
+            lbDebug.AppendText("Erro ao carregar o portfólio: " & ex.Message)
         End Try
 
     End Sub
@@ -2262,7 +2258,7 @@ Public Class FormMain
             $"{percentualCaixa:F2}%"
 
             Me.lbPercentInvestido.Text =
-            $"{percentualInvestido:F2}%"
+            $"{percentualInvestido:F0}%"
 
             Me.lbPerformWallet.Text =
             $"{performanceWallet:F2}%"
@@ -3063,13 +3059,13 @@ Public Class FormMain
     Public Sub criptoGraph(criptoDic As Dictionary(Of String, Decimal))
         Dim gCriptos As New Charts
 
-        gCriptos.collumGraph(500, 185, -2, 360, "Criptos", "% Criptos", 10, Color.Aqua, Color.FromArgb(30, 30, 30), SeriesChartType.Column, criptoDic, PanelGraphs)
+        gCriptos.collumGraph(400, 230, 100, 400, "Ativos", "Portfólio", 10, Color.Aqua, Color.FromArgb(30, 30, 30), SeriesChartType.Column, criptoDic, PanelGraphs)
     End Sub
 
     Public Sub addressGraph(criptoDic As Dictionary(Of String, Decimal))
         Dim gCriptos As New Charts
 
-        gCriptos.pieGraph(330, 190, -2, 850, "Custódia", 10, Color.Aqua, Color.FromArgb(30, 30, 30), criptoDic, 7.5, Color.White, PanelGraphs)
+        gCriptos.pieGraph(330, 230, 100, 800, "Custódia", 10, Color.Aqua, Color.FromArgb(30, 30, 30), criptoDic, 7.5, Color.White, PanelGraphs)
     End Sub
 
     Private Sub dgPortfolio_CellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs) Handles dgPortfolio.CellPainting

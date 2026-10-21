@@ -403,7 +403,7 @@ Public NotInheritable Class PortfolioMarketService
             FormMain.lbDolar.Text = formatter.BRLformat(usdBrl)
             FormMain.lbBTC.Text = formatter.USDformat(btcPrice)
             FormMain.lbDom.Text = If(dom > 0D, $"{dom:F2}%", "--")
-            FormMain.lbPerformWallet.Text = $"{walletPerformance:F2}%"
+            FormMain.lbPerformWallet.Text = $"{walletPerformance:F0}%"
             ' Spot exibe o valor atual dos ativos investidos; Caixa já é
             ' mostrado separadamente com os stablecoins.
             FormMain.lbTotalEntradaUSD.Text = formatter.USDformat(currValueTotal)
@@ -413,8 +413,8 @@ Public NotInheritable Class PortfolioMarketService
             FormMain.lbRoiUSD.Text = formatter.USDformat(profit)
             FormMain.lbCaixa.Text = formatter.USDformat(cashflow)
             FormMain.lbCaixaBRL.Text = formatter.BRLformat(cashflow * usdBrl)
-            FormMain.lbPercentCaixa.Text = $"{percentCash:F2}%"
-            FormMain.lbPercentInvestido.Text = $"{percentInvested:F2}%"
+            FormMain.lbPercentCaixa.Text = $"{percentCash:F0}%"
+            FormMain.lbPercentInvestido.Text = $"{percentInvested:F0}%"
 
             datagrid.DataSource = newDT
 
