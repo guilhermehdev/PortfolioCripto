@@ -1,5 +1,4 @@
 ﻿Public Class FormAPI
-    Dim json As New JSON
     Private Sub FormAPI_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         If Not My.Settings.apiCMCKey = Nothing Then
             tbAPIKey.Text = My.Settings.apiCMCKey
@@ -14,27 +13,20 @@
             cbAPIActive.Text = My.Settings.activeAPI
         End If
 
-        If Not My.Settings.JSONBinID = Nothing Then
-            tbJSONBinID.Text = My.Settings.JSONBinID
-        End If
-        If Not My.Settings.JSONBinMasterKey = Nothing Then
-            tbJSONBinMasterKey.Text = My.Settings.JSONBinMasterKey
-        End If
-        If Not My.Settings.JSONBinURL = Nothing Then
-            tbJSONBinGet.Text = My.Settings.JSONBinURL
-        End If
-
-        loadApi()
-
-    End Sub
-
-    Private Sub loadApi()
         cbAPIActive.Items.Clear()
         cbAPIActive.Items.Add(My.Settings.apiUrl)
         cbAPIActive.Items.Add(My.Settings.apiUrlSandbox)
+        If Not String.IsNullOrWhiteSpace(My.Settings.activeAPI) Then
+            cbAPIActive.SelectedItem = My.Settings.activeAPI
+            If cbAPIActive.SelectedIndex < 0 Then cbAPIActive.Text = My.Settings.activeAPI
+        ElseIf cbAPIActive.Items.Count > 0 Then
+            cbAPIActive.SelectedIndex = 0
+        End If
+
     End Sub
+
     Private Sub btSaveActiveAPI_Click(sender As Object, e As EventArgs) Handles btSaveActiveAPI.Click
-        If Not cbAPIActive.Text = "" Then
+        If Not String.IsNullOrWhiteSpace(cbAPIActive.Text) Then
             If Not tbAPIKey.Text = "" Then
                 My.Settings.apiCMCKey = tbAPIKey.Text
                 My.Settings.Save()
@@ -68,33 +60,6 @@
             Return
         End If
 
-        If Not tbJSONBinID.Text = "" Then
-            My.Settings.JSONBinID = tbJSONBinID.Text
-            My.Settings.Save()
-        Else
-            MessageBox.Show("Não pode ser vazio!")
-            tbJSONBinID.Focus()
-            Return
-        End If
-
-        If Not tbJSONBinMasterKey.Text = "" Then
-            My.Settings.JSONBinMasterKey = tbJSONBinMasterKey.Text
-            My.Settings.Save()
-        Else
-            MessageBox.Show("Não pode ser vazio!")
-            tbJSONBinMasterKey.Focus()
-            Return
-        End If
-
-        If Not tbJSONBinGet.Text = "" Then
-            My.Settings.JSONBinURL = tbJSONBinGet.Text
-            My.Settings.Save()
-        Else
-            MessageBox.Show("Não pode ser vazio!")
-            tbJSONBinGet.Focus()
-            Return
-        End If
-
         My.Settings.activeAPI = cbAPIActive.Text
         MessageBox.Show("Salvo com sucesso! Reiniciando...")
         My.Settings.Save()
@@ -103,11 +68,7 @@
     End Sub
 
     Private Sub btCancelar_Click(sender As Object, e As EventArgs) Handles btCancelar.Click
-        If Not json.checkMySettings Then
-            MessageBox.Show("Configurações faltando!")
-        Else
-            Me.Close()
-        End If
+        Me.Close()
 
     End Sub
 

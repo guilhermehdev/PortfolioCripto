@@ -9,12 +9,8 @@ Imports Newtonsoft.Json.Linq
 Public Class JSON
     Public ReadOnly portfolioPathFile As String = Application.StartupPath & "\JSON\portfolio.json"
     Private ReadOnly bindingSource As New BindingSource()
-    Private ReadOnly jsonbin = My.Settings.JSONBinID
-    Private ReadOnly JSONBinMasterKey As String = My.Settings.JSONBinMasterKey
     Private ReadOnly saoPauloTimeZone As TimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time")
     Private ReadOnly saoPauloTime As DateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saoPauloTimeZone)
-    Private ReadOnly JSONBinGet As String = $"{My.Settings.JSONBinURL}/b/{jsonbin}/latest"
-    Private ReadOnly JSONBinPut As String = $"{My.Settings.JSONBinURL}/b/{jsonbin}"
     Dim b As New Binance
     Dim gec As New Coingecko
     Public Shared USDBRLprice As Decimal = 0D
@@ -32,18 +28,6 @@ Public Class JSON
             Dim propertyValue As Object = My.Settings(propertyName)
 
             Select Case propertyName
-                Case "JSONBinID"
-                    If propertyValue Is Nothing OrElse String.IsNullOrWhiteSpace(propertyValue.ToString()) Then
-                        Return False
-                    End If
-                Case "JSONBinMasterKey"
-                    If propertyValue Is Nothing OrElse String.IsNullOrWhiteSpace(propertyValue.ToString()) Then
-                        Return False
-                    End If
-                Case "JSONBinURL"
-                    If propertyValue Is Nothing OrElse String.IsNullOrWhiteSpace(propertyValue.ToString()) Then
-                        Return False
-                    End If
                 Case "apiCMCKey"
                     If propertyValue Is Nothing OrElse String.IsNullOrWhiteSpace(propertyValue.ToString()) Then
                         Return False
@@ -55,188 +39,6 @@ Public Class JSON
 
         Return True
 
-    End Function
-
-    Async Function loadJSONfromJSONBIN() As Task(Of Boolean)
-        If checkMySettings() Then
-            Dim url As String = JSONBinGet
-
-            Using client As New HttpClient()
-                Try
-                    client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
-
-                    Dim response As HttpResponseMessage = Await client.GetAsync(url)
-
-                    If response.IsSuccessStatusCode Then
-                        Dim json As String = Await response.Content.ReadAsStringAsync()
-                        Dim jObj As JObject = JObject.Parse(json)
-                        Dim conteudoLimpo As JObject = CType(jObj("record"), JObject)
-
-                        conteudoLimpo("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-dd HH:mm:ss")
-
-                        File.WriteAllText(portfolioPathFile, conteudoLimpo.ToString())
-                        Debug.WriteLine("JSON atualizado com sucesso!")
-                        Return True
-                    Else
-                        Debug.WriteLine("Erro: " & response.StatusCode)
-                        Return False
-                    End If
-
-                Catch ex As Exception
-                    Debug.WriteLine("Exceção: " & ex.Message)
-                    Return False
-                End Try
-            End Using
-        Else
-            My.Forms.FormAPI.ShowDialog()
-            Return False
-        End If
-
-    End Function
-
-    Public Async Function checkLastUpdateOnJSONBin() As Task(Of Boolean)
-        Dim cjson As New JSON
-
-        Try
-
-            If Not Directory.Exists(Application.StartupPath & "\JSON") Or Not File.Exists(portfolioPathFile) Then
-
-                Directory.CreateDirectory(Application.StartupPath & "\JSON")
-                Await cjson.AppendJSONToBin("BTC", 10000, 5, Date.Today, "Wallet", 3000, "BTC")
-
-            End If
-
-            Dim url As String = $"{JSONBinPut}?meta=true"
-            Using client As New HttpClient()
-                client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
-
-                Dim response As HttpResponseMessage = Await client.GetAsync(url)
-
-                If response.IsSuccessStatusCode Then
-                    Dim json As String = Await response.Content.ReadAsStringAsync()
-                    Dim metaObj As JObject = JObject.Parse(json)
-
-                    If metaObj("record") IsNot Nothing AndAlso metaObj("record")("ultimaAtualizacao") IsNot Nothing Then
-                        Dim ultimaAtualizacaoStr As String = metaObj("record")("ultimaAtualizacao").ToString()
-                        Dim ultimaAtualizacao As DateTime = DateTime.Parse(ultimaAtualizacaoStr)
-
-                        If My.Settings.lastUpdate <> ultimaAtualizacao Then
-
-                            My.Settings.lastUpdate = ultimaAtualizacao
-                            My.Settings.Save()
-                            Return Await loadJSONfromJSONBIN()
-                        Else
-
-                            Return True
-                        End If
-                    Else
-                        Return False
-                    End If
-                Else
-                    Return False
-                End If
-            End Using
-
-        Catch ex As Exception
-            My.Forms.FormMain.lbDebug.Clear()
-            My.Forms.FormMain.lbDebug.AppendText("Status: JSONBin não respondeu! Carregando arquivo local...")
-            Return False
-        End Try
-    End Function
-
-    Public Async Function saveAportToJSONBin(key As String, precoMedio As Decimal, qtd As Decimal, data As Date, wallet As String, symbol As String) As Task(Of Boolean)
-
-        Dim sucesso As Boolean = Await AppendJSONToBin(key, precoMedio, qtd, data, wallet, 1, symbol)
-        Return sucesso
-
-    End Function
-
-    Public Async Function AppendJSONToBin(chave As String, InitialPrice As Decimal, Qtd As Decimal, Data As String, Wallet As String, lastPrice As Decimal, symbol As String) As Task(Of Boolean)
-        Dim url As String = JSONBinPut
-        Dim jsonAtual As JObject = Nothing
-
-        Using client As New HttpClient()
-            client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
-
-            Try
-                jsonAtual = JObject.Parse(loadJSONfile)
-
-                If jsonAtual(chave) Is Nothing Then
-                    jsonAtual(chave) = New JArray()
-                End If
-
-                Dim itemsArray As JArray = CType(jsonAtual(chave), JArray)
-                Dim atualizado As Boolean = False
-
-                For Each item As JObject In itemsArray
-                    If item("Data") = Data AndAlso item("Wallet") = Wallet Then
-                        item("InitialPrice") = InitialPrice
-                        item("Qtd") = Qtd
-                        item("LastPrice") = lastPrice
-                        atualizado = True
-                        Exit For
-                    End If
-                Next
-
-                If Not atualizado Then
-                    Dim novoItem As New JObject()
-                    novoItem("InitialPrice") = InitialPrice
-                    novoItem("Qtd") = Qtd
-                    novoItem("Data") = Data
-                    novoItem("Wallet") = Wallet
-                    novoItem("LastPrice") = lastPrice
-                    novoItem("Symbol") = symbol
-                    itemsArray.Add(novoItem)
-                End If
-
-                jsonAtual("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
-
-                Dim body As String = JsonConvert.SerializeObject(jsonAtual, Formatting.Indented)
-                Dim stringContent As New StringContent(body, Encoding.UTF8, "application/json")
-                Dim putResponse = Await client.PutAsync(url, stringContent)
-
-                File.WriteAllText(portfolioPathFile, jsonAtual.ToString())
-                Return True
-
-            Catch ex As Exception
-                Debug.Write("Erro em AppendJSONToBin: " & ex.Message)
-                My.Forms.FormMain.lbDebug.Text = "Erro ao salvar em JSONBin: " & ex.Message
-                Return False
-            End Try
-        End Using
-    End Function
-
-    Public Function DeleteJSONFromBin(ByVal key As String) As Boolean
-        Try
-            Dim url As String = JSONBinPut
-
-            Using client As New HttpClient()
-                Dim jsonLocal As JObject = JObject.Parse(loadJSONfile)
-
-                If jsonLocal.ContainsKey(key) Then
-                    jsonLocal.Remove(key)
-                Else
-                    MessageBox.Show("Chave não encontrada no arquivo.")
-                    Return False
-                End If
-
-                jsonLocal("ultimaAtualizacao") = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
-
-                client.DefaultRequestHeaders.Add("X-Master-Key", JSONBinMasterKey)
-
-                File.WriteAllText(portfolioPathFile, jsonLocal.ToString())
-                My.Settings.lastUpdate = saoPauloTime.ToString("yyyy-MM-ddTHH:mm:ss")
-                My.Settings.Save()
-                MessageBox.Show("Removido com sucesso.")
-                Return True
-
-            End Using
-
-        Catch ex As Exception
-            Debug.WriteLine("Erro em DeleteJSONFromBin: " & ex.Message)
-            My.Forms.FormMain.lbDebug.Text = "Erro ao deletar de JSONBin: " & ex.Message
-            Return False
-        End Try
     End Function
 
     Public Sub loadFromJSON2ComboGrid(filePath As String, Optional combobox As System.Windows.Forms.ComboBox = Nothing, Optional grid As DataGridView = Nothing)

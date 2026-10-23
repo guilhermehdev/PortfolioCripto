@@ -34,15 +34,7 @@ Partial Class FormAPI
         btSaveActiveAPI = New Button()
         btCancelar = New Button()
         GroupBox1 = New GroupBox()
-        GroupBox2 = New GroupBox()
-        Label5 = New Label()
-        tbJSONBinID = New TextBox()
-        Label6 = New Label()
-        tbJSONBinMasterKey = New TextBox()
-        Label8 = New Label()
-        tbJSONBinGet = New TextBox()
         GroupBox1.SuspendLayout()
-        GroupBox2.SuspendLayout()
         SuspendLayout()
         ' 
         ' Label1
@@ -161,82 +153,12 @@ Partial Class FormAPI
         GroupBox1.TabStop = False
         GroupBox1.Text = "CoinMarketCap"
         ' 
-        ' GroupBox2
-        ' 
-        GroupBox2.Controls.Add(Label5)
-        GroupBox2.Controls.Add(tbJSONBinID)
-        GroupBox2.Controls.Add(Label6)
-        GroupBox2.Controls.Add(tbJSONBinMasterKey)
-        GroupBox2.Controls.Add(Label8)
-        GroupBox2.Controls.Add(tbJSONBinGet)
-        GroupBox2.Font = New Font("Segoe UI", 9F)
-        GroupBox2.ForeColor = Color.DeepSkyBlue
-        GroupBox2.Location = New Point(484, 262)
-        GroupBox2.Name = "GroupBox2"
-        GroupBox2.Size = New Size(450, 188)
-        GroupBox2.TabIndex = 30
-        GroupBox2.TabStop = False
-        GroupBox2.Text = "JSONBin"
-        GroupBox2.Visible = False
-        ' 
-        ' Label5
-        ' 
-        Label5.AutoSize = True
-        Label5.ForeColor = SystemColors.ButtonHighlight
-        Label5.Location = New Point(34, 35)
-        Label5.Name = "Label5"
-        Label5.Size = New Size(66, 15)
-        Label5.TabIndex = 0
-        Label5.Text = "JSONBin ID"
-        ' 
-        ' tbJSONBinID
-        ' 
-        tbJSONBinID.Location = New Point(34, 53)
-        tbJSONBinID.Name = "tbJSONBinID"
-        tbJSONBinID.Size = New Size(383, 23)
-        tbJSONBinID.TabIndex = 1
-        ' 
-        ' Label6
-        ' 
-        Label6.AutoSize = True
-        Label6.ForeColor = SystemColors.ButtonHighlight
-        Label6.Location = New Point(34, 79)
-        Label6.Name = "Label6"
-        Label6.Size = New Size(127, 15)
-        Label6.TabIndex = 19
-        Label6.Text = "JSONBin X-Master-Key"
-        ' 
-        ' tbJSONBinMasterKey
-        ' 
-        tbJSONBinMasterKey.Location = New Point(34, 97)
-        tbJSONBinMasterKey.Name = "tbJSONBinMasterKey"
-        tbJSONBinMasterKey.Size = New Size(383, 23)
-        tbJSONBinMasterKey.TabIndex = 20
-        ' 
-        ' Label8
-        ' 
-        Label8.AutoSize = True
-        Label8.ForeColor = SystemColors.ButtonHighlight
-        Label8.Location = New Point(34, 123)
-        Label8.Name = "Label8"
-        Label8.Size = New Size(76, 15)
-        Label8.TabIndex = 22
-        Label8.Text = "JSONBin URL"
-        ' 
-        ' tbJSONBinGet
-        ' 
-        tbJSONBinGet.Location = New Point(34, 141)
-        tbJSONBinGet.Name = "tbJSONBinGet"
-        tbJSONBinGet.Size = New Size(383, 23)
-        tbJSONBinGet.TabIndex = 23
-        ' 
         ' FormAPI
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         ClientSize = New Size(476, 290)
-        Controls.Add(GroupBox2)
         Controls.Add(GroupBox1)
         Controls.Add(btCancelar)
         Controls.Add(btSaveActiveAPI)
@@ -249,8 +171,6 @@ Partial Class FormAPI
         Text = "Configurar dados das APIs"
         GroupBox1.ResumeLayout(False)
         GroupBox1.PerformLayout()
-        GroupBox2.ResumeLayout(False)
-        GroupBox2.PerformLayout()
         ResumeLayout(False)
     End Sub
 
@@ -265,11 +185,4 @@ Partial Class FormAPI
     Friend WithEvents btSaveActiveAPI As Button
     Friend WithEvents btCancelar As Button
     Friend WithEvents GroupBox1 As GroupBox
-    Friend WithEvents GroupBox2 As GroupBox
-    Friend WithEvents Label5 As Label
-    Friend WithEvents tbJSONBinID As TextBox
-    Friend WithEvents Label6 As Label
-    Friend WithEvents tbJSONBinMasterKey As TextBox
-    Friend WithEvents Label8 As Label
-    Friend WithEvents tbJSONBinGet As TextBox
 End Class
