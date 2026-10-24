@@ -560,6 +560,11 @@ Public Class FormMain
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Rsi, "RSI", 112, 24, 80)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Breakout, "Rompimento", 198, 24, 118)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Grid, "Grade", 322, 24, 80)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.BollingerMeanReversion, "Bollinger 20/3", 406, 24, 118)
+
+        If Not _spotTradeBot.HasRestoredState Then
+            _botStrategyChecks(SpotBotStrategyKind.BollingerMeanReversion).Checked = True
+        End If
 
         If _spotTradeBot.HasRestoredState Then
             For Each strategyCheck In _botStrategyChecks
@@ -567,14 +572,14 @@ Public Class FormMain
             Next
         End If
 
-        AddBotLabel(editor, "Combinação", 420, 3, 100)
+        AddBotLabel(editor, "Combinação", 532, 3, 100)
         _botCombination = New ComboBox With {
             .Name = "cbSpotBotCombination",
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
             .FlatStyle = FlatStyle.Flat,
-            .Location = New Point(420, 24),
+            .Location = New Point(532, 24),
             .Width = 190
         }
         _botCombination.Items.AddRange(New Object() {
@@ -586,18 +591,18 @@ Public Class FormMain
         _botCombination.SelectedIndex = If(
             _spotTradeBot.HasRestoredState,
             CInt(_spotTradeBot.Configuration.CombinationMode),
-            2)
+            0)
         editor.Controls.Add(_botCombination)
 
-        AddBotLabel(editor, "Confirmações", 620, 3, 100)
+        AddBotLabel(editor, "Confirmações", 732, 3, 100)
         _botConfirmations = New NumericUpDown With {
             .Name = "nudSpotBotConfirmations",
             .Minimum = 1,
-            .Maximum = 4,
-            .Value = 2,
+            .Maximum = 5,
+            .Value = 1,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
-            .Location = New Point(620, 24),
+            .Location = New Point(732, 24),
             .Width = 64
         }
         If _spotTradeBot.HasRestoredState Then
@@ -607,14 +612,14 @@ Public Class FormMain
         End If
         editor.Controls.Add(_botConfirmations)
 
-        AddBotLabel(editor, "Universo", 704, 3, 100)
+        AddBotLabel(editor, "Universo", 816, 3, 100)
         _botUniverseMode = New ComboBox With {
             .Name = "cbSpotBotUniverseMode",
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
             .FlatStyle = FlatStyle.Flat,
-            .Location = New Point(704, 24),
+            .Location = New Point(816, 24),
             .Width = 120
         }
         _botUniverseMode.Items.AddRange(New Object() {"Manual", "Top volume"})
@@ -622,17 +627,17 @@ Public Class FormMain
         AddHandler _botUniverseMode.SelectedIndexChanged, AddressOf SpotBotUniverseModeChanged
         editor.Controls.Add(_botUniverseMode)
 
-        _botUniverseButton = CreateBotButton("Selecionar...", 830, 24, 102, Color.FromArgb(55, 75, 105))
+        _botUniverseButton = CreateBotButton("Selecionar...", 942, 24, 102, Color.FromArgb(55, 75, 105))
         AddHandler _botUniverseButton.Click, AddressOf SpotBotUniverseButton_Click
         editor.Controls.Add(_botUniverseButton)
 
         Dim simulationLabel As New Label With {
             .AutoSize = False,
             .Width = 205,
-            .Height = 24,
+            .Height = 20,
             .ForeColor = Color.Gold,
             .Font = New Font("Calibri", 9.0F, FontStyle.Bold),
-            .Location = New Point(940, 26),
+            .Location = New Point(940, 0),
             .Text = "SIMULAÇÃO — sem ordens reais"
         }
         editor.Controls.Add(simulationLabel)
@@ -697,7 +702,7 @@ Public Class FormMain
             .Height = 34,
             .ForeColor = Color.LightGray,
             .Location = New Point(940, 67),
-            .Text = "RSI usa candles de 1 minuto."
+            .Text = "RSI e Bollinger usam candles fechados de 1 minuto."
         }
         editor.Controls.Add(hint)
 
@@ -1137,11 +1142,18 @@ Public Class FormMain
                "Bot Spot retomado em modo SIMULAÇÃO.",
                "Bot Spot iniciado em modo SIMULAÇÃO."),
             Color.LimeGreen)
+        Dim bollingerEnabled = _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion)
         AppendSpotBotLog(
-            $"Proteções: TP {_spotTradeBot.Configuration.TakeProfitPercent:0.##}% | " &
-            $"SL {_spotTradeBot.Configuration.StopLossPercent:0.##}% " &
-            "(0% desativa).",
+            If(bollingerEnabled,
+               "Proteções: Bollinger usa SL/TP estruturais; percentuais ficam como fallback das demais estratégias.",
+               $"Proteções: TP {_spotTradeBot.Configuration.TakeProfitPercent:0.##}% | " &
+               $"SL {_spotTradeBot.Configuration.StopLossPercent:0.##}% (0% desativa)."),
             Color.LightGray)
+        If bollingerEnabled Then
+            AppendSpotBotLog(
+                "Bollinger: fechamento fora de 20/3σ + confirmação por rompimento; SL no extremo e TP na média 20.",
+                Color.LightGray)
+        End If
         AppendSpotBotLog($"Universo: {universe.Count} ativo(s) ({If(_spotTradeBot.Configuration.UniverseMode = SpotBotUniverseMode.TopVolume, "Top volume", "Manual")}).", Color.LightGray)
         AppendSpotBotLog("Estratégias: " & String.Join(", ", _spotTradeBot.Configuration.EnabledStrategies), Color.LightGray)
     End Sub
@@ -1173,6 +1185,13 @@ Public Class FormMain
             $"{signal.TimestampUtc.ToLocalTime():HH:mm:ss} {directionText} {signal.Symbol} @ {signal.Price:0.########} " &
             $"({signal.Confirmations}/{signal.ActiveStrategies}) - {String.Join(" | ", signal.Reasons)}",
             If(signal.Direction = SpotBotSignalDirection.Buy, Color.LimeGreen, Color.IndianRed))
+
+        If signal.StopPrice > 0D OrElse signal.TakeProfitPrice > 0D Then
+            AppendSpotBotLog(
+                $"   Proteção estrutural: SL {If(signal.StopPrice > 0D, signal.StopPrice.ToString("0.########"), "-")} | " &
+                $"TP {If(signal.TakeProfitPrice > 0D, signal.TakeProfitPrice.ToString("0.########"), "-")}",
+                Color.LightGray)
+        End If
     End Sub
 
     Private Sub SpotTradeBot_SimulationUpdated(sender As Object, e As SpotBotSimulationEventArgs)
@@ -2121,22 +2140,31 @@ Public Class FormMain
                     Continue For
                 End If
 
+                If Not dgPortfolio.Columns.Contains("Cripto") OrElse
+                   Not dgPortfolio.Columns.Contains("Wallet") OrElse
+                   Not dgPortfolio.Columns.Contains("vlEntradaUSD") OrElse
+                   Not dgPortfolio.Columns.Contains("vlAtualUSD") Then
+                    Continue For
+                End If
+
                 Dim wallet As String =
-                row.Cells(2).Value?.
+                row.Cells("Wallet").Value?.
                 ToString().
                 Trim().
                 ToUpperInvariant()
 
-                Dim entrada As Decimal =
-                Convert.ToDecimal(
-                    row.Cells(4).Value)
+                Dim entrada As Decimal
+                If Not TryReadFuturesDecimal(row.Cells("vlEntradaUSD").Value, entrada) Then
+                    Continue For
+                End If
 
-                Dim atual As Decimal =
-                Convert.ToDecimal(
-                    row.Cells(10).Value)
+                Dim atual As Decimal
+                If Not TryReadFuturesDecimal(row.Cells("vlAtualUSD").Value, atual) Then
+                    Continue For
+                End If
 
                 Dim symbol As String =
-                row.Cells(0).Value?.
+                row.Cells("Cripto").Value?.
                 ToString().
                 Trim().
                 ToUpperInvariant()
@@ -3474,8 +3502,9 @@ Public Class FormMain
 
         Try
             dgPortfolio.Cursor = Cursors.WaitCursor
-            Await B.BINANCE_CreateSpotOrderAsync(tradingSymbol, "SELL", "LIMIT", quantity, limitPrice)
+            Dim orderResponse = Await B.BINANCE_CreateSpotOrderAsync(tradingSymbol, "SELL", "LIMIT", quantity, limitPrice)
             row.Cells("SpotExitPrice").Value = String.Empty
+            Await RefreshSpotPortfolioAfterFilledOrderAsync(orderResponse)
             Await LoadSpotOrdersAsync()
             MessageBox.Show("Ordem de fechamento enviada para a Binance.", "Fechar posição", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
@@ -4635,6 +4664,13 @@ Public Class FormMain
             _spotCashUsd = cashUsd
             _spotCashLoadedFromAccount = True
             UpdateSpotOrderCashLabel()
+
+            ' A abertura/atualização do painel de ordens também consulta o
+            ' saldo Spot. Quando uma ordem acabou de preencher, aproveite a
+            ' mesma leitura para manter a Visão Geral sincronizada com o grid.
+            If _spotOverviewInitialized AndAlso Not _marketRefreshRunning Then
+                UpdateRealtimeOverview(force:=True)
+            End If
         Catch ex As Exception
             Debug.WriteLine("Erro ao carregar Caixa Spot: " & ex.Message)
         End Try
@@ -4832,7 +4868,8 @@ Public Class FormMain
 
         Try
             _btAbrirSpotOrder.Enabled = False
-            Await B.BINANCE_CreateSpotOrderAsync(symbol, side, orderType, quantity, price)
+            Dim orderResponse = Await B.BINANCE_CreateSpotOrderAsync(symbol, side, orderType, quantity, price)
+            Await RefreshSpotPortfolioAfterFilledOrderAsync(orderResponse)
             Await LoadSpotOrdersAsync()
             MessageBox.Show("Ordem enviada para a Binance.", "Ordem Spot", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
@@ -4845,6 +4882,43 @@ Public Class FormMain
             _btAbrirSpotOrder.Enabled = True
         End Try
     End Sub
+
+    Private Shared Function IsSpotOrderFilled(orderResponse As String) As Boolean
+        If String.IsNullOrWhiteSpace(orderResponse) Then
+            Return False
+        End If
+
+        Try
+            Dim response = JObject.Parse(orderResponse)
+            Dim status = response("status")?.ToString().Trim().ToUpperInvariant()
+            Return status = "FILLED" OrElse status = "PARTIALLY_FILLED"
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Async Function RefreshSpotPortfolioAfterFilledOrderAsync(orderResponse As String) As Task
+        If Not IsSpotOrderFilled(orderResponse) OrElse IsDisposed OrElse Disposing Then
+            Return
+        End If
+
+        ' Uma ordem LIMIT ainda em NEW não altera a posição. Para FILLED e
+        ' PARTIALLY_FILLED, atualize o saldo e os valores da Visão Geral logo
+        ' após a confirmação da Binance, sem esperar o próximo timer.
+        For attempt As Integer = 1 To 3
+            While _marketRefreshRunning AndAlso attempt < 3
+                Await Task.Delay(250)
+            End While
+
+            If Await refreshMarket() Then
+                Exit For
+            End If
+
+            If attempt < 3 Then
+                Await Task.Delay(250)
+            End If
+        Next
+    End Function
 
     Private Sub ConfigureSpotOrdersGrid()
         If _dgOrdensSpot Is Nothing Then

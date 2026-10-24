@@ -286,3 +286,128 @@ Public NotInheritable Class SpotBotGridStrategy
         }
     End Function
 End Class
+
+''' <summary>
+''' Reversão à média com Bandas de Bollinger conforme a estratégia do vídeo:
+''' período 20, três desvios-padrão, fechamento fora da banda, confirmação por
+''' rompimento do extremo do candle e saída na média central. O stop fica no
+''' extremo do candle que fechou fora da banda.
+''' </summary>
+Public NotInheritable Class SpotBotBollingerMeanReversionStrategy
+    Implements ISpotBotStrategy
+
+    Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
+        Get
+            Return SpotBotStrategyKind.BollingerMeanReversion
+        End Get
+    End Property
+
+    Public Function Evaluate(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
+
+        Dim period = Math.Max(2, configuration.BollingerPeriod)
+        Dim deviations = Math.Max(0.1D, configuration.BollingerStandardDeviations)
+        If prices Is Nothing OrElse prices.Count < period + 2 Then
+            Return HoldSignal($"Bollinger {period}/{deviations:0.##}: histórico insuficiente")
+        End If
+
+        ' O penúltimo ponto é o último candle fechado e o último ponto é o tick
+        ' atual. Assim a entrada acontece na superação real da máxima/mínima
+        ' marcada, sem esperar outro candle fechar.
+        Dim candidateIndex = prices.Count - 2
+        Dim confirmationIndex = prices.Count - 1
+        Dim candidate = prices(candidateIndex)
+        Dim confirmation = prices(confirmationIndex)
+
+        Dim candidateMiddle As Decimal
+        Dim candidateUpper As Decimal
+        Dim candidateLower As Decimal
+        CalculateBands(prices, candidateIndex, period, deviations, candidateMiddle, candidateUpper, candidateLower)
+
+        Dim confirmationMiddle As Decimal
+        Dim ignoredUpper As Decimal
+        Dim ignoredLower As Decimal
+        CalculateBands(prices, confirmationIndex, period, deviations, confirmationMiddle, ignoredUpper, ignoredLower)
+
+        If candidate.Close < candidateLower Then
+            If confirmation.High > candidate.High AndAlso confirmation.Close > candidate.Close Then
+                Dim stopPrice = candidate.Low
+                Dim entryPrice = confirmation.Close
+                If stopPrice > 0D AndAlso entryPrice > stopPrice AndAlso confirmationMiddle > entryPrice Then
+                    Return New SpotBotStrategySignal With {
+                        .Strategy = Kind,
+                        .Direction = SpotBotSignalDirection.Buy,
+                        .Confidence = 1D,
+                        .ObservedValue = candidate.Close - candidateLower,
+                        .EntryPrice = entryPrice,
+                        .StopPrice = stopPrice,
+                        .TakeProfitPrice = confirmationMiddle,
+                        .Reason = $"fechamento abaixo da banda inferior {deviations:0.##}σ + superação da máxima marcada; alvo média {period}"
+                    }
+                End If
+            End If
+
+            Return HoldSignal("fechamento abaixo da banda: aguardando confirmação de reversão")
+        End If
+
+        If candidate.Close > candidateUpper Then
+            If confirmation.Low < candidate.Low AndAlso confirmation.Close < candidate.Close Then
+                Dim stopPrice = candidate.High
+                Dim entryPrice = confirmation.Close
+                If stopPrice > entryPrice AndAlso confirmationMiddle < entryPrice Then
+                    Return New SpotBotStrategySignal With {
+                        .Strategy = Kind,
+                        .Direction = SpotBotSignalDirection.Sell,
+                        .Confidence = 1D,
+                        .ObservedValue = candidate.Close - candidateUpper,
+                        .EntryPrice = entryPrice,
+                        .StopPrice = stopPrice,
+                        .TakeProfitPrice = confirmationMiddle,
+                        .Reason = $"fechamento acima da banda superior {deviations:0.##}σ + perda da mínima marcada; alvo média {period}"
+                    }
+                End If
+            End If
+
+            Return HoldSignal("fechamento acima da banda: aguardando confirmação de reversão")
+        End If
+
+        Return HoldSignal($"sem fechamento fora das bandas {period}/{deviations:0.##}")
+    End Function
+
+    Private Shared Sub CalculateBands(
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        endIndex As Integer,
+        period As Integer,
+        deviations As Decimal,
+        ByRef middle As Decimal,
+        ByRef upper As Decimal,
+        ByRef lower As Decimal)
+
+        Dim firstIndex = endIndex - period + 1
+        Dim sum = 0D
+        For index = firstIndex To endIndex
+            sum += prices(index).Close
+        Next
+
+        middle = sum / period
+        Dim variance = 0D
+        For index = firstIndex To endIndex
+            Dim difference = prices(index).Close - middle
+            variance += difference * difference
+        Next
+
+        Dim standardDeviation = Convert.ToDecimal(Math.Sqrt(Convert.ToDouble(variance / period)))
+        upper = middle + deviations * standardDeviation
+        lower = middle - deviations * standardDeviation
+    End Sub
+
+    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
+        Return New SpotBotStrategySignal With {
+            .Strategy = SpotBotStrategyKind.BollingerMeanReversion,
+            .Direction = SpotBotSignalDirection.Hold,
+            .Reason = reason
+        }
+    End Function
+End Class

@@ -106,6 +106,11 @@ Public NotInheritable Class SpotTradeBotRepository
                     command.ExecuteNonQuery()
                 End Using
 
+                ' Migração compatível com bases criadas antes do stop/alvo
+                ' estruturais da estratégia de Bollinger.
+                EnsureColumn(connection, "SpotBotOpenPositions", "StopPrice", "REAL NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotOpenPositions", "TakeProfitPrice", "REAL NOT NULL DEFAULT 0")
+
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
                         "CREATE INDEX IF NOT EXISTS IX_SpotBotCandles_RunSymbol " &
@@ -240,8 +245,8 @@ Public NotInheritable Class SpotTradeBotRepository
                             insertCommand.Transaction = transaction
                             insertCommand.CommandText =
                                 "INSERT INTO SpotBotOpenPositions(" &
-                                "RunId, Symbol, Side, Quantity, EntryPrice, CurrentPrice, CostBasis, OpenedAtUtc) " &
-                                "VALUES($runId, $symbol, $side, $quantity, $entryPrice, $currentPrice, $costBasis, $openedAtUtc);"
+                                "RunId, Symbol, Side, Quantity, EntryPrice, CurrentPrice, CostBasis, StopPrice, TakeProfitPrice, OpenedAtUtc) " &
+                                "VALUES($runId, $symbol, $side, $quantity, $entryPrice, $currentPrice, $costBasis, $stopPrice, $takeProfitPrice, $openedAtUtc);"
                             insertCommand.Parameters.AddWithValue("$runId", runId)
                             insertCommand.Parameters.AddWithValue("$symbol", position.Symbol.Trim().ToUpperInvariant())
                             insertCommand.Parameters.AddWithValue("$side", If(String.IsNullOrWhiteSpace(position.Side), "LONG", position.Side.Trim().ToUpperInvariant()))
@@ -249,6 +254,8 @@ Public NotInheritable Class SpotTradeBotRepository
                             AddRealParameter(insertCommand, "$entryPrice", position.EntryPrice)
                             AddRealParameter(insertCommand, "$currentPrice", If(position.CurrentPrice > 0D, position.CurrentPrice, position.EntryPrice))
                             AddRealParameter(insertCommand, "$costBasis", position.CostBasis)
+                            AddRealParameter(insertCommand, "$stopPrice", position.StopPrice)
+                            AddRealParameter(insertCommand, "$takeProfitPrice", position.TakeProfitPrice)
                             insertCommand.Parameters.AddWithValue("$openedAtUtc", UtcText(position.OpenedAtUtc))
                             insertCommand.ExecuteNonQuery()
                         End Using
@@ -375,17 +382,19 @@ Public NotInheritable Class SpotTradeBotRepository
 
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
-                    "SELECT Symbol, Side, Quantity, EntryPrice, CurrentPrice, CostBasis, OpenedAtUtc " &
+                        "SELECT Symbol, Side, Quantity, EntryPrice, CurrentPrice, CostBasis, StopPrice, TakeProfitPrice, OpenedAtUtc " &
                     "FROM SpotBotOpenPositions WHERE RunId = $runId ORDER BY Symbol;"
                 command.Parameters.AddWithValue("$runId", state.RunId)
 
                 Using reader = command.ExecuteReader()
                     While reader.Read()
-                        Dim openedAt = ParseUtc(reader.GetString(6))
+                        Dim openedAt = ParseUtc(reader.GetString(8))
                         Dim entryPrice = ReadDecimal(reader, 3)
                         Dim currentPrice = ReadDecimal(reader, 4)
                         Dim quantity = ReadDecimal(reader, 2)
                         Dim costBasis = ReadDecimal(reader, 5)
+                        Dim stopPrice = ReadDecimal(reader, 6)
+                        Dim takeProfitPrice = ReadDecimal(reader, 7)
                         Dim notional = quantity * currentPrice
                         Dim unrealizedPnl = notional - costBasis
 
@@ -396,6 +405,8 @@ Public NotInheritable Class SpotTradeBotRepository
                             .EntryPrice = entryPrice,
                             .CurrentPrice = currentPrice,
                             .CostBasis = costBasis,
+                            .StopPrice = stopPrice,
+                            .TakeProfitPrice = takeProfitPrice,
                             .Notional = notional,
                             .UnrealizedPnl = unrealizedPnl,
                             .RoiPercent = If(costBasis = 0D, 0D, unrealizedPnl / costBasis * 100D),
@@ -414,6 +425,29 @@ Public NotInheritable Class SpotTradeBotRepository
     Private Shared Function GetConnectionString() As String
         Return $"Data Source={PortfolioRepository.GetDatabasePath()}"
     End Function
+
+    Private Shared Sub EnsureColumn(
+        connection As SqliteConnection,
+        tableName As String,
+        columnName As String,
+        columnDefinition As String)
+
+        Using checkCommand As SqliteCommand = connection.CreateCommand()
+            checkCommand.CommandText = $"PRAGMA table_info({tableName});"
+            Using reader = checkCommand.ExecuteReader()
+                While reader.Read()
+                    If String.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase) Then
+                        Return
+                    End If
+                End While
+            End Using
+        End Using
+
+        Using alterCommand As SqliteCommand = connection.CreateCommand()
+            alterCommand.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};"
+            alterCommand.ExecuteNonQuery()
+        End Using
+    End Sub
 
     Private Shared Function UtcText(value As DateTime) As String
         Return value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)

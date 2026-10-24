@@ -19,6 +19,7 @@ Public Enum SpotBotStrategyKind
     Rsi = 1
     Breakout = 2
     Grid = 3
+    BollingerMeanReversion = 4
 End Enum
 
 Public Enum SpotBotUniverseMode
@@ -27,13 +28,30 @@ Public Enum SpotBotUniverseMode
 End Enum
 
 Public NotInheritable Class SpotBotPricePoint
-    Public Sub New(timestampUtc As DateTime, price As Decimal)
+    Public Sub New(
+        timestampUtc As DateTime,
+        price As Decimal,
+        Optional openPrice As Decimal = 0D,
+        Optional highPrice As Decimal = 0D,
+        Optional lowPrice As Decimal = 0D)
+
         Me.TimestampUtc = timestampUtc
         Me.Price = price
+        Me.Open = If(openPrice > 0D, openPrice, price)
+        Me.High = If(highPrice > 0D, highPrice, Math.Max(Me.Open, price))
+        Me.Low = If(lowPrice > 0D, lowPrice, Math.Min(Me.Open, price))
     End Sub
 
     Public ReadOnly Property TimestampUtc As DateTime
     Public ReadOnly Property Price As Decimal
+    Public ReadOnly Property Open As Decimal
+    Public ReadOnly Property High As Decimal
+    Public ReadOnly Property Low As Decimal
+    Public ReadOnly Property Close As Decimal
+        Get
+            Return Price
+        End Get
+    End Property
 End Class
 
 Public NotInheritable Class SpotBotStrategySignal
@@ -42,12 +60,18 @@ Public NotInheritable Class SpotBotStrategySignal
     Public Property Confidence As Decimal
     Public Property Reason As String = String.Empty
     Public Property ObservedValue As Decimal
+    Public Property EntryPrice As Decimal
+    Public Property StopPrice As Decimal
+    Public Property TakeProfitPrice As Decimal
 End Class
 
 Public NotInheritable Class SpotBotSignal
     Public Property Symbol As String = String.Empty
     Public Property TimestampUtc As DateTime
     Public Property Price As Decimal
+    Public Property EntryPrice As Decimal
+    Public Property StopPrice As Decimal
+    Public Property TakeProfitPrice As Decimal
     Public Property Direction As SpotBotSignalDirection
     Public Property Confirmations As Integer
     Public Property ActiveStrategies As Integer
@@ -77,6 +101,11 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property BreakoutPeriod As Integer = 20
     Public Property GridSpacingPercent As Decimal = 1D
     Public Property GridReferencePrice As Decimal
+
+    ' Configuração fixa da estratégia apresentada no vídeo:
+    ' média de 20 períodos e três desvios-padrão.
+    Public Property BollingerPeriod As Integer = 20
+    Public Property BollingerStandardDeviations As Decimal = 3D
 
     ' Parâmetros da carteira virtual usada pelo modo de simulação.
     Public Property SimulationStartingQuote As Decimal = 1000D
@@ -156,6 +185,8 @@ Public NotInheritable Class SpotBotOpenPosition
     Public Property Notional As Decimal
     Public Property UnrealizedPnl As Decimal
     Public Property RoiPercent As Decimal
+    Public Property StopPrice As Decimal
+    Public Property TakeProfitPrice As Decimal
     Public Property OpenedAtUtc As DateTime
 End Class
 
