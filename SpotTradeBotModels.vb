@@ -102,10 +102,10 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property GridSpacingPercent As Decimal = 1D
     Public Property GridReferencePrice As Decimal
 
-    ' Configuração fixa da estratégia apresentada no vídeo:
-    ' média de 20 períodos e três desvios-padrão.
+    ' Parâmetros da variante Bollinger selecionada no painel.
     Public Property BollingerPeriod As Integer = 20
     Public Property BollingerStandardDeviations As Decimal = 3D
+    Public Property BollingerCandleMinutes As Integer = 1440
 
     ' Parâmetros da carteira virtual usada pelo modo de simulação.
     Public Property SimulationStartingQuote As Decimal = 1000D
@@ -198,6 +198,9 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property EnabledStrategies As New HashSet(Of SpotBotStrategyKind)()
     Public Property CombinationMode As SpotBotCombinationMode = SpotBotCombinationMode.MinimumConfirmations
     Public Property RequiredConfirmations As Integer = 2
+    Public Property BollingerPeriod As Integer = 20
+    Public Property BollingerStandardDeviations As Decimal = 3D
+    Public Property BollingerCandleMinutes As Integer = 1440
     Public Property AllocationPercent As Decimal = 10D
     Public Property FeeRate As Decimal = 0.001D
 End Class

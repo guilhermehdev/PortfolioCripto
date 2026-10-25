@@ -25,7 +25,7 @@ Public Class FormBrowser
             new TradingView.widget({
               'container_id': 'tradingview_widget',            
               'symbol': '" & source & ":" & symbol & "USDT',
-              'interval': '240',
+              'interval': 'D',
               'timezone': 'Etc/UTC',
               'theme': 'dark',
               'style': '1',
@@ -37,14 +37,21 @@ Public Class FormBrowser
               'save_image': false,
               'withdateranges': false,
               'details': false,
-              'studies': [
-                             {
-                                id: 'RSI@tv-basicstudies',
-                                inputs: {         
-                                  ma: 14 // Adiciona uma Média Móvel de 14 períodos ao RSI
-                                }
+               'studies': [
+                              {
+                                 id: 'BB@tv-basicstudies',
+                                 inputs: {
+                                   length: 20,
+                                   stdDev: 3
+                                 }
+                              },
+                              {
+                                 id: 'RSI@tv-basicstudies',
+                                 inputs: {
+                                   length: 14
+                                 }
                               }
-                          ],
+                           ],
               'autosize': true
             });
           </script>

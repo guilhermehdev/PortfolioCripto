@@ -536,6 +536,9 @@ Public NotInheritable Class SpotTradeBotEngine
         Next
         _configuration.CombinationMode = state.CombinationMode
         _configuration.RequiredConfirmations = Math.Max(1, state.RequiredConfirmations)
+        _configuration.BollingerPeriod = Math.Max(2, state.BollingerPeriod)
+        _configuration.BollingerStandardDeviations = Math.Max(0.1D, state.BollingerStandardDeviations)
+        _configuration.BollingerCandleMinutes = If(state.BollingerCandleMinutes = 240, 240, 1440)
         _configuration.SimulationAllocationPercent = Math.Max(0D, Math.Min(100D, state.AllocationPercent))
         _configuration.SimulationFeeRate = Math.Max(0D, state.FeeRate)
         _simulationQuoteBalance = Math.Max(0D, state.Snapshot.QuoteBalance)
@@ -682,7 +685,7 @@ Public NotInheritable Class SpotTradeBotEngine
         history As List(Of SpotBotPricePoint),
         ByRef closedCandle As SpotBotPricePoint) As Boolean
 
-        Dim candleStart = TruncateToMinute(timestampUtc)
+        Dim candleStart = TruncateToBollingerInterval(timestampUtc, _configuration.BollingerCandleMinutes)
         Dim currentCandle As CandleState = Nothing
 
         If Not _bollingerCurrentCandles.TryGetValue(symbol, currentCandle) Then
@@ -737,6 +740,24 @@ Public NotInheritable Class SpotTradeBotEngine
             timestampUtc.Minute,
             0,
             DateTimeKind.Utc)
+    End Function
+
+    Private Shared Function TruncateToBollingerInterval(timestampUtc As DateTime, intervalMinutes As Integer) As DateTime
+        Dim interval = If(intervalMinutes = 240, 240, 1440)
+        Dim dayStart = New DateTime(
+            timestampUtc.Year,
+            timestampUtc.Month,
+            timestampUtc.Day,
+            0,
+            0,
+            0,
+            DateTimeKind.Utc)
+
+        If interval >= 1440 Then Return dayStart
+
+        Dim minutesSinceMidnight = timestampUtc.Hour * 60 + timestampUtc.Minute
+        Dim bucketMinutes = (minutesSinceMidnight \ interval) * interval
+        Return dayStart.AddMinutes(bucketMinutes)
     End Function
 
     Public Function GetSimulationSnapshot() As SpotBotSimulationSnapshot
@@ -884,6 +905,9 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim copy As New SpotBotConfiguration With {
             .CombinationMode = source.CombinationMode,
             .RequiredConfirmations = source.RequiredConfirmations,
+            .BollingerPeriod = source.BollingerPeriod,
+            .BollingerStandardDeviations = source.BollingerStandardDeviations,
+            .BollingerCandleMinutes = source.BollingerCandleMinutes,
             .MinimumWeightedScore = source.MinimumWeightedScore,
             .Cooldown = source.Cooldown,
             .MaximumPriceHistory = source.MaximumPriceHistory,
@@ -895,8 +919,6 @@ Public NotInheritable Class SpotTradeBotEngine
             .BreakoutPeriod = source.BreakoutPeriod,
             .GridSpacingPercent = source.GridSpacingPercent,
             .GridReferencePrice = source.GridReferencePrice,
-            .BollingerPeriod = source.BollingerPeriod,
-            .BollingerStandardDeviations = source.BollingerStandardDeviations,
             .SimulationStartingQuote = source.SimulationStartingQuote,
             .SimulationAllocationPercent = source.SimulationAllocationPercent,
             .SimulationFeeRate = source.SimulationFeeRate,

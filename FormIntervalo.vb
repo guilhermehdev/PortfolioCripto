@@ -22,10 +22,12 @@
             Case 8
                 timerRefresh.Interval = 3600000.0
             Case 9
-                timerRefresh.Interval = 3600000.0 * 6
+                timerRefresh.Interval = 3600000.0 * 4
             Case 10
-                timerRefresh.Interval = 3600000.0 * 12
+                timerRefresh.Interval = 3600000.0 * 6
             Case 11
+                timerRefresh.Interval = 3600000.0 * 12
+            Case 12
                 timerRefresh.Interval = 3600000.0 * 24
         End Select
 

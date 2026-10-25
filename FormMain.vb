@@ -78,6 +78,8 @@ Public Class FormMain
     Private _botLog As RichTextBox
     Private _dgSpotBotPositions As DataGridView
     Private _botCombination As ComboBox
+    Private _botBollingerMode As ComboBox
+    Private _botBollingerTimeframe As ComboBox
     Private _botConfirmations As NumericUpDown
     Private _botStartingQuote As NumericUpDown
     Private _botAllocation As NumericUpDown
@@ -560,11 +562,26 @@ Public Class FormMain
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Rsi, "RSI", 112, 24, 80)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Breakout, "Rompimento", 198, 24, 118)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Grid, "Grade", 322, 24, 80)
-        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.BollingerMeanReversion, "Bollinger 20/3", 406, 24, 118)
 
-        If Not _spotTradeBot.HasRestoredState Then
-            _botStrategyChecks(SpotBotStrategyKind.BollingerMeanReversion).Checked = True
-        End If
+        AddBotLabel(editor, "Bollinger", 406, 3, 118)
+        _botBollingerMode = New ComboBox With {
+            .Name = "cbSpotBotBollingerMode",
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Location = New Point(406, 24),
+            .Width = 118
+        }
+        _botBollingerMode.Items.AddRange(New Object() {
+            "Desativada",
+            "Bollinger 20/3",
+            "Bollinger 20/2,3",
+            "Bollinger 25/3",
+            "Bollinger 25/2,3"
+        })
+        _botBollingerMode.SelectedIndex = GetBollingerModeIndex()
+        editor.Controls.Add(_botBollingerMode)
 
         If _spotTradeBot.HasRestoredState Then
             For Each strategyCheck In _botStrategyChecks
@@ -580,7 +597,7 @@ Public Class FormMain
             .ForeColor = Color.White,
             .FlatStyle = FlatStyle.Flat,
             .Location = New Point(532, 24),
-            .Width = 190
+            .Width = 150
         }
         _botCombination.Items.AddRange(New Object() {
             "Qualquer estratégia",
@@ -594,7 +611,7 @@ Public Class FormMain
             0)
         editor.Controls.Add(_botCombination)
 
-        AddBotLabel(editor, "Confirmações", 732, 3, 100)
+        AddBotLabel(editor, "Confirmações", 690, 3, 78)
         _botConfirmations = New NumericUpDown With {
             .Name = "nudSpotBotConfirmations",
             .Minimum = 1,
@@ -602,7 +619,7 @@ Public Class FormMain
             .Value = 1,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
-            .Location = New Point(732, 24),
+            .Location = New Point(690, 24),
             .Width = 64
         }
         If _spotTradeBot.HasRestoredState Then
@@ -612,14 +629,28 @@ Public Class FormMain
         End If
         editor.Controls.Add(_botConfirmations)
 
-        AddBotLabel(editor, "Universo", 816, 3, 100)
+        AddBotLabel(editor, "Candle BB", 768, 3, 100)
+        _botBollingerTimeframe = New ComboBox With {
+            .Name = "cbSpotBotBollingerTimeframe",
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Location = New Point(768, 24),
+            .Width = 100
+        }
+        _botBollingerTimeframe.Items.AddRange(New Object() {"4 horas", "Diário"})
+        _botBollingerTimeframe.SelectedIndex = GetBollingerTimeframeIndex()
+        editor.Controls.Add(_botBollingerTimeframe)
+
+        AddBotLabel(editor, "Universo", 876, 3, 100)
         _botUniverseMode = New ComboBox With {
             .Name = "cbSpotBotUniverseMode",
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
             .FlatStyle = FlatStyle.Flat,
-            .Location = New Point(816, 24),
+            .Location = New Point(876, 24),
             .Width = 120
         }
         _botUniverseMode.Items.AddRange(New Object() {"Manual", "Top volume"})
@@ -627,7 +658,7 @@ Public Class FormMain
         AddHandler _botUniverseMode.SelectedIndexChanged, AddressOf SpotBotUniverseModeChanged
         editor.Controls.Add(_botUniverseMode)
 
-        _botUniverseButton = CreateBotButton("Selecionar...", 942, 24, 102, Color.FromArgb(55, 75, 105))
+        _botUniverseButton = CreateBotButton("Selecionar...", 1002, 24, 102, Color.FromArgb(55, 75, 105))
         AddHandler _botUniverseButton.Click, AddressOf SpotBotUniverseButton_Click
         editor.Controls.Add(_botUniverseButton)
 
@@ -637,7 +668,7 @@ Public Class FormMain
             .Height = 20,
             .ForeColor = Color.Gold,
             .Font = New Font("Calibri", 9.0F, FontStyle.Bold),
-            .Location = New Point(940, 0),
+            .Location = New Point(940, 55),
             .Text = "SIMULAÇÃO — sem ordens reais"
         }
         editor.Controls.Add(simulationLabel)
@@ -699,10 +730,10 @@ Public Class FormMain
         Dim hint As New Label With {
             .AutoSize = False,
             .Width = 205,
-            .Height = 34,
+            .Height = 27,
             .ForeColor = Color.LightGray,
-            .Location = New Point(940, 67),
-            .Text = "RSI e Bollinger usam candles fechados de 1 minuto."
+            .Location = New Point(940, 78),
+            .Text = "RSI usa 1 minuto; Bollinger usa o candle selecionado."
         }
         editor.Controls.Add(hint)
 
@@ -964,6 +995,61 @@ Public Class FormMain
         _botStrategyChecks(kind) = check
     End Sub
 
+    Private Function GetBollingerModeIndex() As Integer
+        If Not _spotTradeBot.HasRestoredState Then Return 1
+        If Not _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion) Then
+            Return 0
+        End If
+
+        If _spotTradeBot.Configuration.BollingerPeriod = 20 Then
+            If Math.Abs(_spotTradeBot.Configuration.BollingerStandardDeviations - 2.3D) < 0.01D Then
+                Return 2
+            End If
+            Return 1
+        End If
+
+        If Math.Abs(_spotTradeBot.Configuration.BollingerStandardDeviations - 2.3D) < 0.01D Then
+            Return 4
+        End If
+
+        Return 3
+    End Function
+
+    Private Function GetBollingerTimeframeIndex() As Integer
+        Return If(_spotTradeBot.HasRestoredState AndAlso _spotTradeBot.Configuration.BollingerCandleMinutes = 240, 0, 1)
+    End Function
+
+    Private Sub ApplyBollingerTimeframe()
+        If _botBollingerTimeframe Is Nothing OrElse _botBollingerTimeframe.SelectedIndex = 0 Then
+            _spotTradeBot.Configuration.BollingerCandleMinutes = 240
+        Else
+            _spotTradeBot.Configuration.BollingerCandleMinutes = 1440
+        End If
+    End Sub
+
+    Private Sub ApplyBollingerMode()
+        If _botBollingerMode Is Nothing OrElse _botBollingerMode.SelectedIndex <= 0 Then
+            _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, False)
+            Return
+        End If
+
+        _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, True)
+        Select Case _botBollingerMode.SelectedIndex
+            Case 2
+                _spotTradeBot.Configuration.BollingerPeriod = 20
+                _spotTradeBot.Configuration.BollingerStandardDeviations = 2.3D
+            Case 3
+                _spotTradeBot.Configuration.BollingerPeriod = 25
+                _spotTradeBot.Configuration.BollingerStandardDeviations = 3D
+            Case 4
+                _spotTradeBot.Configuration.BollingerPeriod = 25
+                _spotTradeBot.Configuration.BollingerStandardDeviations = 2.3D
+            Case Else
+                _spotTradeBot.Configuration.BollingerPeriod = 20
+                _spotTradeBot.Configuration.BollingerStandardDeviations = 3D
+        End Select
+    End Sub
+
     Private Shared Sub AddBotLabel(editor As Panel, text As String, left As Integer, top As Integer, width As Integer)
         editor.Controls.Add(New Label With {
             .AutoSize = False,
@@ -1059,6 +1145,9 @@ Public Class FormMain
             _spotTradeBot.SetStrategyEnabled(item.Key, item.Value.Checked)
         Next
 
+        ApplyBollingerMode()
+        ApplyBollingerTimeframe()
+
         Select Case _botCombination.SelectedIndex
             Case 0
                 _spotTradeBot.Configuration.CombinationMode = SpotBotCombinationMode.Any
@@ -1151,7 +1240,9 @@ Public Class FormMain
             Color.LightGray)
         If bollingerEnabled Then
             AppendSpotBotLog(
-                "Bollinger: fechamento fora de 20/3σ + confirmação por rompimento; SL no extremo e TP na média 20.",
+                $"Bollinger: fechamento fora de {_spotTradeBot.Configuration.BollingerPeriod}/{_spotTradeBot.Configuration.BollingerStandardDeviations:0.##}σ + confirmação por rompimento; " &
+                $"SL no extremo e TP na média {_spotTradeBot.Configuration.BollingerPeriod}; " &
+                $"timeframe {If(_spotTradeBot.Configuration.BollingerCandleMinutes = 240, "4 horas", "diário")}.",
                 Color.LightGray)
         End If
         AppendSpotBotLog($"Universo: {universe.Count} ativo(s) ({If(_spotTradeBot.Configuration.UniverseMode = SpotBotUniverseMode.TopVolume, "Top volume", "Manual")}).", Color.LightGray)

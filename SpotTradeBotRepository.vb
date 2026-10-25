@@ -46,10 +46,17 @@ Public NotInheritable Class SpotTradeBotRepository
                         "OpenValue REAL NOT NULL DEFAULT 0, " &
                         "OpenPositions INTEGER NOT NULL DEFAULT 0, " &
                         "LastAction TEXT, " &
+                        "BollingerPeriod INTEGER NOT NULL DEFAULT 20, " &
+                        "BollingerStandardDeviations REAL NOT NULL DEFAULT 3, " &
+                        "BollingerCandleMinutes INTEGER NOT NULL DEFAULT 1440, " &
                         "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                         ");"
                     command.ExecuteNonQuery()
                 End Using
+
+                EnsureColumn(connection, "SpotBotRuns", "BollingerPeriod", "INTEGER NOT NULL DEFAULT 20")
+                EnsureColumn(connection, "SpotBotRuns", "BollingerStandardDeviations", "REAL NOT NULL DEFAULT 3")
+                EnsureColumn(connection, "SpotBotRuns", "BollingerCandleMinutes", "INTEGER NOT NULL DEFAULT 1440")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -144,9 +151,11 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.CommandText =
                     "INSERT INTO SpotBotRuns (" &
                     "StartedAt, Status, EnabledStrategies, CombinationMode, RequiredConfirmations, " &
-                    "StartingQuote, AllocationPercent, FeeRate, Equity, QuoteBalance) " &
+                        "StartingQuote, AllocationPercent, FeeRate, Equity, QuoteBalance, " &
+                        "BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes) " &
                     "VALUES ($startedAt, $status, $enabledStrategies, $combinationMode, $requiredConfirmations, " &
-                    "$startingQuote, $allocationPercent, $feeRate, $equity, $quoteBalance);"
+                        "$startingQuote, $allocationPercent, $feeRate, $equity, $quoteBalance, " &
+                        "$bollingerPeriod, $bollingerStandardDeviations, $bollingerCandleMinutes);"
 
                 command.Parameters.AddWithValue("$startedAt", UtcText(DateTime.UtcNow))
                 command.Parameters.AddWithValue("$status", "RUNNING")
@@ -158,6 +167,9 @@ Public NotInheritable Class SpotTradeBotRepository
                 AddRealParameter(command, "$feeRate", configuration.SimulationFeeRate)
                 AddRealParameter(command, "$equity", configuration.SimulationStartingQuote)
                 AddRealParameter(command, "$quoteBalance", configuration.SimulationStartingQuote)
+                command.Parameters.AddWithValue("$bollingerPeriod", Math.Max(2, configuration.BollingerPeriod))
+                AddRealParameter(command, "$bollingerStandardDeviations", Math.Max(0.1D, configuration.BollingerStandardDeviations))
+                command.Parameters.AddWithValue("$bollingerCandleMinutes", If(configuration.BollingerCandleMinutes = 240, 240, 1440))
                 command.ExecuteNonQuery()
             End Using
 
@@ -317,7 +329,8 @@ Public NotInheritable Class SpotTradeBotRepository
                     "SELECT Id, StartedAt, EndedAt, Status, EnabledStrategies, CombinationMode, " &
                     "RequiredConfirmations, StartingQuote, AllocationPercent, FeeRate, CompletedTrades, " &
                     "WinningTrades, LosingTrades, RealizedPnl, UnrealizedPnl, Equity, TotalPnl, " &
-                    "QuoteBalance, OpenValue, OpenPositions, LastAction, UpdatedAt " &
+                        "QuoteBalance, OpenValue, OpenPositions, LastAction, " &
+                        "BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes, UpdatedAt " &
                     "FROM SpotBotRuns ORDER BY Id DESC;"
                 Using reader = command.ExecuteReader()
                     table.Load(reader)
@@ -340,7 +353,7 @@ Public NotInheritable Class SpotTradeBotRepository
                     "SELECT Id, Status, EnabledStrategies, CombinationMode, RequiredConfirmations, " &
                     "StartingQuote, AllocationPercent, FeeRate, QuoteBalance, OpenValue, RealizedPnl, " &
                     "UnrealizedPnl, Equity, TotalPnl, CompletedTrades, WinningTrades, LosingTrades, " &
-                    "OpenPositions, LastAction " &
+                        "OpenPositions, LastAction, BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes " &
                     "FROM SpotBotRuns ORDER BY Id DESC LIMIT 1;"
 
                 Using reader = command.ExecuteReader()
@@ -366,7 +379,10 @@ Public NotInheritable Class SpotTradeBotRepository
                             .LosingTrades = reader.GetInt32(16),
                             .OpenPositions = reader.GetInt32(17),
                             .LastAction = If(reader.IsDBNull(18), String.Empty, reader.GetString(18))
-                        }
+                        },
+                        .BollingerPeriod = If(reader.IsDBNull(19), 20, Math.Max(2, reader.GetInt32(19))),
+                        .BollingerStandardDeviations = If(reader.IsDBNull(20), 3D, Math.Max(0.1D, ReadDecimal(reader, 20))),
+                        .BollingerCandleMinutes = If(reader.IsDBNull(21), 1440, If(reader.GetInt32(21) = 240, 240, 1440))
                     }
 
                     If Not reader.IsDBNull(2) Then
