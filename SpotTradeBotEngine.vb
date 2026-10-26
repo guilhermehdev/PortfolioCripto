@@ -8,8 +8,8 @@ Public NotInheritable Class SpotTradeBotEngine
     Private ReadOnly _priceHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _rsiCandleHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _rsiCurrentCandles As New Dictionary(Of String, RsiCandleState)(StringComparer.OrdinalIgnoreCase)
-    Private ReadOnly _waveCandleHistory As New Dictionary(Of String, List(Of SpotBotCandle))(StringComparer.OrdinalIgnoreCase)
-    Private ReadOnly _waveCurrentCandles As New Dictionary(Of String, WaveCandleState)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _bollingerCandleHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _bollingerCurrentCandles As New Dictionary(Of String, CandleState)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _lastSignals As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _simulationPositions As New Dictionary(Of String, SimulationPosition)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _configuration As New SpotBotConfiguration()
@@ -37,7 +37,7 @@ Public NotInheritable Class SpotTradeBotEngine
         RegisterStrategy(New SpotBotRsiStrategy())
         RegisterStrategy(New SpotBotBreakoutStrategy())
         RegisterStrategy(New SpotBotGridStrategy())
-        RegisterStrategy(New SpotBotWavePullbackStrategy())
+        RegisterStrategy(New SpotBotBollingerMeanReversionStrategy())
 
         Dim persistedState As SpotBotPersistedSimulationState = Nothing
         Try
@@ -171,8 +171,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 _priceHistory.Clear()
                 _rsiCandleHistory.Clear()
                 _rsiCurrentCandles.Clear()
-                _waveCandleHistory.Clear()
-                _waveCurrentCandles.Clear()
+                _bollingerCandleHistory.Clear()
+                _bollingerCurrentCandles.Clear()
                 _lastSignals.Clear()
                 ResetSimulationLocked()
                 If Not _running Then
@@ -184,8 +184,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 _priceHistory.Remove(normalized)
                 _rsiCandleHistory.Remove(normalized)
                 _rsiCurrentCandles.Remove(normalized)
-                _waveCandleHistory.Remove(normalized)
-                _waveCurrentCandles.Remove(normalized)
+                _bollingerCandleHistory.Remove(normalized)
+                _bollingerCurrentCandles.Remove(normalized)
                 For Each key In _lastSignals.Keys.
                     Where(Function(item) item.StartsWith(normalized & "|", StringComparison.OrdinalIgnoreCase)).
                     ToList()
@@ -219,11 +219,14 @@ Public NotInheritable Class SpotTradeBotEngine
 
         Dim history As List(Of SpotBotPricePoint) = Nothing
         Dim rsiHistory As List(Of SpotBotPricePoint) = Nothing
+        Dim bollingerHistory As List(Of SpotBotPricePoint) = Nothing
         Dim rsiPriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
+        Dim bollingerPriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
+        Dim rsiClosedCandle As SpotBotPricePoint = Nothing
+        Dim bollingerClosedCandle As SpotBotPricePoint = Nothing
         Dim closedCandle As SpotBotPricePoint = Nothing
-        Dim waveCandleSnapshot As IReadOnlyList(Of SpotBotCandle) = Array.Empty(Of SpotBotCandle)()
-        Dim closedWaveCandle As SpotBotCandle = Nothing
         Dim candleClosed As Boolean
+        Dim bollingerCandleClosed As Boolean
         Dim enabledStrategies As List(Of SpotBotStrategyKind)
         Dim configurationSnapshot As SpotBotConfiguration
         Dim activeRunId As Long
@@ -245,23 +248,23 @@ Public NotInheritable Class SpotTradeBotEngine
             enabledStrategies = _configuration.EnabledStrategies.ToList()
             If enabledStrategies.Contains(SpotBotStrategyKind.Rsi) Then
                 rsiHistory = GetOrCreateRsiCandleHistory(normalizedSymbol)
-                candleClosed = UpdateRsiCandle(normalizedSymbol, observedAt, price, rsiHistory, closedCandle)
+                candleClosed = UpdateRsiCandle(normalizedSymbol, observedAt, price, rsiHistory, rsiClosedCandle)
                 rsiPriceSnapshot = rsiHistory.ToArray()
             End If
 
-            If enabledStrategies.Contains(SpotBotStrategyKind.WavePullback) Then
-                Dim waveHistory = GetOrCreateWaveCandleHistory(normalizedSymbol)
-                candleClosed = UpdateWaveCandle(
+            If enabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion) Then
+                bollingerHistory = GetOrCreateBollingerCandleHistory(normalizedSymbol)
+                bollingerCandleClosed = UpdateBollingerCandle(
                     normalizedSymbol,
                     observedAt,
                     price,
-                    waveHistory,
-                    closedWaveCandle) OrElse candleClosed
-                waveCandleSnapshot = waveHistory.ToArray()
-                If closedCandle Is Nothing AndAlso closedWaveCandle IsNot Nothing Then
-                    closedCandle = New SpotBotPricePoint(closedWaveCandle.TimestampUtc, closedWaveCandle.Close)
-                End If
+                    bollingerHistory,
+                    bollingerClosedCandle)
+                bollingerPriceSnapshot = bollingerHistory.ToArray()
+                candleClosed = candleClosed OrElse bollingerCandleClosed
             End If
+
+            closedCandle = If(rsiClosedCandle, bollingerClosedCandle)
 
             configurationSnapshot = CopyConfiguration(_configuration)
             activeRunId = _activeRunId
@@ -282,22 +285,19 @@ Public NotInheritable Class SpotTradeBotEngine
                 Dim strategyPrices As IReadOnlyList(Of SpotBotPricePoint) = priceSnapshot
                 If kind = SpotBotStrategyKind.Rsi Then
                     strategyPrices = rsiPriceSnapshot
+                ElseIf kind = SpotBotStrategyKind.BollingerMeanReversion Then
+                    Dim bollingerEvaluation = bollingerPriceSnapshot.ToList()
+                    If bollingerEvaluation.Count > 0 Then
+                        ' O candle em formação representa o preço atual. A
+                        ' estratégia só usa candles fechados para a banda, mas
+                        ' aceita o rompimento intrabar do extremo marcado.
+                        bollingerEvaluation.Add(New SpotBotPricePoint(observedAt, price))
+                    End If
+                    strategyPrices = bollingerEvaluation
                 End If
 
-                Dim strategySignal As SpotBotStrategySignal = Nothing
-                If kind = SpotBotStrategyKind.WavePullback Then
-                    If candleClosed AndAlso waveCandleSnapshot.Count > 0 Then
-                        Dim candleStrategy = TryCast(strategy, ISpotBotCandleStrategy)
-                        If candleStrategy IsNot Nothing Then
-                            strategySignal = candleStrategy.EvaluateCandles(
-                                normalizedSymbol,
-                                waveCandleSnapshot,
-                                configurationSnapshot)
-                        End If
-                    End If
-                Else
-                    strategySignal = strategy.Evaluate(normalizedSymbol, strategyPrices, configurationSnapshot)
-                End If
+                Dim strategySignal As SpotBotStrategySignal
+                strategySignal = strategy.Evaluate(normalizedSymbol, strategyPrices, configurationSnapshot)
                 If strategySignal IsNot Nothing Then
                     strategySignals.Add(strategySignal)
                 End If
@@ -385,17 +385,13 @@ Public NotInheritable Class SpotTradeBotEngine
 
             If position IsNot Nothing AndAlso position.EntryPrice > 0D Then
                 Dim variationPercent = (price - position.EntryPrice) / position.EntryPrice * 100D
+                Dim takeProfitReached = position.TakeProfitPrice > 0D AndAlso price >= position.TakeProfitPrice
+                Dim stopLossReached = position.StopPrice > 0D AndAlso price <= position.StopPrice
                 Dim takeProfitPercent = Math.Max(0D, configuration.TakeProfitPercent)
                 Dim stopLossPercent = Math.Max(0D, configuration.StopLossPercent)
 
-                Dim targetReached = If(position.TargetPrice > 0D,
-                                       price >= position.TargetPrice,
-                                       takeProfitPercent > 0D AndAlso variationPercent >= takeProfitPercent)
-                Dim stopReached = If(position.StopPrice > 0D,
-                                     price <= position.StopPrice,
-                                     stopLossPercent > 0D AndAlso variationPercent <= -stopLossPercent)
-
-                If targetReached Then
+                If takeProfitReached OrElse
+                   (position.TakeProfitPrice <= 0D AndAlso takeProfitPercent > 0D AndAlso variationPercent >= takeProfitPercent) Then
                     CloseSimulationPosition(
                         symbol,
                         price,
@@ -408,7 +404,8 @@ Public NotInheritable Class SpotTradeBotEngine
                     Return BuildSimulationSnapshotLocked(configuration)
                 End If
 
-                If stopReached Then
+                If stopLossReached OrElse
+                   (position.StopPrice <= 0D AndAlso stopLossPercent > 0D AndAlso variationPercent <= -stopLossPercent) Then
                     CloseSimulationPosition(
                         symbol,
                         price,
@@ -433,15 +430,16 @@ Public NotInheritable Class SpotTradeBotEngine
 
                             If notional > 0D Then
                                 Dim fee = notional * feeRate
+                                Dim executionPrice = If(signal.EntryPrice > 0D, signal.EntryPrice, price)
                                 position = New SimulationPosition With {
                                     .Symbol = symbol,
-                                    .Quantity = notional / price,
-                                    .EntryPrice = price,
+                                    .Quantity = notional / executionPrice,
+                                    .EntryPrice = executionPrice,
                                     .CostBasis = notional + fee,
-                                    .LastPrice = price,
-                                    .EntryTimestampUtc = signal.TimestampUtc,
-                                    .StopPrice = signal.SuggestedStopPrice,
-                                    .TargetPrice = signal.SuggestedTargetPrice
+                                    .LastPrice = executionPrice,
+                                    .StopPrice = signal.StopPrice,
+                                    .TakeProfitPrice = signal.TakeProfitPrice,
+                                    .EntryTimestampUtc = signal.TimestampUtc
                                 }
                                 _simulationPositions(symbol) = position
                                 _simulationQuoteBalance -= notional + fee
@@ -538,6 +536,9 @@ Public NotInheritable Class SpotTradeBotEngine
         Next
         _configuration.CombinationMode = state.CombinationMode
         _configuration.RequiredConfirmations = Math.Max(1, state.RequiredConfirmations)
+        _configuration.BollingerPeriod = Math.Max(2, state.BollingerPeriod)
+        _configuration.BollingerStandardDeviations = Math.Max(0.1D, state.BollingerStandardDeviations)
+        _configuration.BollingerCandleMinutes = If(state.BollingerCandleMinutes = 240, 240, 1440)
         _configuration.SimulationAllocationPercent = Math.Max(0D, Math.Min(100D, state.AllocationPercent))
         _configuration.SimulationFeeRate = Math.Max(0D, state.FeeRate)
         _simulationQuoteBalance = Math.Max(0D, state.Snapshot.QuoteBalance)
@@ -562,6 +563,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 .EntryPrice = persistedPosition.EntryPrice,
                 .CostBasis = persistedPosition.CostBasis,
                 .LastPrice = If(persistedPosition.CurrentPrice > 0D, persistedPosition.CurrentPrice, persistedPosition.EntryPrice),
+                .StopPrice = persistedPosition.StopPrice,
+                .TakeProfitPrice = persistedPosition.TakeProfitPrice,
                 .EntryTimestampUtc = persistedPosition.OpenedAtUtc
             }
         Next
@@ -623,65 +626,14 @@ Public NotInheritable Class SpotTradeBotEngine
         Return history
     End Function
 
-    Private Function GetOrCreateWaveCandleHistory(symbol As String) As List(Of SpotBotCandle)
-        Dim history As List(Of SpotBotCandle) = Nothing
-        If Not _waveCandleHistory.TryGetValue(symbol, history) Then
-            history = New List(Of SpotBotCandle)()
-            _waveCandleHistory(symbol) = history
+    Private Function GetOrCreateBollingerCandleHistory(symbol As String) As List(Of SpotBotPricePoint)
+        Dim history As List(Of SpotBotPricePoint) = Nothing
+        If Not _bollingerCandleHistory.TryGetValue(symbol, history) Then
+            history = New List(Of SpotBotPricePoint)()
+            _bollingerCandleHistory(symbol) = history
         End If
 
         Return history
-    End Function
-
-    Private Function UpdateWaveCandle(
-        symbol As String,
-        timestampUtc As DateTime,
-        price As Decimal,
-        history As List(Of SpotBotCandle),
-        ByRef closedCandle As SpotBotCandle) As Boolean
-
-        Dim candleStart = TruncateToMinute(timestampUtc)
-        Dim current As WaveCandleState = Nothing
-
-        If Not _waveCurrentCandles.TryGetValue(symbol, current) Then
-            _waveCurrentCandles(symbol) = New WaveCandleState With {
-                .TimestampUtc = candleStart,
-                .Open = price,
-                .High = price,
-                .Low = price,
-                .Close = price}
-            Return False
-        End If
-
-        If candleStart < current.TimestampUtc Then Return False
-
-        If candleStart = current.TimestampUtc Then
-            current.High = Math.Max(current.High, price)
-            current.Low = Math.Min(current.Low, price)
-            current.Close = price
-            Return False
-        End If
-
-        closedCandle = New SpotBotCandle With {
-            .TimestampUtc = current.TimestampUtc,
-            .Open = current.Open,
-            .High = current.High,
-            .Low = current.Low,
-            .Close = current.Close}
-        history.Add(closedCandle)
-
-        Dim maximumCandles = Math.Max(60, _configuration.MaximumPriceHistory)
-        If history.Count > maximumCandles Then
-            history.RemoveRange(0, history.Count - maximumCandles)
-        End If
-
-        _waveCurrentCandles(symbol) = New WaveCandleState With {
-            .TimestampUtc = candleStart,
-            .Open = price,
-            .High = price,
-            .Low = price,
-            .Close = price}
-        Return True
     End Function
 
     Private Function UpdateRsiCandle(
@@ -726,6 +678,59 @@ Public NotInheritable Class SpotTradeBotEngine
         Return True
     End Function
 
+    Private Function UpdateBollingerCandle(
+        symbol As String,
+        timestampUtc As DateTime,
+        price As Decimal,
+        history As List(Of SpotBotPricePoint),
+        ByRef closedCandle As SpotBotPricePoint) As Boolean
+
+        Dim candleStart = TruncateToBollingerInterval(timestampUtc, _configuration.BollingerCandleMinutes)
+        Dim currentCandle As CandleState = Nothing
+
+        If Not _bollingerCurrentCandles.TryGetValue(symbol, currentCandle) Then
+            _bollingerCurrentCandles(symbol) = New CandleState With {
+                .StartUtc = candleStart,
+                .Open = price,
+                .High = price,
+                .Low = price,
+                .Close = price
+            }
+            Return False
+        End If
+
+        If candleStart < currentCandle.StartUtc Then Return False
+
+        If candleStart = currentCandle.StartUtc Then
+            currentCandle.High = Math.Max(currentCandle.High, price)
+            currentCandle.Low = Math.Min(currentCandle.Low, price)
+            currentCandle.Close = price
+            Return False
+        End If
+
+        closedCandle = New SpotBotPricePoint(
+            currentCandle.StartUtc,
+            currentCandle.Close,
+            currentCandle.Open,
+            currentCandle.High,
+            currentCandle.Low)
+        history.Add(closedCandle)
+
+        Dim maximumCandles = Math.Max(30, _configuration.MaximumPriceHistory)
+        If history.Count > maximumCandles Then
+            history.RemoveRange(0, history.Count - maximumCandles)
+        End If
+
+        _bollingerCurrentCandles(symbol) = New CandleState With {
+            .StartUtc = candleStart,
+            .Open = price,
+            .High = price,
+            .Low = price,
+            .Close = price
+        }
+        Return True
+    End Function
+
     Private Shared Function TruncateToMinute(timestampUtc As DateTime) As DateTime
         Return New DateTime(
             timestampUtc.Year,
@@ -735,6 +740,24 @@ Public NotInheritable Class SpotTradeBotEngine
             timestampUtc.Minute,
             0,
             DateTimeKind.Utc)
+    End Function
+
+    Private Shared Function TruncateToBollingerInterval(timestampUtc As DateTime, intervalMinutes As Integer) As DateTime
+        Dim interval = If(intervalMinutes = 240, 240, 1440)
+        Dim dayStart = New DateTime(
+            timestampUtc.Year,
+            timestampUtc.Month,
+            timestampUtc.Day,
+            0,
+            0,
+            0,
+            DateTimeKind.Utc)
+
+        If interval >= 1440 Then Return dayStart
+
+        Dim minutesSinceMidnight = timestampUtc.Hour * 60 + timestampUtc.Minute
+        Dim bucketMinutes = (minutesSinceMidnight \ interval) * interval
+        Return dayStart.AddMinutes(bucketMinutes)
     End Function
 
     Public Function GetSimulationSnapshot() As SpotBotSimulationSnapshot
@@ -759,6 +782,8 @@ Public NotInheritable Class SpotTradeBotEngine
                                .Notional = notional,
                                .UnrealizedPnl = unrealizedPnl,
                                .RoiPercent = If(position.CostBasis = 0D, 0D, unrealizedPnl / position.CostBasis * 100D),
+                                .StopPrice = position.StopPrice,
+                                .TakeProfitPrice = position.TakeProfitPrice,
                                .OpenedAtUtc = position.EntryTimestampUtc
                            }
                        End Function).
@@ -781,7 +806,18 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim selected As List(Of SpotBotStrategySignal) = Nothing
         Dim score As Decimal = 0D
 
-        Select Case configuration.CombinationMode
+        ' Uma única estratégia selecionada deve poder operar sozinha. Isso é
+        ' importante para a Bollinger do vídeo, que não depende de EMA/RSI.
+        If configuration.EnabledStrategies.Count = 1 AndAlso activeCount > 0 Then
+            If buySignals.Count > 0 AndAlso buySignals.Count >= sellSignals.Count Then
+                direction = SpotBotSignalDirection.Buy
+                selected = buySignals
+            ElseIf sellSignals.Count > 0 Then
+                direction = SpotBotSignalDirection.Sell
+                selected = sellSignals
+            End If
+        Else
+            Select Case configuration.CombinationMode
             Case SpotBotCombinationMode.Any
                 If buySignals.Sum(Function(item) item.Confidence) >= sellSignals.Sum(Function(item) item.Confidence) Then
                     direction = If(buySignals.Count > 0, SpotBotSignalDirection.Buy, SpotBotSignalDirection.Hold)
@@ -824,7 +860,8 @@ Public NotInheritable Class SpotTradeBotEngine
                     selected = sellSignals
                     score = sellScore
                 End If
-        End Select
+            End Select
+        End If
 
         If direction = SpotBotSignalDirection.Hold OrElse selected Is Nothing Then
             Return Nothing
@@ -834,18 +871,32 @@ Public NotInheritable Class SpotTradeBotEngine
             score = selected.Sum(Function(item) item.Confidence)
         End If
 
+        Dim entryPrice = selected.Where(Function(item) item.EntryPrice > 0D).
+            Select(Function(item) item.EntryPrice).
+            DefaultIfEmpty(price).
+            First()
+        Dim stopPrice = selected.Where(Function(item) item.StopPrice > 0D).
+            Select(Function(item) item.StopPrice).
+            DefaultIfEmpty(0D).
+            First()
+        Dim takeProfitPrice = selected.Where(Function(item) item.TakeProfitPrice > 0D).
+            Select(Function(item) item.TakeProfitPrice).
+            DefaultIfEmpty(0D).
+            First()
+
         Return New SpotBotSignal With {
             .Symbol = symbol,
             .TimestampUtc = timestampUtc,
-            .Price = price,
+            .Price = entryPrice,
+            .EntryPrice = entryPrice,
+            .StopPrice = stopPrice,
+            .TakeProfitPrice = takeProfitPrice,
             .Direction = direction,
             .Confirmations = selected.Count,
             .ActiveStrategies = activeCount,
             .Score = score,
             .Reasons = selected.Where(Function(item) Not String.IsNullOrWhiteSpace(item.Reason)).Select(Function(item) item.Reason).ToList(),
             .StrategySignals = strategySignals,
-            .SuggestedStopPrice = selected.Where(Function(item) item.SuggestedStopPrice > 0D).Select(Function(item) item.SuggestedStopPrice).FirstOrDefault(),
-            .SuggestedTargetPrice = selected.Where(Function(item) item.SuggestedTargetPrice > 0D).Select(Function(item) item.SuggestedTargetPrice).FirstOrDefault(),
             .SimulationOnly = configuration.SimulationOnly
         }
     End Function
@@ -854,6 +905,9 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim copy As New SpotBotConfiguration With {
             .CombinationMode = source.CombinationMode,
             .RequiredConfirmations = source.RequiredConfirmations,
+            .BollingerPeriod = source.BollingerPeriod,
+            .BollingerStandardDeviations = source.BollingerStandardDeviations,
+            .BollingerCandleMinutes = source.BollingerCandleMinutes,
             .MinimumWeightedScore = source.MinimumWeightedScore,
             .Cooldown = source.Cooldown,
             .MaximumPriceHistory = source.MaximumPriceHistory,
@@ -865,13 +919,6 @@ Public NotInheritable Class SpotTradeBotEngine
             .BreakoutPeriod = source.BreakoutPeriod,
             .GridSpacingPercent = source.GridSpacingPercent,
             .GridReferencePrice = source.GridReferencePrice,
-            .WaveEmaPeriod = source.WaveEmaPeriod,
-            .WaveSlopeLookback = source.WaveSlopeLookback,
-            .WaveTouchTolerancePercent = source.WaveTouchTolerancePercent,
-            .WaveMinimumSlopeDegrees = source.WaveMinimumSlopeDegrees,
-            .WaveStrongSlopeDegrees = source.WaveStrongSlopeDegrees,
-            .WaveMinimumRiskReward = source.WaveMinimumRiskReward,
-            .WaveStructureLookback = source.WaveStructureLookback,
             .SimulationStartingQuote = source.SimulationStartingQuote,
             .SimulationAllocationPercent = source.SimulationAllocationPercent,
             .SimulationFeeRate = source.SimulationFeeRate,
@@ -904,9 +951,9 @@ Public NotInheritable Class SpotTradeBotEngine
         Public Property EntryPrice As Decimal
         Public Property CostBasis As Decimal
         Public Property LastPrice As Decimal
-        Public Property EntryTimestampUtc As DateTime
         Public Property StopPrice As Decimal
-        Public Property TargetPrice As Decimal
+        Public Property TakeProfitPrice As Decimal
+        Public Property EntryTimestampUtc As DateTime
     End Class
 
     Private NotInheritable Class RsiCandleState
@@ -914,8 +961,8 @@ Public NotInheritable Class SpotTradeBotEngine
         Public Property Close As Decimal
     End Class
 
-    Private NotInheritable Class WaveCandleState
-        Public Property TimestampUtc As DateTime
+    Private NotInheritable Class CandleState
+        Public Property StartUtc As DateTime
         Public Property Open As Decimal
         Public Property High As Decimal
         Public Property Low As Decimal

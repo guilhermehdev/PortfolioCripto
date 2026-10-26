@@ -19,7 +19,7 @@ Public Enum SpotBotStrategyKind
     Rsi = 1
     Breakout = 2
     Grid = 3
-    WavePullback = 4
+    BollingerMeanReversion = 4
 End Enum
 
 Public Enum SpotBotUniverseMode
@@ -28,43 +28,28 @@ Public Enum SpotBotUniverseMode
 End Enum
 
 Public NotInheritable Class SpotBotPricePoint
-    Public Sub New(timestampUtc As DateTime, price As Decimal)
+    Public Sub New(
+        timestampUtc As DateTime,
+        price As Decimal,
+        Optional openPrice As Decimal = 0D,
+        Optional highPrice As Decimal = 0D,
+        Optional lowPrice As Decimal = 0D)
+
         Me.TimestampUtc = timestampUtc
         Me.Price = price
+        Me.Open = If(openPrice > 0D, openPrice, price)
+        Me.High = If(highPrice > 0D, highPrice, Math.Max(Me.Open, price))
+        Me.Low = If(lowPrice > 0D, lowPrice, Math.Min(Me.Open, price))
     End Sub
 
     Public ReadOnly Property TimestampUtc As DateTime
     Public ReadOnly Property Price As Decimal
-End Class
-
-Public NotInheritable Class SpotBotCandle
-    Public Property TimestampUtc As DateTime
-    Public Property Open As Decimal
-    Public Property High As Decimal
-    Public Property Low As Decimal
-    Public Property Close As Decimal
-
-    Public ReadOnly Property Range As Decimal
+    Public ReadOnly Property Open As Decimal
+    Public ReadOnly Property High As Decimal
+    Public ReadOnly Property Low As Decimal
+    Public ReadOnly Property Close As Decimal
         Get
-            Return Math.Max(0D, High - Low)
-        End Get
-    End Property
-
-    Public ReadOnly Property Body As Decimal
-        Get
-            Return Math.Abs(Close - Open)
-        End Get
-    End Property
-
-    Public ReadOnly Property IsBullish As Boolean
-        Get
-            Return Close > Open
-        End Get
-    End Property
-
-    Public ReadOnly Property IsBearish As Boolean
-        Get
-            Return Close < Open
+            Return Price
         End Get
     End Property
 End Class
@@ -75,22 +60,24 @@ Public NotInheritable Class SpotBotStrategySignal
     Public Property Confidence As Decimal
     Public Property Reason As String = String.Empty
     Public Property ObservedValue As Decimal
-    Public Property SuggestedStopPrice As Decimal
-    Public Property SuggestedTargetPrice As Decimal
+    Public Property EntryPrice As Decimal
+    Public Property StopPrice As Decimal
+    Public Property TakeProfitPrice As Decimal
 End Class
 
 Public NotInheritable Class SpotBotSignal
     Public Property Symbol As String = String.Empty
     Public Property TimestampUtc As DateTime
     Public Property Price As Decimal
+    Public Property EntryPrice As Decimal
+    Public Property StopPrice As Decimal
+    Public Property TakeProfitPrice As Decimal
     Public Property Direction As SpotBotSignalDirection
     Public Property Confirmations As Integer
     Public Property ActiveStrategies As Integer
     Public Property Score As Decimal
     Public Property Reasons As New List(Of String)
     Public Property StrategySignals As New List(Of SpotBotStrategySignal)
-    Public Property SuggestedStopPrice As Decimal
-    Public Property SuggestedTargetPrice As Decimal
     Public Property SimulationOnly As Boolean = True
 End Class
 
@@ -115,14 +102,10 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property GridSpacingPercent As Decimal = 1D
     Public Property GridReferencePrice As Decimal
 
-    ' Parâmetros do setup da onda/relógio.
-    Public Property WaveEmaPeriod As Integer = 34
-    Public Property WaveSlopeLookback As Integer = 5
-    Public Property WaveTouchTolerancePercent As Decimal = 0.35D
-    Public Property WaveMinimumSlopeDegrees As Decimal = 15D
-    Public Property WaveStrongSlopeDegrees As Decimal = 45D
-    Public Property WaveMinimumRiskReward As Decimal = 2D
-    Public Property WaveStructureLookback As Integer = 20
+    ' Parâmetros da variante Bollinger selecionada no painel.
+    Public Property BollingerPeriod As Integer = 20
+    Public Property BollingerStandardDeviations As Decimal = 3D
+    Public Property BollingerCandleMinutes As Integer = 1440
 
     ' Parâmetros da carteira virtual usada pelo modo de simulação.
     Public Property SimulationStartingQuote As Decimal = 1000D
@@ -202,6 +185,8 @@ Public NotInheritable Class SpotBotOpenPosition
     Public Property Notional As Decimal
     Public Property UnrealizedPnl As Decimal
     Public Property RoiPercent As Decimal
+    Public Property StopPrice As Decimal
+    Public Property TakeProfitPrice As Decimal
     Public Property OpenedAtUtc As DateTime
 End Class
 
@@ -213,6 +198,9 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property EnabledStrategies As New HashSet(Of SpotBotStrategyKind)()
     Public Property CombinationMode As SpotBotCombinationMode = SpotBotCombinationMode.MinimumConfirmations
     Public Property RequiredConfirmations As Integer = 2
+    Public Property BollingerPeriod As Integer = 20
+    Public Property BollingerStandardDeviations As Decimal = 3D
+    Public Property BollingerCandleMinutes As Integer = 1440
     Public Property AllocationPercent As Decimal = 10D
     Public Property FeeRate As Decimal = 0.001D
 End Class
@@ -233,14 +221,5 @@ Public Interface ISpotBotStrategy
     Function Evaluate(
         symbol As String,
         prices As IReadOnlyList(Of SpotBotPricePoint),
-        configuration As SpotBotConfiguration) As SpotBotStrategySignal
-End Interface
-
-Public Interface ISpotBotCandleStrategy
-    Inherits ISpotBotStrategy
-
-    Function EvaluateCandles(
-        symbol As String,
-        candles As IReadOnlyList(Of SpotBotCandle),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal
 End Interface
