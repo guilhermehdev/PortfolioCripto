@@ -223,6 +223,207 @@ Public NotInheritable Class SpotBotBreakoutStrategy
     End Function
 End Class
 
+Public NotInheritable Class SpotBotWavePullbackStrategy
+    Implements ISpotBotCandleStrategy
+
+    Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotCandleStrategy.Kind
+        Get
+            Return SpotBotStrategyKind.WavePullback
+        End Get
+    End Property
+
+    Public Function Evaluate(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
+
+        Return HoldSignal("aguardando candle fechado da onda")
+    End Function
+
+    Public Function EvaluateCandles(
+        symbol As String,
+        candles As IReadOnlyList(Of SpotBotCandle),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotCandleStrategy.EvaluateCandles
+
+        Dim period = Math.Max(5, configuration.WaveEmaPeriod)
+        Dim lookback = Math.Max(2, configuration.WaveSlopeLookback)
+        If candles Is Nothing OrElse candles.Count < period + lookback + 2 Then
+            Return HoldSignal("histórico insuficiente para a onda")
+        End If
+
+        Dim previous = candles(candles.Count - 2)
+        Dim confirmation = candles(candles.Count - 1)
+        Dim emaNow = CalculateEma(candles, candles.Count - 1, period)
+        Dim emaPast = CalculateEma(candles, candles.Count - 1 - lookback, period)
+        Dim averageRange = CalculateAverageRange(candles, candles.Count - 1, lookback)
+
+        If averageRange <= 0D Then
+            Return HoldSignal("range médio inválido para a onda")
+        End If
+
+        Dim priceDelta = emaNow - emaPast
+        Dim slopeDegrees = CDec(Math.Atan2(CDbl(Math.Abs(priceDelta)), CDbl(averageRange * lookback)) * 180D / Math.PI)
+        Dim tolerance = Math.Max(0D, configuration.WaveTouchTolerancePercent) / 100D
+        Dim bandHalfWidth = averageRange
+        Dim bandUpper = emaPast + bandHalfWidth
+        Dim bandLower = emaPast - bandHalfWidth
+        Dim touchedBand = previous.Low <= bandUpper * (1D + tolerance) AndAlso
+                          previous.High >= bandLower * (1D - tolerance)
+
+        If Not touchedBand Then
+            Return HoldSignal("preço não tocou a banda da onda")
+        End If
+
+        Dim range = Math.Max(previous.Range, confirmation.Range)
+        If range <= 0D Then
+            Return HoldSignal("candle de confirmação sem range")
+        End If
+
+        Dim bodyRatio = confirmation.Body / range
+        Dim bullishConfirmation = confirmation.IsBullish AndAlso
+                                   bodyRatio >= 0.5D AndAlso
+                                   confirmation.Close > previous.High
+        Dim bearishConfirmation = confirmation.IsBearish AndAlso
+                                  bodyRatio >= 0.5D AndAlso
+                                  confirmation.Close < previous.Low
+
+        Dim rsi = CalculateRsi(candles, configuration.RsiPeriod)
+        Dim highSlope = priceDelta > 0D AndAlso slopeDegrees >= configuration.WaveMinimumSlopeDegrees
+        Dim lowSlope = priceDelta < 0D AndAlso slopeDegrees >= configuration.WaveMinimumSlopeDegrees
+        Dim structureLookback = Math.Max(5, configuration.WaveStructureLookback)
+        Dim structureFirst = Math.Max(0, candles.Count - structureLookback - 2)
+        Dim structureLast = candles.Count - 3
+        Dim priorResistance = Decimal.MinValue
+        Dim priorSupport = Decimal.MaxValue
+
+        For index = structureFirst To structureLast
+            priorResistance = Math.Max(priorResistance, candles(index).High)
+            priorSupport = Math.Min(priorSupport, candles(index).Low)
+        Next
+
+        If highSlope AndAlso bullishConfirmation Then
+            If rsi >= configuration.RsiOverbought Then
+                Return HoldSignal($"alta confirmada, mas RSI {rsi:F2} sobrecomprado")
+            End If
+
+            Dim stopPrice = Math.Min(previous.Low, bandLower)
+            Dim risk = confirmation.Close - stopPrice
+            Dim room = If(priorResistance > confirmation.Close,
+                          priorResistance - confirmation.Close,
+                          risk * configuration.WaveMinimumRiskReward)
+            If risk <= 0D OrElse room < risk * configuration.WaveMinimumRiskReward Then
+                Return HoldSignal("compra bloqueada: resistência próxima ou risco/retorno menor que 2:1")
+            End If
+
+            Dim strength = If(slopeDegrees >= configuration.WaveStrongSlopeDegrees, "alta forte", "alta")
+            Return New SpotBotStrategySignal With {
+                .Strategy = Kind,
+                .Direction = SpotBotSignalDirection.Buy,
+                .Confidence = If(slopeDegrees >= configuration.WaveStrongSlopeDegrees, 1D, 0.8D),
+                .ObservedValue = slopeDegrees,
+                .Reason = $"onda {strength} ({slopeDegrees:F1} graus), toque e rompimento da máxima; RSI {rsi:F2}; RR {(room / risk):F2}:1",
+                .SuggestedStopPrice = stopPrice,
+                .SuggestedTargetPrice = confirmation.Close + (risk * configuration.WaveMinimumRiskReward)
+            }
+        End If
+
+        If lowSlope AndAlso bearishConfirmation Then
+            If rsi <= configuration.RsiOversold Then
+                Return HoldSignal($"baixa confirmada, mas RSI {rsi:F2} sobrevendido")
+            End If
+
+            Dim stopPrice = Math.Max(previous.High, bandUpper)
+            Dim risk = stopPrice - confirmation.Close
+            Dim room = If(priorSupport < confirmation.Close,
+                          confirmation.Close - priorSupport,
+                          risk * configuration.WaveMinimumRiskReward)
+            If risk <= 0D OrElse room < risk * configuration.WaveMinimumRiskReward Then
+                Return HoldSignal("venda bloqueada: suporte próximo ou risco/retorno menor que 2:1")
+            End If
+
+            Dim strength = If(slopeDegrees >= configuration.WaveStrongSlopeDegrees, "baixa forte", "baixa")
+            Return New SpotBotStrategySignal With {
+                .Strategy = Kind,
+                .Direction = SpotBotSignalDirection.Sell,
+                .Confidence = If(slopeDegrees >= configuration.WaveStrongSlopeDegrees, 1D, 0.8D),
+                .ObservedValue = slopeDegrees,
+                .Reason = $"onda {strength} ({slopeDegrees:F1} graus), toque e rompimento da mínima; RSI {rsi:F2}; RR {(room / risk):F2}:1",
+                .SuggestedStopPrice = stopPrice,
+                .SuggestedTargetPrice = confirmation.Close - (risk * configuration.WaveMinimumRiskReward)
+            }
+        End If
+
+        Return HoldSignal("sem confirmação da onda")
+    End Function
+
+    Private Shared Function CalculateEma(
+        candles As IReadOnlyList(Of SpotBotCandle),
+        lastIndex As Integer,
+        period As Integer) As Decimal
+
+        Dim firstIndex = Math.Max(0, lastIndex - period + 1)
+        Dim smoothing = 2D / (period + 1D)
+        Dim ema = candles(firstIndex).Close
+
+        For index = firstIndex + 1 To lastIndex
+            ema = (candles(index).Close - ema) * smoothing + ema
+        Next
+
+        Return ema
+    End Function
+
+    Private Shared Function CalculateAverageRange(
+        candles As IReadOnlyList(Of SpotBotCandle),
+        lastIndex As Integer,
+        count As Integer) As Decimal
+
+        Dim firstIndex = Math.Max(0, lastIndex - count + 1)
+        Dim total = 0D
+        Dim samples = 0
+        For index = firstIndex To lastIndex
+            total += candles(index).Range
+            samples += 1
+        Next
+
+        Return If(samples = 0, 0D, total / samples)
+    End Function
+
+    Private Shared Function CalculateRsi(
+        candles As IReadOnlyList(Of SpotBotCandle),
+        period As Integer) As Decimal
+
+        period = Math.Max(2, period)
+        If candles.Count < period + 1 Then Return 50D
+
+        Dim gain = 0D
+        Dim loss = 0D
+        Dim first = candles.Count - period - 1
+        For index = first + 1 To first + period
+            Dim change = candles(index).Close - candles(index - 1).Close
+            If change >= 0D Then gain += change Else loss -= change
+        Next
+
+        gain /= period
+        loss /= period
+        For index = first + period + 1 To candles.Count - 1
+            Dim change = candles(index).Close - candles(index - 1).Close
+            gain = ((gain * (period - 1)) + Math.Max(0D, change)) / period
+            loss = ((loss * (period - 1)) + Math.Max(0D, -change)) / period
+        Next
+
+        If loss = 0D Then Return If(gain = 0D, 50D, 100D)
+        Return 100D - (100D / (1D + (gain / loss)))
+    End Function
+
+    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
+        Return New SpotBotStrategySignal With {
+            .Strategy = SpotBotStrategyKind.WavePullback,
+            .Direction = SpotBotSignalDirection.Hold,
+            .Reason = reason
+        }
+    End Function
+End Class
+
 Public NotInheritable Class SpotBotGridStrategy
     Implements ISpotBotStrategy
 

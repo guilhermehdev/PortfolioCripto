@@ -19,6 +19,7 @@ Public Enum SpotBotStrategyKind
     Rsi = 1
     Breakout = 2
     Grid = 3
+    WavePullback = 4
 End Enum
 
 Public Enum SpotBotUniverseMode
@@ -36,12 +37,46 @@ Public NotInheritable Class SpotBotPricePoint
     Public ReadOnly Property Price As Decimal
 End Class
 
+Public NotInheritable Class SpotBotCandle
+    Public Property TimestampUtc As DateTime
+    Public Property Open As Decimal
+    Public Property High As Decimal
+    Public Property Low As Decimal
+    Public Property Close As Decimal
+
+    Public ReadOnly Property Range As Decimal
+        Get
+            Return Math.Max(0D, High - Low)
+        End Get
+    End Property
+
+    Public ReadOnly Property Body As Decimal
+        Get
+            Return Math.Abs(Close - Open)
+        End Get
+    End Property
+
+    Public ReadOnly Property IsBullish As Boolean
+        Get
+            Return Close > Open
+        End Get
+    End Property
+
+    Public ReadOnly Property IsBearish As Boolean
+        Get
+            Return Close < Open
+        End Get
+    End Property
+End Class
+
 Public NotInheritable Class SpotBotStrategySignal
     Public Property Strategy As SpotBotStrategyKind
     Public Property Direction As SpotBotSignalDirection
     Public Property Confidence As Decimal
     Public Property Reason As String = String.Empty
     Public Property ObservedValue As Decimal
+    Public Property SuggestedStopPrice As Decimal
+    Public Property SuggestedTargetPrice As Decimal
 End Class
 
 Public NotInheritable Class SpotBotSignal
@@ -54,6 +89,8 @@ Public NotInheritable Class SpotBotSignal
     Public Property Score As Decimal
     Public Property Reasons As New List(Of String)
     Public Property StrategySignals As New List(Of SpotBotStrategySignal)
+    Public Property SuggestedStopPrice As Decimal
+    Public Property SuggestedTargetPrice As Decimal
     Public Property SimulationOnly As Boolean = True
 End Class
 
@@ -77,6 +114,15 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property BreakoutPeriod As Integer = 20
     Public Property GridSpacingPercent As Decimal = 1D
     Public Property GridReferencePrice As Decimal
+
+    ' Parâmetros do setup da onda/relógio.
+    Public Property WaveEmaPeriod As Integer = 34
+    Public Property WaveSlopeLookback As Integer = 5
+    Public Property WaveTouchTolerancePercent As Decimal = 0.35D
+    Public Property WaveMinimumSlopeDegrees As Decimal = 15D
+    Public Property WaveStrongSlopeDegrees As Decimal = 45D
+    Public Property WaveMinimumRiskReward As Decimal = 2D
+    Public Property WaveStructureLookback As Integer = 20
 
     ' Parâmetros da carteira virtual usada pelo modo de simulação.
     Public Property SimulationStartingQuote As Decimal = 1000D
@@ -187,5 +233,14 @@ Public Interface ISpotBotStrategy
     Function Evaluate(
         symbol As String,
         prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal
+End Interface
+
+Public Interface ISpotBotCandleStrategy
+    Inherits ISpotBotStrategy
+
+    Function EvaluateCandles(
+        symbol As String,
+        candles As IReadOnlyList(Of SpotBotCandle),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal
 End Interface

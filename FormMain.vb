@@ -559,7 +559,7 @@ Public Class FormMain
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.EmaCrossover, "EMA", 6, 24, 100)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Rsi, "RSI", 112, 24, 80)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Breakout, "Rompimento", 198, 24, 118)
-        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Grid, "Grade", 322, 24, 80)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.WavePullback, "Onda", 322, 24, 80)
 
         If _spotTradeBot.HasRestoredState Then
             For Each strategyCheck In _botStrategyChecks
@@ -1100,6 +1100,18 @@ Public Class FormMain
         ApplySpotBotControls(resumePreviousSimulation)
         If _spotTradeBot.Configuration.EnabledStrategies.Count = 0 Then
             AppendSpotBotLog("Selecione pelo menos uma estratégia antes de iniciar.", Color.Gold)
+            Return
+        End If
+
+        If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.WavePullback) AndAlso
+           _spotTradeBot.Configuration.StopLossPercent > 0D AndAlso
+           _spotTradeBot.Configuration.TakeProfitPercent <
+           _spotTradeBot.Configuration.StopLossPercent * _spotTradeBot.Configuration.WaveMinimumRiskReward Then
+            AppendSpotBotLog(
+                $"A estratégia Onda exige risco/retorno mínimo de " &
+                $"{_spotTradeBot.Configuration.WaveMinimumRiskReward:0.##}:1. " &
+                "Ajuste o TP ou o SL antes de iniciar.",
+                Color.Gold)
             Return
         End If
 
