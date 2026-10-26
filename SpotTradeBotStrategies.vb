@@ -242,7 +242,7 @@ Public NotInheritable Class SpotBotWavePullbackStrategy
 
     Public Function EvaluateCandles(
         symbol As String,
-        candles As IReadOnlyList(Of SpotBotCandle),
+        candles As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotCandleStrategy.EvaluateCandles
 
         Dim period = Math.Max(5, configuration.WaveEmaPeriod)
@@ -322,8 +322,8 @@ Public NotInheritable Class SpotBotWavePullbackStrategy
                 .Confidence = If(slopeDegrees >= configuration.WaveStrongSlopeDegrees, 1D, 0.8D),
                 .ObservedValue = slopeDegrees,
                 .Reason = $"onda {strength} ({slopeDegrees:F1} graus), toque e rompimento da máxima; RSI {rsi:F2}; RR {(room / risk):F2}:1",
-                .SuggestedStopPrice = stopPrice,
-                .SuggestedTargetPrice = confirmation.Close + (risk * configuration.WaveMinimumRiskReward)
+                .StopPrice = stopPrice,
+                .TakeProfitPrice = confirmation.Close + (risk * configuration.WaveMinimumRiskReward)
             }
         End If
 
@@ -348,8 +348,8 @@ Public NotInheritable Class SpotBotWavePullbackStrategy
                 .Confidence = If(slopeDegrees >= configuration.WaveStrongSlopeDegrees, 1D, 0.8D),
                 .ObservedValue = slopeDegrees,
                 .Reason = $"onda {strength} ({slopeDegrees:F1} graus), toque e rompimento da mínima; RSI {rsi:F2}; RR {(room / risk):F2}:1",
-                .SuggestedStopPrice = stopPrice,
-                .SuggestedTargetPrice = confirmation.Close - (risk * configuration.WaveMinimumRiskReward)
+                .StopPrice = stopPrice,
+                .TakeProfitPrice = confirmation.Close - (risk * configuration.WaveMinimumRiskReward)
             }
         End If
 
@@ -357,7 +357,7 @@ Public NotInheritable Class SpotBotWavePullbackStrategy
     End Function
 
     Private Shared Function CalculateEma(
-        candles As IReadOnlyList(Of SpotBotCandle),
+        candles As IReadOnlyList(Of SpotBotPricePoint),
         lastIndex As Integer,
         period As Integer) As Decimal
 
@@ -373,7 +373,7 @@ Public NotInheritable Class SpotBotWavePullbackStrategy
     End Function
 
     Private Shared Function CalculateAverageRange(
-        candles As IReadOnlyList(Of SpotBotCandle),
+        candles As IReadOnlyList(Of SpotBotPricePoint),
         lastIndex As Integer,
         count As Integer) As Decimal
 
@@ -389,7 +389,7 @@ Public NotInheritable Class SpotBotWavePullbackStrategy
     End Function
 
     Private Shared Function CalculateRsi(
-        candles As IReadOnlyList(Of SpotBotCandle),
+        candles As IReadOnlyList(Of SpotBotPricePoint),
         period As Integer) As Decimal
 
         period = Math.Max(2, period)

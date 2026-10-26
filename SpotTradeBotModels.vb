@@ -20,6 +20,7 @@ Public Enum SpotBotStrategyKind
     Breakout = 2
     Grid = 3
     BollingerMeanReversion = 4
+    WavePullback = 5
 End Enum
 
 Public Enum SpotBotUniverseMode
@@ -50,6 +51,30 @@ Public NotInheritable Class SpotBotPricePoint
     Public ReadOnly Property Close As Decimal
         Get
             Return Price
+        End Get
+    End Property
+
+    Public ReadOnly Property Range As Decimal
+        Get
+            Return Math.Max(0D, High - Low)
+        End Get
+    End Property
+
+    Public ReadOnly Property Body As Decimal
+        Get
+            Return Math.Abs(Close - Open)
+        End Get
+    End Property
+
+    Public ReadOnly Property IsBullish As Boolean
+        Get
+            Return Close > Open
+        End Get
+    End Property
+
+    Public ReadOnly Property IsBearish As Boolean
+        Get
+            Return Close < Open
         End Get
     End Property
 End Class
@@ -106,6 +131,15 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property BollingerPeriod As Integer = 20
     Public Property BollingerStandardDeviations As Decimal = 3D
     Public Property BollingerCandleMinutes As Integer = 1440
+
+    ' Parâmetros da estratégia da onda/relógio.
+    Public Property WaveEmaPeriod As Integer = 34
+    Public Property WaveSlopeLookback As Integer = 5
+    Public Property WaveTouchTolerancePercent As Decimal = 0.35D
+    Public Property WaveMinimumSlopeDegrees As Decimal = 15D
+    Public Property WaveStrongSlopeDegrees As Decimal = 45D
+    Public Property WaveMinimumRiskReward As Decimal = 2D
+    Public Property WaveStructureLookback As Integer = 20
 
     ' Parâmetros da carteira virtual usada pelo modo de simulação.
     Public Property SimulationStartingQuote As Decimal = 1000D
@@ -221,5 +255,14 @@ Public Interface ISpotBotStrategy
     Function Evaluate(
         symbol As String,
         prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal
+End Interface
+
+Public Interface ISpotBotCandleStrategy
+    Inherits ISpotBotStrategy
+
+    Function EvaluateCandles(
+        symbol As String,
+        candles As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal
 End Interface

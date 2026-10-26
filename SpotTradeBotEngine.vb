@@ -10,6 +10,8 @@ Public NotInheritable Class SpotTradeBotEngine
     Private ReadOnly _rsiCurrentCandles As New Dictionary(Of String, RsiCandleState)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _bollingerCandleHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _bollingerCurrentCandles As New Dictionary(Of String, CandleState)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _waveCandleHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _waveCurrentCandles As New Dictionary(Of String, CandleState)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _lastSignals As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _simulationPositions As New Dictionary(Of String, SimulationPosition)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _configuration As New SpotBotConfiguration()
@@ -38,6 +40,7 @@ Public NotInheritable Class SpotTradeBotEngine
         RegisterStrategy(New SpotBotBreakoutStrategy())
         RegisterStrategy(New SpotBotGridStrategy())
         RegisterStrategy(New SpotBotBollingerMeanReversionStrategy())
+        RegisterStrategy(New SpotBotWavePullbackStrategy())
 
         Dim persistedState As SpotBotPersistedSimulationState = Nothing
         Try
@@ -173,6 +176,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 _rsiCurrentCandles.Clear()
                 _bollingerCandleHistory.Clear()
                 _bollingerCurrentCandles.Clear()
+                _waveCandleHistory.Clear()
+                _waveCurrentCandles.Clear()
                 _lastSignals.Clear()
                 ResetSimulationLocked()
                 If Not _running Then
@@ -186,6 +191,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 _rsiCurrentCandles.Remove(normalized)
                 _bollingerCandleHistory.Remove(normalized)
                 _bollingerCurrentCandles.Remove(normalized)
+                _waveCandleHistory.Remove(normalized)
+                _waveCurrentCandles.Remove(normalized)
                 For Each key In _lastSignals.Keys.
                     Where(Function(item) item.StartsWith(normalized & "|", StringComparison.OrdinalIgnoreCase)).
                     ToList()
@@ -222,11 +229,14 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim bollingerHistory As List(Of SpotBotPricePoint) = Nothing
         Dim rsiPriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim bollingerPriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
+        Dim wavePriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim rsiClosedCandle As SpotBotPricePoint = Nothing
         Dim bollingerClosedCandle As SpotBotPricePoint = Nothing
+        Dim waveClosedCandle As SpotBotPricePoint = Nothing
         Dim closedCandle As SpotBotPricePoint = Nothing
         Dim candleClosed As Boolean
         Dim bollingerCandleClosed As Boolean
+        Dim waveCandleClosed As Boolean
         Dim enabledStrategies As List(Of SpotBotStrategyKind)
         Dim configurationSnapshot As SpotBotConfiguration
         Dim activeRunId As Long
@@ -264,7 +274,19 @@ Public NotInheritable Class SpotTradeBotEngine
                 candleClosed = candleClosed OrElse bollingerCandleClosed
             End If
 
-            closedCandle = If(rsiClosedCandle, bollingerClosedCandle)
+            If enabledStrategies.Contains(SpotBotStrategyKind.WavePullback) Then
+                Dim waveHistory = GetOrCreateWaveCandleHistory(normalizedSymbol)
+                waveCandleClosed = UpdateWaveCandle(
+                    normalizedSymbol,
+                    observedAt,
+                    price,
+                    waveHistory,
+                    waveClosedCandle)
+                wavePriceSnapshot = waveHistory.ToArray()
+                candleClosed = candleClosed OrElse waveCandleClosed
+            End If
+
+            closedCandle = If(rsiClosedCandle, If(bollingerClosedCandle, waveClosedCandle))
 
             configurationSnapshot = CopyConfiguration(_configuration)
             activeRunId = _activeRunId
@@ -297,7 +319,17 @@ Public NotInheritable Class SpotTradeBotEngine
                 End If
 
                 Dim strategySignal As SpotBotStrategySignal
-                strategySignal = strategy.Evaluate(normalizedSymbol, strategyPrices, configurationSnapshot)
+                If kind = SpotBotStrategyKind.WavePullback Then
+                    If Not waveCandleClosed Then Continue For
+                    Dim candleStrategy = TryCast(strategy, ISpotBotCandleStrategy)
+                    If candleStrategy Is Nothing Then Continue For
+                    strategySignal = candleStrategy.EvaluateCandles(
+                        normalizedSymbol,
+                        wavePriceSnapshot,
+                        configurationSnapshot)
+                Else
+                    strategySignal = strategy.Evaluate(normalizedSymbol, strategyPrices, configurationSnapshot)
+                End If
                 If strategySignal IsNot Nothing Then
                     strategySignals.Add(strategySignal)
                 End If
@@ -636,6 +668,16 @@ Public NotInheritable Class SpotTradeBotEngine
         Return history
     End Function
 
+    Private Function GetOrCreateWaveCandleHistory(symbol As String) As List(Of SpotBotPricePoint)
+        Dim history As List(Of SpotBotPricePoint) = Nothing
+        If Not _waveCandleHistory.TryGetValue(symbol, history) Then
+            history = New List(Of SpotBotPricePoint)()
+            _waveCandleHistory(symbol) = history
+        End If
+
+        Return history
+    End Function
+
     Private Function UpdateRsiCandle(
         symbol As String,
         timestampUtc As DateTime,
@@ -728,6 +770,57 @@ Public NotInheritable Class SpotTradeBotEngine
             .Low = price,
             .Close = price
         }
+        Return True
+    End Function
+
+    Private Function UpdateWaveCandle(
+        symbol As String,
+        timestampUtc As DateTime,
+        price As Decimal,
+        history As List(Of SpotBotPricePoint),
+        ByRef closedCandle As SpotBotPricePoint) As Boolean
+
+        Dim candleStart = TruncateToMinute(timestampUtc)
+        Dim currentCandle As CandleState = Nothing
+
+        If Not _waveCurrentCandles.TryGetValue(symbol, currentCandle) Then
+            _waveCurrentCandles(symbol) = New CandleState With {
+                .StartUtc = candleStart,
+                .Open = price,
+                .High = price,
+                .Low = price,
+                .Close = price}
+            Return False
+        End If
+
+        If candleStart < currentCandle.StartUtc Then Return False
+
+        If candleStart = currentCandle.StartUtc Then
+            currentCandle.High = Math.Max(currentCandle.High, price)
+            currentCandle.Low = Math.Min(currentCandle.Low, price)
+            currentCandle.Close = price
+            Return False
+        End If
+
+        closedCandle = New SpotBotPricePoint(
+            currentCandle.StartUtc,
+            currentCandle.Close,
+            currentCandle.Open,
+            currentCandle.High,
+            currentCandle.Low)
+        history.Add(closedCandle)
+
+        Dim maximumCandles = Math.Max(60, _configuration.MaximumPriceHistory)
+        If history.Count > maximumCandles Then
+            history.RemoveRange(0, history.Count - maximumCandles)
+        End If
+
+        _waveCurrentCandles(symbol) = New CandleState With {
+            .StartUtc = candleStart,
+            .Open = price,
+            .High = price,
+            .Low = price,
+            .Close = price}
         Return True
     End Function
 
@@ -908,6 +1001,13 @@ Public NotInheritable Class SpotTradeBotEngine
             .BollingerPeriod = source.BollingerPeriod,
             .BollingerStandardDeviations = source.BollingerStandardDeviations,
             .BollingerCandleMinutes = source.BollingerCandleMinutes,
+            .WaveEmaPeriod = source.WaveEmaPeriod,
+            .WaveSlopeLookback = source.WaveSlopeLookback,
+            .WaveTouchTolerancePercent = source.WaveTouchTolerancePercent,
+            .WaveMinimumSlopeDegrees = source.WaveMinimumSlopeDegrees,
+            .WaveStrongSlopeDegrees = source.WaveStrongSlopeDegrees,
+            .WaveMinimumRiskReward = source.WaveMinimumRiskReward,
+            .WaveStructureLookback = source.WaveStructureLookback,
             .MinimumWeightedScore = source.MinimumWeightedScore,
             .Cooldown = source.Cooldown,
             .MaximumPriceHistory = source.MaximumPriceHistory,
