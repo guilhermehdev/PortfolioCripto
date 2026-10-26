@@ -629,7 +629,7 @@ Public Class FormMain
         End If
         editor.Controls.Add(_botConfirmations)
 
-        AddBotLabel(editor, "Candle BB", 768, 3, 100)
+        AddBotLabel(editor, "Candle", 768, 3, 100)
         _botBollingerTimeframe = New ComboBox With {
             .Name = "cbSpotBotBollingerTimeframe",
             .DropDownStyle = ComboBoxStyle.DropDownList,
@@ -733,7 +733,7 @@ Public Class FormMain
             .Height = 27,
             .ForeColor = Color.LightGray,
             .Location = New Point(940, 78),
-            .Text = "RSI usa 1 minuto; Bollinger usa o candle selecionado."
+            .Text = "RSI usa 1 minuto; Onda e Bollinger usam o candle selecionado."
         }
         editor.Controls.Add(hint)
 

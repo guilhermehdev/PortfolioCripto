@@ -281,7 +281,8 @@ Public NotInheritable Class SpotTradeBotEngine
                     observedAt,
                     price,
                     waveHistory,
-                    waveClosedCandle)
+                    waveClosedCandle,
+                    _configuration.BollingerCandleMinutes)
                 wavePriceSnapshot = waveHistory.ToArray()
                 candleClosed = candleClosed OrElse waveCandleClosed
             End If
@@ -778,9 +779,10 @@ Public NotInheritable Class SpotTradeBotEngine
         timestampUtc As DateTime,
         price As Decimal,
         history As List(Of SpotBotPricePoint),
-        ByRef closedCandle As SpotBotPricePoint) As Boolean
+        ByRef closedCandle As SpotBotPricePoint,
+        candleMinutes As Integer) As Boolean
 
-        Dim candleStart = TruncateToMinute(timestampUtc)
+        Dim candleStart = TruncateToBollingerInterval(timestampUtc, candleMinutes)
         Dim currentCandle As CandleState = Nothing
 
         If Not _waveCurrentCandles.TryGetValue(symbol, currentCandle) Then
@@ -899,18 +901,7 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim selected As List(Of SpotBotStrategySignal) = Nothing
         Dim score As Decimal = 0D
 
-        ' Uma única estratégia selecionada deve poder operar sozinha. Isso é
-        ' importante para a Bollinger do vídeo, que não depende de EMA/RSI.
-        If configuration.EnabledStrategies.Count = 1 AndAlso activeCount > 0 Then
-            If buySignals.Count > 0 AndAlso buySignals.Count >= sellSignals.Count Then
-                direction = SpotBotSignalDirection.Buy
-                selected = buySignals
-            ElseIf sellSignals.Count > 0 Then
-                direction = SpotBotSignalDirection.Sell
-                selected = sellSignals
-            End If
-        Else
-            Select Case configuration.CombinationMode
+        Select Case configuration.CombinationMode
             Case SpotBotCombinationMode.Any
                 If buySignals.Sum(Function(item) item.Confidence) >= sellSignals.Sum(Function(item) item.Confidence) Then
                     direction = If(buySignals.Count > 0, SpotBotSignalDirection.Buy, SpotBotSignalDirection.Hold)
@@ -953,8 +944,7 @@ Public NotInheritable Class SpotTradeBotEngine
                     selected = sellSignals
                     score = sellScore
                 End If
-            End Select
-        End If
+        End Select
 
         If direction = SpotBotSignalDirection.Hold OrElse selected Is Nothing Then
             Return Nothing
