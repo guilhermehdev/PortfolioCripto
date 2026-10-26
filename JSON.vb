@@ -355,7 +355,7 @@ Public Class JSON
         datagrid.RowTemplate.Height = 35
         datagrid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal
         datagrid.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        datagrid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+        datagrid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
 
         With datagrid.ColumnHeadersDefaultCellStyle
             .BackColor = Color.FromArgb(40, 40, 40)
@@ -371,6 +371,20 @@ Public Class JSON
             datagrid.Columns("Qtd").Visible = True
             datagrid.Columns("Qtd").HeaderText = "Qtd"
         End If
+
+        ' ROI precisa permanecer em uma única linha. Como o grid usa Fill por
+        ' padrão, sem uma largura mínima o valor negativo (por exemplo,
+        ' "-R$ 71,20") pode ficar estreito e ser quebrado em duas linhas.
+        For Each roiColumnName In New String() {"ROIusd", "ROIbrl"}
+            If datagrid.Columns.Contains(roiColumnName) Then
+                Dim roiColumn = datagrid.Columns(roiColumnName)
+                roiColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+                roiColumn.MinimumWidth = 95
+                roiColumn.Width = 95
+                roiColumn.DefaultCellStyle.WrapMode = DataGridViewTriState.False
+                roiColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            End If
+        Next
 
         Try
             Dim cm As CurrencyManager = CType(My.Forms.FormMain.BindingContext(datagrid.DataSource), CurrencyManager)
@@ -400,7 +414,7 @@ Public Class JSON
                 End With
 
                 datagrid.Columns(1).HeaderText = "Desempenho"
-                datagrid.Columns(1).Width = 80
+                datagrid.Columns(1).Width = 90
                 With datagrid.Columns(1).DefaultCellStyle
                     .BackColor = Color.Black
                     .ForeColor = Color.WhiteSmoke
@@ -427,7 +441,7 @@ Public Class JSON
                 End With
 
                 datagrid.Columns(4).HeaderText = "Entrada"
-                datagrid.Columns(4).Width = 95
+                datagrid.Columns(4).Width = 85
                 With datagrid.Columns(4).DefaultCellStyle
                     .BackColor = Color.Black
                     .ForeColor = Color.WhiteSmoke
@@ -438,7 +452,7 @@ Public Class JSON
                 End With
 
                 datagrid.Columns(5).HeaderText = "Entrada"
-                datagrid.Columns(5).Width = 95
+                datagrid.Columns(5).Width = 85
                 With datagrid.Columns(5).DefaultCellStyle
                     .BackColor = Color.Black
                     .ForeColor = Color.WhiteSmoke
@@ -449,7 +463,7 @@ Public Class JSON
                 End With
 
                 datagrid.Columns(6).HeaderText = "Preço médio"
-                datagrid.Columns(6).Width = 95
+                datagrid.Columns(6).Width = 85
                 With datagrid.Columns(6).DefaultCellStyle
                     .BackColor = Color.Black
                     .ForeColor = Color.WhiteSmoke
@@ -458,7 +472,7 @@ Public Class JSON
                 End With
 
                 datagrid.Columns(7).HeaderText = "Preço atual"
-                datagrid.Columns(7).Width = 95
+                datagrid.Columns(7).Width = 90
                 With datagrid.Columns(7).DefaultCellStyle
                     .BackColor = Color.Black
                     .ForeColor = Color.WhiteSmoke
@@ -486,7 +500,7 @@ Public Class JSON
                 End With
 
                 datagrid.Columns(10).HeaderText = "Quantia atual"
-                datagrid.Columns(10).Width = 95
+                datagrid.Columns(10).Width = 105
                 With datagrid.Columns(10).DefaultCellStyle
                     .BackColor = Color.Black
                     .ForeColor = Color.WhiteSmoke
@@ -495,7 +509,7 @@ Public Class JSON
                 End With
 
                 datagrid.Columns(11).HeaderText = "Quantia atual"
-                datagrid.Columns(11).Width = 95
+                datagrid.Columns(11).Width = 105
                 With datagrid.Columns(11).DefaultCellStyle
                     .BackColor = Color.Black
                     .ForeColor = Color.WhiteSmoke
@@ -504,24 +518,30 @@ Public Class JSON
                 End With
 
                 datagrid.Columns(12).HeaderText = "ROI"
-                datagrid.Columns(12).Width = 145
+                datagrid.Columns(12).AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+                datagrid.Columns(12).MinimumWidth = 95
+                datagrid.Columns(12).Width = 95
                 With datagrid.Columns(12).DefaultCellStyle
                     .BackColor = Color.Black
                     .Format = "C2"
                     .FormatProvider = New CultureInfo("en-US")
                     .Font = New Font(fontname, fontsize, FontStyle.Regular)
-                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                    .Alignment = DataGridViewContentAlignment.MiddleRight
+                    .WrapMode = DataGridViewTriState.False
                 End With
 
                 datagrid.Columns(13).HeaderText = "ROI"
-                datagrid.Columns(13).Width = 145
+                datagrid.Columns(13).AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+                datagrid.Columns(13).MinimumWidth = 95
+                datagrid.Columns(13).Width = 95
                 With datagrid.Columns(13).DefaultCellStyle
                     .BackColor = Color.Black
                     .ForeColor = Color.IndianRed
                     .Format = "C2"
                     .FormatProvider = New CultureInfo("pt-BR")
                     .Font = New Font(fontname, fontsize, FontStyle.Regular)
-                    .Alignment = DataGridViewContentAlignment.MiddleCenter
+                    .Alignment = DataGridViewContentAlignment.MiddleRight
+                    .WrapMode = DataGridViewTriState.False
                 End With
 
                 datagrid.Columns(14).HeaderText = "X"
@@ -687,6 +707,16 @@ Public Class JSON
                     row.Cells(9).Style.ForeColor = Color.BlueViolet
                 End If
 
+            Next
+
+            ' Padroniza a leitura do grid: headers e células ficam à esquerda.
+            ' Os controles interativos permanecem com o alinhamento próprio.
+            For Each column As DataGridViewColumn In datagrid.Columns
+                column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
+                If Not String.Equals(column.Name, "SpotClose", StringComparison.OrdinalIgnoreCase) AndAlso
+                   Not String.Equals(column.Name, "SpotExitPrice", StringComparison.OrdinalIgnoreCase) Then
+                    column.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+                End If
             Next
 
             datagrid.ClearSelection()

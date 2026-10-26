@@ -62,13 +62,20 @@ Public Class Charts
 
         series.ChartType = chartType
         series.Color = Color.Purple
+        ' Os símbolos são categorias textuais. Sem o eixo categórico
+        ' indexado, o Chart pode interpretar os rótulos como o mesmo X e
+        ' desenhar todos os ativos em uma única coluna.
+        series.IsXValueIndexed = True
         series.IsValueShownAsLabel = False
         series.LabelForeColor = Color.Gold
         series.Font = New Font("Arial", 7, FontStyle.Italic)
 
 
         For Each item As KeyValuePair(Of String, Decimal) In seriesItens
-            series.Points.AddXY(item.Key, item.Value)
+            Dim point As New DataPoint()
+            point.SetValueY(CDbl(item.Value))
+            point.AxisLabel = item.Key
+            series.Points.Add(point)
         Next
 
         For Each point In series.Points
