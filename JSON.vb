@@ -372,6 +372,15 @@ Public Class JSON
             datagrid.Columns("Qtd").HeaderText = "Qtd"
         End If
 
+        ' A coluna é recriada/revinculada a cada atualização do DataTable.
+        ' Reforce sua visibilidade antes de formatar as linhas para que um
+        ' refresh sem dados de mercado não a deixe oculta ou sem largura.
+        If datagrid.Columns.Contains("marketcap") Then
+            datagrid.Columns("marketcap").Visible = True
+            datagrid.Columns("marketcap").HeaderText = "Capitalização de mercado"
+            datagrid.Columns("marketcap").MinimumWidth = 130
+        End If
+
         ' ROI precisa permanecer em uma única linha. Como o grid usa Fill por
         ' padrão, sem uma largura mínima o valor negativo (por exemplo,
         ' "-R$ 71,20") pode ficar estreito e ser quebrado em duas linhas.

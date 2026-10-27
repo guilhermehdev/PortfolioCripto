@@ -3530,7 +3530,8 @@ Public Class FormMain
         ' MARKET CAP
         ' ==========================================
             Case "marketcap"
-                valor.ToString("C2", CultureInfo.GetCultureInfo("en-US"))
+                e.Value = valor.ToString("C2", CultureInfo.GetCultureInfo("en-US"))
+                e.FormattingApplied = True
         ' ==========================================
         ' QUANTIA ATUAL USD
         ' ==========================================
@@ -3542,6 +3543,7 @@ Public Class FormMain
         ' ==========================================
             Case "vlAtualBRL"
                 e.Value = valor.ToString("C2", CultureInfo.GetCultureInfo("pt-BR"))
+                e.FormattingApplied = True
         End Select
     End Sub
     Private Sub ImpermanetLossToolStripMenuItem_Click(sender As Object, e As EventArgs)

@@ -4,6 +4,11 @@ Imports System.Net.Http
 
 Public NotInheritable Class PortfolioMarketService
 
+    ' Mantém o último market cap conhecido para que uma falha temporária do
+    ' provedor de dados não faça a coluna desaparecer ou voltar para zero no
+    ' próximo refresh. O preço continua sendo atualizado normalmente.
+    Private Shared ReadOnly _lastMarketData As New Dictionary(Of String, CoinMarketData)(StringComparer.OrdinalIgnoreCase)
+
     Private Sub New()
     End Sub
 
@@ -180,6 +185,20 @@ Public NotInheritable Class PortfolioMarketService
                     mcapDict.GetValueOrDefault(
                         symbol,
                         New CoinMarketData())
+
+                Dim previousMarket As CoinMarketData = Nothing
+                If _lastMarketData.TryGetValue(symbol, previousMarket) Then
+                    If market.Price <= 0D Then
+                        market.Price = previousMarket.Price
+                    End If
+                    If market.MarketCap <= 0D Then
+                        market.MarketCap = previousMarket.MarketCap
+                    End If
+                End If
+
+                If market.Price > 0D OrElse market.MarketCap > 0D Then
+                    _lastMarketData(symbol) = market
+                End If
 
                 Dim currPrice As Decimal = market.Price
                 Dim quantity As Decimal = 0D
