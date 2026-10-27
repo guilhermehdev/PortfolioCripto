@@ -563,7 +563,7 @@ Public Class FormMain
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Breakout, "Rompimento", 198, 24, 118)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.WavePullback, "Onda", 322, 24, 80)
 
-        AddBotLabel(editor, "Bollinger", 406, 3, 118)
+        AddBotLabel(editor, "BNF / Bollinger", 406, 3, 118)
         _botBollingerMode = New ComboBox With {
             .Name = "cbSpotBotBollingerMode",
             .DropDownStyle = ComboBoxStyle.DropDownList,
@@ -575,12 +575,14 @@ Public Class FormMain
         }
         _botBollingerMode.Items.AddRange(New Object() {
             "Desativada",
+            "BNF 25d/20%",
             "Bollinger 20/3",
             "Bollinger 20/2,3",
             "Bollinger 25/3",
             "Bollinger 25/2,3"
         })
         _botBollingerMode.SelectedIndex = GetBollingerModeIndex()
+        AddHandler _botBollingerMode.SelectedIndexChanged, AddressOf SpotBotBollingerModeChanged
         editor.Controls.Add(_botBollingerMode)
 
         If _spotTradeBot.HasRestoredState Then
@@ -642,6 +644,7 @@ Public Class FormMain
         _botBollingerTimeframe.Items.AddRange(New Object() {"4 horas", "Diário"})
         _botBollingerTimeframe.SelectedIndex = GetBollingerTimeframeIndex()
         editor.Controls.Add(_botBollingerTimeframe)
+        UpdateSpotBotBollingerTimeframeAvailability()
 
         AddBotLabel(editor, "Universo", 876, 3, 100)
         _botUniverseMode = New ComboBox With {
@@ -733,7 +736,7 @@ Public Class FormMain
             .Height = 27,
             .ForeColor = Color.LightGray,
             .Location = New Point(940, 78),
-            .Text = "RSI usa 1 minuto; Onda e Bollinger usam o candle selecionado."
+            .Text = "RSI usa 1 minuto; BNF usa diário; Onda e Bollinger usam o candle selecionado."
         }
         editor.Controls.Add(hint)
 
@@ -997,30 +1000,53 @@ Public Class FormMain
 
     Private Function GetBollingerModeIndex() As Integer
         If Not _spotTradeBot.HasRestoredState Then Return 1
+        If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BnfContrarian) Then
+            Return 1
+        End If
         If Not _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion) Then
             Return 0
         End If
 
         If _spotTradeBot.Configuration.BollingerPeriod = 20 Then
             If Math.Abs(_spotTradeBot.Configuration.BollingerStandardDeviations - 2.3D) < 0.01D Then
-                Return 2
+                Return 3
             End If
-            Return 1
+            Return 2
         End If
 
         If Math.Abs(_spotTradeBot.Configuration.BollingerStandardDeviations - 2.3D) < 0.01D Then
-            Return 4
+            Return 5
         End If
 
-        Return 3
+        Return 4
     End Function
 
     Private Function GetBollingerTimeframeIndex() As Integer
         Return If(_spotTradeBot.HasRestoredState AndAlso _spotTradeBot.Configuration.BollingerCandleMinutes = 240, 0, 1)
     End Function
 
+    Private Sub SpotBotBollingerModeChanged(sender As Object, e As EventArgs)
+        UpdateSpotBotBollingerTimeframeAvailability()
+    End Sub
+
+    Private Sub UpdateSpotBotBollingerTimeframeAvailability()
+        If _botBollingerMode Is Nothing OrElse _botBollingerTimeframe Is Nothing Then
+            Return
+        End If
+
+        Dim isBnf = _botBollingerMode.SelectedIndex = 1
+        If isBnf Then
+            ' A referência do BNF é uma média de 25 dias; não misture-a com
+            ' candles de 4 horas e deixe o perfil visualmente explícito.
+            _botBollingerTimeframe.SelectedIndex = 1
+        End If
+        _botBollingerTimeframe.Enabled = Not isBnf
+    End Sub
+
     Private Sub ApplyBollingerTimeframe()
-        If _botBollingerTimeframe Is Nothing OrElse _botBollingerTimeframe.SelectedIndex = 0 Then
+        If _botBollingerMode IsNot Nothing AndAlso _botBollingerMode.SelectedIndex = 1 Then
+            _spotTradeBot.Configuration.BollingerCandleMinutes = 1440
+        ElseIf _botBollingerTimeframe Is Nothing OrElse _botBollingerTimeframe.SelectedIndex = 0 Then
             _spotTradeBot.Configuration.BollingerCandleMinutes = 240
         Else
             _spotTradeBot.Configuration.BollingerCandleMinutes = 1440
@@ -1030,18 +1056,29 @@ Public Class FormMain
     Private Sub ApplyBollingerMode()
         If _botBollingerMode Is Nothing OrElse _botBollingerMode.SelectedIndex <= 0 Then
             _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, False)
+            _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BnfContrarian, False)
+            Return
+        End If
+
+        _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, False)
+        _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BnfContrarian, False)
+
+        If _botBollingerMode.SelectedIndex = 1 Then
+            _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BnfContrarian, True)
+            _spotTradeBot.Configuration.BnfMovingAveragePeriod = 25
+            _spotTradeBot.Configuration.BnfMinimumDeviationPercent = 20D
             Return
         End If
 
         _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, True)
         Select Case _botBollingerMode.SelectedIndex
-            Case 2
+            Case 3
                 _spotTradeBot.Configuration.BollingerPeriod = 20
                 _spotTradeBot.Configuration.BollingerStandardDeviations = 2.3D
-            Case 3
+            Case 4
                 _spotTradeBot.Configuration.BollingerPeriod = 25
                 _spotTradeBot.Configuration.BollingerStandardDeviations = 3D
-            Case 4
+            Case 5
                 _spotTradeBot.Configuration.BollingerPeriod = 25
                 _spotTradeBot.Configuration.BollingerStandardDeviations = 2.3D
             Case Else
@@ -1244,13 +1281,19 @@ Public Class FormMain
                "Bot Spot iniciado em modo SIMULAÇÃO."),
             Color.LimeGreen)
         Dim bollingerEnabled = _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion)
+        Dim bnfEnabled = _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BnfContrarian)
         AppendSpotBotLog(
-            If(bollingerEnabled,
-               "Proteções: Bollinger usa SL/TP estruturais; percentuais ficam como fallback das demais estratégias.",
+            If(bollingerEnabled OrElse bnfEnabled,
+               "Proteções: BNF/Bollinger usa SL/TP estruturais; percentuais ficam como fallback das demais estratégias.",
                $"Proteções: TP {_spotTradeBot.Configuration.TakeProfitPercent:0.##}% | " &
                $"SL {_spotTradeBot.Configuration.StopLossPercent:0.##}% (0% desativa)."),
             Color.LightGray)
-        If bollingerEnabled Then
+        If bnfEnabled Then
+            AppendSpotBotLog(
+                $"BNF experimental: fechamento {_spotTradeBot.Configuration.BnfMinimumDeviationPercent:0.##}% abaixo da SMA {_spotTradeBot.Configuration.BnfMovingAveragePeriod} + confirmação por rompimento; " &
+                $"SL no extremo e TP na SMA; timeframe {If(_spotTradeBot.Configuration.BollingerCandleMinutes = 240, "4 horas", "diário")}.",
+                Color.LightGray)
+        ElseIf bollingerEnabled Then
             AppendSpotBotLog(
                 $"Bollinger: fechamento fora de {_spotTradeBot.Configuration.BollingerPeriod}/{_spotTradeBot.Configuration.BollingerStandardDeviations:0.##}σ + confirmação por rompimento; " &
                 $"SL no extremo e TP na média {_spotTradeBot.Configuration.BollingerPeriod}; " &

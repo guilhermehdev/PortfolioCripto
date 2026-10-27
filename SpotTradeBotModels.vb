@@ -21,6 +21,7 @@ Public Enum SpotBotStrategyKind
     Grid = 3
     BollingerMeanReversion = 4
     WavePullback = 5
+    BnfContrarian = 6
 End Enum
 
 Public Enum SpotBotUniverseMode
@@ -131,6 +132,11 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property BollingerPeriod As Integer = 20
     Public Property BollingerStandardDeviations As Decimal = 3D
     Public Property BollingerCandleMinutes As Integer = 1440
+
+    ' Parâmetros da adaptação experimental da abordagem contrária à média
+    ' atribuída ao BNF. O padrão usa SMA de 25 candles e desvio mínimo de 20%.
+    Public Property BnfMovingAveragePeriod As Integer = 25
+    Public Property BnfMinimumDeviationPercent As Decimal = 20D
 
     ' Parâmetros da estratégia da onda/relógio.
     Public Property WaveEmaPeriod As Integer = 34

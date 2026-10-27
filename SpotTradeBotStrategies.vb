@@ -74,6 +74,93 @@ Public NotInheritable Class SpotBotEmaCrossoverStrategy
     End Function
 End Class
 
+''' <summary>
+''' Adaptação experimental da abordagem contrária à média atribuída ao BNF.
+''' Usa a distância do fechamento em relação à SMA de 25 candles. Um candle
+''' de pânico abaixo de 20% da média cria o setup; a entrada só ocorre quando
+''' o preço rompe a máxima desse candle. O alvo estrutural é a SMA e o stop é
+''' o mínimo do candle de pânico. Não representa uma fórmula autenticada pelo
+''' próprio BNF.
+''' </summary>
+Public NotInheritable Class SpotBotBnfContrarianStrategy
+    Implements ISpotBotStrategy
+
+    Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
+        Get
+            Return SpotBotStrategyKind.BnfContrarian
+        End Get
+    End Property
+
+    Public Function Evaluate(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
+
+        Dim period = Math.Max(2, configuration.BnfMovingAveragePeriod)
+        Dim minimumDeviation = Math.Max(0.1D, configuration.BnfMinimumDeviationPercent)
+        If prices Is Nothing OrElse prices.Count < period + 2 Then
+            Return HoldSignal($"BNF: histórico insuficiente para SMA {period}")
+        End If
+
+        ' O penúltimo ponto é o último candle fechado; o último representa o
+        ' preço atual usado apenas para confirmar o rompimento intrabar.
+        Dim candidateIndex = prices.Count - 2
+        Dim confirmation = prices(prices.Count - 1)
+        Dim candidate = prices(candidateIndex)
+        Dim movingAverage = CalculateMovingAverage(prices, candidateIndex, period)
+        If movingAverage <= 0D Then
+            Return HoldSignal("BNF: média móvel inválida")
+        End If
+
+        Dim deviationPercent = (candidate.Close - movingAverage) / movingAverage * 100D
+
+        If deviationPercent <= -minimumDeviation Then
+            If confirmation.High > candidate.High AndAlso confirmation.Close > candidate.Close Then
+                Dim stopPrice = candidate.Low
+                Dim entryPrice = confirmation.Close
+                If stopPrice > 0D AndAlso entryPrice > stopPrice AndAlso movingAverage > entryPrice Then
+                    Return New SpotBotStrategySignal With {
+                        .Strategy = Kind,
+                        .Direction = SpotBotSignalDirection.Buy,
+                        .Confidence = Math.Min(1D, Math.Abs(deviationPercent) / 35D),
+                        .ObservedValue = deviationPercent,
+                        .EntryPrice = entryPrice,
+                        .StopPrice = stopPrice,
+                        .TakeProfitPrice = movingAverage,
+                        .Reason = $"BNF: fechamento {Math.Abs(deviationPercent):0.##}% abaixo da SMA {period} + rompimento da máxima; alvo SMA"
+                    }
+                End If
+            End If
+
+            Return HoldSignal($"BNF: desvio {Math.Abs(deviationPercent):0.##}% abaixo da SMA {period}; aguardando rompimento")
+        End If
+
+        Return HoldSignal($"BNF: desvio {deviationPercent:0.##}% (mínimo {minimumDeviation:0.##}%)")
+    End Function
+
+    Private Shared Function CalculateMovingAverage(
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        endIndex As Integer,
+        period As Integer) As Decimal
+
+        Dim firstIndex = endIndex - period + 1
+        Dim sum = 0D
+        For index = firstIndex To endIndex
+            sum += prices(index).Close
+        Next
+
+        Return sum / period
+    End Function
+
+    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
+        Return New SpotBotStrategySignal With {
+            .Strategy = SpotBotStrategyKind.BnfContrarian,
+            .Direction = SpotBotSignalDirection.Hold,
+            .Reason = reason
+        }
+    End Function
+End Class
+
 Public NotInheritable Class SpotBotRsiStrategy
     Implements ISpotBotStrategy
 

@@ -40,6 +40,7 @@ Public NotInheritable Class SpotTradeBotEngine
         RegisterStrategy(New SpotBotBreakoutStrategy())
         RegisterStrategy(New SpotBotGridStrategy())
         RegisterStrategy(New SpotBotBollingerMeanReversionStrategy())
+        RegisterStrategy(New SpotBotBnfContrarianStrategy())
         RegisterStrategy(New SpotBotWavePullbackStrategy())
 
         Dim persistedState As SpotBotPersistedSimulationState = Nothing
@@ -262,7 +263,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 rsiPriceSnapshot = rsiHistory.ToArray()
             End If
 
-            If enabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion) Then
+            If enabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion) OrElse
+               enabledStrategies.Contains(SpotBotStrategyKind.BnfContrarian) Then
                 bollingerHistory = GetOrCreateBollingerCandleHistory(normalizedSymbol)
                 bollingerCandleClosed = UpdateBollingerCandle(
                     normalizedSymbol,
@@ -308,7 +310,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 Dim strategyPrices As IReadOnlyList(Of SpotBotPricePoint) = priceSnapshot
                 If kind = SpotBotStrategyKind.Rsi Then
                     strategyPrices = rsiPriceSnapshot
-                ElseIf kind = SpotBotStrategyKind.BollingerMeanReversion Then
+                ElseIf kind = SpotBotStrategyKind.BollingerMeanReversion OrElse
+                       kind = SpotBotStrategyKind.BnfContrarian Then
                     Dim bollingerEvaluation = bollingerPriceSnapshot.ToList()
                     If bollingerEvaluation.Count > 0 Then
                         ' O candle em formação representa o preço atual. A
@@ -991,6 +994,8 @@ Public NotInheritable Class SpotTradeBotEngine
             .BollingerPeriod = source.BollingerPeriod,
             .BollingerStandardDeviations = source.BollingerStandardDeviations,
             .BollingerCandleMinutes = source.BollingerCandleMinutes,
+            .BnfMovingAveragePeriod = source.BnfMovingAveragePeriod,
+            .BnfMinimumDeviationPercent = source.BnfMinimumDeviationPercent,
             .WaveEmaPeriod = source.WaveEmaPeriod,
             .WaveSlopeLookback = source.WaveSlopeLookback,
             .WaveTouchTolerancePercent = source.WaveTouchTolerancePercent,
