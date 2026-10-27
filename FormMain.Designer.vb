@@ -300,9 +300,9 @@ Partial Class FormMain
         lbLoadFromMarket.BackColor = Color.Transparent
         lbLoadFromMarket.Font = New Font("Segoe UI", 9F, FontStyle.Italic)
         lbLoadFromMarket.ForeColor = Color.OrangeRed
-        lbLoadFromMarket.Location = New Point(4, 319)
+        lbLoadFromMarket.Location = New Point(4, 30)
         lbLoadFromMarket.Name = "lbLoadFromMarket"
-        lbLoadFromMarket.Size = New Size(1142, 15)
+        lbLoadFromMarket.Size = New Size(1143, 19)
         lbLoadFromMarket.TabIndex = 0
         lbLoadFromMarket.Text = "Buscando dados"
         lbLoadFromMarket.TextAlign = ContentAlignment.MiddleCenter
@@ -529,7 +529,7 @@ Partial Class FormMain
         Label16.AutoSize = True
         Label16.Font = New Font("Calibri", 20.25F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
         Label16.ForeColor = Color.White
-        Label16.Location = New Point(92, 27)
+        Label16.Location = New Point(92, 53)
         Label16.Name = "Label16"
         Label16.Size = New Size(159, 33)
         Label16.TabIndex = 12
@@ -540,7 +540,7 @@ Partial Class FormMain
         lbPerformWallet.AutoSize = True
         lbPerformWallet.Font = New Font("Calibri", 20F, FontStyle.Italic)
         lbPerformWallet.ForeColor = Color.GreenYellow
-        lbPerformWallet.Location = New Point(253, 27)
+        lbPerformWallet.Location = New Point(253, 53)
         lbPerformWallet.Name = "lbPerformWallet"
         lbPerformWallet.Size = New Size(48, 33)
         lbPerformWallet.TabIndex = 13
@@ -573,7 +573,7 @@ Partial Class FormMain
         lbDataTotalToday.AutoSize = True
         lbDataTotalToday.Font = New Font("Calibri", 12F, FontStyle.Italic)
         lbDataTotalToday.ForeColor = Color.DarkOrange
-        lbDataTotalToday.Location = New Point(9, 38)
+        lbDataTotalToday.Location = New Point(99, 34)
         lbDataTotalToday.Name = "lbDataTotalToday"
         lbDataTotalToday.Size = New Size(85, 19)
         lbDataTotalToday.TabIndex = 9
@@ -862,7 +862,7 @@ Partial Class FormMain
         ImportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {PortfolioToolStripMenuItem, WalletsExchangeToolStripMenuItem})
         ImportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ImportarToolStripMenuItem.Name = "ImportarToolStripMenuItem"
-        ImportarToolStripMenuItem.Size = New Size(168, 22)
+        ImportarToolStripMenuItem.Size = New Size(167, 22)
         ImportarToolStripMenuItem.Text = "Portfolio"
         ' 
         ' PortfolioToolStripMenuItem
@@ -887,7 +887,7 @@ Partial Class FormMain
         ExportarToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem1, ExportarToolStripMenuItem1})
         ExportarToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         ExportarToolStripMenuItem.Name = "ExportarToolStripMenuItem"
-        ExportarToolStripMenuItem.Size = New Size(168, 22)
+        ExportarToolStripMenuItem.Size = New Size(167, 22)
         ExportarToolStripMenuItem.Text = "Wallets/Exchange"
         ' 
         ' ImportarToolStripMenuItem1
@@ -912,7 +912,7 @@ Partial Class FormMain
         CriptoToolStripMenuItem2.DropDownItems.AddRange(New ToolStripItem() {ImportarToolStripMenuItem2, ExportarToolStripMenuItem2})
         CriptoToolStripMenuItem2.ForeColor = SystemColors.ControlLightLight
         CriptoToolStripMenuItem2.Name = "CriptoToolStripMenuItem2"
-        CriptoToolStripMenuItem2.Size = New Size(168, 22)
+        CriptoToolStripMenuItem2.Size = New Size(167, 22)
         CriptoToolStripMenuItem2.Text = "Cripto"
         ' 
         ' ImportarToolStripMenuItem2
@@ -1121,6 +1121,10 @@ Partial Class FormMain
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         ClientSize = New Size(1151, 810)
+        Controls.Add(pbBRL)
+        Controls.Add(pbUSD)
+        Controls.Add(Label8)
+        Controls.Add(btSpot)
         Controls.Add(PanelGraphs)
         Controls.Add(PanelFuturos)
         Controls.Add(btOrdensFuturo)
@@ -1130,13 +1134,9 @@ Partial Class FormMain
         Controls.Add(btVisaoGeral)
         Controls.Add(lbLoadFromMarket)
         Controls.Add(btFuturos)
-        Controls.Add(btSpot)
         Controls.Add(dgFuturos)
         Controls.Add(dgPortfolio)
         Controls.Add(panelDebug)
-        Controls.Add(Label8)
-        Controls.Add(pbUSD)
-        Controls.Add(pbBRL)
         Controls.Add(PanelProfits)
         Controls.Add(Panel1)
         Controls.Add(MenuStrip1)
