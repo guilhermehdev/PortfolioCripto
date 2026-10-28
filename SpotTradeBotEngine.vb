@@ -40,8 +40,12 @@ Public NotInheritable Class SpotTradeBotEngine
         RegisterStrategy(New SpotBotBreakoutStrategy())
         RegisterStrategy(New SpotBotGridStrategy())
         RegisterStrategy(New SpotBotBollingerMeanReversionStrategy())
+        RegisterStrategy(New SpotBotBollingerMeanReversionStrategy(SpotBotStrategyKind.BaseOriginalProtected))
         RegisterStrategy(New SpotBotBnfContrarianStrategy())
         RegisterStrategy(New SpotBotWavePullbackStrategy())
+        RegisterStrategy(New SpotBotBreakoutRetestStrategy())
+        RegisterStrategy(New SpotBotMomentumVolumeStrategy())
+        RegisterStrategy(New SpotBotGridRegimeStrategy())
 
         Dim persistedState As SpotBotPersistedSimulationState = Nothing
         Try
@@ -211,7 +215,8 @@ Public NotInheritable Class SpotTradeBotEngine
     Public Function ProcessPrice(
         symbol As String,
         price As Decimal,
-        Optional timestampUtc As DateTime = Nothing) As SpotBotSignal
+        Optional timestampUtc As DateTime = Nothing,
+        Optional quoteVolume24h As Decimal = 0D) As SpotBotSignal
 
         Dim normalizedSymbol = NormalizeSymbol(symbol)
         If String.IsNullOrWhiteSpace(normalizedSymbol) OrElse price <= 0D Then
@@ -250,7 +255,7 @@ Public NotInheritable Class SpotTradeBotEngine
                 _priceHistory(normalizedSymbol) = history
             End If
 
-            history.Add(New SpotBotPricePoint(observedAt, price))
+            history.Add(New SpotBotPricePoint(observedAt, price, volume:=quoteVolume24h))
             Dim maximum = Math.Max(30, _configuration.MaximumPriceHistory)
             If history.Count > maximum Then
                 history.RemoveRange(0, history.Count - maximum)
@@ -264,6 +269,7 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
 
             If enabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion) OrElse
+               enabledStrategies.Contains(SpotBotStrategyKind.BaseOriginalProtected) OrElse
                enabledStrategies.Contains(SpotBotStrategyKind.BnfContrarian) Then
                 bollingerHistory = GetOrCreateBollingerCandleHistory(normalizedSymbol)
                 bollingerCandleClosed = UpdateBollingerCandle(
@@ -276,7 +282,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 candleClosed = candleClosed OrElse bollingerCandleClosed
             End If
 
-            If enabledStrategies.Contains(SpotBotStrategyKind.WavePullback) Then
+            If enabledStrategies.Contains(SpotBotStrategyKind.WavePullback) OrElse
+               enabledStrategies.Contains(SpotBotStrategyKind.BreakoutRetest) Then
                 Dim waveHistory = GetOrCreateWaveCandleHistory(normalizedSymbol)
                 waveCandleClosed = UpdateWaveCandle(
                     normalizedSymbol,
@@ -311,6 +318,7 @@ Public NotInheritable Class SpotTradeBotEngine
                 If kind = SpotBotStrategyKind.Rsi Then
                     strategyPrices = rsiPriceSnapshot
                 ElseIf kind = SpotBotStrategyKind.BollingerMeanReversion OrElse
+                       kind = SpotBotStrategyKind.BaseOriginalProtected OrElse
                        kind = SpotBotStrategyKind.BnfContrarian Then
                     Dim bollingerEvaluation = bollingerPriceSnapshot.ToList()
                     If bollingerEvaluation.Count > 0 Then
@@ -323,7 +331,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 End If
 
                 Dim strategySignal As SpotBotStrategySignal
-                If kind = SpotBotStrategyKind.WavePullback Then
+                If kind = SpotBotStrategyKind.WavePullback OrElse
+                   kind = SpotBotStrategyKind.BreakoutRetest Then
                     If Not waveCandleClosed Then Continue For
                     Dim candleStrategy = TryCast(strategy, ISpotBotCandleStrategy)
                     If candleStrategy Is Nothing Then Continue For
@@ -1014,6 +1023,13 @@ Public NotInheritable Class SpotTradeBotEngine
             .BreakoutPeriod = source.BreakoutPeriod,
             .GridSpacingPercent = source.GridSpacingPercent,
             .GridReferencePrice = source.GridReferencePrice,
+            .GridRegimeLookback = source.GridRegimeLookback,
+            .GridRegimeMaxRangePercent = source.GridRegimeMaxRangePercent,
+            .GridRegimeMaxSlopePercent = source.GridRegimeMaxSlopePercent,
+            .MomentumVolumeLookback = source.MomentumVolumeLookback,
+            .MomentumVolumeMultiplier = source.MomentumVolumeMultiplier,
+            .MomentumEmaPeriod = source.MomentumEmaPeriod,
+            .MomentumRiskReward = source.MomentumRiskReward,
             .SimulationStartingQuote = source.SimulationStartingQuote,
             .SimulationAllocationPercent = source.SimulationAllocationPercent,
             .SimulationFeeRate = source.SimulationFeeRate,

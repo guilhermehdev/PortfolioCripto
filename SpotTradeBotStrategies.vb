@@ -576,6 +576,297 @@ Public NotInheritable Class SpotBotGridStrategy
 End Class
 
 ''' <summary>
+''' Rompimento de uma faixa seguido de reteste do nível rompido.
+''' O sinal só é gerado em candles fechados e permanece long/short simétrico;
+''' no Spot o lado Sell serve para reduzir ou encerrar uma posição existente.
+''' </summary>
+Public NotInheritable Class SpotBotBreakoutRetestStrategy
+    Implements ISpotBotCandleStrategy
+
+    Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
+        Get
+            Return SpotBotStrategyKind.BreakoutRetest
+        End Get
+    End Property
+
+    Public Function Evaluate(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
+
+        Return HoldSignal("aguardando candle fechado do rompimento e reteste")
+    End Function
+
+    Public Function EvaluateCandles(
+        symbol As String,
+        candles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotCandleStrategy.EvaluateCandles
+
+        Dim period = Math.Max(5, configuration.BreakoutPeriod)
+        If candles Is Nothing OrElse candles.Count < period + 3 Then
+            Return HoldSignal("histórico insuficiente para o rompimento e reteste")
+        End If
+
+        Dim breakoutIndex = candles.Count - 2
+        Dim retestIndex = candles.Count - 1
+        Dim rangeFirst = breakoutIndex - period
+        Dim rangeLast = breakoutIndex - 1
+        Dim resistance = Decimal.MinValue
+        Dim support = Decimal.MaxValue
+
+        For index = rangeFirst To rangeLast
+            resistance = Math.Max(resistance, candles(index).High)
+            support = Math.Min(support, candles(index).Low)
+        Next
+
+        Dim breakout = candles(breakoutIndex)
+        Dim retest = candles(retestIndex)
+        Dim riskReward = 2D
+
+        If breakout.Close > resistance AndAlso
+           retest.Low <= resistance AndAlso
+           retest.Close > resistance AndAlso
+           retest.IsBullish Then
+            Dim stopPrice = Math.Min(retest.Low, resistance)
+            Dim risk = retest.Close - stopPrice
+            If risk > 0D Then
+                Return New SpotBotStrategySignal With {
+                    .Strategy = Kind,
+                    .Direction = SpotBotSignalDirection.Buy,
+                    .Confidence = 1D,
+                    .ObservedValue = retest.Close - resistance,
+                    .EntryPrice = retest.Close,
+                    .StopPrice = stopPrice,
+                    .TakeProfitPrice = retest.Close + risk * riskReward,
+                    .Reason = $"rompimento da resistência {resistance:F8} + reteste confirmado; RR {riskReward:0.##}:1"
+                }
+            End If
+        End If
+
+        If breakout.Close < support AndAlso
+           retest.High >= support AndAlso
+           retest.Close < support AndAlso
+           retest.IsBearish Then
+            Dim stopPrice = Math.Max(retest.High, support)
+            Dim risk = stopPrice - retest.Close
+            If risk > 0D Then
+                Return New SpotBotStrategySignal With {
+                    .Strategy = Kind,
+                    .Direction = SpotBotSignalDirection.Sell,
+                    .Confidence = 1D,
+                    .ObservedValue = support - retest.Close,
+                    .EntryPrice = retest.Close,
+                    .StopPrice = stopPrice,
+                    .TakeProfitPrice = retest.Close - risk * riskReward,
+                    .Reason = $"rompimento do suporte {support:F8} + reteste confirmado; RR {riskReward:0.##}:1"
+                }
+            End If
+        End If
+
+        Return HoldSignal("sem rompimento com reteste confirmado")
+    End Function
+
+    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
+        Return New SpotBotStrategySignal With {
+            .Strategy = SpotBotStrategyKind.BreakoutRetest,
+            .Direction = SpotBotSignalDirection.Hold,
+            .Reason = reason
+        }
+    End Function
+End Class
+
+''' <summary>
+''' Momentum confirmado por expansão de volume e fechamento acima/abaixo da
+''' EMA. O volume recebido pelo ticker é tratado como uma confirmação
+''' experimental; a execução continua protegida pelo modo de simulação.
+''' </summary>
+Public NotInheritable Class SpotBotMomentumVolumeStrategy
+    Implements ISpotBotStrategy
+
+    Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
+        Get
+            Return SpotBotStrategyKind.MomentumVolume
+        End Get
+    End Property
+
+    Public Function Evaluate(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
+
+        Dim lookback = Math.Max(5, configuration.MomentumVolumeLookback)
+        Dim emaPeriod = Math.Max(2, configuration.MomentumEmaPeriod)
+        Dim multiplier = Math.Max(1D, configuration.MomentumVolumeMultiplier)
+        If prices Is Nothing OrElse prices.Count < Math.Max(lookback + 2, emaPeriod + 2) Then
+            Return HoldSignal("histórico insuficiente para momentum por volume")
+        End If
+
+        Dim latest = prices(prices.Count - 1)
+        If latest.Volume <= 0D Then
+            Return HoldSignal("ticker sem volume disponível")
+        End If
+
+        Dim averageVolume = prices.Skip(Math.Max(0, prices.Count - lookback - 1)).Take(lookback).
+            Where(Function(item) item.Volume > 0D).
+            Select(Function(item) item.Volume).
+            DefaultIfEmpty(0D).
+            Average()
+        If averageVolume <= 0D OrElse latest.Volume < averageVolume * multiplier Then
+            Return HoldSignal($"volume {latest.Volume:0.##} abaixo do gatilho {averageVolume * multiplier:0.##}")
+        End If
+
+        Dim ema = CalculateEma(prices, emaPeriod)
+        Dim previous = prices(prices.Count - 2)
+
+        If latest.Close > ema AndAlso latest.Close > previous.Close Then
+            Dim stopPrice = Math.Min(previous.Close, ema)
+            Dim risk = latest.Close - stopPrice
+            If risk > 0D Then
+                Return New SpotBotStrategySignal With {
+                    .Strategy = Kind,
+                    .Direction = SpotBotSignalDirection.Buy,
+                    .Confidence = Math.Min(1D, latest.Volume / (averageVolume * multiplier)),
+                    .ObservedValue = latest.Volume / averageVolume,
+                    .EntryPrice = latest.Close,
+                    .StopPrice = stopPrice,
+                    .TakeProfitPrice = latest.Close + risk * Math.Max(1D, configuration.MomentumRiskReward),
+                    .Reason = $"momentum comprador: volume {latest.Volume / averageVolume:0.##}x da média + fechamento acima da EMA {emaPeriod}"
+                }
+            End If
+        End If
+
+        If latest.Close < ema AndAlso latest.Close < previous.Close Then
+            Dim stopPrice = Math.Max(previous.Close, ema)
+            Dim risk = stopPrice - latest.Close
+            If risk > 0D Then
+                Return New SpotBotStrategySignal With {
+                    .Strategy = Kind,
+                    .Direction = SpotBotSignalDirection.Sell,
+                    .Confidence = Math.Min(1D, latest.Volume / (averageVolume * multiplier)),
+                    .ObservedValue = latest.Volume / averageVolume,
+                    .EntryPrice = latest.Close,
+                    .StopPrice = stopPrice,
+                    .TakeProfitPrice = latest.Close - risk * Math.Max(1D, configuration.MomentumRiskReward),
+                    .Reason = $"momentum vendedor: volume {latest.Volume / averageVolume:0.##}x da média + fechamento abaixo da EMA {emaPeriod}"
+                }
+            End If
+        End If
+
+        Return HoldSignal("volume expandiu, mas o preço não confirmou o momentum")
+    End Function
+
+    Private Shared Function CalculateEma(prices As IReadOnlyList(Of SpotBotPricePoint), period As Integer) As Decimal
+        Dim firstIndex = Math.Max(0, prices.Count - period)
+        Dim smoothing = 2D / (period + 1D)
+        Dim ema = prices(firstIndex).Close
+        For index = firstIndex + 1 To prices.Count - 1
+            ema = (prices(index).Close - ema) * smoothing + ema
+        Next
+        Return ema
+    End Function
+
+    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
+        Return New SpotBotStrategySignal With {
+            .Strategy = SpotBotStrategyKind.MomentumVolume,
+            .Direction = SpotBotSignalDirection.Hold,
+            .Reason = reason
+        }
+    End Function
+End Class
+
+''' <summary>
+''' Grade que só opera em regime lateral: o preço precisa permanecer dentro
+''' de uma faixa limitada e a inclinação da EMA curta não pode indicar uma
+''' tendência forte. Não cria ordens reais; fornece sinais para o simulador.
+''' </summary>
+Public NotInheritable Class SpotBotGridRegimeStrategy
+    Implements ISpotBotStrategy
+
+    Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
+        Get
+            Return SpotBotStrategyKind.GridRegime
+        End Get
+    End Property
+
+    Public Function Evaluate(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
+
+        Dim lookback = Math.Max(10, configuration.GridRegimeLookback)
+        If prices Is Nothing OrElse prices.Count < lookback + 1 Then
+            Return HoldSignal("histórico insuficiente para grade com filtro de regime")
+        End If
+
+        Dim window = prices.Skip(prices.Count - lookback).ToList()
+        Dim highest = window.Max(Function(item) item.High)
+        Dim lowest = window.Min(Function(item) item.Low)
+        Dim midpoint = (highest + lowest) / 2D
+        If midpoint <= 0D Then Return HoldSignal("faixa de regime inválida")
+
+        Dim rangePercent = (highest - lowest) / midpoint * 100D
+        If rangePercent > Math.Max(0.1D, configuration.GridRegimeMaxRangePercent) Then
+            Return HoldSignal($"regime tendencial: faixa de {rangePercent:0.##}%")
+        End If
+
+        Dim emaShort = CalculateEma(window, Math.Min(10, lookback))
+        Dim emaPrevious = CalculateEma(window.Take(window.Count - 1).ToList(), Math.Min(10, lookback))
+        Dim slopePercent = If(emaPrevious = 0D, 0D, Math.Abs(emaShort - emaPrevious) / emaPrevious * 100D)
+        If slopePercent > Math.Max(0.1D, configuration.GridRegimeMaxSlopePercent) Then
+            Return HoldSignal($"regime tendencial: inclinação de {slopePercent:0.##}%")
+        End If
+
+        Dim reference = If(configuration.GridReferencePrice > 0D, configuration.GridReferencePrice, midpoint)
+        Dim spacing = Math.Max(0.01D, configuration.GridSpacingPercent) / 100D
+        Dim latest = prices(prices.Count - 1).Close
+        Dim buyLevel = reference * (1D - spacing)
+        Dim sellLevel = reference * (1D + spacing)
+
+        If latest <= buyLevel Then
+            Return New SpotBotStrategySignal With {
+                .Strategy = Kind,
+                .Direction = SpotBotSignalDirection.Buy,
+                .Confidence = 1D,
+                .ObservedValue = rangePercent,
+                .EntryPrice = latest,
+                .Reason = $"grade ativa em regime lateral ({rangePercent:0.##}% de faixa); nível de compra {buyLevel:F8}"
+            }
+        End If
+
+        If latest >= sellLevel Then
+            Return New SpotBotStrategySignal With {
+                .Strategy = Kind,
+                .Direction = SpotBotSignalDirection.Sell,
+                .Confidence = 1D,
+                .ObservedValue = rangePercent,
+                .EntryPrice = latest,
+                .Reason = $"grade ativa em regime lateral ({rangePercent:0.##}% de faixa); nível de venda {sellLevel:F8}"
+            }
+        End If
+
+        Return HoldSignal("regime lateral confirmado, preço dentro da faixa da grade")
+    End Function
+
+    Private Shared Function CalculateEma(prices As IReadOnlyList(Of SpotBotPricePoint), period As Integer) As Decimal
+        If prices.Count = 0 Then Return 0D
+        Dim smoothing = 2D / (period + 1D)
+        Dim ema = prices(0).Close
+        For index = 1 To prices.Count - 1
+            ema = (prices(index).Close - ema) * smoothing + ema
+        Next
+        Return ema
+    End Function
+
+    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
+        Return New SpotBotStrategySignal With {
+            .Strategy = SpotBotStrategyKind.GridRegime,
+            .Direction = SpotBotSignalDirection.Hold,
+            .Reason = reason
+        }
+    End Function
+End Class
+
+''' <summary>
 ''' Reversão à média com Bandas de Bollinger conforme a estratégia do vídeo:
 ''' período 20, três desvios-padrão, fechamento fora da banda, confirmação por
 ''' rompimento do extremo do candle e saída na média central. O stop fica no
@@ -584,9 +875,15 @@ End Class
 Public NotInheritable Class SpotBotBollingerMeanReversionStrategy
     Implements ISpotBotStrategy
 
+    Private ReadOnly _kind As SpotBotStrategyKind
+
+    Public Sub New(Optional kind As SpotBotStrategyKind = SpotBotStrategyKind.BollingerMeanReversion)
+        _kind = kind
+    End Sub
+
     Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
         Get
-            Return SpotBotStrategyKind.BollingerMeanReversion
+            Return _kind
         End Get
     End Property
 
@@ -691,9 +988,9 @@ Public NotInheritable Class SpotBotBollingerMeanReversionStrategy
         lower = middle - deviations * standardDeviation
     End Sub
 
-    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
+    Private Function HoldSignal(reason As String) As SpotBotStrategySignal
         Return New SpotBotStrategySignal With {
-            .Strategy = SpotBotStrategyKind.BollingerMeanReversion,
+            .Strategy = _kind,
             .Direction = SpotBotSignalDirection.Hold,
             .Reason = reason
         }

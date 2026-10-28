@@ -74,7 +74,9 @@ Public Class FormMain
     Private _binanceCatalogPromptRunning As Boolean
     Private _credentialsMenuItem As ToolStripMenuItem
     Private ReadOnly _spotTradeBot As New SpotTradeBotEngine()
+    Private ReadOnly _spotDca As New SpotDcaEngine()
     Private _panelSpotBot As Panel
+    Private _panelDca As Panel
     Private _botLog As RichTextBox
     Private _dgSpotBotPositions As DataGridView
     Private _botCombination As ComboBox
@@ -95,9 +97,21 @@ Public Class FormMain
     Private _botStart As Button
     Private _botStop As Button
     Private _btTradeBot As Button
+    Private _btDca As Button
     Private ReadOnly _botStrategyChecks As New Dictionary(Of SpotBotStrategyKind, CheckBox)()
     Private _lastBotSummaryUpdateUtc As DateTime
     Private _lastBotSimulationAction As String = String.Empty
+    Private _cbDcaSymbol As ComboBox
+    Private _txtDcaLevels As TextBox
+    Private _nudDcaBudget As NumericUpDown
+    Private _nudDcaCooldown As NumericUpDown
+    Private _chkDcaEnabled As CheckBox
+    Private _btDcaAdd As Button
+    Private _btDcaStart As Button
+    Private _btDcaStop As Button
+    Private _btDcaReset As Button
+    Private _dgDca As DataGridView
+    Private _lbDcaStatus As Label
 
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
@@ -117,6 +131,7 @@ Public Class FormMain
         ConfigureSpotOrdersPanel()
         ConfigureFuturesOrdersPanel()
         ConfigureSpotBotPanel()
+        ConfigureDcaPanel()
         _portfolioGridDefaultHeight = dgPortfolio.Height
         _futuresGridDefaultHeight = dgFuturos.Height
         ArrangeOrdersPanel(False)
@@ -545,7 +560,7 @@ Public Class FormMain
 
         Dim editor As New Panel With {
             .Dock = DockStyle.Top,
-            .Height = 105,
+            .Height = 150,
             .BackColor = Color.FromArgb(30, 30, 30)
         }
 
@@ -557,33 +572,28 @@ Public Class FormMain
             Debug.WriteLine("Erro carregando configurações do universo do Tradebot: " & ex.Message)
         End Try
 
-        AddBotLabel(editor, "Estratégias ativas", 6, 3, 150)
-        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.EmaCrossover, "EMA", 6, 24, 100)
-        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Rsi, "RSI", 112, 24, 80)
-        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.Breakout, "Rompimento", 198, 24, 118)
-        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.WavePullback, "Onda", 322, 24, 80)
-
-        AddBotLabel(editor, "BNF / Bollinger", 406, 3, 118)
+        AddBotLabel(editor, "Estratégia base", 6, 3, 150)
         _botBollingerMode = New ComboBox With {
             .Name = "cbSpotBotBollingerMode",
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
             .FlatStyle = FlatStyle.Flat,
-            .Location = New Point(406, 24),
-            .Width = 118
+            .Location = New Point(6, 24),
+            .Width = 150
         }
         _botBollingerMode.Items.AddRange(New Object() {
-            "Desativada",
-            "BNF 25d/20%",
-            "Bollinger 20/3",
-            "Bollinger 20/2,3",
-            "Bollinger 25/3",
-            "Bollinger 25/2,3"
+            "Base Original Protegida"
         })
         _botBollingerMode.SelectedIndex = GetBollingerModeIndex()
         AddHandler _botBollingerMode.SelectedIndexChanged, AddressOf SpotBotBollingerModeChanged
         editor.Controls.Add(_botBollingerMode)
+
+        AddBotLabel(editor, "Estratégias adicionais", 164, 3, 180)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.WavePullback, "Pullback EMA34", 164, 24, 105)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.BreakoutRetest, "Breakout + Reteste", 274, 24, 125)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.MomentumVolume, "Momentum volume", 404, 24, 110)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.GridRegime, "Grid + regime", 520, 24, 110)
 
         If _spotTradeBot.HasRestoredState Then
             For Each strategyCheck In _botStrategyChecks
@@ -591,14 +601,14 @@ Public Class FormMain
             Next
         End If
 
-        AddBotLabel(editor, "Combinação", 532, 3, 100)
+        AddBotLabel(editor, "Combinação", 650, 3, 100)
         _botCombination = New ComboBox With {
             .Name = "cbSpotBotCombination",
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
             .FlatStyle = FlatStyle.Flat,
-            .Location = New Point(532, 24),
+            .Location = New Point(650, 24),
             .Width = 150
         }
         _botCombination.Items.AddRange(New Object() {
@@ -607,13 +617,10 @@ Public Class FormMain
             "Mínimo de confirmações",
             "Pontuação ponderada"
         })
-        _botCombination.SelectedIndex = If(
-            _spotTradeBot.HasRestoredState,
-            CInt(_spotTradeBot.Configuration.CombinationMode),
-            0)
+        _botCombination.SelectedIndex = 0
         editor.Controls.Add(_botCombination)
 
-        AddBotLabel(editor, "Confirmações", 690, 3, 78)
+        AddBotLabel(editor, "Confirmações", 808, 3, 78)
         _botConfirmations = New NumericUpDown With {
             .Name = "nudSpotBotConfirmations",
             .Minimum = 1,
@@ -621,7 +628,7 @@ Public Class FormMain
             .Value = 1,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
-            .Location = New Point(690, 24),
+            .Location = New Point(808, 24),
             .Width = 64
         }
         If _spotTradeBot.HasRestoredState Then
@@ -631,14 +638,14 @@ Public Class FormMain
         End If
         editor.Controls.Add(_botConfirmations)
 
-        AddBotLabel(editor, "Candle", 768, 3, 100)
+        AddBotLabel(editor, "Candle", 886, 3, 100)
         _botBollingerTimeframe = New ComboBox With {
             .Name = "cbSpotBotBollingerTimeframe",
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
             .FlatStyle = FlatStyle.Flat,
-            .Location = New Point(768, 24),
+            .Location = New Point(886, 24),
             .Width = 100
         }
         _botBollingerTimeframe.Items.AddRange(New Object() {"4 horas", "Diário"})
@@ -646,14 +653,14 @@ Public Class FormMain
         editor.Controls.Add(_botBollingerTimeframe)
         UpdateSpotBotBollingerTimeframeAvailability()
 
-        AddBotLabel(editor, "Universo", 876, 3, 100)
+        AddBotLabel(editor, "Universo", 6, 58, 100)
         _botUniverseMode = New ComboBox With {
             .Name = "cbSpotBotUniverseMode",
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
             .FlatStyle = FlatStyle.Flat,
-            .Location = New Point(876, 24),
+            .Location = New Point(6, 79),
             .Width = 120
         }
         _botUniverseMode.Items.AddRange(New Object() {"Manual", "Top volume"})
@@ -661,7 +668,7 @@ Public Class FormMain
         AddHandler _botUniverseMode.SelectedIndexChanged, AddressOf SpotBotUniverseModeChanged
         editor.Controls.Add(_botUniverseMode)
 
-        _botUniverseButton = CreateBotButton("Selecionar...", 1002, 24, 102, Color.FromArgb(55, 75, 105))
+        _botUniverseButton = CreateBotButton("Selecionar...", 132, 79, 102, Color.FromArgb(55, 75, 105))
         AddHandler _botUniverseButton.Click, AddressOf SpotBotUniverseButton_Click
         editor.Controls.Add(_botUniverseButton)
 
@@ -671,22 +678,22 @@ Public Class FormMain
             .Height = 20,
             .ForeColor = Color.Gold,
             .Font = New Font("Calibri", 9.0F, FontStyle.Bold),
-            .Location = New Point(940, 55),
+            .Location = New Point(940, 83),
             .Text = "SIMULAÇÃO — sem ordens reais"
         }
         editor.Controls.Add(simulationLabel)
 
-        _botStart = CreateBotButton("Iniciar bot", 6, 58, 110, Color.DarkGreen)
+        _botStart = CreateBotButton("Iniciar bot", 6, 111, 110, Color.DarkGreen)
         AddHandler _botStart.Click, AddressOf SpotBotStart_Click
         editor.Controls.Add(_botStart)
 
-        _botStop = CreateBotButton("Parar bot", 122, 58, 100, Color.IndianRed)
+        _botStop = CreateBotButton("Parar bot", 122, 111, 100, Color.IndianRed)
         _botStop.Enabled = False
         AddHandler _botStop.Click, AddressOf SpotBotStop_Click
         editor.Controls.Add(_botStop)
 
-        AddBotLabel(editor, "Saldo virtual (USDT)", 240, 55, 110)
-        _botStartingQuote = CreateBotNumeric(1000D, 0D, 100000000D, 2, 240, 74, 98)
+        AddBotLabel(editor, "Saldo virtual (USDT)", 240, 88, 110)
+        _botStartingQuote = CreateBotNumeric(1000D, 0D, 100000000D, 2, 240, 107, 98)
         editor.Controls.Add(_botStartingQuote)
 
         If _spotTradeBot.HasRestoredState Then
@@ -696,8 +703,8 @@ Public Class FormMain
                 Math.Max(_botStartingQuote.Minimum, restoredSnapshot.StartingQuote))
         End If
 
-        AddBotLabel(editor, "Alocação (%)", 348, 55, 86)
-        _botAllocation = CreateBotNumeric(10D, 0D, 100D, 2, 348, 74, 82)
+        AddBotLabel(editor, "Alocação (%)", 348, 88, 86)
+        _botAllocation = CreateBotNumeric(10D, 0D, 100D, 2, 348, 107, 82)
         If _spotTradeBot.HasRestoredState Then
             _botAllocation.Value = Math.Min(
                 _botAllocation.Maximum,
@@ -705,8 +712,8 @@ Public Class FormMain
         End If
         editor.Controls.Add(_botAllocation)
 
-        AddBotLabel(editor, "Taxa (%)", 440, 55, 70)
-        _botFee = CreateBotNumeric(0.1D, 0D, 5D, 3, 440, 74, 70)
+        AddBotLabel(editor, "Taxa (%)", 440, 88, 70)
+        _botFee = CreateBotNumeric(0.1D, 0D, 5D, 3, 440, 107, 70)
         If _spotTradeBot.HasRestoredState Then
             _botFee.Value = Math.Min(
                 _botFee.Maximum,
@@ -714,20 +721,20 @@ Public Class FormMain
         End If
         editor.Controls.Add(_botFee)
 
-        AddBotLabel(editor, "TP (%)", 520, 55, 75)
-        _botTakeProfit = CreateBotNumeric(2D, 0D, 100D, 2, 520, 74, 75)
+        AddBotLabel(editor, "TP (%)", 520, 88, 75)
+        _botTakeProfit = CreateBotNumeric(2D, 0D, 100D, 2, 520, 107, 75)
         editor.Controls.Add(_botTakeProfit)
 
-        AddBotLabel(editor, "SL (%)", 604, 55, 75)
-        _botStopLoss = CreateBotNumeric(1D, 0D, 100D, 2, 604, 74, 75)
+        AddBotLabel(editor, "SL (%)", 604, 88, 75)
+        _botStopLoss = CreateBotNumeric(1D, 0D, 100D, 2, 604, 107, 75)
         editor.Controls.Add(_botStopLoss)
 
-        AddBotLabel(editor, "Máx. ativos", 704, 55, 90)
-        _botUniverseMaxAssets = CreateBotNumeric(universeSettings.MaxAssets, 1D, 500D, 0, 704, 74, 75)
+        AddBotLabel(editor, "Máx. ativos", 704, 88, 90)
+        _botUniverseMaxAssets = CreateBotNumeric(universeSettings.MaxAssets, 1D, 500D, 0, 704, 107, 75)
         editor.Controls.Add(_botUniverseMaxAssets)
 
-        AddBotLabel(editor, "Volume mínimo", 790, 55, 105)
-        _botUniverseMinVolume = CreateBotNumeric(universeSettings.MinimumQuoteVolume, 0D, 1000000000000D, 0, 790, 74, 112)
+        AddBotLabel(editor, "Volume mínimo", 790, 88, 105)
+        _botUniverseMinVolume = CreateBotNumeric(universeSettings.MinimumQuoteVolume, 0D, 1000000000000D, 0, 790, 107, 112)
         editor.Controls.Add(_botUniverseMinVolume)
 
         Dim hint As New Label With {
@@ -735,8 +742,8 @@ Public Class FormMain
             .Width = 205,
             .Height = 27,
             .ForeColor = Color.LightGray,
-            .Location = New Point(940, 78),
-            .Text = "RSI usa 1 minuto; BNF usa diário; Onda e Bollinger usam o candle selecionado."
+            .Location = New Point(940, 107),
+            .Text = "Base protegida; EMA34, reteste, volume e grade podem ser combinados."
         }
         editor.Controls.Add(hint)
 
@@ -841,6 +848,312 @@ Public Class FormMain
         AddHandler _spotTradeBot.SignalGenerated, AddressOf SpotTradeBot_SignalGenerated
         AddHandler _spotTradeBot.SimulationUpdated, AddressOf SpotTradeBot_SimulationUpdated
         UpdateSpotBotUniverseButtonText()
+    End Sub
+
+    Private Sub ConfigureDcaPanel()
+        If _panelDca IsNot Nothing Then Return
+
+        _panelDca = New Panel With {
+            .Name = "PanelDca",
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .Padding = New Padding(14, 0, 14, 0),
+            .Visible = False}
+
+        Dim editor As New Panel With {
+            .Dock = DockStyle.Top,
+            .Height = 92,
+            .BackColor = Color.FromArgb(30, 30, 30)}
+
+        AddBotLabel(editor, "Moeda", 6, 3, 110)
+        _cbDcaSymbol = New ComboBox With {
+            .Name = "cbDcaSymbol",
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Location = New Point(6, 24),
+            .Width = 125}
+        For Each symbol In GetManualSpotBotUniverseCandidates()
+            _cbDcaSymbol.Items.Add(symbol)
+        Next
+        If _cbDcaSymbol.Items.Count > 0 Then _cbDcaSymbol.SelectedIndex = 0
+        editor.Controls.Add(_cbDcaSymbol)
+
+        AddBotLabel(editor, "Orçamento por moeda (USDT)", 140, 3, 170)
+        _nudDcaBudget = CreateBotNumeric(100D, 1D, 100000000D, 2, 140, 24, 125)
+        editor.Controls.Add(_nudDcaBudget)
+
+        AddBotLabel(editor, "Níveis queda: percentual:alocação", 278, 3, 250)
+        _txtDcaLevels = New TextBox With {
+            .Name = "txtDcaLevels",
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .BorderStyle = BorderStyle.FixedSingle,
+            .Location = New Point(278, 24),
+            .Width = 250,
+            .Text = "5:10;10:20;18:30;28:40"}
+        editor.Controls.Add(_txtDcaLevels)
+
+        AddBotLabel(editor, "Intervalo (min)", 540, 3, 110)
+        _nudDcaCooldown = CreateBotNumeric(60D, 0D, 10080D, 0, 540, 24, 90)
+        editor.Controls.Add(_nudDcaCooldown)
+
+        _chkDcaEnabled = New CheckBox With {
+            .Name = "chkDcaEnabled",
+            .Text = "Ativo",
+            .Checked = True,
+            .AutoSize = True,
+            .ForeColor = Color.White,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .Location = New Point(642, 27),
+            .Cursor = Cursors.Hand}
+        editor.Controls.Add(_chkDcaEnabled)
+
+        _btDcaAdd = CreateBotButton("Salvar plano", 710, 24, 110, Color.FromArgb(55, 75, 105))
+        AddHandler _btDcaAdd.Click, AddressOf DcaSavePlan_Click
+        editor.Controls.Add(_btDcaAdd)
+        _btDcaStart = CreateBotButton("Iniciar DCA", 830, 24, 100, Color.DarkGreen)
+        AddHandler _btDcaStart.Click, AddressOf DcaStart_Click
+        editor.Controls.Add(_btDcaStart)
+        _btDcaStop = CreateBotButton("Parar", 940, 24, 75, Color.IndianRed)
+        _btDcaStop.Enabled = False
+        AddHandler _btDcaStop.Click, AddressOf DcaStop_Click
+        editor.Controls.Add(_btDcaStop)
+        _btDcaReset = CreateBotButton("Zerar simulação", 1025, 24, 105, Color.FromArgb(80, 60, 35))
+        AddHandler _btDcaReset.Click, AddressOf DcaReset_Click
+        editor.Controls.Add(_btDcaReset)
+
+        _lbDcaStatus = New Label With {
+            .Name = "lbDcaStatus",
+            .Dock = DockStyle.Bottom,
+            .Height = 24,
+            .BackColor = Color.FromArgb(20, 20, 20),
+            .ForeColor = Color.Gold,
+            .Padding = New Padding(4, 0, 4, 0),
+            .TextAlign = ContentAlignment.MiddleLeft,
+            .Text = "DCA: aguardando início"}
+
+        _dgDca = New DataGridView With {
+            .Name = "dgDca",
+            .Dock = DockStyle.Fill,
+            .AllowUserToAddRows = False,
+            .AllowUserToDeleteRows = False,
+            .AllowUserToResizeRows = False,
+            .AutoGenerateColumns = False,
+            .AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+            .BackgroundColor = Color.FromArgb(64, 64, 64),
+            .BorderStyle = BorderStyle.FixedSingle,
+            .CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+            .EnableHeadersVisualStyles = False,
+            .ReadOnly = True,
+            .RowHeadersVisible = False,
+            .SelectionMode = DataGridViewSelectionMode.FullRowSelect}
+        _dgDca.ColumnHeadersDefaultCellStyle = New DataGridViewCellStyle With {
+            .Alignment = DataGridViewContentAlignment.MiddleLeft,
+            .BackColor = Color.FromArgb(40, 40, 40),
+            .ForeColor = Color.Turquoise,
+            .Font = New Font("Calibri", 9.0F, FontStyle.Italic)}
+        _dgDca.DefaultCellStyle = New DataGridViewCellStyle With {
+            .Alignment = DataGridViewContentAlignment.MiddleLeft,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .SelectionBackColor = Color.FromArgb(64, 64, 64),
+            .SelectionForeColor = Color.White,
+            .Font = New Font("Calibri", 10.0F)}
+        AddDcaGridColumn("Symbol", "Cripto")
+        AddDcaGridColumn("Enabled", "Ativo")
+        AddDcaGridColumn("Anchor", "Topo")
+        AddDcaGridColumn("LastPrice", "Preço")
+        AddDcaGridColumn("Drop", "Queda")
+        AddDcaGridColumn("Quantity", "Qtd")
+        AddDcaGridColumn("Invested", "Investido")
+        AddDcaGridColumn("Average", "Preço médio")
+        AddDcaGridColumn("Pnl", "PnL")
+        AddDcaGridColumn("Roi", "ROI %")
+
+        _panelDca.Controls.Add(_dgDca)
+        _panelDca.Controls.Add(_lbDcaStatus)
+        _panelDca.Controls.Add(editor)
+        Controls.Add(_panelDca)
+
+        AddHandler _spotDca.PurchaseSimulated, AddressOf Dca_PurchaseSimulated
+        AddHandler _spotDca.SimulationUpdated, AddressOf Dca_SimulationUpdated
+        UpdateDcaGrid()
+
+        _btDca = New Button With {
+            .Name = "btDca",
+            .Text = "DCA",
+            .BackColor = Color.FromArgb(20, 20, 20),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Cursor = Cursors.Hand,
+            .Size = New Size(55, 23)}
+        _btDca.FlatAppearance.BorderSize = 0
+        _btDca.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        _btDca.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+        AddHandler _btDca.Click, AddressOf btDca_Click
+        Controls.Add(_btDca)
+        ArrangeDcaButton()
+    End Sub
+
+    Private Sub AddDcaGridColumn(name As String, headerText As String)
+        _dgDca.Columns.Add(New DataGridViewTextBoxColumn With {
+            .Name = name,
+            .HeaderText = headerText,
+            .SortMode = DataGridViewColumnSortMode.NotSortable,
+            .AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill})
+    End Sub
+
+    Private Async Sub DcaSavePlan_Click(sender As Object, e As EventArgs)
+        Try
+            Dim plan = New DcaPlan With {
+                .Symbol = If(_cbDcaSymbol.SelectedItem, String.Empty).ToString(),
+                .BudgetQuote = _nudDcaBudget.Value,
+                .CooldownMinutes = CInt(_nudDcaCooldown.Value),
+                .Enabled = _chkDcaEnabled.Checked,
+                .Levels = ParseDcaLevels(_txtDcaLevels.Text)}
+            _spotDca.SavePlan(plan)
+            UpdateDcaGrid()
+            SetDcaStatus($"Plano {plan.Symbol} salvo com {plan.Levels.Count} nível(is).", Color.LimeGreen)
+            If _spotDca.IsRunning Then Await StartBinanceWebSocket()
+        Catch ex As Exception
+            SetDcaStatus("Erro no plano DCA: " & ex.Message, Color.IndianRed)
+        End Try
+    End Sub
+
+    Private Async Sub DcaStart_Click(sender As Object, e As EventArgs)
+        If _spotDca.GetPlans().Count = 0 Then
+            SetDcaStatus("Salve pelo menos um plano antes de iniciar.", Color.Gold)
+            Return
+        End If
+        _spotDca.Start()
+        _btDcaStart.Enabled = False
+        _btDcaStop.Enabled = True
+        SetDcaStatus("DCA iniciado em modo SIMULAÇÃO.", Color.LimeGreen)
+        Await StartBinanceWebSocket()
+    End Sub
+
+    Private Sub DcaStop_Click(sender As Object, e As EventArgs)
+        _spotDca.Stop()
+        _btDcaStart.Enabled = True
+        _btDcaStop.Enabled = False
+        SetDcaStatus("DCA parado; os estados foram preservados.", Color.Gold)
+    End Sub
+
+    Private Sub DcaReset_Click(sender As Object, e As EventArgs)
+        If MessageBox.Show("Zerar quantidades, níveis acionados e capital simulado do DCA?", "DCA", MessageBoxButtons.YesNo, MessageBoxIcon.Question) <> DialogResult.Yes Then Return
+        _spotDca.ResetSimulation()
+        UpdateDcaGrid()
+        SetDcaStatus("Simulação DCA zerada.", Color.Gold)
+    End Sub
+
+    Private Sub btDca_Click(sender As Object, e As EventArgs)
+        PanelGraphs.Visible = False
+        PanelOrdens.Visible = False
+        PanelFuturos.Visible = False
+        ArrangeOrdersPanel(False)
+        ArrangeFuturesOrdersPanel(False)
+        ArrangeSpotBotPanel(False)
+        ArrangeDcaPanel(True)
+        btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
+        btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
+        btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
+        _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
+        _btDca.BackColor = Color.SteelBlue
+        UpdateDcaGrid()
+    End Sub
+
+    Private Function ParseDcaLevels(text As String) As List(Of DcaLevel)
+        Dim result As New List(Of DcaLevel)()
+        For Each part In If(text, String.Empty).Split(";"c, StringSplitOptions.RemoveEmptyEntries)
+            Dim pieces = part.Trim().Split(":"c)
+            If pieces.Length <> 2 Then Throw New FormatException("Use o formato queda:alocação; exemplo 5:10;10:20.")
+            Dim drop As Decimal
+            Dim allocation As Decimal
+            If Not Decimal.TryParse(pieces(0), NumberStyles.Float, CultureInfo.InvariantCulture, drop) OrElse
+               Not Decimal.TryParse(pieces(1), NumberStyles.Float, CultureInfo.InvariantCulture, allocation) OrElse
+               drop <= 0D OrElse allocation <= 0D Then
+                Throw New FormatException("Cada nível precisa ter percentuais positivos.")
+            End If
+            result.Add(New DcaLevel With {.DropPercent = drop, .AllocationPercent = allocation})
+        Next
+        If result.Count = 0 Then Throw New FormatException("Informe pelo menos um nível DCA.")
+        If result.Sum(Function(item) item.AllocationPercent) > 100.01D Then Throw New FormatException("A soma das alocações não pode ultrapassar 100%.")
+        Return result.OrderBy(Function(item) item.DropPercent).ToList()
+    End Function
+
+    Private Sub Dca_PurchaseSimulated(sender As Object, e As DcaPurchaseEventArgs)
+        If e Is Nothing OrElse e.Purchase Is Nothing Then Return
+        SetDcaStatus($"Compra simulada {e.Purchase.Symbol}: {e.Purchase.QuoteAmount:0.00} USDT em -{e.Purchase.DropPercent:0.##}%.", Color.LimeGreen)
+    End Sub
+
+    Private Sub Dca_SimulationUpdated(sender As Object, e As DcaSimulationEventArgs)
+        If IsDisposed OrElse Disposing Then Return
+        If InvokeRequired Then
+            BeginInvoke(New Action(AddressOf UpdateDcaGrid))
+            Return
+        End If
+        UpdateDcaGrid()
+    End Sub
+
+    Private Sub SetDcaStatus(text As String, color As Color)
+        If _lbDcaStatus Is Nothing Then Return
+        _lbDcaStatus.Text = text
+        _lbDcaStatus.ForeColor = color
+    End Sub
+
+    Private Sub UpdateDcaGrid()
+        If _dgDca Is Nothing Then Return
+        _dgDca.Rows.Clear()
+        Dim states = _spotDca.GetStates().ToDictionary(Function(item) item.Symbol, StringComparer.OrdinalIgnoreCase)
+        For Each plan In _spotDca.GetPlans()
+            Dim state As DcaState = Nothing
+            If Not states.TryGetValue(plan.Symbol, state) Then state = New DcaState With {.Symbol = plan.Symbol}
+            Dim drop = If(state.AnchorPrice <= 0D, 0D, (state.AnchorPrice - state.LastPrice) / state.AnchorPrice * 100D)
+            Dim index = _dgDca.Rows.Add()
+            Dim row = _dgDca.Rows(index)
+            row.Cells("Symbol").Value = plan.Symbol
+            row.Cells("Enabled").Value = If(plan.Enabled, "SIM", "NÃO")
+            row.Cells("Anchor").Value = If(state.AnchorPrice <= 0D, "-", state.AnchorPrice.ToString("0.########", CultureInfo.InvariantCulture))
+            row.Cells("LastPrice").Value = If(state.LastPrice <= 0D, "-", state.LastPrice.ToString("0.########", CultureInfo.InvariantCulture))
+            row.Cells("Drop").Value = drop.ToString("0.00", CultureInfo.InvariantCulture) & "%"
+            row.Cells("Quantity").Value = state.Quantity.ToString("0.########", CultureInfo.InvariantCulture)
+            row.Cells("Invested").Value = FormatSpotBotUsd(state.InvestedQuote, 2)
+            row.Cells("Average").Value = If(state.AveragePrice <= 0D, "-", state.AveragePrice.ToString("0.########", CultureInfo.InvariantCulture))
+            row.Cells("Pnl").Value = FormatSpotBotUsd(state.UnrealizedPnl, 2)
+            row.Cells("Roi").Value = state.RoiPercent.ToString("0.00;-0.00;0.00", CultureInfo.InvariantCulture) & "%"
+            Dim positive = state.UnrealizedPnl >= 0D
+            Dim pnlColor = If(positive, Color.LimeGreen, Color.IndianRed)
+            row.DefaultCellStyle.BackColor = If(positive, Color.FromArgb(0, 25, 0), Color.FromArgb(25, 0, 0))
+            row.Cells("Pnl").Style.ForeColor = pnlColor
+            row.Cells("Roi").Style.ForeColor = pnlColor
+        Next
+    End Sub
+
+    Private Sub ArrangeDcaPanel(showDca As Boolean)
+        If _panelDca Is Nothing OrElse PanelGraphs Is Nothing Then Return
+        If Not showDca Then
+            _panelDca.Visible = False
+            Return
+        End If
+
+        Dim panelTop = Math.Max(PanelGraphs.Top, _btDca.Bottom + 2)
+        Dim panelBottom = PanelProfits.Top
+        _panelDca.Padding = New Padding(14, 0, 14, 0)
+        _panelDca.Location = New Point(0, panelTop)
+        _panelDca.Size = New Size(Me.ClientSize.Width, Math.Max(150, panelBottom - panelTop))
+        _panelDca.Visible = True
+        _panelDca.BringToFront()
+        btVisaoGeral.BringToFront()
+        btOrdensSpot.BringToFront()
+        btOrdensFuturo.BringToFront()
+        _btTradeBot.BringToFront()
+        _btDca.BringToFront()
+    End Sub
+
+    Private Sub ArrangeDcaButton()
+        If _btDca Is Nothing OrElse _btTradeBot Is Nothing Then Return
+        _btDca.Location = New Point(_btTradeBot.Right, _btTradeBot.Top)
     End Sub
 
     Private Sub SpotBotUniverseModeChanged(sender As Object, e As EventArgs)
@@ -999,26 +1312,8 @@ Public Class FormMain
     End Sub
 
     Private Function GetBollingerModeIndex() As Integer
-        If Not _spotTradeBot.HasRestoredState Then Return 1
-        If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BnfContrarian) Then
-            Return 1
-        End If
-        If Not _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion) Then
-            Return 0
-        End If
-
-        If _spotTradeBot.Configuration.BollingerPeriod = 20 Then
-            If Math.Abs(_spotTradeBot.Configuration.BollingerStandardDeviations - 2.3D) < 0.01D Then
-                Return 3
-            End If
-            Return 2
-        End If
-
-        If Math.Abs(_spotTradeBot.Configuration.BollingerStandardDeviations - 2.3D) < 0.01D Then
-            Return 5
-        End If
-
-        Return 4
+        ' A estratégia base do Tradebot é sempre a Base Original Protegida.
+        Return 0
     End Function
 
     Private Function GetBollingerTimeframeIndex() As Integer
@@ -1034,19 +1329,11 @@ Public Class FormMain
             Return
         End If
 
-        Dim isBnf = _botBollingerMode.SelectedIndex = 1
-        If isBnf Then
-            ' A referência do BNF é uma média de 25 dias; não misture-a com
-            ' candles de 4 horas e deixe o perfil visualmente explícito.
-            _botBollingerTimeframe.SelectedIndex = 1
-        End If
-        _botBollingerTimeframe.Enabled = Not isBnf
+        _botBollingerTimeframe.Enabled = True
     End Sub
 
     Private Sub ApplyBollingerTimeframe()
-        If _botBollingerMode IsNot Nothing AndAlso _botBollingerMode.SelectedIndex = 1 Then
-            _spotTradeBot.Configuration.BollingerCandleMinutes = 1440
-        ElseIf _botBollingerTimeframe Is Nothing OrElse _botBollingerTimeframe.SelectedIndex = 0 Then
+        If _botBollingerTimeframe Is Nothing OrElse _botBollingerTimeframe.SelectedIndex = 0 Then
             _spotTradeBot.Configuration.BollingerCandleMinutes = 240
         Else
             _spotTradeBot.Configuration.BollingerCandleMinutes = 1440
@@ -1054,37 +1341,13 @@ Public Class FormMain
     End Sub
 
     Private Sub ApplyBollingerMode()
-        If _botBollingerMode Is Nothing OrElse _botBollingerMode.SelectedIndex <= 0 Then
-            _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, False)
-            _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BnfContrarian, False)
-            Return
-        End If
-
-        _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, False)
+        ' A Base Original Protegida permanece como perfil principal; as demais
+        ' estratégias são opcionais e aplicadas pelos checkboxes do painel.
         _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BnfContrarian, False)
-
-        If _botBollingerMode.SelectedIndex = 1 Then
-            _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BnfContrarian, True)
-            _spotTradeBot.Configuration.BnfMovingAveragePeriod = 25
-            _spotTradeBot.Configuration.BnfMinimumDeviationPercent = 20D
-            Return
-        End If
-
-        _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, True)
-        Select Case _botBollingerMode.SelectedIndex
-            Case 3
-                _spotTradeBot.Configuration.BollingerPeriod = 20
-                _spotTradeBot.Configuration.BollingerStandardDeviations = 2.3D
-            Case 4
-                _spotTradeBot.Configuration.BollingerPeriod = 25
-                _spotTradeBot.Configuration.BollingerStandardDeviations = 3D
-            Case 5
-                _spotTradeBot.Configuration.BollingerPeriod = 25
-                _spotTradeBot.Configuration.BollingerStandardDeviations = 2.3D
-            Case Else
-                _spotTradeBot.Configuration.BollingerPeriod = 20
-                _spotTradeBot.Configuration.BollingerStandardDeviations = 3D
-        End Select
+        _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, False)
+        _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BaseOriginalProtected, True)
+        _spotTradeBot.Configuration.BollingerPeriod = 25
+        _spotTradeBot.Configuration.BollingerStandardDeviations = 3D
     End Sub
 
     Private Shared Sub AddBotLabel(editor As Panel, text As String, left As Integer, top As Integer, width As Integer)
@@ -1166,6 +1429,7 @@ Public Class FormMain
         btOrdensSpot.BringToFront()
         btOrdensFuturo.BringToFront()
         _btTradeBot.BringToFront()
+        If _btDca IsNot Nothing Then _btDca.BringToFront()
     End Sub
 
     Private Sub ArrangeSpotBotButton()
@@ -1239,7 +1503,7 @@ Public Class FormMain
            _spotTradeBot.Configuration.TakeProfitPercent <
            _spotTradeBot.Configuration.StopLossPercent * _spotTradeBot.Configuration.WaveMinimumRiskReward Then
             AppendSpotBotLog(
-                $"A estratégia Onda exige risco/retorno mínimo de " &
+                $"A estratégia Pullback EMA34 exige risco/retorno mínimo de " &
                 $"{_spotTradeBot.Configuration.WaveMinimumRiskReward:0.##}:1. " &
                 "Ajuste o TP ou o SL antes de iniciar.",
                 Color.Gold)
@@ -1280,26 +1544,12 @@ Public Class FormMain
                "Bot Spot retomado em modo SIMULAÇÃO.",
                "Bot Spot iniciado em modo SIMULAÇÃO."),
             Color.LimeGreen)
-        Dim bollingerEnabled = _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion)
-        Dim bnfEnabled = _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BnfContrarian)
         AppendSpotBotLog(
-            If(bollingerEnabled OrElse bnfEnabled,
-               "Proteções: BNF/Bollinger usa SL/TP estruturais; percentuais ficam como fallback das demais estratégias.",
-               $"Proteções: TP {_spotTradeBot.Configuration.TakeProfitPercent:0.##}% | " &
-               $"SL {_spotTradeBot.Configuration.StopLossPercent:0.##}% (0% desativa)."),
+            "Perfil ativo: Base Original Protegida (Bollinger 25/3); alvo na média central e stop no extremo do candle.",
             Color.LightGray)
-        If bnfEnabled Then
-            AppendSpotBotLog(
-                $"BNF experimental: fechamento {_spotTradeBot.Configuration.BnfMinimumDeviationPercent:0.##}% abaixo da SMA {_spotTradeBot.Configuration.BnfMovingAveragePeriod} + confirmação por rompimento; " &
-                $"SL no extremo e TP na SMA; timeframe {If(_spotTradeBot.Configuration.BollingerCandleMinutes = 240, "4 horas", "diário")}.",
-                Color.LightGray)
-        ElseIf bollingerEnabled Then
-            AppendSpotBotLog(
-                $"Bollinger: fechamento fora de {_spotTradeBot.Configuration.BollingerPeriod}/{_spotTradeBot.Configuration.BollingerStandardDeviations:0.##}σ + confirmação por rompimento; " &
-                $"SL no extremo e TP na média {_spotTradeBot.Configuration.BollingerPeriod}; " &
-                $"timeframe {If(_spotTradeBot.Configuration.BollingerCandleMinutes = 240, "4 horas", "diário")}.",
-                Color.LightGray)
-        End If
+        AppendSpotBotLog(
+            $"Timeframe: {If(_spotTradeBot.Configuration.BollingerCandleMinutes = 240, "4 horas", "diário")}.",
+            Color.LightGray)
         AppendSpotBotLog($"Universo: {universe.Count} ativo(s) ({If(_spotTradeBot.Configuration.UniverseMode = SpotBotUniverseMode.TopVolume, "Top volume", "Manual")}).", Color.LightGray)
         AppendSpotBotLog("Estratégias: " & String.Join(", ", _spotTradeBot.Configuration.EnabledStrategies), Color.LightGray)
     End Sub
@@ -1558,6 +1808,7 @@ Public Class FormMain
             CheckCatalogsOnStartup()
 
             AddHandler _binanceWs.PriceUpdated, AddressOf BinanceWs_PriceUpdated
+            AddHandler _binanceWs.VolumeUpdated, AddressOf BinanceWs_VolumeUpdated
 
             AddHandler _binanceWs.ConnectionStateChanged, AddressOf BinanceWs_ConnectionStateChanged
             AddHandler _gateWs.PriceUpdated, AddressOf GateWs_PriceUpdated
@@ -2130,6 +2381,12 @@ Public Class FormMain
                 End If
             Next
 
+            For Each dcaPlan In _spotDca.GetPlans()
+                If dcaPlan.Enabled AndAlso Not String.IsNullOrWhiteSpace(dcaPlan.Symbol) Then
+                    symbols.Add(dcaPlan.Symbol.Trim().ToUpperInvariant())
+                End If
+            Next
+
             symbols =
             symbols.Distinct().ToList()
 
@@ -2624,7 +2881,6 @@ Public Class FormMain
                     UpdateBinanceRow(symbol, price)
                     UpdateSpotOrdersCurrentPrice(symbol, price)
                     UpdateSpotOrderCurrentPrice()
-                    ProcessSpotBotPrice(symbol, price)
                 End Sub))
 
             Return
@@ -2634,14 +2890,23 @@ Public Class FormMain
         UpdateBinanceRow(symbol, price)
         UpdateSpotOrdersCurrentPrice(symbol, price)
         UpdateSpotOrderCurrentPrice()
-        ProcessSpotBotPrice(symbol, price)
 
     End Sub
 
-    Private Sub ProcessSpotBotPrice(symbol As String, price As Decimal)
+    Private Sub BinanceWs_VolumeUpdated(symbol As String, price As Decimal, quoteVolume24h As Decimal)
+        If Me.InvokeRequired Then
+            Me.BeginInvoke(New Action(Of String, Decimal, Decimal)(AddressOf BinanceWs_VolumeUpdated), symbol, price, quoteVolume24h)
+            Return
+        End If
+
+        ProcessSpotBotPrice(symbol, price, quoteVolume24h)
+        _spotDca.ProcessPrice(symbol, price)
+    End Sub
+
+    Private Sub ProcessSpotBotPrice(symbol As String, price As Decimal, Optional quoteVolume24h As Decimal = 0D)
         If Not _spotTradeBot.IsRunning Then Return
         If Not IsSpotBotUniverseSymbol(symbol) Then Return
-        _spotTradeBot.ProcessPrice(symbol, price)
+        _spotTradeBot.ProcessPrice(symbol, price, quoteVolume24h:=quoteVolume24h)
     End Sub
 
     Private Function IsSpotBotUniverseSymbol(symbol As String) As Boolean
@@ -2785,8 +3050,12 @@ Public Class FormMain
             End If
 
             ArrangeSpotBotButton()
+            ArrangeDcaButton()
             If _panelSpotBot IsNot Nothing AndAlso _panelSpotBot.Visible Then
                 ArrangeSpotBotPanel(True)
+            End If
+            If _panelDca IsNot Nothing AndAlso _panelDca.Visible Then
+                ArrangeDcaPanel(True)
             End If
 
             Me.CenterToScreen()
@@ -6130,11 +6399,13 @@ Public Class FormMain
         PanelOrdens.Visible = False
         PanelFuturos.Visible = False
         ArrangeSpotBotPanel(False)
+        ArrangeDcaPanel(False)
         ArrangeOrdersPanel(False)
         ArrangeFuturesOrdersPanel(False)
         btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
         _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
+        If _btDca IsNot Nothing Then _btDca.BackColor = Color.FromArgb(20, 20, 20)
         btVisaoGeral.BackColor = Color.SteelBlue
     End Sub
     Private Async Sub btOrdensSpot_Click(sender As Object, e As EventArgs) Handles btOrdensSpot.Click
@@ -6142,24 +6413,28 @@ Public Class FormMain
         PanelOrdens.Visible = True
         PanelFuturos.Visible = False
         ArrangeSpotBotPanel(False)
+        ArrangeDcaPanel(False)
         ArrangeOrdersPanel(True)
         ArrangeFuturesOrdersPanel(False)
         btOrdensSpot.BackColor = Color.SteelBlue
         btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
         _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
+        If _btDca IsNot Nothing Then _btDca.BackColor = Color.FromArgb(20, 20, 20)
         Await LoadSpotOrdersAsync()
     End Sub
     Private Async Sub btOrdensFuturo_Click(sender As Object, e As EventArgs) Handles btOrdensFuturo.Click
         PanelGraphs.Visible = False
         PanelOrdens.Visible = False
         ArrangeSpotBotPanel(False)
+        ArrangeDcaPanel(False)
         ArrangeFuturesOrdersPanel(True)
         ArrangeOrdersPanel(False)
         btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.SteelBlue
         _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
+        If _btDca IsNot Nothing Then _btDca.BackColor = Color.FromArgb(20, 20, 20)
         Await LoadFuturesOrdersAsync()
     End Sub
 
@@ -6169,6 +6444,7 @@ Public Class FormMain
         PanelFuturos.Visible = False
         ArrangeOrdersPanel(False)
         ArrangeFuturesOrdersPanel(False)
+        ArrangeDcaPanel(False)
         ArrangeSpotBotPanel(True)
         UpdateSpotBotPositionsGrid(_spotTradeBot.GetOpenPositions())
         If _spotTradeBot.IsRunning OrElse _spotTradeBot.HasRestoredState Then
@@ -6178,6 +6454,7 @@ Public Class FormMain
         btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
         _btTradeBot.BackColor = Color.SteelBlue
+        If _btDca IsNot Nothing Then _btDca.BackColor = Color.FromArgb(20, 20, 20)
     End Sub
 
     Private Sub SimbolosToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SimbolosToolStripMenuItem.Click

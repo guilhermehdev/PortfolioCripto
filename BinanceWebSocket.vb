@@ -17,6 +17,7 @@ Public Class BinanceWebSocket
     Private _symbols As List(Of String)
 
     Public Event PriceUpdated(symbol As String, price As Decimal)
+    Public Event VolumeUpdated(symbol As String, price As Decimal, quoteVolume24h As Decimal)
     Public Event ConnectionStateChanged(connected As Boolean, message As String)
 
     Public ReadOnly Property IsConnected As Boolean
@@ -217,6 +218,7 @@ Public Class BinanceWebSocket
 
                 Dim symbolElement As JsonElement
                 Dim priceElement As JsonElement
+                Dim volumeElement As JsonElement
 
                 If Not data.TryGetProperty("s", symbolElement) OrElse
                    Not data.TryGetProperty("c", priceElement) Then
@@ -241,6 +243,15 @@ Public Class BinanceWebSocket
                     Return
                 End If
 
+                Dim quoteVolume24h = 0D
+                If data.TryGetProperty("q", volumeElement) Then
+                    Decimal.TryParse(
+                        volumeElement.GetString(),
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        quoteVolume24h)
+                End If
+
                 Dim assetSymbol As String = pairSymbol
 
                 If assetSymbol.EndsWith("USDT", StringComparison.OrdinalIgnoreCase) Then
@@ -257,6 +268,7 @@ Public Class BinanceWebSocket
                 End If
 
                 RaiseEvent PriceUpdated(assetSymbol, price)
+                RaiseEvent VolumeUpdated(assetSymbol, price, Math.Max(0D, quoteVolume24h))
 
             End Using
 

@@ -22,6 +22,12 @@ Public Enum SpotBotStrategyKind
     BollingerMeanReversion = 4
     WavePullback = 5
     BnfContrarian = 6
+    ' Perfis nomeados do Tradebot. Os valores novos preservam as simulações
+    ' antigas que ainda possam estar persistidas no SQLite.
+    BaseOriginalProtected = 7
+    BreakoutRetest = 8
+    MomentumVolume = 9
+    GridRegime = 10
 End Enum
 
 Public Enum SpotBotUniverseMode
@@ -35,13 +41,15 @@ Public NotInheritable Class SpotBotPricePoint
         price As Decimal,
         Optional openPrice As Decimal = 0D,
         Optional highPrice As Decimal = 0D,
-        Optional lowPrice As Decimal = 0D)
+        Optional lowPrice As Decimal = 0D,
+        Optional volume As Decimal = 0D)
 
         Me.TimestampUtc = timestampUtc
         Me.Price = price
         Me.Open = If(openPrice > 0D, openPrice, price)
         Me.High = If(highPrice > 0D, highPrice, Math.Max(Me.Open, price))
         Me.Low = If(lowPrice > 0D, lowPrice, Math.Min(Me.Open, price))
+        Me.Volume = Math.Max(0D, volume)
     End Sub
 
     Public ReadOnly Property TimestampUtc As DateTime
@@ -49,6 +57,7 @@ Public NotInheritable Class SpotBotPricePoint
     Public ReadOnly Property Open As Decimal
     Public ReadOnly Property High As Decimal
     Public ReadOnly Property Low As Decimal
+    Public ReadOnly Property Volume As Decimal
     Public ReadOnly Property Close As Decimal
         Get
             Return Price
@@ -127,6 +136,15 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property BreakoutPeriod As Integer = 20
     Public Property GridSpacingPercent As Decimal = 1D
     Public Property GridReferencePrice As Decimal
+    Public Property GridRegimeLookback As Integer = 30
+    Public Property GridRegimeMaxRangePercent As Decimal = 12D
+    Public Property GridRegimeMaxSlopePercent As Decimal = 4D
+
+    ' Parâmetros do momentum confirmado por volume de 24h do ticker.
+    Public Property MomentumVolumeLookback As Integer = 20
+    Public Property MomentumVolumeMultiplier As Decimal = 1.5D
+    Public Property MomentumEmaPeriod As Integer = 21
+    Public Property MomentumRiskReward As Decimal = 2D
 
     ' Parâmetros da variante Bollinger selecionada no painel.
     Public Property BollingerPeriod As Integer = 20
