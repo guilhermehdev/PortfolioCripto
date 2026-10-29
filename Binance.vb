@@ -510,6 +510,61 @@ Public Class Binance
         End Try
     End Function
 
+    Public Async Function BINANCE_GetSpotKlinesAsync(
+        symbol As String,
+        interval As String,
+        limit As Integer) As Task(Of List(Of DcaCandle))
+
+        Dim result As New List(Of DcaCandle)()
+        Dim normalizedSymbol = symbol?.Trim().ToUpperInvariant()
+        If String.IsNullOrWhiteSpace(normalizedSymbol) Then Return result
+        If Not normalizedSymbol.EndsWith("USDT", StringComparison.OrdinalIgnoreCase) Then
+            normalizedSymbol &= "USDT"
+        End If
+
+        Dim normalizedInterval = If(String.Equals(interval?.Trim(), "1d", StringComparison.OrdinalIgnoreCase), "1d", "4h")
+        Dim requestedLimit = Math.Max(30, Math.Min(1000, limit))
+
+        Using client As New HttpClient()
+            client.DefaultRequestHeaders.Add("User-Agent", "PortfolioCripto/1.0")
+            Dim url = $"https://api.binance.com/api/v3/klines?symbol={Uri.EscapeDataString(normalizedSymbol)}" &
+                      $"&interval={normalizedInterval}&limit={requestedLimit}"
+            Dim response = Await client.GetAsync(url)
+            Dim content = Await response.Content.ReadAsStringAsync()
+            If Not response.IsSuccessStatusCode Then
+                Throw New InvalidOperationException(
+                    $"Binance não carregou candles de {normalizedSymbol}: HTTP {CInt(response.StatusCode)}.")
+            End If
+
+            Dim raw = TryCast(JToken.Parse(content), JArray)
+            If raw Is Nothing Then Return result
+
+            For Each item In raw.OfType(Of JArray)()
+                If item.Count < 7 Then Continue For
+
+                Dim startMs As Long
+                Dim closeMs As Long
+                If Not Long.TryParse(item(0)?.ToString(), startMs) OrElse
+                   Not Long.TryParse(item(6)?.ToString(), closeMs) Then Continue For
+
+                result.Add(New DcaCandle With {
+                    .StartUtc = DateTimeOffset.FromUnixTimeMilliseconds(startMs).UtcDateTime,
+                    .CloseUtc = DateTimeOffset.FromUnixTimeMilliseconds(closeMs).UtcDateTime,
+                    .Open = ParseDecimalInvariant(item(1)),
+                    .High = ParseDecimalInvariant(item(2)),
+                    .Low = ParseDecimalInvariant(item(3)),
+                    .Close = ParseDecimalInvariant(item(4)),
+                    .Volume = ParseDecimalInvariant(item(5)),
+                    .IsClosed = DateTimeOffset.FromUnixTimeMilliseconds(closeMs) <= DateTimeOffset.UtcNow})
+            Next
+        End Using
+
+        Return result.
+            Where(Function(item) item.IsClosed AndAlso item.Low > 0D AndAlso item.Close > 0D).
+            OrderBy(Function(item) item.StartUtc).
+            ToList()
+    End Function
+
     Public Async Function BINANCE_GetTopSpotSymbolsByVolumeAsync(
         maxAssets As Integer,
         minimumQuoteVolume As Decimal) As Task(Of List(Of String))

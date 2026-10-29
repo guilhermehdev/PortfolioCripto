@@ -105,6 +105,13 @@ Public Class FormMain
     Private _txtDcaLevels As TextBox
     Private _nudDcaBudget As NumericUpDown
     Private _nudDcaCooldown As NumericUpDown
+    Private _chkDcaAutomaticSupports As CheckBox
+    Private _cbDcaTimeframe As ComboBox
+    Private _nudDcaLookback As NumericUpDown
+    Private _nudDcaTolerance As NumericUpDown
+    Private _nudDcaMinimumTouches As NumericUpDown
+    Private _nudDcaMaximumLevels As NumericUpDown
+    Private _chkDcaRequireRejection As CheckBox
     Private _chkDcaEnabled As CheckBox
     Private _btDcaAdd As Button
     Private _btDcaStart As Button
@@ -861,7 +868,7 @@ Public Class FormMain
 
         Dim editor As New Panel With {
             .Dock = DockStyle.Top,
-            .Height = 92,
+            .Height = 126,
             .BackColor = Color.FromArgb(30, 30, 30)}
 
         AddBotLabel(editor, "Moeda", 6, 3, 110)
@@ -883,7 +890,7 @@ Public Class FormMain
         _nudDcaBudget = CreateBotNumeric(100D, 1D, 100000000D, 2, 140, 24, 125)
         editor.Controls.Add(_nudDcaBudget)
 
-        AddBotLabel(editor, "Níveis queda: percentual:alocação", 278, 3, 250)
+        AddBotLabel(editor, "Níveis/ajustes valor:alocação", 278, 3, 250)
         _txtDcaLevels = New TextBox With {
             .Name = "txtDcaLevels",
             .BackColor = Color.FromArgb(64, 64, 64),
@@ -891,7 +898,7 @@ Public Class FormMain
             .BorderStyle = BorderStyle.FixedSingle,
             .Location = New Point(278, 24),
             .Width = 250,
-            .Text = "5:10;10:20;18:30;28:40"}
+            .Text = ""}
         editor.Controls.Add(_txtDcaLevels)
 
         AddBotLabel(editor, "Intervalo (min)", 540, 3, 110)
@@ -908,6 +915,58 @@ Public Class FormMain
             .Location = New Point(642, 27),
             .Cursor = Cursors.Hand}
         editor.Controls.Add(_chkDcaEnabled)
+
+        _chkDcaAutomaticSupports = New CheckBox With {
+            .Name = "chkDcaAutomaticSupports",
+            .Text = "Suportes automáticos",
+            .Checked = True,
+            .AutoSize = True,
+            .ForeColor = Color.White,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .Location = New Point(6, 78),
+            .Cursor = Cursors.Hand}
+        AddHandler _chkDcaAutomaticSupports.CheckedChanged, AddressOf DcaAutomaticSupports_CheckedChanged
+        editor.Controls.Add(_chkDcaAutomaticSupports)
+
+        AddBotLabel(editor, "Período", 150, 55, 70)
+        _cbDcaTimeframe = New ComboBox With {
+            .Name = "cbDcaTimeframe",
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Location = New Point(150, 76),
+            .Width = 72}
+        _cbDcaTimeframe.Items.AddRange(New Object() {"4 horas", "Diário"})
+        _cbDcaTimeframe.SelectedIndex = 0
+        editor.Controls.Add(_cbDcaTimeframe)
+
+        AddBotLabel(editor, "Lookback", 230, 55, 70)
+        _nudDcaLookback = CreateBotNumeric(200D, 30D, 1000D, 0, 230, 76, 65)
+        editor.Controls.Add(_nudDcaLookback)
+
+        AddBotLabel(editor, "Tolerância %", 305, 55, 80)
+        _nudDcaTolerance = CreateBotNumeric(0.5D, 0.05D, 10D, 2, 305, 76, 65)
+        editor.Controls.Add(_nudDcaTolerance)
+
+        AddBotLabel(editor, "Mín. toques", 380, 55, 80)
+        _nudDcaMinimumTouches = CreateBotNumeric(2D, 1D, 10D, 0, 380, 76, 65)
+        editor.Controls.Add(_nudDcaMinimumTouches)
+
+        AddBotLabel(editor, "Máx. níveis", 455, 55, 80)
+        _nudDcaMaximumLevels = CreateBotNumeric(4D, 1D, 10D, 0, 455, 76, 65)
+        editor.Controls.Add(_nudDcaMaximumLevels)
+
+        _chkDcaRequireRejection = New CheckBox With {
+            .Name = "chkDcaRequireRejection",
+            .Text = "Exigir rejeição",
+            .Checked = True,
+            .AutoSize = True,
+            .ForeColor = Color.White,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .Location = New Point(530, 78),
+            .Cursor = Cursors.Hand}
+        editor.Controls.Add(_chkDcaRequireRejection)
 
         _btDcaAdd = CreateBotButton("Salvar plano", 710, 24, 110, Color.FromArgb(55, 75, 105))
         AddHandler _btDcaAdd.Click, AddressOf DcaSavePlan_Click
@@ -968,6 +1027,7 @@ Public Class FormMain
         AddDcaGridColumn("Quantity", "Qtd")
         AddDcaGridColumn("Invested", "Investido")
         AddDcaGridColumn("Average", "Preço médio")
+        AddDcaGridColumn("Supports", "Suportes")
         AddDcaGridColumn("Pnl", "PnL")
         AddDcaGridColumn("Roi", "ROI %")
 
@@ -1006,16 +1066,31 @@ Public Class FormMain
 
     Private Async Sub DcaSavePlan_Click(sender As Object, e As EventArgs)
         Try
+            Dim automaticSupports = _chkDcaAutomaticSupports IsNot Nothing AndAlso _chkDcaAutomaticSupports.Checked
             Dim plan = New DcaPlan With {
                 .Symbol = If(_cbDcaSymbol.SelectedItem, String.Empty).ToString(),
                 .BudgetQuote = _nudDcaBudget.Value,
                 .CooldownMinutes = CInt(_nudDcaCooldown.Value),
                 .Enabled = _chkDcaEnabled.Checked,
-                .Levels = ParseDcaLevels(_txtDcaLevels.Text)}
+                .UseAutomaticSupports = automaticSupports,
+                .CandleInterval = If(_cbDcaTimeframe.SelectedIndex = 1, "1d", "4h"),
+                .SupportLookbackCandles = CInt(_nudDcaLookback.Value),
+                .SupportTolerancePercent = _nudDcaTolerance.Value,
+                .SupportMinimumTouches = CInt(_nudDcaMinimumTouches.Value),
+                .SupportMaxLevels = CInt(_nudDcaMaximumLevels.Value),
+                .RequireSupportRejection = _chkDcaRequireRejection.Checked,
+                .Levels = If(automaticSupports, New List(Of DcaLevel)(), ParseDcaLevels(_txtDcaLevels.Text)),
+                .ManualSupportOverrides = If(automaticSupports, ParseDcaSupportOverrides(_txtDcaLevels.Text), New List(Of DcaSupportOverride)())}
             _spotDca.SavePlan(plan)
             UpdateDcaGrid()
-            SetDcaStatus($"Plano {plan.Symbol} salvo com {plan.Levels.Count} nível(is).", Color.LimeGreen)
-            If _spotDca.IsRunning Then Await StartBinanceWebSocket()
+            Dim configuredLevels = If(automaticSupports,
+                                     plan.ManualSupportOverrides.Count,
+                                     plan.Levels.Count)
+            SetDcaStatus($"Plano {plan.Symbol} salvo com {configuredLevels} ajuste(s)/nível(is).", Color.LimeGreen)
+            If _spotDca.IsRunning Then
+                Await _spotDca.LoadHistoricalCandlesAsync(AddressOf B.BINANCE_GetSpotKlinesAsync)
+                Await StartBinanceWebSocket()
+            End If
         Catch ex As Exception
             SetDcaStatus("Erro no plano DCA: " & ex.Message, Color.IndianRed)
         End Try
@@ -1026,11 +1101,19 @@ Public Class FormMain
             SetDcaStatus("Salve pelo menos um plano antes de iniciar.", Color.Gold)
             Return
         End If
-        _spotDca.Start()
-        _btDcaStart.Enabled = False
-        _btDcaStop.Enabled = True
-        SetDcaStatus("DCA iniciado em modo SIMULAÇÃO.", Color.LimeGreen)
-        Await StartBinanceWebSocket()
+
+        Try
+            SetDcaStatus("Carregando candles e recalculando suportes...", Color.Gold)
+            Await _spotDca.LoadHistoricalCandlesAsync(AddressOf B.BINANCE_GetSpotKlinesAsync)
+            _spotDca.Start()
+            _btDcaStart.Enabled = False
+            _btDcaStop.Enabled = True
+            SetDcaStatus("DCA iniciado em modo SIMULAÇÃO; suportes automáticos ativos.", Color.LimeGreen)
+            Await StartBinanceWebSocket()
+        Catch ex As Exception
+            _spotDca.Stop()
+            SetDcaStatus("Erro iniciando DCA: " & ex.Message, Color.IndianRed)
+        End Try
     End Sub
 
     Private Sub DcaStop_Click(sender As Object, e As EventArgs)
@@ -1070,8 +1153,8 @@ Public Class FormMain
             If pieces.Length <> 2 Then Throw New FormatException("Use o formato queda:alocação; exemplo 5:10;10:20.")
             Dim drop As Decimal
             Dim allocation As Decimal
-            If Not Decimal.TryParse(pieces(0), NumberStyles.Float, CultureInfo.InvariantCulture, drop) OrElse
-               Not Decimal.TryParse(pieces(1), NumberStyles.Float, CultureInfo.InvariantCulture, allocation) OrElse
+            If Not TryParseDcaDecimal(pieces(0), drop) OrElse
+               Not TryParseDcaDecimal(pieces(1), allocation) OrElse
                drop <= 0D OrElse allocation <= 0D Then
                 Throw New FormatException("Cada nível precisa ter percentuais positivos.")
             End If
@@ -1081,6 +1164,58 @@ Public Class FormMain
         If result.Sum(Function(item) item.AllocationPercent) > 100.01D Then Throw New FormatException("A soma das alocações não pode ultrapassar 100%.")
         Return result.OrderBy(Function(item) item.DropPercent).ToList()
     End Function
+
+    Private Function ParseDcaSupportOverrides(text As String) As List(Of DcaSupportOverride)
+        Dim result As New List(Of DcaSupportOverride)()
+        For Each part In If(text, String.Empty).Split(";"c, StringSplitOptions.RemoveEmptyEntries)
+            Dim pieces = part.Trim().Split(":"c)
+            If pieces.Length < 2 OrElse pieces.Length > 3 Then
+                Throw New FormatException("Use o formato preço:alocação; exemplo 0,9500:20;0,8800:30.")
+            End If
+
+            Dim price As Decimal
+            Dim allocation As Decimal
+            Dim tolerance = _nudDcaTolerance.Value
+            If Not TryParseDcaDecimal(pieces(0), price) OrElse
+               Not TryParseDcaDecimal(pieces(1), allocation) OrElse
+               price <= 0D OrElse allocation <= 0D Then
+                Throw New FormatException("Cada ajuste manual precisa ter preço e alocação positivos.")
+            End If
+
+            If pieces.Length = 3 AndAlso Not TryParseDcaDecimal(pieces(2), tolerance) Then
+                Throw New FormatException("A tolerância manual deve ser um percentual positivo.")
+            End If
+
+            If tolerance <= 0D Then
+                Throw New FormatException("A tolerância manual deve ser maior que zero.")
+            End If
+
+            result.Add(New DcaSupportOverride With {
+                .Price = price,
+                .AllocationPercent = allocation,
+                .TolerancePercent = tolerance,
+                .Enabled = True})
+        Next
+
+        If result.Sum(Function(item) item.AllocationPercent) > 100.01D Then
+            Throw New FormatException("A soma dos ajustes manuais não pode ultrapassar 100%.")
+        End If
+        Return result
+    End Function
+
+    Private Shared Function TryParseDcaDecimal(value As String, ByRef result As Decimal) As Boolean
+        If Decimal.TryParse(value?.Trim(), NumberStyles.Float, CultureInfo.CurrentCulture, result) Then Return True
+        Return Decimal.TryParse(value?.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, result)
+    End Function
+
+    Private Sub DcaAutomaticSupports_CheckedChanged(sender As Object, e As EventArgs)
+        If _chkDcaAutomaticSupports Is Nothing Then Return
+        If _chkDcaAutomaticSupports.Checked Then
+            SetDcaStatus("Modo automático: informe apenas ajustes manuais opcionais.", Color.Gold)
+        Else
+            SetDcaStatus("Modo percentual: os níveis serão interpretados como queda:alocação.", Color.Gold)
+        End If
+    End Sub
 
     Private Sub Dca_PurchaseSimulated(sender As Object, e As DcaPurchaseEventArgs)
         If e Is Nothing OrElse e.Purchase Is Nothing Then Return
@@ -1120,6 +1255,13 @@ Public Class FormMain
             row.Cells("Quantity").Value = state.Quantity.ToString("0.########", CultureInfo.InvariantCulture)
             row.Cells("Invested").Value = FormatSpotBotUsd(state.InvestedQuote, 2)
             row.Cells("Average").Value = If(state.AveragePrice <= 0D, "-", state.AveragePrice.ToString("0.########", CultureInfo.InvariantCulture))
+            row.Cells("Supports").Value = If(
+                state.Supports Is Nothing OrElse state.Supports.Count = 0,
+                "-",
+                String.Join(" | ", state.Supports.
+                    OrderByDescending(Function(item) item.Price).
+                    Select(Function(item) item.Price.ToString("0.########", CultureInfo.InvariantCulture) &
+                           " (" & item.AllocationPercent.ToString("0.#", CultureInfo.InvariantCulture) & "%)")))
             row.Cells("Pnl").Value = FormatSpotBotUsd(state.UnrealizedPnl, 2)
             row.Cells("Roi").Value = state.RoiPercent.ToString("0.00;-0.00;0.00", CultureInfo.InvariantCulture) & "%"
             Dim positive = state.UnrealizedPnl >= 0D
@@ -1809,6 +1951,7 @@ Public Class FormMain
 
             AddHandler _binanceWs.PriceUpdated, AddressOf BinanceWs_PriceUpdated
             AddHandler _binanceWs.VolumeUpdated, AddressOf BinanceWs_VolumeUpdated
+            AddHandler _binanceWs.CandleUpdated, AddressOf BinanceWs_CandleUpdated
 
             AddHandler _binanceWs.ConnectionStateChanged, AddressOf BinanceWs_ConnectionStateChanged
             AddHandler _gateWs.PriceUpdated, AddressOf GateWs_PriceUpdated
@@ -2399,7 +2542,7 @@ Public Class FormMain
 
             End If
 
-            Await _binanceWs.StartAsync(symbols)
+            Await _binanceWs.StartAsync(symbols, _spotDca.GetRequiredCandleIntervals())
 
         Catch ex As Exception
 
@@ -2901,6 +3044,29 @@ Public Class FormMain
 
         ProcessSpotBotPrice(symbol, price, quoteVolume24h)
         _spotDca.ProcessPrice(symbol, price)
+    End Sub
+
+    Private Sub BinanceWs_CandleUpdated(
+        symbol As String,
+        interval As String,
+        candleStartUtc As DateTime,
+        openPrice As Decimal,
+        highPrice As Decimal,
+        lowPrice As Decimal,
+        closePrice As Decimal,
+        volume As Decimal,
+        isClosed As Boolean)
+
+        _spotDca.ProcessCandle(
+            symbol,
+            interval,
+            candleStartUtc,
+            openPrice,
+            highPrice,
+            lowPrice,
+            closePrice,
+            volume,
+            isClosed)
     End Sub
 
     Private Sub ProcessSpotBotPrice(symbol As String, price As Decimal, Optional quoteVolume24h As Decimal = 0D)

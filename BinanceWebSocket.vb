@@ -1,5 +1,6 @@
 Imports System.Collections.Concurrent
 Imports System.Globalization
+Imports System.Linq
 Imports System.Net.WebSockets
 Imports System.Text
 Imports System.Text.Json
@@ -15,9 +16,20 @@ Public Class BinanceWebSocket
     Private _receiveTask As Task
     Private _supervisorTask As Task
     Private _symbols As List(Of String)
+    Private _klineIntervals As List(Of String)
 
     Public Event PriceUpdated(symbol As String, price As Decimal)
     Public Event VolumeUpdated(symbol As String, price As Decimal, quoteVolume24h As Decimal)
+    Public Event CandleUpdated(
+        symbol As String,
+        interval As String,
+        candleStartUtc As DateTime,
+        openPrice As Decimal,
+        highPrice As Decimal,
+        lowPrice As Decimal,
+        closePrice As Decimal,
+        volume As Decimal,
+        isClosed As Boolean)
     Public Event ConnectionStateChanged(connected As Boolean, message As String)
 
     Public ReadOnly Property IsConnected As Boolean
@@ -30,7 +42,9 @@ Public Class BinanceWebSocket
         Return _prices.TryGetValue(symbol.Trim().ToUpperInvariant(), price)
     End Function
 
-    Public Async Function StartAsync(symbols As IEnumerable(Of String)) As Task
+    Public Async Function StartAsync(
+        symbols As IEnumerable(Of String),
+        Optional klineIntervals As IEnumerable(Of String) = Nothing) As Task
 
         Dim normalized As List(Of String) = symbols.
             Where(Function(s) Not String.IsNullOrWhiteSpace(s)).
@@ -55,6 +69,11 @@ Public Class BinanceWebSocket
         Await StopAsync()
 
         _symbols = normalized
+        _klineIntervals = If(klineIntervals, Enumerable.Empty(Of String)()).
+            Select(Function(item) NormalizeKlineInterval(item)).
+            Where(Function(item) Not String.IsNullOrWhiteSpace(item)).
+            Distinct(StringComparer.OrdinalIgnoreCase).
+            ToList()
         _cts = New CancellationTokenSource()
 
         _supervisorTask = ConnectionSupervisorAsync(_cts.Token)
@@ -161,6 +180,10 @@ Public Class BinanceWebSocket
 
             streams.Add(pair & "@ticker")
 
+            For Each interval In If(_klineIntervals, New List(Of String)())
+                streams.Add(pair & "@kline_" & interval)
+            Next
+
         Next
 
         Return WebSocketBaseUrl & String.Join("/", streams)
@@ -213,6 +236,12 @@ Public Class BinanceWebSocket
                 Dim data As JsonElement
 
                 If Not root.TryGetProperty("data", data) Then
+                    Return
+                End If
+
+                Dim kline As JsonElement
+                If data.TryGetProperty("k", kline) Then
+                    ProcessKlineMessage(kline)
                     Return
                 End If
 
@@ -285,6 +314,58 @@ Public Class BinanceWebSocket
         End Try
 
     End Sub
+
+    Private Sub ProcessKlineMessage(kline As JsonElement)
+        Try
+            Dim symbol As String = Nothing
+            Dim interval As String = Nothing
+            Dim startMs As Long
+            Dim openPrice As Decimal
+            Dim highPrice As Decimal
+            Dim lowPrice As Decimal
+            Dim closePrice As Decimal
+            Dim volume As Decimal
+            Dim closeFlag As Boolean
+
+            Dim symbolElement As JsonElement
+            If Not kline.TryGetProperty("s", symbolElement) Then Return
+            symbol = symbolElement.GetString()
+            interval = kline.GetProperty("i").GetString()
+            If Not Long.TryParse(kline.GetProperty("t").ToString(), startMs) Then Return
+            If Not Decimal.TryParse(kline.GetProperty("o").GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, openPrice) Then Return
+            If Not Decimal.TryParse(kline.GetProperty("h").GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, highPrice) Then Return
+            If Not Decimal.TryParse(kline.GetProperty("l").GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, lowPrice) Then Return
+            If Not Decimal.TryParse(kline.GetProperty("c").GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, closePrice) Then Return
+            Decimal.TryParse(kline.GetProperty("v").GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, volume)
+            Boolean.TryParse(kline.GetProperty("x").ToString(), closeFlag)
+
+            If String.IsNullOrWhiteSpace(symbol) OrElse String.IsNullOrWhiteSpace(interval) Then Return
+
+            Dim assetSymbol = symbol.Trim().ToUpperInvariant()
+            If assetSymbol.EndsWith("USDT", StringComparison.OrdinalIgnoreCase) Then
+                assetSymbol = assetSymbol.Substring(0, assetSymbol.Length - 4)
+            End If
+
+            RaiseEvent CandleUpdated(
+                assetSymbol,
+                NormalizeKlineInterval(interval),
+                DateTimeOffset.FromUnixTimeMilliseconds(startMs).UtcDateTime,
+                openPrice,
+                highPrice,
+                lowPrice,
+                closePrice,
+                Math.Max(0D, volume),
+                closeFlag)
+        Catch ex As Exception
+            Debug.WriteLine("Erro processando candle Binance: " & ex.Message)
+        End Try
+    End Sub
+
+    Private Shared Function NormalizeKlineInterval(value As String) As String
+        If String.Equals(value?.Trim(), "1d", StringComparison.OrdinalIgnoreCase) Then Return "1d"
+        If String.Equals(value?.Trim(), "4h", StringComparison.OrdinalIgnoreCase) Then Return "4h"
+        Return String.Empty
+    End Function
 
     Private Sub UpdateBitcoinLabel(price As Decimal)
 
