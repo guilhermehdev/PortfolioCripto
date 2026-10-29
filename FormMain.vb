@@ -1640,18 +1640,6 @@ Public Class FormMain
             Return
         End If
 
-        If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.WavePullback) AndAlso
-           _spotTradeBot.Configuration.StopLossPercent > 0D AndAlso
-           _spotTradeBot.Configuration.TakeProfitPercent <
-           _spotTradeBot.Configuration.StopLossPercent * _spotTradeBot.Configuration.WaveMinimumRiskReward Then
-            AppendSpotBotLog(
-                $"A estratégia Pullback EMA34 exige risco/retorno mínimo de " &
-                $"{_spotTradeBot.Configuration.WaveMinimumRiskReward:0.##}:1. " &
-                "Ajuste o TP ou o SL antes de iniciar.",
-                Color.Gold)
-            Return
-        End If
-
         Dim universe As List(Of String)
         Try
             universe = Await ResolveSpotBotUniverseAsync()
@@ -1694,6 +1682,11 @@ Public Class FormMain
             Color.LightGray)
         AppendSpotBotLog($"Universo: {universe.Count} ativo(s) ({If(_spotTradeBot.Configuration.UniverseMode = SpotBotUniverseMode.TopVolume, "Top volume", "Manual")}).", Color.LightGray)
         AppendSpotBotLog("Estratégias: " & String.Join(", ", _spotTradeBot.Configuration.EnabledStrategies), Color.LightGray)
+        If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.WavePullback) Then
+            AppendSpotBotLog(
+                "Pullback EMA34: SL e TP estruturais do sinal; os percentuais globais não bloqueiam a inicialização.",
+                Color.LightGray)
+        End If
     End Sub
 
     Private Sub SpotBotStop_Click(sender As Object, e As EventArgs)
