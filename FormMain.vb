@@ -1,5 +1,6 @@
 ﻿Imports System.Globalization
 Imports System.IO
+Imports System.Text
 Imports System.Windows.Forms.DataVisualization.Charting
 Imports Newtonsoft.Json.Linq
 Imports System.Diagnostics
@@ -9,15 +10,19 @@ Public Class FormMain
     Dim Cjson As New JSON
     Dim chart As New Charts
     Dim B As New Binance
+    Private ReadOnly _gateSpot As New Gateio
+    Private ReadOnly _gateFutures As New GateFutures
     Dim gec As New Coingecko
     Private ReadOnly _binanceWs As New BinanceWebSocket
     Private ReadOnly _gateWs As New GateWebSocket
     Private ReadOnly _binanceFuturesMarketWs As New BinanceFuturesMarketWebSocket
+    Private ReadOnly _gateFuturesMarketWs As New GateFuturesMarketWebSocket
     Private ReadOnly _binanceFuturesUserWs As New BinanceFuturesUserDataWebSocket
     Private ReadOnly _binanceSpotUserWs As New BinanceSpotUserDataWebSocket
     Private _marketRefreshRunning As Boolean = False
     Private _futuresLoadRunning As Boolean = False
     Private _futuresMarketSymbolsKey As String = String.Empty
+    Private _futuresMarketProviderKey As String = String.Empty
     Private _futuresUserStreamStarted As Boolean = False
     Private _spotUserStreamStarted As Boolean = False
     Private _spotAccountRefreshQueued As Boolean = False
@@ -38,6 +43,7 @@ Public Class FormMain
     Private _btAtualizarOrdensSpot As Button
     Private _spotOrdersLoadRunning As Boolean = False
     Private _cbSpotOrderSymbol As ComboBox
+    Private _cbSpotOrderExchange As ComboBox
     Private _cbSpotOrderSide As ComboBox
     Private _cbSpotOrderType As ComboBox
     Private _txtSpotOrderQuantity As TextBox
@@ -76,6 +82,7 @@ Public Class FormMain
     Private ReadOnly _spotTradeBot As New SpotTradeBotEngine()
     Private ReadOnly _spotDca As New SpotDcaEngine()
     Private _panelSpotBot As Panel
+    Private _panelSpotBotEditor As Panel
     Private _panelDca As Panel
     Private _botLog As RichTextBox
     Private _dgSpotBotPositions As DataGridView
@@ -88,6 +95,11 @@ Public Class FormMain
     Private _botFee As NumericUpDown
     Private _botTakeProfit As NumericUpDown
     Private _botStopLoss As NumericUpDown
+    Private _botBreakEvenEnabled As CheckBox
+    Private _botBreakEvenTrigger As NumericUpDown
+    Private _botTrailingEnabled As CheckBox
+    Private _botTrailingDistance As NumericUpDown
+    Private _botPostExitCooldown As NumericUpDown
     Private _botUniverseMode As ComboBox
     Private _botUniverseMaxAssets As NumericUpDown
     Private _botUniverseMinVolume As NumericUpDown
@@ -96,6 +108,7 @@ Public Class FormMain
     Private _botSimulationSummary As Label
     Private _botStart As Button
     Private _botStop As Button
+    Private _botExport As Button
     Private _btTradeBot As Button
     Private _btDca As Button
     Private ReadOnly _botStrategyChecks As New Dictionary(Of SpotBotStrategyKind, CheckBox)()
@@ -120,6 +133,58 @@ Public Class FormMain
     Private _dgDca As DataGridView
     Private _lbDcaStatus As Label
 
+    Private ReadOnly Property UseGateFutures As Boolean
+        Get
+            Return Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateAPIKey) AndAlso
+                   Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateSecretKey)
+        End Get
+    End Property
+
+    Private ReadOnly Property UseBinanceFutures As Boolean
+        Get
+            Return Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceAPIKey) AndAlso
+                   Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceSecretKey)
+        End Get
+    End Property
+
+    Private Shared Function NormalizeFuturesExchange(exchange As String) As String
+        If String.Equals(exchange, "GATE", StringComparison.OrdinalIgnoreCase) Then
+            Return "GATE"
+        End If
+
+        Return "BINANCE"
+    End Function
+
+    Private Shared Function FuturesProviderKey(exchange As String, symbol As String) As String
+        Return NormalizeFuturesExchange(exchange) & "|" & ToFuturesUsdtSymbol(symbol)
+    End Function
+
+    Private Function GetDefaultFuturesExchange() As String
+        If UseGateFutures Then Return "GATE"
+        Return "BINANCE"
+    End Function
+
+    Private Function GetRowFuturesExchange(row As DataGridViewRow) As String
+        If row IsNot Nothing AndAlso
+           row.DataGridView IsNot Nothing AndAlso
+           row.DataGridView.Columns.Contains("Exchange") Then
+            Dim value = row.Cells("Exchange").Value?.ToString()
+            If Not String.IsNullOrWhiteSpace(value) Then
+                Return NormalizeFuturesExchange(value)
+            End If
+        End If
+
+        Return GetDefaultFuturesExchange()
+    End Function
+
+    Private Sub AppendFuturesProviderError(exchange As String, ex As Exception)
+        Dim message = $"Erro ao carregar futuros {exchange}: {ex.Message}"
+        Debug.WriteLine(message)
+        If lbDebug IsNot Nothing Then
+            lbDebug.AppendText(Environment.NewLine & message)
+        End If
+    End Sub
+
     Private Sub CriptoToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CriptoToolStripMenuItem.Click
         FormEntradas.Show()
     End Sub
@@ -139,6 +204,12 @@ Public Class FormMain
         ConfigureFuturesOrdersPanel()
         ConfigureSpotBotPanel()
         ConfigureDcaPanel()
+        RemoveSelectionHighlight(dgPortfolio)
+        RemoveSelectionHighlight(dgFuturos)
+        RemoveSelectionHighlight(_dgOrdensSpot)
+        RemoveSelectionHighlight(_dgOrdensFuturos)
+        RemoveSelectionHighlight(_dgSpotBotPositions)
+        RemoveSelectionHighlight(_dgDca)
         _portfolioGridDefaultHeight = dgPortfolio.Height
         _futuresGridDefaultHeight = dgFuturos.Height
         ArrangeOrdersPanel(False)
@@ -146,6 +217,75 @@ Public Class FormMain
         lbDataTotalToday.Text = Date.Today & ":"
         Adjust()
         ArrangeProfitPairs()
+    End Sub
+
+    ''' <summary>
+    ''' Mantém uma seleção funcional para teclado/edição, mas sem aplicar a
+    ''' inversão de cores padrão do DataGridView nos grids operacionais.
+    ''' Os grids de cadastro (símbolos e wallets) não passam por este método.
+    ''' </summary>
+    Private Shared Sub RemoveSelectionHighlight(grid As DataGridView)
+        If grid Is Nothing Then Return
+
+        Dim normalBackColor = If(grid.DefaultCellStyle.BackColor.IsEmpty,
+                                 grid.BackgroundColor,
+                                 grid.DefaultCellStyle.BackColor)
+        Dim normalForeColor = If(grid.DefaultCellStyle.ForeColor.IsEmpty,
+                                 Color.White,
+                                 grid.DefaultCellStyle.ForeColor)
+
+        grid.DefaultCellStyle.SelectionBackColor = normalBackColor
+        grid.DefaultCellStyle.SelectionForeColor = normalForeColor
+        grid.RowsDefaultCellStyle.SelectionBackColor = If(grid.RowsDefaultCellStyle.BackColor.IsEmpty,
+                                                          normalBackColor,
+                                                          grid.RowsDefaultCellStyle.BackColor)
+        grid.RowsDefaultCellStyle.SelectionForeColor = If(grid.RowsDefaultCellStyle.ForeColor.IsEmpty,
+                                                          normalForeColor,
+                                                          grid.RowsDefaultCellStyle.ForeColor)
+        grid.RowTemplate.DefaultCellStyle.SelectionBackColor = normalBackColor
+        grid.RowTemplate.DefaultCellStyle.SelectionForeColor = normalForeColor
+        grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = grid.ColumnHeadersDefaultCellStyle.BackColor
+        grid.ColumnHeadersDefaultCellStyle.SelectionForeColor = grid.ColumnHeadersDefaultCellStyle.ForeColor
+        grid.RowHeadersDefaultCellStyle.SelectionBackColor = grid.RowHeadersDefaultCellStyle.BackColor
+        grid.RowHeadersDefaultCellStyle.SelectionForeColor = grid.RowHeadersDefaultCellStyle.ForeColor
+
+        For Each column As DataGridViewColumn In grid.Columns
+            column.DefaultCellStyle.SelectionBackColor = If(column.DefaultCellStyle.BackColor.IsEmpty,
+                                                             normalBackColor,
+                                                             column.DefaultCellStyle.BackColor)
+            column.DefaultCellStyle.SelectionForeColor = If(column.DefaultCellStyle.ForeColor.IsEmpty,
+                                                             normalForeColor,
+                                                             column.DefaultCellStyle.ForeColor)
+        Next
+
+        For Each row As DataGridViewRow In grid.Rows
+            If row.IsNewRow Then Continue For
+            If Not row.DefaultCellStyle.BackColor.IsEmpty Then
+                row.DefaultCellStyle.SelectionBackColor = row.DefaultCellStyle.BackColor
+            Else
+                row.DefaultCellStyle.SelectionBackColor = normalBackColor
+            End If
+            If Not row.DefaultCellStyle.ForeColor.IsEmpty Then
+                row.DefaultCellStyle.SelectionForeColor = row.DefaultCellStyle.ForeColor
+            Else
+                row.DefaultCellStyle.SelectionForeColor = normalForeColor
+            End If
+
+            For Each cell As DataGridViewCell In row.Cells
+                Dim inherited = cell.InheritedStyle
+                cell.Style.SelectionBackColor = inherited.BackColor
+                cell.Style.SelectionForeColor = inherited.ForeColor
+            Next
+        Next
+    End Sub
+
+    Private Shared Sub RemoveCellSelectionHighlight(row As DataGridViewRow)
+        If row Is Nothing OrElse row.IsNewRow Then Return
+        For Each cell As DataGridViewCell In row.Cells
+            Dim inherited = cell.InheritedStyle
+            cell.Style.SelectionBackColor = inherited.BackColor
+            cell.Style.SelectionForeColor = inherited.ForeColor
+        Next
     End Sub
 
     Private Sub ConfigureCredentialsMenu()
@@ -208,72 +348,86 @@ Public Class FormMain
         _txtSpotOrderCurrentPrice.Text = "--"
         editor.Controls.Add(_txtSpotOrderCurrentPrice)
 
-        AddSpotOrderEditorLabel(editor, "Lado", 314, 1, 68)
-        _cbSpotOrderSide = New ComboBox With {
+        AddSpotOrderEditorLabel(editor, "Exchange", 314, 1, 68)
+        _cbSpotOrderExchange = New ComboBox With {
             .BackColor = Color.FromArgb(45, 45, 45),
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .FlatStyle = FlatStyle.Flat,
             .ForeColor = Color.White,
             .Location = New Point(314, 17),
-            .Name = "cbSpotOrderSide",
+            .Name = "cbSpotOrderExchange",
             .Size = New Size(68, 23)
         }
-        _cbSpotOrderSide.Items.AddRange(New Object() {"BUY", "SELL"})
-        _cbSpotOrderSide.SelectedIndex = 0
-        editor.Controls.Add(_cbSpotOrderSide)
+        _cbSpotOrderExchange.Items.AddRange(New Object() {"BINANCE", "GATE.IO"})
+        _cbSpotOrderExchange.SelectedIndex = 0
+        editor.Controls.Add(_cbSpotOrderExchange)
 
-        AddSpotOrderEditorLabel(editor, "Tipo", 390, 1, 76)
-        _cbSpotOrderType = New ComboBox With {
+        AddSpotOrderEditorLabel(editor, "Lado", 390, 1, 62)
+        _cbSpotOrderSide = New ComboBox With {
             .BackColor = Color.FromArgb(45, 45, 45),
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .FlatStyle = FlatStyle.Flat,
             .ForeColor = Color.White,
             .Location = New Point(390, 17),
+            .Name = "cbSpotOrderSide",
+            .Size = New Size(62, 23)
+        }
+        _cbSpotOrderSide.Items.AddRange(New Object() {"BUY", "SELL"})
+        _cbSpotOrderSide.SelectedIndex = 0
+        editor.Controls.Add(_cbSpotOrderSide)
+
+        AddSpotOrderEditorLabel(editor, "Tipo", 460, 1, 68)
+        _cbSpotOrderType = New ComboBox With {
+            .BackColor = Color.FromArgb(45, 45, 45),
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .FlatStyle = FlatStyle.Flat,
+            .ForeColor = Color.White,
+            .Location = New Point(460, 17),
             .Name = "cbSpotOrderType",
-            .Size = New Size(76, 23)
+            .Size = New Size(68, 23)
         }
         _cbSpotOrderType.Items.Add("LIMIT")
         _cbSpotOrderType.SelectedIndex = 0
         AddHandler _cbSpotOrderType.SelectedIndexChanged, AddressOf SpotOrderTypeChanged
         editor.Controls.Add(_cbSpotOrderType)
 
-        AddSpotOrderEditorLabel(editor, "Caixa Spot", 474, 1, 96)
+        AddSpotOrderEditorLabel(editor, "Caixa Spot", 536, 1, 88)
         _lbSpotOrderCash = New Label With {
             .AutoSize = False,
             .BackColor = Color.FromArgb(45, 45, 45),
             .BorderStyle = BorderStyle.FixedSingle,
             .ForeColor = Color.Gold,
-            .Location = New Point(474, 17),
+            .Location = New Point(536, 17),
             .Name = "lbSpotOrderCash",
-            .Size = New Size(96, 23),
+            .Size = New Size(88, 23),
             .Text = "$0.00",
             .TextAlign = ContentAlignment.MiddleRight
         }
         editor.Controls.Add(_lbSpotOrderCash)
 
-        AddSpotOrderEditorLabel(editor, "Quantidade", 584, 1, 96)
-        _txtSpotOrderQuantity = CreateSpotOrderEditorTextBox("txtSpotOrderQuantity", 584, 17, 96)
+        AddSpotOrderEditorLabel(editor, "Quantidade", 632, 1, 82)
+        _txtSpotOrderQuantity = CreateSpotOrderEditorTextBox("txtSpotOrderQuantity", 632, 17, 82)
         AddHandler _txtSpotOrderQuantity.TextChanged, AddressOf SpotOrderQuantityChanged
         editor.Controls.Add(_txtSpotOrderQuantity)
 
-        AddSpotOrderEditorLabel(editor, "Preço limite", 688, 1, 102)
-        _txtSpotOrderPrice = CreateSpotOrderEditorTextBox("txtSpotOrderPrice", 688, 17, 102)
+        AddSpotOrderEditorLabel(editor, "Preço limite", 722, 1, 90)
+        _txtSpotOrderPrice = CreateSpotOrderEditorTextBox("txtSpotOrderPrice", 722, 17, 90)
         AddHandler _txtSpotOrderPrice.TextChanged, AddressOf SpotOrderPriceChanged
         editor.Controls.Add(_txtSpotOrderPrice)
 
-        AddSpotOrderEditorLabel(editor, "Valor USDT", 798, 1, 102)
-        _txtSpotOrderNotional = CreateSpotOrderEditorTextBox("txtSpotOrderNotional", 798, 17, 102)
+        AddSpotOrderEditorLabel(editor, "Valor USDT", 820, 1, 88)
+        _txtSpotOrderNotional = CreateSpotOrderEditorTextBox("txtSpotOrderNotional", 820, 17, 88)
         _txtSpotOrderNotional.TextAlign = HorizontalAlignment.Right
         _txtSpotOrderNotional.ForeColor = Color.Gold
         AddHandler _txtSpotOrderNotional.TextChanged, AddressOf SpotOrderNotionalChanged
         editor.Controls.Add(_txtSpotOrderNotional)
 
-        _btAbrirSpotOrder = CreateSpotOrderEditorButton("Enviar ordem", 908, 15, 102)
+        _btAbrirSpotOrder = CreateSpotOrderEditorButton("Enviar ordem", 916, 15, 100)
         _btAbrirSpotOrder.BackColor = Color.DarkGreen
         AddHandler _btAbrirSpotOrder.Click, AddressOf btAbrirSpotOrder_Click
         editor.Controls.Add(_btAbrirSpotOrder)
 
-        _btAtualizarOrdensSpot = CreateSpotOrderEditorButton("Atualizar", 1018, 15, 90)
+        _btAtualizarOrdensSpot = CreateSpotOrderEditorButton("Atualizar", 1024, 15, 90)
         _btAtualizarOrdensSpot.Name = "btAtualizarOrdensSpot"
         AddHandler _btAtualizarOrdensSpot.Click, AddressOf btAtualizarOrdensSpot_Click
         editor.Controls.Add(_btAtualizarOrdensSpot)
@@ -313,7 +467,7 @@ Public Class FormMain
             .BackColor = Color.FromArgb(64, 64, 64),
             .Font = New Font("Calibri", 11.0F),
             .ForeColor = Color.White,
-            .SelectionBackColor = Color.Black,
+            .SelectionBackColor = Color.FromArgb(64, 64, 64),
             .SelectionForeColor = Color.White
         }
         _dgOrdensSpot.RowTemplate.Height = 30
@@ -541,7 +695,7 @@ Public Class FormMain
             .BackColor = Color.FromArgb(64, 64, 64),
             .Font = New Font("Calibri", 11.0F),
             .ForeColor = Color.White,
-            .SelectionBackColor = Color.Black,
+            .SelectionBackColor = Color.FromArgb(64, 64, 64),
             .SelectionForeColor = Color.White
         }
         _dgOrdensFuturos.RowTemplate.Height = 30
@@ -567,9 +721,10 @@ Public Class FormMain
 
         Dim editor As New Panel With {
             .Dock = DockStyle.Top,
-            .Height = 150,
+            .Height = 180,
             .BackColor = Color.FromArgb(30, 30, 30)
         }
+        _panelSpotBotEditor = editor
 
         Dim universeSettings As SpotBotUniverseSettings
         Try
@@ -590,7 +745,8 @@ Public Class FormMain
             .Width = 150
         }
         _botBollingerMode.Items.AddRange(New Object() {
-            "Base Original Protegida"
+            "Base Original Protegida",
+            "Desativada"
         })
         _botBollingerMode.SelectedIndex = GetBollingerModeIndex()
         AddHandler _botBollingerMode.SelectedIndexChanged, AddressOf SpotBotBollingerModeChanged
@@ -600,11 +756,15 @@ Public Class FormMain
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.WavePullback, "Pullback EMA34", 164, 24, 105)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.BreakoutRetest, "Breakout + Reteste", 274, 24, 125)
         AddBotStrategyCheckBox(editor, SpotBotStrategyKind.MomentumVolume, "Momentum volume", 404, 24, 110)
-        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.GridRegime, "Grid + regime", 520, 24, 110)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.GridAdaptive, "Grid adaptativo v2", 520, 24, 125)
+        AddBotStrategyCheckBox(editor, SpotBotStrategyKind.ValueZonePullback, "Pullback zona de valor", 240, 58, 165)
 
         If _spotTradeBot.HasRestoredState Then
             For Each strategyCheck In _botStrategyChecks
-                strategyCheck.Value.Checked = _spotTradeBot.Configuration.EnabledStrategies.Contains(strategyCheck.Key)
+                strategyCheck.Value.Checked =
+                    _spotTradeBot.Configuration.EnabledStrategies.Contains(strategyCheck.Key) OrElse
+                    (strategyCheck.Key = SpotBotStrategyKind.GridAdaptive AndAlso
+                     _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridRegime))
             Next
         End If
 
@@ -699,6 +859,10 @@ Public Class FormMain
         AddHandler _botStop.Click, AddressOf SpotBotStop_Click
         editor.Controls.Add(_botStop)
 
+        _botExport = CreateBotButton("Exportar CSV", 1000, 24, 100, Color.FromArgb(55, 75, 105))
+        AddHandler _botExport.Click, AddressOf SpotBotExport_Click
+        editor.Controls.Add(_botExport)
+
         AddBotLabel(editor, "Saldo virtual (USDT)", 240, 88, 110)
         _botStartingQuote = CreateBotNumeric(1000D, 0D, 100000000D, 2, 240, 107, 98)
         editor.Controls.Add(_botStartingQuote)
@@ -744,15 +908,60 @@ Public Class FormMain
         _botUniverseMinVolume = CreateBotNumeric(universeSettings.MinimumQuoteVolume, 0D, 1000000000000D, 0, 790, 107, 112)
         editor.Controls.Add(_botUniverseMinVolume)
 
-        Dim hint As New Label With {
+        AddBotLabel(editor, "Proteções dinâmicas", 940, 83, 210)
+        _botBreakEvenEnabled = New CheckBox With {
+            .Text = "BE",
             .AutoSize = False,
-            .Width = 205,
-            .Height = 27,
-            .ForeColor = Color.LightGray,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
             .Location = New Point(940, 107),
-            .Text = "Base protegida; EMA34, reteste, volume e grade podem ser combinados."
+            .Size = New Size(40, 23),
+            .Checked = True,
+            .Cursor = Cursors.Hand
         }
-        editor.Controls.Add(hint)
+        editor.Controls.Add(_botBreakEvenEnabled)
+        _botBreakEvenTrigger = CreateBotNumeric(1.5D, 0D, 100D, 2, 980, 107, 62)
+        editor.Controls.Add(_botBreakEvenTrigger)
+
+        _botTrailingEnabled = New CheckBox With {
+            .Text = "Trail",
+            .AutoSize = False,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .Location = New Point(1046, 107),
+            .Size = New Size(50, 23),
+            .Checked = False,
+            .Cursor = Cursors.Hand
+        }
+        editor.Controls.Add(_botTrailingEnabled)
+        _botTrailingDistance = CreateBotNumeric(1D, 0.01D, 100D, 2, 1096, 107, 62)
+        editor.Controls.Add(_botTrailingDistance)
+        ToolTip1.SetToolTip(_botBreakEvenEnabled, "Move o stop para a entrada após o gatilho (%)")
+        ToolTip1.SetToolTip(_botBreakEvenTrigger, "Gatilho do break-even em percentual")
+        ToolTip1.SetToolTip(_botTrailingEnabled, "Depois do break-even, acompanha o maior preço")
+        ToolTip1.SetToolTip(_botTrailingDistance, "Distância do trailing em percentual")
+        If _spotTradeBot.HasRestoredState Then
+            _botBreakEvenEnabled.Checked = _spotTradeBot.Configuration.BreakEvenEnabled
+            _botBreakEvenTrigger.Value = Math.Min(
+                _botBreakEvenTrigger.Maximum,
+                Math.Max(_botBreakEvenTrigger.Minimum, _spotTradeBot.Configuration.BreakEvenTriggerPercent))
+            _botTrailingEnabled.Checked = _spotTradeBot.Configuration.TrailingStopEnabled
+            _botTrailingDistance.Value = Math.Min(
+                _botTrailingDistance.Maximum,
+                Math.Max(_botTrailingDistance.Minimum, _spotTradeBot.Configuration.TrailingStopDistancePercent))
+        End If
+
+        AddBotLabel(editor, "Cooldown pós-saída (min)", 6, 136, 160)
+        _botPostExitCooldown = CreateBotNumeric(5D, 0D, 1440D, 0, 6, 155, 82)
+        If _spotTradeBot.HasRestoredState Then
+            _botPostExitCooldown.Value = Math.Min(
+                _botPostExitCooldown.Maximum,
+                Math.Max(_botPostExitCooldown.Minimum, _spotTradeBot.Configuration.PostExitCooldownMinutes))
+        End If
+        editor.Controls.Add(_botPostExitCooldown)
+        ToolTip1.SetToolTip(
+            _botPostExitCooldown,
+            "Tempo mínimo antes de permitir uma nova entrada no mesmo ativo após uma saída. Stops, alvos e fechamento manual não são atrasados.")
 
         _botLog = New RichTextBox With {
             .Name = "rtbSpotBotLog",
@@ -764,7 +973,7 @@ Public Class FormMain
             .DetectUrls = False,
             .Font = New Font("Consolas", 10.0F),
             .ScrollBars = RichTextBoxScrollBars.Vertical,
-            .Height = 80
+            .Height = 40
         }
 
         _dgSpotBotPositions = New DataGridView With {
@@ -809,13 +1018,38 @@ Public Class FormMain
         _dgSpotBotPositions.RowTemplate.Height = 28
         _dgSpotBotPositions.ColumnHeadersHeight = 25
         AddSpotBotPositionColumn("Symbol", "Cripto")
+        AddSpotBotPositionColumn("Strategy", "Estratégia")
         AddSpotBotPositionColumn("Side", "Lado")
         AddSpotBotPositionColumn("Quantity", "Qtd")
         AddSpotBotPositionColumn("Notional", "Notional")
         AddSpotBotPositionColumn("EntryPrice", "Entrada")
         AddSpotBotPositionColumn("CurrentPrice", "Preço atual")
+        AddSpotBotPositionColumn("StopPrice", "SL")
         AddSpotBotPositionColumn("UnrealizedPnl", "PnL")
         AddSpotBotPositionColumn("RoiPercent", "ROI %")
+        AddSpotBotPositionColumn("GridLevelCount", "Níveis")
+
+        Dim closeBotPositionColumn As New DataGridViewButtonColumn With {
+            .Name = "ClosePosition",
+            .HeaderText = "Ação",
+            .Text = "Fechar",
+            .UseColumnTextForButtonValue = True,
+            .SortMode = DataGridViewColumnSortMode.NotSortable,
+            .AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            .Width = 72,
+            .FlatStyle = FlatStyle.Flat
+        }
+        closeBotPositionColumn.DefaultCellStyle = New DataGridViewCellStyle With {
+            .Alignment = DataGridViewContentAlignment.MiddleCenter,
+            .BackColor = Color.IndianRed,
+            .ForeColor = Color.White,
+            .SelectionBackColor = Color.IndianRed,
+            .SelectionForeColor = Color.White
+        }
+        _dgSpotBotPositions.Columns.Add(closeBotPositionColumn)
+        AddHandler _dgSpotBotPositions.CellContentClick, AddressOf SpotBotPositions_CellContentClick
+        AddHandler _dgSpotBotPositions.CellMouseEnter, AddressOf SpotBotPositions_CellMouseEnter
+        AddHandler _dgSpotBotPositions.CellMouseLeave, AddressOf SpotBotPositions_CellMouseLeave
 
         _botSimulationSummary = New Label With {
             .Name = "lbSpotBotSimulationSummary",
@@ -1031,6 +1265,24 @@ Public Class FormMain
         AddDcaGridColumn("Pnl", "PnL")
         AddDcaGridColumn("Roi", "ROI %")
 
+        Dim removeColumn As New DataGridViewButtonColumn With {
+            .Name = "DcaRemove",
+            .HeaderText = "Ação",
+            .Text = "Excluir",
+            .UseColumnTextForButtonValue = True,
+            .AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            .Width = 62,
+            .FlatStyle = FlatStyle.Flat,
+            .ReadOnly = True}
+        removeColumn.DefaultCellStyle = New DataGridViewCellStyle With {
+            .Alignment = DataGridViewContentAlignment.MiddleCenter,
+            .BackColor = Color.IndianRed,
+            .ForeColor = Color.White,
+            .SelectionBackColor = Color.IndianRed,
+            .SelectionForeColor = Color.White}
+        _dgDca.Columns.Add(removeColumn)
+        AddHandler _dgDca.CellContentClick, AddressOf DcaGrid_CellContentClick
+
         _panelDca.Controls.Add(_dgDca)
         _panelDca.Controls.Add(_lbDcaStatus)
         _panelDca.Controls.Add(editor)
@@ -1128,6 +1380,37 @@ Public Class FormMain
         _spotDca.ResetSimulation()
         UpdateDcaGrid()
         SetDcaStatus("Simulação DCA zerada.", Color.Gold)
+    End Sub
+
+    Private Async Sub DcaGrid_CellContentClick(sender As Object, e As DataGridViewCellEventArgs)
+        If e.RowIndex < 0 OrElse e.ColumnIndex < 0 OrElse
+           Not String.Equals(_dgDca.Columns(e.ColumnIndex).Name, "DcaRemove", StringComparison.OrdinalIgnoreCase) Then
+            Return
+        End If
+
+        Dim symbol = _dgDca.Rows(e.RowIndex).Cells("Symbol").Value?.ToString().Trim()
+        If String.IsNullOrWhiteSpace(symbol) Then Return
+
+        If MessageBox.Show(
+                $"Excluir o plano DCA de {symbol}? Isso também removerá o estado salvo e as compras simuladas dessa moeda.",
+                "DCA",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning) <> DialogResult.Yes Then
+            Return
+        End If
+
+        Try
+            _spotDca.RemovePlan(symbol)
+            If _spotDca.GetPlans().Count = 0 Then
+                _btDcaStart.Enabled = True
+                _btDcaStop.Enabled = False
+            End If
+            UpdateDcaGrid()
+            SetDcaStatus($"Plano DCA de {symbol} excluído.", Color.Gold)
+            Await StartBinanceWebSocket()
+        Catch ex As Exception
+            SetDcaStatus("Erro excluindo plano DCA: " & ex.Message, Color.IndianRed)
+        End Try
     End Sub
 
     Private Sub btDca_Click(sender As Object, e As EventArgs)
@@ -1267,8 +1550,11 @@ Public Class FormMain
             Dim positive = state.UnrealizedPnl >= 0D
             Dim pnlColor = If(positive, Color.LimeGreen, Color.IndianRed)
             row.DefaultCellStyle.BackColor = If(positive, Color.FromArgb(0, 25, 0), Color.FromArgb(25, 0, 0))
+            row.DefaultCellStyle.SelectionBackColor = row.DefaultCellStyle.BackColor
+            row.DefaultCellStyle.SelectionForeColor = row.DefaultCellStyle.ForeColor
             row.Cells("Pnl").Style.ForeColor = pnlColor
             row.Cells("Roi").Style.ForeColor = pnlColor
+            RemoveCellSelectionHighlight(row)
         Next
     End Sub
 
@@ -1429,6 +1715,50 @@ Public Class FormMain
         })
     End Sub
 
+    Private Sub SpotBotPositions_CellContentClick(sender As Object, e As DataGridViewCellEventArgs)
+        If _dgSpotBotPositions Is Nothing OrElse
+           e.RowIndex < 0 OrElse
+           e.ColumnIndex < 0 OrElse
+           Not String.Equals(_dgSpotBotPositions.Columns(e.ColumnIndex).Name, "ClosePosition", StringComparison.OrdinalIgnoreCase) Then
+            Return
+        End If
+
+        Dim symbol = _dgSpotBotPositions.Rows(e.RowIndex).Cells("Symbol").Value?.ToString().Trim().ToUpperInvariant()
+        If String.IsNullOrWhiteSpace(symbol) Then Return
+
+        Dim position = _spotTradeBot.GetOpenPositions().FirstOrDefault(
+            Function(item) String.Equals(item.Symbol, symbol, StringComparison.OrdinalIgnoreCase))
+        If position Is Nothing Then Return
+
+        Try
+            If _spotTradeBot.ClosePositionManually(symbol) Then
+                AppendSpotBotLog(
+                    $"FECHAMENTO MANUAL {symbol}: posição encerrada a {FormatSpotBotUsd(position.CurrentPrice, 4)}.",
+                    Color.Gold)
+            End If
+        Catch ex As Exception
+            MessageBox.Show(
+                "Erro ao fechar o trade: " & ex.Message,
+                "Fechar trade",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Sub SpotBotPositions_CellMouseEnter(sender As Object, e As DataGridViewCellEventArgs)
+        If _dgSpotBotPositions Is Nothing OrElse e.ColumnIndex < 0 Then Return
+        _dgSpotBotPositions.Cursor = If(
+            String.Equals(_dgSpotBotPositions.Columns(e.ColumnIndex).Name, "ClosePosition", StringComparison.OrdinalIgnoreCase),
+            Cursors.Hand,
+            Cursors.Default)
+    End Sub
+
+    Private Sub SpotBotPositions_CellMouseLeave(sender As Object, e As DataGridViewCellEventArgs)
+        If _dgSpotBotPositions IsNot Nothing Then
+            _dgSpotBotPositions.Cursor = Cursors.Default
+        End If
+    End Sub
+
     Private Sub AddBotStrategyCheckBox(
         editor As Panel,
         kind As SpotBotStrategyKind,
@@ -1454,7 +1784,11 @@ Public Class FormMain
     End Sub
 
     Private Function GetBollingerModeIndex() As Integer
-        ' A estratégia base do Tradebot é sempre a Base Original Protegida.
+        If _spotTradeBot.HasRestoredState AndAlso
+           Not _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BaseOriginalProtected) Then
+            Return 1
+        End If
+
         Return 0
     End Function
 
@@ -1471,7 +1805,7 @@ Public Class FormMain
             Return
         End If
 
-        _botBollingerTimeframe.Enabled = True
+        _botBollingerTimeframe.Enabled = _botBollingerMode.SelectedIndex = 0
     End Sub
 
     Private Sub ApplyBollingerTimeframe()
@@ -1483,11 +1817,14 @@ Public Class FormMain
     End Sub
 
     Private Sub ApplyBollingerMode()
-        ' A Base Original Protegida permanece como perfil principal; as demais
-        ' estratégias são opcionais e aplicadas pelos checkboxes do painel.
+        ' A Base Original Protegida é o perfil principal, mas pode ser
+        ' desativada pelo combo quando o usuário quiser testar apenas as
+        ' estratégias adicionais.
         _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BnfContrarian, False)
         _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, False)
-        _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BaseOriginalProtected, True)
+        _spotTradeBot.SetStrategyEnabled(
+            SpotBotStrategyKind.BaseOriginalProtected,
+            _botBollingerMode Is Nothing OrElse _botBollingerMode.SelectedIndex = 0)
         _spotTradeBot.Configuration.BollingerPeriod = 25
         _spotTradeBot.Configuration.BollingerStandardDeviations = 3D
     End Sub
@@ -1564,6 +1901,7 @@ Public Class FormMain
         _panelSpotBot.Padding = New Padding(14, 0, 14, 0)
         _panelSpotBot.Location = New Point(0, panelTop)
         _panelSpotBot.Size = New Size(Me.ClientSize.Width, panelHeight)
+        ArrangeSpotBotLayout()
         _panelSpotBot.Visible = True
         _panelSpotBot.BringToFront()
 
@@ -1572,6 +1910,32 @@ Public Class FormMain
         btOrdensFuturo.BringToFront()
         _btTradeBot.BringToFront()
         If _btDca IsNot Nothing Then _btDca.BringToFront()
+    End Sub
+
+    Private Sub ArrangeSpotBotLayout()
+        If _panelSpotBot Is Nothing OrElse
+           _panelSpotBotEditor Is Nothing OrElse
+           _botSimulationSummary Is Nothing OrElse
+           _dgSpotBotPositions Is Nothing OrElse
+           _botLog Is Nothing Then
+            Return
+        End If
+
+        Dim availableHeight = Math.Max(0, _panelSpotBot.ClientSize.Height)
+        Dim fixedTopHeight = _panelSpotBotEditor.Height + _botSimulationSummary.Height
+        Dim remainingHeight = Math.Max(0, availableHeight - fixedTopHeight)
+        Dim logHeight = Math.Min(40, remainingHeight)
+        Dim gridHeight = Math.Min(150, Math.Max(0, remainingHeight - logHeight))
+
+        ' O grid tem prioridade; o log encolhe quando o painel fica menor,
+        ' evitando que o RichTextBox cubra as posições.
+        If gridHeight < 60 AndAlso remainingHeight >= 60 Then
+            gridHeight = Math.Min(60, remainingHeight)
+            logHeight = Math.Max(0, remainingHeight - gridHeight)
+        End If
+
+        _dgSpotBotPositions.Height = gridHeight
+        _botLog.Height = logHeight
     End Sub
 
     Private Sub ArrangeSpotBotButton()
@@ -1607,9 +1971,16 @@ Public Class FormMain
             _spotTradeBot.Configuration.SimulationStartingQuote = _botStartingQuote.Value
         End If
         _spotTradeBot.Configuration.SimulationAllocationPercent = _botAllocation.Value
+        _spotTradeBot.Configuration.GridV2LevelAllocationPercent = _botAllocation.Value
         _spotTradeBot.Configuration.SimulationFeeRate = _botFee.Value / 100D
         _spotTradeBot.Configuration.TakeProfitPercent = _botTakeProfit.Value
         _spotTradeBot.Configuration.StopLossPercent = _botStopLoss.Value
+        _spotTradeBot.Configuration.BreakEvenEnabled = _botBreakEvenEnabled IsNot Nothing AndAlso _botBreakEvenEnabled.Checked
+        _spotTradeBot.Configuration.BreakEvenTriggerPercent = If(_botBreakEvenTrigger Is Nothing, 1.5D, _botBreakEvenTrigger.Value)
+        _spotTradeBot.Configuration.BreakEvenOffsetPercent = 0.1D
+        _spotTradeBot.Configuration.TrailingStopEnabled = _botTrailingEnabled IsNot Nothing AndAlso _botTrailingEnabled.Checked
+        _spotTradeBot.Configuration.TrailingStopDistancePercent = If(_botTrailingDistance Is Nothing, 1D, _botTrailingDistance.Value)
+        _spotTradeBot.Configuration.PostExitCooldownMinutes = If(_botPostExitCooldown Is Nothing, 5D, _botPostExitCooldown.Value)
         _spotTradeBot.Configuration.SimulationOnly = True
 
         _spotTradeBot.Configuration.UniverseMode = If(_botUniverseMode.SelectedIndex = 1,
@@ -1664,6 +2035,11 @@ Public Class FormMain
         _botUniverseButton.Enabled = False
         _botTakeProfit.Enabled = False
         _botStopLoss.Enabled = False
+        _botBreakEvenEnabled.Enabled = False
+        _botBreakEvenTrigger.Enabled = False
+        _botTrailingEnabled.Enabled = False
+        _botTrailingDistance.Enabled = False
+        _botPostExitCooldown.Enabled = False
         Await StartBinanceWebSocket()
         _botStart.Enabled = False
         _botStop.Enabled = True
@@ -1675,16 +2051,41 @@ Public Class FormMain
                "Bot Spot iniciado em modo SIMULAÇÃO."),
             Color.LimeGreen)
         AppendSpotBotLog(
-            "Perfil ativo: Base Original Protegida (Bollinger 25/3); alvo na média central e stop no extremo do candle.",
+            If(_botBollingerMode.SelectedIndex = 0,
+               "Perfil ativo: Base Original Protegida (Bollinger 25/3); alvo na média central e stop no extremo do candle.",
+               "Perfil base: Base Original Protegida desativada."),
             Color.LightGray)
         AppendSpotBotLog(
             $"Timeframe: {If(_spotTradeBot.Configuration.BollingerCandleMinutes = 240, "4 horas", "diário")}.",
             Color.LightGray)
         AppendSpotBotLog($"Universo: {universe.Count} ativo(s) ({If(_spotTradeBot.Configuration.UniverseMode = SpotBotUniverseMode.TopVolume, "Top volume", "Manual")}).", Color.LightGray)
         AppendSpotBotLog("Estratégias: " & String.Join(", ", _spotTradeBot.Configuration.EnabledStrategies), Color.LightGray)
+        AppendSpotBotLog(
+            $"Alocação: {_spotTradeBot.Configuration.SimulationAllocationPercent:0.##}% " &
+            "(Grid: saldo inicial por nível; demais: saldo disponível).",
+            Color.LightGray)
+        AppendSpotBotLog(
+            $"Proteções: BE {If(_spotTradeBot.Configuration.BreakEvenEnabled, "ativo", "desligado")} após " &
+            $"{_spotTradeBot.Configuration.BreakEvenTriggerPercent:0.##}% | " &
+            $"Trailing {If(_spotTradeBot.Configuration.TrailingStopEnabled, "ativo", "desligado")} " &
+            $"({_spotTradeBot.Configuration.TrailingStopDistancePercent:0.##}%).",
+            Color.LightGray)
+        AppendSpotBotLog(
+            $"Cooldown pós-saída: {_spotTradeBot.Configuration.PostExitCooldownMinutes:0.##} minuto(s) por ativo.",
+            Color.LightGray)
         If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.WavePullback) Then
             AppendSpotBotLog(
                 "Pullback EMA34: SL e TP estruturais do sinal; os percentuais globais não bloqueiam a inicialização.",
+                Color.LightGray)
+        End If
+        If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.ValueZonePullback) Then
+            AppendSpotBotLog(
+                "Pullback zona de valor: M5 filtra tendência, M2 espera retorno à EMA 9/20 e M1 confirma a retomada; Spot opera somente comprado.",
+                Color.LightGray)
+        End If
+        If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) Then
+            AppendSpotBotLog(
+                "Grid V2: EMA 9/21 em candles M5 libera a grade apenas em lateralização; SL no suporte local mais próximo com buffer e limite de 3%.",
                 Color.LightGray)
         End If
     End Sub
@@ -1699,8 +2100,133 @@ Public Class FormMain
         _botUniverseButton.Enabled = True
         _botTakeProfit.Enabled = True
         _botStopLoss.Enabled = True
+        _botBreakEvenEnabled.Enabled = True
+        _botBreakEvenTrigger.Enabled = True
+        _botTrailingEnabled.Enabled = True
+        _botTrailingDistance.Enabled = True
+        _botPostExitCooldown.Enabled = True
         AppendSpotBotLog("Bot Spot parado.", Color.IndianRed)
     End Sub
+
+    Private Sub SpotBotExport_Click(sender As Object, e As EventArgs)
+        Try
+            Dim state = SpotTradeBotRepository.LoadLatestRestorableState()
+            If state Is Nothing OrElse state.Snapshot Is Nothing Then
+                MessageBox.Show(
+                    "Ainda não há uma simulação salva para exportar.",
+                    "Exportar Tradebot",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information)
+                Return
+            End If
+
+            Using dialog As New SaveFileDialog With {
+                .Title = "Exportar resultados do Tradebot",
+                .Filter = "Arquivo CSV (*.csv)|*.csv",
+                .DefaultExt = "csv",
+                .AddExtension = True,
+                .InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                .FileName = $"tradebot_run_{state.RunId}.csv"}
+
+                If dialog.ShowDialog(Me) <> DialogResult.OK Then Return
+
+                Dim basePath = Path.Combine(
+                    Path.GetDirectoryName(dialog.FileName),
+                    Path.GetFileNameWithoutExtension(dialog.FileName))
+
+                WriteSpotBotSummaryCsv(basePath & "_resumo.csv", state)
+                WriteSpotBotDataTableCsv(basePath & "_trades.csv", SpotTradeBotRepository.GetTrades(state.RunId))
+                WriteSpotBotDataTableCsv(basePath & "_posicoes.csv", SpotTradeBotRepository.GetOpenPositions(state.RunId))
+
+                MessageBox.Show(
+                    "Resultados exportados em três arquivos CSV:" & Environment.NewLine &
+                    Path.GetFileName(basePath & "_resumo.csv") & Environment.NewLine &
+                    Path.GetFileName(basePath & "_trades.csv") & Environment.NewLine &
+                    Path.GetFileName(basePath & "_posicoes.csv"),
+                    "Exportar Tradebot",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information)
+            End Using
+        Catch ex As Exception
+            MessageBox.Show(
+                "Erro exportando os resultados: " & ex.Message,
+                "Exportar Tradebot",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Shared Sub WriteSpotBotSummaryCsv(filePath As String, state As SpotBotPersistedSimulationState)
+        Dim snapshot = state.Snapshot
+        Dim builder As New StringBuilder()
+        builder.AppendLine("Campo;Valor")
+        AppendSpotBotCsvPair(builder, "RunId", state.RunId)
+        AppendSpotBotCsvPair(builder, "Status", state.Status)
+        AppendSpotBotCsvPair(builder, "Estrategias", String.Join(", ", state.EnabledStrategies.OrderBy(Function(item) item.ToString())))
+        AppendSpotBotCsvPair(builder, "Combinacao", state.CombinationMode)
+        AppendSpotBotCsvPair(builder, "Confirmacoes", state.RequiredConfirmations)
+        AppendSpotBotCsvPair(builder, "SaldoInicialUSDT", snapshot.StartingQuote)
+        AppendSpotBotCsvPair(builder, "SaldoDisponivelUSDT", snapshot.QuoteBalance)
+        AppendSpotBotCsvPair(builder, "ValorAbertoUSDT", snapshot.OpenValue)
+        AppendSpotBotCsvPair(builder, "PnlRealizadoUSDT", snapshot.RealizedPnl)
+        AppendSpotBotCsvPair(builder, "PnlAbertoUSDT", snapshot.UnrealizedPnl)
+        AppendSpotBotCsvPair(builder, "PatrimonioUSDT", snapshot.Equity)
+        AppendSpotBotCsvPair(builder, "PnlTotalUSDT", snapshot.TotalPnl)
+        AppendSpotBotCsvPair(builder, "Trades", snapshot.CompletedTrades)
+        AppendSpotBotCsvPair(builder, "TradesVencedores", snapshot.WinningTrades)
+        AppendSpotBotCsvPair(builder, "TradesPerdedores", snapshot.LosingTrades)
+        AppendSpotBotCsvPair(builder, "WinRatePercentual", snapshot.WinRatePercent)
+        AppendSpotBotCsvPair(builder, "BollingerPeriodo", state.BollingerPeriod)
+        AppendSpotBotCsvPair(builder, "BollingerDesvios", state.BollingerStandardDeviations)
+        AppendSpotBotCsvPair(builder, "BollingerCandleMinutos", state.BollingerCandleMinutes)
+        AppendSpotBotCsvPair(builder, "BreakEvenAtivo", state.BreakEvenEnabled)
+        AppendSpotBotCsvPair(builder, "BreakEvenGatilhoPercentual", state.BreakEvenTriggerPercent)
+        AppendSpotBotCsvPair(builder, "BreakEvenOffsetPercentual", state.BreakEvenOffsetPercent)
+        AppendSpotBotCsvPair(builder, "TrailingAtivo", state.TrailingStopEnabled)
+        AppendSpotBotCsvPair(builder, "TrailingDistanciaPercentual", state.TrailingStopDistancePercent)
+        AppendSpotBotCsvPair(builder, "CooldownPosSaidaMinutos", state.PostExitCooldownMinutes)
+        AppendSpotBotCsvPair(builder, "AlocacaoPercentual", state.AllocationPercent)
+        AppendSpotBotCsvPair(builder, "Taxa", state.FeeRate)
+        AppendSpotBotCsvPair(builder, "UltimaAcao", snapshot.LastAction)
+        File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
+    End Sub
+
+    Private Shared Sub AppendSpotBotCsvPair(builder As StringBuilder, name As String, value As Object)
+        builder.Append(CsvEscape(name)).Append(";").AppendLine(CsvEscape(FormatSpotBotCsvValue(value)))
+    End Sub
+
+    Private Shared Sub WriteSpotBotDataTableCsv(filePath As String, table As DataTable)
+        Dim builder As New StringBuilder()
+        If table Is Nothing Then
+            File.WriteAllText(filePath, String.Empty, New UTF8Encoding(True))
+            Return
+        End If
+
+        builder.AppendLine(String.Join(";", table.Columns.Cast(Of DataColumn)().Select(Function(column) CsvEscape(column.ColumnName))))
+        For Each row As DataRow In table.Rows
+            builder.AppendLine(String.Join(";", table.Columns.Cast(Of DataColumn)().Select(Function(column) CsvEscape(FormatSpotBotCsvValue(row(column))))))
+        Next
+
+        File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
+    End Sub
+
+    Private Shared Function FormatSpotBotCsvValue(value As Object) As String
+        If value Is Nothing OrElse Convert.IsDBNull(value) Then Return String.Empty
+        If TypeOf value Is DateTime Then Return DirectCast(value, DateTime).ToString("O", CultureInfo.InvariantCulture)
+        If TypeOf value Is Decimal Then Return DirectCast(value, Decimal).ToString("0.########", CultureInfo.InvariantCulture)
+        If TypeOf value Is Double Then Return DirectCast(value, Double).ToString("0.########", CultureInfo.InvariantCulture)
+        If TypeOf value Is Single Then Return DirectCast(value, Single).ToString("0.########", CultureInfo.InvariantCulture)
+        Return Convert.ToString(value, CultureInfo.InvariantCulture)
+    End Function
+
+    Private Shared Function CsvEscape(value As String) As String
+        Dim quote = ChrW(34)
+        Dim text = If(value, String.Empty).Replace(quote.ToString(), New String(quote, 2))
+        If text.Contains(";"c) OrElse text.Contains(quote) OrElse text.Contains(ControlChars.Cr) OrElse text.Contains(ControlChars.Lf) Then
+            Return quote & text & quote
+        End If
+        Return text
+    End Function
 
     Private Sub SpotTradeBot_SignalGenerated(sender As Object, e As SpotBotSignalEventArgs)
         If e Is Nothing OrElse e.Signal Is Nothing Then Return
@@ -1750,12 +2276,14 @@ Public Class FormMain
         _lastBotSimulationAction = e.Snapshot.LastAction
         If Not String.Equals(previousAction, e.Snapshot.LastAction, StringComparison.Ordinal) AndAlso
            (e.Snapshot.LastAction.StartsWith("TP ", StringComparison.OrdinalIgnoreCase) OrElse
-            e.Snapshot.LastAction.StartsWith("SL ", StringComparison.OrdinalIgnoreCase)) Then
+            e.Snapshot.LastAction.StartsWith("SL ", StringComparison.OrdinalIgnoreCase) OrElse
+            e.Snapshot.LastAction.StartsWith("BE ", StringComparison.OrdinalIgnoreCase) OrElse
+            e.Snapshot.LastAction.StartsWith("TRAIL ", StringComparison.OrdinalIgnoreCase)) Then
             AppendSpotBotLog(
                 e.Snapshot.LastAction,
-                If(e.Snapshot.LastAction.StartsWith("TP ", StringComparison.OrdinalIgnoreCase),
-                   Color.LimeGreen,
-                   Color.IndianRed))
+                If(e.Snapshot.LastAction.StartsWith("SL ", StringComparison.OrdinalIgnoreCase),
+                   Color.IndianRed,
+                   Color.Gold))
         End If
         RenderSpotBotSimulationSummary(e.Snapshot)
     End Sub
@@ -1807,13 +2335,16 @@ Public Class FormMain
             Dim position = safePositions(index)
             Dim row = _dgSpotBotPositions.Rows(index)
             row.Cells("Symbol").Value = position.Symbol
+            row.Cells("Strategy").Value = If(String.IsNullOrWhiteSpace(position.Strategy), "-", position.Strategy)
             row.Cells("Side").Value = position.Side
             row.Cells("Quantity").Value = position.Quantity.ToString("0.########", CultureInfo.InvariantCulture)
             row.Cells("Notional").Value = FormatSpotBotUsd(position.Notional, 2)
             row.Cells("EntryPrice").Value = FormatSpotBotUsd(position.EntryPrice, 4)
             row.Cells("CurrentPrice").Value = FormatSpotBotUsd(position.CurrentPrice, 4)
+            row.Cells("StopPrice").Value = If(position.StopPrice > 0D, FormatSpotBotUsd(position.StopPrice, 6), "-")
             row.Cells("UnrealizedPnl").Value = FormatSpotBotUsd(position.UnrealizedPnl, 2)
             row.Cells("RoiPercent").Value = position.RoiPercent.ToString("0.00;-0.00;0.00", CultureInfo.InvariantCulture) & "%"
+            row.Cells("GridLevelCount").Value = If(position.GridLevelCount > 0, position.GridLevelCount.ToString(CultureInfo.InvariantCulture), "-")
             ApplySpotBotPositionRowStyle(row, position.UnrealizedPnl)
         Next
     End Sub
@@ -1837,11 +2368,24 @@ Public Class FormMain
         row.DefaultCellStyle.SelectionBackColor = rowBackColor
         row.DefaultCellStyle.SelectionForeColor = fontColor
         row.Cells("Symbol").Style.ForeColor = pnlColor
+        If row.DataGridView.Columns.Contains("Strategy") Then
+            row.Cells("Strategy").Style.ForeColor = Color.Gold
+        End If
         row.Cells("Side").Style.ForeColor = Color.LimeGreen
         row.Cells("EntryPrice").Style.ForeColor = Color.Cyan
         row.Cells("CurrentPrice").Style.ForeColor = pnlColor
+        If row.DataGridView.Columns.Contains("StopPrice") Then
+            row.Cells("StopPrice").Style.ForeColor = Color.DarkOrange
+        End If
         row.Cells("UnrealizedPnl").Style.ForeColor = pnlColor
         row.Cells("RoiPercent").Style.ForeColor = pnlColor
+        If row.DataGridView.Columns.Contains("ClosePosition") Then
+            row.Cells("ClosePosition").Style.BackColor = Color.IndianRed
+            row.Cells("ClosePosition").Style.ForeColor = Color.White
+            row.Cells("ClosePosition").Style.SelectionBackColor = Color.IndianRed
+            row.Cells("ClosePosition").Style.SelectionForeColor = Color.White
+        End If
+        RemoveCellSelectionHighlight(row)
     End Sub
 
     Private Sub AppendSpotBotLog(message As String, color As Color)
@@ -1951,6 +2495,8 @@ Public Class FormMain
             AddHandler _gateWs.ConnectionStateChanged, AddressOf GateWs_ConnectionStateChanged
             AddHandler _binanceFuturesMarketWs.MarkPriceUpdated, AddressOf BinanceFuturesMarkPriceUpdated
             AddHandler _binanceFuturesMarketWs.ConnectionStateChanged, AddressOf BinanceFuturesWs_ConnectionStateChanged
+            AddHandler _gateFuturesMarketWs.MarkPriceUpdated, AddressOf GateFuturesMarkPriceUpdated
+            AddHandler _gateFuturesMarketWs.ConnectionStateChanged, AddressOf GateFuturesWs_ConnectionStateChanged
             AddHandler _binanceFuturesUserWs.DataUpdated, AddressOf BinanceFuturesUserDataUpdated
             AddHandler _binanceFuturesUserWs.ConnectionStateChanged, AddressOf BinanceFuturesWs_ConnectionStateChanged
             AddHandler _binanceSpotUserWs.DataUpdated, AddressOf BinanceSpotUserDataUpdated
@@ -2256,6 +2802,27 @@ Public Class FormMain
 
         Next
 
+        If _cbSpotOrderExchange IsNot Nothing AndAlso
+           String.Equals(_cbSpotOrderExchange.Text.Trim(), "GATE.IO", StringComparison.OrdinalIgnoreCase) Then
+            Dim selectedSymbol = GetSpotBaseAsset(_cbSpotOrderSymbol?.Text)
+            If Not String.IsNullOrWhiteSpace(selectedSymbol) AndAlso Not Cjson.stablecoins.Contains(selectedSymbol) Then
+                symbols.Add(selectedSymbol)
+            End If
+        End If
+
+        If _dgOrdensSpot IsNot Nothing AndAlso _dgOrdensSpot.Columns.Contains("Symbol") AndAlso
+           _dgOrdensSpot.Columns.Contains("Exchange") Then
+            For Each orderRow As DataGridViewRow In _dgOrdensSpot.Rows
+                If orderRow.IsNewRow Then Continue For
+                Dim exchange = orderRow.Cells("Exchange").Value?.ToString().Trim().ToUpperInvariant()
+                If exchange <> "GATE.IO" Then Continue For
+                Dim orderSymbol = GetSpotBaseAsset(orderRow.Cells("Symbol").Value?.ToString())
+                If Not String.IsNullOrWhiteSpace(orderSymbol) AndAlso Not Cjson.stablecoins.Contains(orderSymbol) Then
+                    symbols.Add(orderSymbol)
+                End If
+            Next
+        End If
+
         If symbols.Count > 0 Then
             Await _gateWs.StartAsync(symbols.Distinct())
         End If
@@ -2402,6 +2969,8 @@ Public Class FormMain
             New Action(
                 Sub()
                     UpdateGateRow(symbol, price)
+                    UpdateSpotOrdersCurrentPrice(symbol, price, "GATE.IO")
+                    UpdateSpotOrderCurrentPrice()
                 End Sub))
 
             Return
@@ -2409,6 +2978,8 @@ Public Class FormMain
         End If
 
         UpdateGateRow(symbol, price)
+        UpdateSpotOrdersCurrentPrice(symbol, price, "GATE.IO")
+        UpdateSpotOrderCurrentPrice()
 
     End Sub
 
@@ -2655,6 +3226,8 @@ Public Class FormMain
             row.Cells("SpotClose").Style.SelectionBackColor = Color.IndianRed
             row.Cells("SpotClose").Style.SelectionForeColor = Color.White
         End If
+
+        RemoveCellSelectionHighlight(row)
     End Sub
 
     Private Sub UpdateRealtimeOverview(Optional force As Boolean = False)
@@ -3358,8 +3931,8 @@ Public Class FormMain
                 .Alignment = DataGridViewContentAlignment.MiddleRight,
                 .BackColor = Color.FromArgb(64, 64, 64),
                 .ForeColor = Color.Gold,
-                .SelectionBackColor = Color.White,
-                .SelectionForeColor = Color.Black
+                .SelectionBackColor = Color.FromArgb(64, 64, 64),
+                .SelectionForeColor = Color.Gold
             }
             dgPortfolio.Columns.Insert(Math.Min(oldXIndex, dgPortfolio.Columns.Count), priceColumn)
         End If
@@ -3416,8 +3989,8 @@ Public Class FormMain
                 row.Cells("SpotExitPrice").Style.Alignment = DataGridViewContentAlignment.MiddleRight
                 row.Cells("SpotExitPrice").Style.BackColor = Color.FromArgb(64, 64, 64)
                 row.Cells("SpotExitPrice").Style.ForeColor = Color.Gold
-                row.Cells("SpotExitPrice").Style.SelectionBackColor = Color.White
-                row.Cells("SpotExitPrice").Style.SelectionForeColor = Color.Black
+                row.Cells("SpotExitPrice").Style.SelectionBackColor = Color.FromArgb(64, 64, 64)
+                row.Cells("SpotExitPrice").Style.SelectionForeColor = Color.Gold
             End If
 
             If dgPortfolio.Columns.Contains("SpotClose") Then
@@ -4051,8 +4624,8 @@ Public Class FormMain
         Dim quantity As Decimal
         Dim limitPrice As Decimal
 
-        If wallet <> "BINANCE" Then
-            MessageBox.Show("O fechamento Spot está disponível somente para posições da Binance.", "Fechar posição", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        If wallet <> "BINANCE" AndAlso wallet <> "GATE.IO" Then
+            MessageBox.Show("O fechamento Spot está disponível somente para posições da Binance ou Gate.", "Fechar posição", MessageBoxButtons.OK, MessageBoxIcon.Information)
             Return
         End If
 
@@ -4078,11 +4651,13 @@ Public Class FormMain
 
         Try
             dgPortfolio.Cursor = Cursors.WaitCursor
-            Dim orderResponse = Await B.BINANCE_CreateSpotOrderAsync(tradingSymbol, "SELL", "LIMIT", quantity, limitPrice)
+            Dim orderResponse = If(wallet = "GATE.IO",
+                                   Await _gateSpot.GATE_CreateSpotOrderAsync(tradingSymbol, "SELL", "LIMIT", quantity, limitPrice),
+                                   Await B.BINANCE_CreateSpotOrderAsync(tradingSymbol, "SELL", "LIMIT", quantity, limitPrice))
             row.Cells("SpotExitPrice").Value = String.Empty
             Await RefreshSpotPortfolioAfterFilledOrderAsync(orderResponse)
             Await LoadSpotOrdersAsync()
-            MessageBox.Show("Ordem de fechamento enviada para a Binance.", "Fechar posição", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show($"Ordem de fechamento enviada para {wallet}.", "Fechar posição", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show(
                 "Erro ao fechar a posição: " & ex.Message,
@@ -4109,13 +4684,72 @@ Public Class FormMain
         dgFuturos.Cursor = Cursors.WaitCursor
 
         Try
-            Dim positions = Await B.BINANCE_GetFuturesPositionsAsync()
-            Dim futuresAccount = Await B.BINANCE_GetFuturesAccountSummaryAsync()
-            Dim protectionOrders = Await B.BINANCE_GetFuturesProtectionOrdersAsync()
+            Dim positions As New List(Of BinanceFuturesPosition)()
+            Dim protectionOrders As New List(Of BinanceFuturesProtectionOrder)()
+            Dim futuresAccount As New BinanceFuturesAccountSummary()
+            Dim accountLoaded = False
+
+            If UseBinanceFutures Then
+                Try
+                    Dim binancePositions = Await B.BINANCE_GetFuturesPositionsAsync()
+                    For Each position In binancePositions
+                        position.Exchange = "BINANCE"
+                        positions.Add(position)
+                    Next
+
+                    Dim binanceAccount = Await B.BINANCE_GetFuturesAccountSummaryAsync()
+                    futuresAccount.AvailableBalance += binanceAccount.AvailableBalance
+                    futuresAccount.InitialMargin += binanceAccount.InitialMargin
+                    futuresAccount.WalletBalance += binanceAccount.WalletBalance
+                    futuresAccount.Equity += binanceAccount.Equity
+                    futuresAccount.UnrealizedProfit += binanceAccount.UnrealizedProfit
+                    accountLoaded = True
+
+                    Dim binanceProtectionOrders = Await B.BINANCE_GetFuturesProtectionOrdersAsync()
+                    For Each protection In binanceProtectionOrders
+                        protection.Exchange = "BINANCE"
+                        protectionOrders.Add(protection)
+                    Next
+                Catch ex As Exception
+                    AppendFuturesProviderError("Binance", ex)
+                End Try
+            End If
+
+            If UseGateFutures Then
+                Try
+                    Dim gatePositions = Await _gateFutures.GATE_GetFuturesPositionsAsync()
+                    For Each position In gatePositions
+                        position.Exchange = "GATE"
+                        positions.Add(position)
+                    Next
+
+                    Dim gateAccount = Await _gateFutures.GATE_GetFuturesAccountSummaryAsync()
+                    futuresAccount.AvailableBalance += gateAccount.AvailableBalance
+                    futuresAccount.InitialMargin += gateAccount.InitialMargin
+                    futuresAccount.WalletBalance += gateAccount.WalletBalance
+                    futuresAccount.Equity += gateAccount.Equity
+                    futuresAccount.UnrealizedProfit += gateAccount.UnrealizedProfit
+                    accountLoaded = True
+
+                    Dim gateProtectionOrders = Await _gateFutures.GATE_GetFuturesProtectionOrdersAsync(gatePositions)
+                    For Each protection In gateProtectionOrders
+                        protection.Exchange = "GATE"
+                        protectionOrders.Add(protection)
+                    Next
+                Catch ex As Exception
+                    AppendFuturesProviderError("Gate", ex)
+                End Try
+            End If
+
+            If Not accountLoaded AndAlso positions.Count = 0 Then
+                Throw New InvalidOperationException("Nenhuma conta de futuros está disponível. Configure as credenciais da Binance ou da Gate.")
+            End If
+
             Await EnsureFuturesUsdBrlRateAsync()
             Dim table As New DataTable()
 
             table.Columns.Add("Symbol", GetType(String))
+            table.Columns.Add("Exchange", GetType(String))
             table.Columns.Add("PositionSide", GetType(String))
             table.Columns.Add("InitialMargin", GetType(Decimal))
             table.Columns.Add("Leverage", GetType(Integer))
@@ -4138,6 +4772,7 @@ Public Class FormMain
 
                 table.Rows.Add(
                     position.Symbol,
+                    NormalizeFuturesExchange(position.Exchange),
                     If(String.IsNullOrWhiteSpace(position.PositionSide), "-", position.PositionSide),
                     roiMargin,
                     position.Leverage,
@@ -4161,18 +4796,28 @@ Public Class FormMain
             RestoreFuturesExitPrices(savedExitPrices)
             ApplyFuturesGridColors()
 
-            If futuresAccount.Equity > 0D Then
-                _futuresEquityBaseUsd = futuresAccount.WalletBalance
-                _futuresEquityLoaded = True
-            End If
+            _futuresEquityBaseUsd = futuresAccount.WalletBalance
+            _futuresEquityLoaded = accountLoaded
             _futuresAvailableUsd = futuresAccount.AvailableBalance
             UpdateFuturesOrderAvailableLabel()
 
             UpdateFuturesPnlSummary()
 
-            If Not _futuresUserStreamStarted Then
+            If Not UseBinanceFutures AndAlso _futuresUserStreamStarted Then
+                Await _binanceFuturesUserWs.StopAsync()
+                _futuresUserStreamStarted = False
+            ElseIf UseBinanceFutures AndAlso Not _futuresUserStreamStarted Then
                 Await _binanceFuturesUserWs.StartAsync()
                 _futuresUserStreamStarted = True
+            End If
+
+            If UseGateFutures AndAlso lbDebug IsNot Nothing AndAlso Not lbDebug.Text.Contains("Futures ativos", StringComparison.OrdinalIgnoreCase) Then
+                Dim activeProviders = New List(Of String)()
+                If UseBinanceFutures Then activeProviders.Add("Binance")
+                If UseGateFutures Then activeProviders.Add("Gate")
+                lbDebug.AppendText(
+                    Environment.NewLine &
+                    $"Futures ativos: {String.Join(" + ", activeProviders)}; posições via API e preços via WebSocket.")
             End If
             Await EnsureFuturesMarketWebSocketAsync()
 
@@ -4260,10 +4905,41 @@ Public Class FormMain
         Try
             PopulateSpotOrderSymbols()
             Await RefreshSpotOrderCashAsync()
-            Dim orders = Await B.BINANCE_GetSpotOpenOrdersAsync()
+            Dim orders As New List(Of BinanceSpotOrder)()
+            Dim accountLoaded = False
+            If Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceAPIKey) AndAlso
+               Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceSecretKey) Then
+                Try
+                    Dim binanceOrders = Await B.BINANCE_GetSpotOpenOrdersAsync()
+                    For Each order In binanceOrders
+                        order.Exchange = "BINANCE"
+                        orders.Add(order)
+                    Next
+                    accountLoaded = True
+                Catch ex As Exception
+                    Debug.WriteLine("Erro ao carregar ordens Spot Binance: " & ex.Message)
+                End Try
+            End If
+            If Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateAPIKey) AndAlso
+               Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateSecretKey) Then
+                Try
+                    Dim gateOrders = Await _gateSpot.GATE_GetSpotOpenOrdersAsync()
+                    For Each order In gateOrders
+                        order.Exchange = "GATE.IO"
+                        orders.Add(order)
+                    Next
+                    accountLoaded = True
+                Catch ex As Exception
+                    Debug.WriteLine("Erro ao carregar ordens Spot Gate: " & ex.Message)
+                End Try
+            End If
+            If Not accountLoaded Then
+                Throw New InvalidOperationException("Nenhuma conta Spot está disponível. Configure as credenciais da Binance ou da Gate.")
+            End If
             Dim table As New DataTable()
 
             table.Columns.Add("Symbol", GetType(String))
+            table.Columns.Add("Exchange", GetType(String))
             table.Columns.Add("Side", GetType(String))
             table.Columns.Add("OrderType", GetType(String))
             table.Columns.Add("Quantity", GetType(Decimal))
@@ -4283,6 +4959,7 @@ Public Class FormMain
 
                 table.Rows.Add(
                     order.Symbol,
+                    If(String.IsNullOrWhiteSpace(order.Exchange), "BINANCE", order.Exchange),
                     order.Side,
                     order.OrderType,
                     order.Quantity,
@@ -4300,6 +4977,7 @@ Public Class FormMain
             _dgOrdensSpot.DataSource = table
             ConfigureSpotOrdersGrid()
             Await EnsureSpotOrderSymbolsWebSocketAsync()
+            Await StartGateWebSocket()
         Catch ex As Exception
             Debug.WriteLine("Erro ao carregar ordens Spot: " & ex.Message)
             MessageBox.Show(
@@ -4314,63 +4992,86 @@ Public Class FormMain
     End Function
 
     Private Async Function EnsureFuturesMarketWebSocketAsync() As Task
-        Dim symbols As New List(Of String)()
+        Dim binanceSymbols As New List(Of String)()
+        Dim gateSymbols As New List(Of String)()
+
+        Dim addSymbol = Sub(target As List(Of String), rawSymbol As String)
+                            Dim normalized = ToFuturesUsdtSymbol(rawSymbol)
+                            If Not String.IsNullOrWhiteSpace(normalized) AndAlso
+                               Not target.Contains(normalized, StringComparer.OrdinalIgnoreCase) Then
+                                target.Add(normalized)
+                            End If
+                        End Sub
+
+        Dim addRowSymbol = Sub(row As DataGridViewRow)
+                               If row Is Nothing OrElse row.IsNewRow Then Return
+                               Dim exchange = GetRowFuturesExchange(row)
+
+                               If exchange = "GATE" Then
+                                   addSymbol(gateSymbols, row.Cells("Symbol").Value?.ToString())
+                               Else
+                                   addSymbol(binanceSymbols, row.Cells("Symbol").Value?.ToString())
+                               End If
+                           End Sub
 
         For Each row As DataGridViewRow In dgFuturos.Rows
-            If row.IsNewRow Then
-                Continue For
-            End If
-
-            Dim symbol = row.Cells("Symbol").Value?.ToString().Trim().ToUpperInvariant()
-            If Not String.IsNullOrWhiteSpace(symbol) Then
-                symbols.Add(symbol)
-            End If
+            addRowSymbol(row)
         Next
 
         If _dgOrdensFuturos IsNot Nothing AndAlso
            _dgOrdensFuturos.Columns.Contains("Symbol") Then
             For Each orderRow As DataGridViewRow In _dgOrdensFuturos.Rows
-                If orderRow.IsNewRow Then
-                    Continue For
-                End If
-
-                Dim orderSymbol = ToFuturesUsdtSymbol(orderRow.Cells("Symbol").Value?.ToString())
-                If Not String.IsNullOrWhiteSpace(orderSymbol) Then
-                    symbols.Add(orderSymbol)
-                End If
+                addRowSymbol(orderRow)
             Next
         End If
 
         If _cbFuturesOrderSymbol IsNot Nothing Then
             Dim selectedSymbol = ToFuturesUsdtSymbol(_cbFuturesOrderSymbol.Text)
             If Not String.IsNullOrWhiteSpace(selectedSymbol) Then
-                symbols.Add(selectedSymbol)
+                If UseBinanceFutures Then addSymbol(binanceSymbols, selectedSymbol)
+                If UseGateFutures Then addSymbol(gateSymbols, selectedSymbol)
             End If
         End If
 
-        symbols = symbols.
-            Where(Function(symbol) Not String.IsNullOrWhiteSpace(symbol)).
-            Select(Function(symbol) ToFuturesUsdtSymbol(symbol)).
-            Distinct(StringComparer.OrdinalIgnoreCase).
-            ToList()
-
-        If symbols.Count = 0 Then
-            If Not String.IsNullOrWhiteSpace(_futuresMarketSymbolsKey) Then
-                Await _binanceFuturesMarketWs.StopAsync()
-                _futuresMarketSymbolsKey = String.Empty
-            End If
+        If binanceSymbols.Count = 0 AndAlso gateSymbols.Count = 0 Then
+            Await _binanceFuturesMarketWs.StopAsync()
+            Await _gateFuturesMarketWs.StopAsync()
+            _futuresMarketSymbolsKey = String.Empty
+            _futuresMarketProviderKey = String.Empty
             Return
         End If
 
-        Dim symbolsKey = String.Join(
+        Dim symbolsKey = "BINANCE:" & String.Join(
             "|",
-            symbols.OrderBy(Function(symbol) symbol, StringComparer.OrdinalIgnoreCase))
-        If String.Equals(symbolsKey, _futuresMarketSymbolsKey, StringComparison.OrdinalIgnoreCase) Then
+            binanceSymbols.OrderBy(Function(symbol) symbol, StringComparer.OrdinalIgnoreCase)) &
+            "|GATE:" & String.Join(
+                "|",
+                gateSymbols.OrderBy(Function(symbol) symbol, StringComparer.OrdinalIgnoreCase))
+        Dim providerKey = String.Join(
+            "+",
+            New String() {
+                If(UseBinanceFutures, "Binance", String.Empty),
+                If(UseGateFutures, "Gate", String.Empty)
+            }.Where(Function(item) Not String.IsNullOrWhiteSpace(item)))
+        If String.Equals(symbolsKey, _futuresMarketSymbolsKey, StringComparison.OrdinalIgnoreCase) AndAlso
+           String.Equals(providerKey, _futuresMarketProviderKey, StringComparison.OrdinalIgnoreCase) Then
             Return
         End If
 
-        Await _binanceFuturesMarketWs.StartAsync(symbols)
+        If binanceSymbols.Count = 0 OrElse Not UseBinanceFutures Then
+            Await _binanceFuturesMarketWs.StopAsync()
+        Else
+            Await _binanceFuturesMarketWs.StartAsync(binanceSymbols)
+        End If
+
+        If gateSymbols.Count = 0 OrElse Not UseGateFutures Then
+            Await _gateFuturesMarketWs.StopAsync()
+        Else
+            Await _gateFuturesMarketWs.StartAsync(gateSymbols)
+        End If
+
         _futuresMarketSymbolsKey = symbolsKey
+        _futuresMarketProviderKey = providerKey
     End Function
 
     Private Shared Function ToFuturesUsdtSymbol(symbol As String) As String
@@ -4456,16 +5157,34 @@ Public Class FormMain
     End Sub
 
     Private Function TryGetFuturesCurrentPrice(symbol As String, ByRef price As Decimal) As Boolean
+        Return TryGetFuturesCurrentPrice(symbol, String.Empty, price)
+    End Function
+
+    Private Function TryGetFuturesCurrentPrice(symbol As String, exchange As String, ByRef price As Decimal) As Boolean
         Dim normalizedSymbol = ToFuturesUsdtSymbol(symbol)
         If String.IsNullOrWhiteSpace(normalizedSymbol) Then
             Return False
         End If
 
-        Return _binanceFuturesMarketWs.TryGetPrice(normalizedSymbol, price) OrElse
-               TryGetFuturesGridPrice(normalizedSymbol, price)
+        Dim normalizedExchange = If(String.IsNullOrWhiteSpace(exchange), String.Empty, NormalizeFuturesExchange(exchange))
+        If normalizedExchange = "GATE" Then
+            Return _gateFuturesMarketWs.TryGetPrice(normalizedSymbol, price) OrElse
+                   TryGetFuturesGridPrice(normalizedSymbol, price, normalizedExchange)
+        ElseIf normalizedExchange = "BINANCE" Then
+            Return _binanceFuturesMarketWs.TryGetPrice(normalizedSymbol, price) OrElse
+                   TryGetFuturesGridPrice(normalizedSymbol, price, normalizedExchange)
+        End If
+
+        Return (_gateFuturesMarketWs.TryGetPrice(normalizedSymbol, price) OrElse
+                _binanceFuturesMarketWs.TryGetPrice(normalizedSymbol, price) OrElse
+                TryGetFuturesGridPrice(normalizedSymbol, price, String.Empty))
     End Function
 
     Private Function TryGetFuturesGridPrice(symbol As String, ByRef price As Decimal) As Boolean
+        Return TryGetFuturesGridPrice(symbol, price, String.Empty)
+    End Function
+
+    Private Function TryGetFuturesGridPrice(symbol As String, ByRef price As Decimal, exchange As String) As Boolean
         If Not dgFuturos.Columns.Contains("Symbol") OrElse
            Not dgFuturos.Columns.Contains("MarkPrice") Then
             Return False
@@ -4473,7 +5192,13 @@ Public Class FormMain
 
         For Each row As DataGridViewRow In dgFuturos.Rows
             If row.IsNewRow Then Continue For
-            If String.Equals(
+            If (String.IsNullOrWhiteSpace(exchange) OrElse
+                Not dgFuturos.Columns.Contains("Exchange") OrElse
+                String.Equals(
+                    NormalizeFuturesExchange(row.Cells("Exchange").Value?.ToString()),
+                    NormalizeFuturesExchange(exchange),
+                    StringComparison.OrdinalIgnoreCase)) AndAlso
+               String.Equals(
                    ToFuturesUsdtSymbol(row.Cells("Symbol").Value?.ToString()),
                    ToFuturesUsdtSymbol(symbol),
                    StringComparison.OrdinalIgnoreCase) Then
@@ -4639,24 +5364,81 @@ Public Class FormMain
 
         Try
             PopulateFuturesOrderSymbols()
-            Dim account = Await B.BINANCE_GetFuturesAccountSummaryAsync()
-            _futuresAvailableUsd = account.AvailableBalance
+            Dim availableBalance As Decimal = 0D
+            Dim accountLoaded = False
+            If UseBinanceFutures Then
+                Try
+                    Dim binanceAccount = Await B.BINANCE_GetFuturesAccountSummaryAsync()
+                    availableBalance += binanceAccount.AvailableBalance
+                    accountLoaded = True
+                Catch ex As Exception
+                    AppendFuturesProviderError("Binance", ex)
+                End Try
+            End If
+            If UseGateFutures Then
+                Try
+                    Dim gateAccount = Await _gateFutures.GATE_GetFuturesAccountSummaryAsync()
+                    availableBalance += gateAccount.AvailableBalance
+                    accountLoaded = True
+                Catch ex As Exception
+                    AppendFuturesProviderError("Gate", ex)
+                End Try
+            End If
+            If Not accountLoaded Then
+                Throw New InvalidOperationException("Nenhuma conta de futuros está disponível. Configure as credenciais da Binance ou da Gate.")
+            End If
+            _futuresAvailableUsd = availableBalance
             UpdateFuturesOrderAvailableLabel()
 
             Try
-                Dim positions = Await B.BINANCE_GetFuturesPositionsAsync(includeEmptyPositions:=True)
-                For Each position In positions
-                    If position IsNot Nothing AndAlso position.Leverage > 0 Then
-                        _futuresLeverageBySymbol(ToFuturesUsdtSymbol(position.Symbol)) = position.Leverage
-                    End If
-                Next
+                If UseBinanceFutures Then
+                    Dim binancePositions = Await B.BINANCE_GetFuturesPositionsAsync(includeEmptyPositions:=True)
+                    For Each position In binancePositions
+                        If position IsNot Nothing AndAlso position.Leverage > 0 Then
+                            position.Exchange = "BINANCE"
+                            _futuresLeverageBySymbol(FuturesProviderKey("BINANCE", position.Symbol)) = position.Leverage
+                        End If
+                    Next
+                End If
+                If UseGateFutures Then
+                    Dim gatePositions = Await _gateFutures.GATE_GetFuturesPositionsAsync(includeEmptyPositions:=True)
+                    For Each position In gatePositions
+                        If position IsNot Nothing AndAlso position.Leverage > 0 Then
+                            position.Exchange = "GATE"
+                            _futuresLeverageBySymbol(FuturesProviderKey("GATE", position.Symbol)) = position.Leverage
+                        End If
+                    Next
+                End If
             Catch ex As Exception
                 Debug.WriteLine("Erro ao carregar alavancagem das posições Futures: " & ex.Message)
             End Try
 
-            Dim orders = Await B.BINANCE_GetFuturesOpenOrdersAsync()
+            Dim orders As New List(Of BinanceFuturesOrder)()
+            If UseBinanceFutures Then
+                Try
+                    Dim binanceOrders = Await B.BINANCE_GetFuturesOpenOrdersAsync()
+                    For Each order In binanceOrders
+                        order.Exchange = "BINANCE"
+                        orders.Add(order)
+                    Next
+                Catch ex As Exception
+                    AppendFuturesProviderError("Binance", ex)
+                End Try
+            End If
+            If UseGateFutures Then
+                Try
+                    Dim gateOrders = Await _gateFutures.GATE_GetFuturesOpenOrdersAsync()
+                    For Each order In gateOrders
+                        order.Exchange = "GATE"
+                        orders.Add(order)
+                    Next
+                Catch ex As Exception
+                    AppendFuturesProviderError("Gate", ex)
+                End Try
+            End If
             Dim table As New DataTable()
             table.Columns.Add("Symbol", GetType(String))
+            table.Columns.Add("Exchange", GetType(String))
             table.Columns.Add("PositionSide", GetType(String))
             table.Columns.Add("Leverage", GetType(Integer))
             table.Columns.Add("Side", GetType(String))
@@ -4675,11 +5457,11 @@ Public Class FormMain
 
             For Each order In orders
                 Dim currentPrice As Decimal = 0D
-                TryGetFuturesCurrentPrice(order.Symbol, currentPrice)
+                TryGetFuturesCurrentPrice(order.Symbol, order.Exchange, currentPrice)
                 Dim orderValue = order.Quantity * order.Price
                 Dim orderLeverage As Integer = 0
                 Dim normalizedOrderSymbol = ToFuturesUsdtSymbol(order.Symbol)
-                If Not _futuresLeverageBySymbol.TryGetValue(normalizedOrderSymbol, orderLeverage) AndAlso
+                If Not _futuresLeverageBySymbol.TryGetValue(FuturesProviderKey(order.Exchange, normalizedOrderSymbol), orderLeverage) AndAlso
                    _cbFuturesOrderSymbol IsNot Nothing AndAlso
                    String.Equals(normalizedOrderSymbol, ToFuturesUsdtSymbol(_cbFuturesOrderSymbol.Text), StringComparison.OrdinalIgnoreCase) Then
                     Integer.TryParse(_cbFuturesOrderLeverage?.Text.Replace("x", String.Empty).Trim(), orderLeverage)
@@ -4687,6 +5469,7 @@ Public Class FormMain
 
                 table.Rows.Add(
                     order.Symbol,
+                    NormalizeFuturesExchange(order.Exchange),
                     If(String.IsNullOrWhiteSpace(order.PositionSide), "-", order.PositionSide),
                     orderLeverage,
                     order.Side,
@@ -4704,14 +5487,36 @@ Public Class FormMain
                     False)
             Next
 
-            Dim protectionOrders = Await B.BINANCE_GetFuturesProtectionOrdersAsync()
+            Dim protectionOrders As New List(Of BinanceFuturesProtectionOrder)()
+            If UseBinanceFutures Then
+                Try
+                    Dim binanceProtectionOrders = Await B.BINANCE_GetFuturesProtectionOrdersAsync()
+                    For Each protection In binanceProtectionOrders
+                        protection.Exchange = "BINANCE"
+                        protectionOrders.Add(protection)
+                    Next
+                Catch ex As Exception
+                    AppendFuturesProviderError("Binance", ex)
+                End Try
+            End If
+            If UseGateFutures Then
+                Try
+                    Dim gateProtectionOrders = Await _gateFutures.GATE_GetFuturesProtectionOrdersAsync()
+                    For Each protection In gateProtectionOrders
+                        protection.Exchange = "GATE"
+                        protectionOrders.Add(protection)
+                    Next
+                Catch ex As Exception
+                    AppendFuturesProviderError("Gate", ex)
+                End Try
+            End If
             For Each protection In protectionOrders
                 Dim currentPrice As Decimal = 0D
-                TryGetFuturesCurrentPrice(protection.Symbol, currentPrice)
+                TryGetFuturesCurrentPrice(protection.Symbol, protection.Exchange, currentPrice)
 
                 Dim normalizedProtectionSymbol = ToFuturesUsdtSymbol(protection.Symbol)
                 Dim protectionLeverage As Integer = 0
-                _futuresLeverageBySymbol.TryGetValue(normalizedProtectionSymbol, protectionLeverage)
+                _futuresLeverageBySymbol.TryGetValue(FuturesProviderKey(protection.Exchange, normalizedProtectionSymbol), protectionLeverage)
 
                 Dim protectionPrice = If(
                     protection.Price > 0D,
@@ -4721,6 +5526,7 @@ Public Class FormMain
 
                 table.Rows.Add(
                     protection.Symbol,
+                    NormalizeFuturesExchange(protection.Exchange),
                     If(String.IsNullOrWhiteSpace(protection.PositionSide), "-", protection.PositionSide),
                     protectionLeverage,
                     protection.Side,
@@ -4762,6 +5568,7 @@ Public Class FormMain
 
         Dim headers As New Dictionary(Of String, String) From {
             {"Symbol", "Cripto"},
+            {"Exchange", "Exchange"},
             {"PositionSide", "Lado"},
             {"Leverage", "Alavancagem"},
             {"Side", "Ordem"},
@@ -4813,7 +5620,7 @@ Public Class FormMain
                 .Alignment = DataGridViewContentAlignment.MiddleCenter,
                 .BackColor = Color.IndianRed,
                 .ForeColor = Color.White,
-                .SelectionBackColor = Color.DarkRed,
+                .SelectionBackColor = Color.IndianRed,
                 .SelectionForeColor = Color.White
             }
         End If
@@ -4847,6 +5654,11 @@ Public Class FormMain
             Case "Symbol"
                 e.CellStyle.ForeColor = Color.White
                 e.CellStyle.SelectionForeColor = Color.White
+            Case "Exchange"
+                Dim exchange = NormalizeFuturesExchange(e.Value?.ToString())
+                Dim exchangeColor = If(exchange = "GATE", Color.DeepSkyBlue, Color.Gold)
+                e.CellStyle.ForeColor = exchangeColor
+                e.CellStyle.SelectionForeColor = exchangeColor
             Case "PositionSide"
                 Dim side = e.Value.ToString().Trim().ToUpperInvariant()
                 Dim sideColor = If(side = "LONG", Color.LimeGreen, If(side = "SHORT", Color.IndianRed, Color.White))
@@ -4916,6 +5728,7 @@ Public Class FormMain
 
         Dim row = _dgOrdensFuturos.Rows(e.RowIndex)
         Dim symbol = row.Cells("Symbol").Value?.ToString().Trim().ToUpperInvariant()
+        Dim exchange = GetRowFuturesExchange(row)
 
         Dim isProtection As Boolean = False
         If _dgOrdensFuturos.Columns.Contains("IsProtection") Then
@@ -4940,7 +5753,10 @@ Public Class FormMain
 
             Try
                 _dgOrdensFuturos.Cursor = Cursors.WaitCursor
-                If Await B.BINANCE_CancelFuturesProtectionOrderAsync(symbol, algoId) Then
+                Dim cancelled = If(exchange = "GATE",
+                                   Await _gateFutures.GATE_CancelFuturesProtectionOrderAsync(symbol, algoId),
+                                   Await B.BINANCE_CancelFuturesProtectionOrderAsync(symbol, algoId))
+                If cancelled Then
                     Await LoadFuturesOrdersAsync()
                 End If
             Catch ex As Exception
@@ -4972,7 +5788,10 @@ Public Class FormMain
 
         Try
             _dgOrdensFuturos.Cursor = Cursors.WaitCursor
-            If Await B.BINANCE_CancelFuturesOrderAsync(symbol, orderId) Then
+            Dim cancelled = If(exchange = "GATE",
+                               Await _gateFutures.GATE_CancelFuturesOrderAsync(symbol, orderId),
+                               Await B.BINANCE_CancelFuturesOrderAsync(symbol, orderId))
+            If cancelled Then
                 Await LoadFuturesOrdersAsync()
             End If
         Catch ex As Exception
@@ -4998,6 +5817,7 @@ Public Class FormMain
         End If
 
         Dim symbol = ToFuturesUsdtSymbol(_cbFuturesOrderSymbol.Text)
+        Dim exchange = GetDefaultFuturesExchange()
         Dim positionSide = _cbFuturesOrderSide.Text.Trim().ToUpperInvariant()
         Dim orderType = _cbFuturesOrderType.Text.Trim().ToUpperInvariant()
         Dim leverage As Integer = 0
@@ -5023,7 +5843,7 @@ Public Class FormMain
         End If
 
         Dim leverageDetails = If(leverage > 0, $" com {leverage}x", String.Empty)
-        Dim details = $"{positionSide} {orderType} {quantity:0.########} {symbol} a ${price:0.########}{leverageDetails}"
+        Dim details = $"{exchange} - {positionSide} {orderType} {quantity:0.########} {symbol} a ${price:0.########}{leverageDetails}"
         If MessageBox.Show(
                "Enviar esta ordem Futures?" & Environment.NewLine & details,
                "Confirmar ordem",
@@ -5035,12 +5855,20 @@ Public Class FormMain
         Try
             _btAbrirFuturesOrder.Enabled = False
             If leverage > 0 Then
-                Await B.BINANCE_SetFuturesLeverageAsync(symbol, leverage)
-                _futuresLeverageBySymbol(symbol) = leverage
+                If exchange = "GATE" Then
+                    Await _gateFutures.GATE_SetFuturesLeverageAsync(symbol, leverage)
+                Else
+                    Await B.BINANCE_SetFuturesLeverageAsync(symbol, leverage)
+                End If
+                _futuresLeverageBySymbol(FuturesProviderKey(exchange, symbol)) = leverage
             End If
-            Await B.BINANCE_CreateFuturesOrderAsync(symbol, positionSide, orderType, quantity, price)
+            If exchange = "GATE" Then
+                Await _gateFutures.GATE_CreateFuturesOrderAsync(symbol, positionSide, orderType, quantity, price)
+            Else
+                Await B.BINANCE_CreateFuturesOrderAsync(symbol, positionSide, orderType, quantity, price)
+            End If
             Await LoadFuturesOrdersAsync()
-            MessageBox.Show("Ordem enviada para a Binance.", "Ordem Futures", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show($"Ordem enviada para {exchange}.", "Ordem Futures", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show(
                 "Erro ao enviar a ordem Futures: " & ex.Message,
@@ -5133,7 +5961,9 @@ Public Class FormMain
             Return False
         End If
 
-        Return _binanceWs.TryGetPrice(symbol, price) OrElse TryGetSpotGridPrice(symbol, price)
+        Return _binanceWs.TryGetPrice(symbol, price) OrElse
+               _gateWs.TryGetPrice(symbol, price) OrElse
+               TryGetSpotGridPrice(symbol, price)
     End Function
 
     Private Async Function EnsureSpotOrderSymbolsWebSocketAsync() As Task
@@ -5226,30 +6056,58 @@ Public Class FormMain
         _lbSpotOrderCash.ForeColor = Color.Gold
     End Sub
 
+    Public Sub ApplySpotCashFromPopup(cashUsd As Decimal)
+        _spotCashUsd = Math.Max(0D, cashUsd)
+        _spotCashLoadedFromAccount = True
+        UpdateSpotOrderCashLabel()
+
+        If _spotOverviewInitialized AndAlso Not _marketRefreshRunning Then
+            UpdateRealtimeOverview(force:=True)
+        End If
+    End Sub
+
     Private Async Function RefreshSpotOrderCashAsync() As Task
-        Try
-            Dim assets = Await B.BINANCE_GetSpotAssetsFull()
-            Dim cashUsd As Decimal = 0D
+        Dim cashUsd As Decimal = 0D
+        Dim accountLoaded = False
 
-            For Each asset In assets
-                If Cjson.stablecoins.Contains(asset.Key) Then
-                    cashUsd += asset.Value
-                End If
-            Next
+        If Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceAPIKey) AndAlso
+           Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceSecretKey) Then
+            Try
+                Dim assets = Await B.BINANCE_GetSpotAssetsFull()
+                For Each asset In assets
+                    If Cjson.stablecoins.Contains(asset.Key) Then cashUsd += asset.Value
+                Next
+                accountLoaded = True
+            Catch ex As Exception
+                Debug.WriteLine("Erro ao carregar Caixa Spot Binance: " & ex.Message)
+            End Try
+        End If
 
-            _spotCashUsd = cashUsd
-            _spotCashLoadedFromAccount = True
-            UpdateSpotOrderCashLabel()
+        If Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateAPIKey) AndAlso
+           Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateSecretKey) Then
+            Try
+                Dim gateAssets = Await _gateSpot.GATE_GetAllSpotAssets()
+                For Each asset In gateAssets
+                    If Cjson.stablecoins.Contains(asset.Key) Then cashUsd += asset.Value
+                Next
+                accountLoaded = True
+            Catch ex As Exception
+                Debug.WriteLine("Erro ao carregar Caixa Spot Gate: " & ex.Message)
+            End Try
+        End If
 
-            ' A abertura/atualização do painel de ordens também consulta o
-            ' saldo Spot. Quando uma ordem acabou de preencher, aproveite a
-            ' mesma leitura para manter a Visão Geral sincronizada com o grid.
-            If _spotOverviewInitialized AndAlso Not _marketRefreshRunning Then
-                UpdateRealtimeOverview(force:=True)
-            End If
-        Catch ex As Exception
-            Debug.WriteLine("Erro ao carregar Caixa Spot: " & ex.Message)
-        End Try
+        If Not accountLoaded Then Return
+
+        _spotCashUsd = cashUsd
+        _spotCashLoadedFromAccount = True
+        UpdateSpotOrderCashLabel()
+
+        ' A abertura/atualização do painel de ordens também consulta o
+        ' saldo Spot. Quando uma ordem acabou de preencher, aproveite a
+        ' mesma leitura para manter a Visão Geral sincronizada com o grid.
+        If _spotOverviewInitialized AndAlso Not _marketRefreshRunning Then
+            UpdateRealtimeOverview(force:=True)
+        End If
     End Function
 
     Private Sub SpotOrderSymbolTextChanged(sender As Object, e As EventArgs)
@@ -5271,12 +6129,16 @@ Public Class FormMain
 
     Private Async Function EnsureSpotOrderSymbolWebSocketAsync() As Task
         If _cbSpotOrderSymbol Is Nothing OrElse
-           String.IsNullOrWhiteSpace(_cbSpotOrderSymbol.Text) OrElse
-           _binanceWsStartRunning Then
+           String.IsNullOrWhiteSpace(_cbSpotOrderSymbol.Text) Then
             Return
         End If
 
-        Await StartBinanceWebSocket()
+        Dim exchange = If(_cbSpotOrderExchange?.Text.Trim().ToUpperInvariant(), "BINANCE")
+        If exchange = "GATE.IO" Then
+            Await StartGateWebSocket()
+        ElseIf Not _binanceWsStartRunning Then
+            Await StartBinanceWebSocket()
+        End If
     End Function
 
     Private Sub UpdateSpotOrderCurrentPrice()
@@ -5292,7 +6154,12 @@ Public Class FormMain
             Return
         End If
 
-        If _binanceWs.TryGetPrice(symbol, price) OrElse TryGetSpotGridPrice(symbol, price) Then
+        Dim exchange = If(_cbSpotOrderExchange?.Text.Trim().ToUpperInvariant(), "BINANCE")
+        Dim hasPrice = If(exchange = "GATE.IO",
+                          _gateWs.TryGetPrice(symbol, price) OrElse _binanceWs.TryGetPrice(symbol, price),
+                          _binanceWs.TryGetPrice(symbol, price) OrElse _gateWs.TryGetPrice(symbol, price))
+
+        If hasPrice OrElse TryGetSpotGridPrice(symbol, price) Then
             _txtSpotOrderCurrentPrice.Text = "$" & price.ToString("0.########", CultureInfo.GetCultureInfo("en-US"))
         Else
             _txtSpotOrderCurrentPrice.Text = "--"
@@ -5301,7 +6168,7 @@ Public Class FormMain
         UpdateSpotOrderLinkedValue()
     End Sub
 
-    Private Sub UpdateSpotOrdersCurrentPrice(symbol As String, price As Decimal)
+    Private Sub UpdateSpotOrdersCurrentPrice(symbol As String, price As Decimal, Optional exchange As String = "")
         If _dgOrdensSpot Is Nothing OrElse
            Not _dgOrdensSpot.Columns.Contains("Symbol") OrElse
            Not _dgOrdensSpot.Columns.Contains("CurrentPrice") Then
@@ -5319,7 +6186,9 @@ Public Class FormMain
             End If
 
             Dim rowSymbol = GetSpotBaseAsset(row.Cells("Symbol").Value?.ToString())
-            If String.Equals(rowSymbol, baseSymbol, StringComparison.OrdinalIgnoreCase) Then
+            Dim rowExchange = If(_dgOrdensSpot.Columns.Contains("Exchange"), row.Cells("Exchange").Value?.ToString().Trim(), String.Empty)
+            If String.Equals(rowSymbol, baseSymbol, StringComparison.OrdinalIgnoreCase) AndAlso
+               (String.IsNullOrWhiteSpace(exchange) OrElse String.Equals(rowExchange, exchange, StringComparison.OrdinalIgnoreCase)) Then
                 row.Cells("CurrentPrice").Value = price
             End If
         Next
@@ -5411,6 +6280,7 @@ Public Class FormMain
         End If
 
         Dim symbol = ToSpotUsdtSymbol(_cbSpotOrderSymbol.Text.Trim())
+        Dim exchange = If(_cbSpotOrderExchange?.Text.Trim().ToUpperInvariant(), "BINANCE")
         Dim side = _cbSpotOrderSide.Text.Trim().ToUpperInvariant()
         Dim orderType = _cbSpotOrderType.Text.Trim().ToUpperInvariant()
         Dim quantity As Decimal
@@ -5429,7 +6299,7 @@ Public Class FormMain
             Return
         End If
 
-        Dim details = $"{side} {orderType} {quantity:0.########} {symbol}"
+        Dim details = $"{exchange} - {side} {orderType} {quantity:0.########} {symbol}"
         If orderType = "LIMIT" Then
             details &= $" a ${price:0.########}"
         End If
@@ -5444,10 +6314,15 @@ Public Class FormMain
 
         Try
             _btAbrirSpotOrder.Enabled = False
-            Dim orderResponse = Await B.BINANCE_CreateSpotOrderAsync(symbol, side, orderType, quantity, price)
+            Dim orderResponse As String
+            If exchange = "GATE.IO" Then
+                orderResponse = Await _gateSpot.GATE_CreateSpotOrderAsync(symbol, side, orderType, quantity, price)
+            Else
+                orderResponse = Await B.BINANCE_CreateSpotOrderAsync(symbol, side, orderType, quantity, price)
+            End If
             Await RefreshSpotPortfolioAfterFilledOrderAsync(orderResponse)
             Await LoadSpotOrdersAsync()
-            MessageBox.Show("Ordem enviada para a Binance.", "Ordem Spot", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show($"Ordem enviada para {exchange}.", "Ordem Spot", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show(
                 "Erro ao enviar a ordem: " & ex.Message,
@@ -5503,6 +6378,7 @@ Public Class FormMain
 
         Dim headers As New Dictionary(Of String, String) From {
             {"Symbol", "Cripto"},
+            {"Exchange", "Exchange"},
             {"Side", "Lado"},
             {"OrderType", "Tipo"},
             {"Quantity", "Quantidade"},
@@ -5546,7 +6422,7 @@ Public Class FormMain
                 .Alignment = DataGridViewContentAlignment.MiddleCenter,
                 .BackColor = Color.IndianRed,
                 .ForeColor = Color.White,
-                .SelectionBackColor = Color.DarkRed,
+                .SelectionBackColor = Color.IndianRed,
                 .SelectionForeColor = Color.White
             }
         End If
@@ -5582,6 +6458,11 @@ Public Class FormMain
             Case "Symbol"
                 e.CellStyle.ForeColor = Color.White
                 e.CellStyle.SelectionForeColor = Color.White
+            Case "Exchange"
+                Dim exchange = e.Value?.ToString().Trim().ToUpperInvariant()
+                Dim exchangeColor = If(exchange = "GATE.IO", Color.DeepSkyBlue, Color.Gold)
+                e.CellStyle.ForeColor = exchangeColor
+                e.CellStyle.SelectionForeColor = exchangeColor
             Case "Side"
                 Dim side = e.Value.ToString().Trim().ToUpperInvariant()
                 Dim sideColor = If(side = "BUY", Color.LimeGreen, If(side = "SELL", Color.IndianRed, Color.White))
@@ -5640,6 +6521,7 @@ Public Class FormMain
 
         Dim row = _dgOrdensSpot.Rows(e.RowIndex)
         Dim symbol = row.Cells("Symbol").Value?.ToString().Trim().ToUpperInvariant()
+        Dim exchange = If(_dgOrdensSpot.Columns.Contains("Exchange"), row.Cells("Exchange").Value?.ToString().Trim().ToUpperInvariant(), "BINANCE")
         Dim orderId As Long
         If String.IsNullOrWhiteSpace(symbol) OrElse
            Not Long.TryParse(row.Cells("OrderId").Value?.ToString(), orderId) OrElse
@@ -5648,7 +6530,7 @@ Public Class FormMain
         End If
 
         If MessageBox.Show(
-               $"Cancelar a ordem {symbol} #{orderId}?",
+               $"Cancelar a ordem {symbol} #{orderId} ({exchange})?",
                "Cancelar ordem Spot",
                MessageBoxButtons.YesNo,
                MessageBoxIcon.Warning) <> DialogResult.Yes Then
@@ -5657,7 +6539,10 @@ Public Class FormMain
 
         Try
             _dgOrdensSpot.Cursor = Cursors.WaitCursor
-            If Await B.BINANCE_CancelSpotOrderAsync(symbol, orderId) Then
+            Dim cancelled = If(exchange = "GATE.IO",
+                               Await _gateSpot.GATE_CancelSpotOrderAsync(symbol, orderId),
+                               Await B.BINANCE_CancelSpotOrderAsync(symbol, orderId))
+            If cancelled Then
                 Await LoadSpotOrdersAsync()
             End If
         Catch ex As Exception
@@ -5901,6 +6786,7 @@ Public Class FormMain
         Next
 
         ApplyFuturesCloseCellStyle(row, rowBackColor)
+        RemoveCellSelectionHighlight(row)
     End Sub
     Private Sub BinanceFuturesWs_ConnectionStateChanged(connected As Boolean, message As String)
         If IsDisposed OrElse Disposing Then Return
@@ -5914,19 +6800,46 @@ Public Class FormMain
             lbDebug.AppendText(Environment.NewLine & message)
         End If
     End Sub
+
+    Private Sub GateFuturesWs_ConnectionStateChanged(connected As Boolean, message As String)
+        If IsDisposed OrElse Disposing Then Return
+        If InvokeRequired Then
+            BeginInvoke(New Action(Of Boolean, String)(AddressOf GateFuturesWs_ConnectionStateChanged), connected, message)
+            Return
+        End If
+        If Not connected AndAlso lbDebug IsNot Nothing Then
+            lbDebug.AppendText(Environment.NewLine & message)
+        End If
+    End Sub
+
+    Private Sub GateFuturesMarkPriceUpdated(symbol As String, markPrice As Decimal)
+        UpdateFuturesMarkPrice(symbol, markPrice, "GATE")
+    End Sub
+
     Private Sub BinanceFuturesMarkPriceUpdated(symbol As String, markPrice As Decimal)
+        UpdateFuturesMarkPrice(symbol, markPrice, "BINANCE")
+    End Sub
+
+    Private Sub UpdateFuturesMarkPrice(symbol As String, markPrice As Decimal, exchange As String)
         If IsDisposed OrElse Disposing Then Return
 
         If InvokeRequired Then
-            BeginInvoke(New Action(Of String, Decimal)(AddressOf BinanceFuturesMarkPriceUpdated), symbol, markPrice)
+            BeginInvoke(New Action(Of String, Decimal, String)(AddressOf UpdateFuturesMarkPrice), symbol, markPrice, exchange)
             Return
         End If
 
-        UpdateFuturesOrdersCurrentPrice(symbol, markPrice)
+        UpdateFuturesOrdersCurrentPrice(symbol, markPrice, exchange)
         UpdateFuturesOrderCurrentPrice()
 
         For Each row As DataGridViewRow In dgFuturos.Rows
             If row.IsNewRow OrElse Not String.Equals(row.Cells("Symbol").Value?.ToString(), symbol, StringComparison.OrdinalIgnoreCase) Then
+                Continue For
+            End If
+            If dgFuturos.Columns.Contains("Exchange") AndAlso
+               Not String.Equals(
+                   NormalizeFuturesExchange(row.Cells("Exchange").Value?.ToString()),
+                   NormalizeFuturesExchange(exchange),
+                   StringComparison.OrdinalIgnoreCase) Then
                 Continue For
             End If
 
@@ -5962,6 +6875,10 @@ Public Class FormMain
     End Sub
 
     Private Sub UpdateFuturesOrdersCurrentPrice(symbol As String, price As Decimal)
+        UpdateFuturesOrdersCurrentPrice(symbol, price, String.Empty)
+    End Sub
+
+    Private Sub UpdateFuturesOrdersCurrentPrice(symbol As String, price As Decimal, exchange As String)
         If _dgOrdensFuturos Is Nothing OrElse
            Not _dgOrdensFuturos.Columns.Contains("Symbol") OrElse
            Not _dgOrdensFuturos.Columns.Contains("CurrentPrice") Then
@@ -5972,7 +6889,13 @@ Public Class FormMain
         For Each row As DataGridViewRow In _dgOrdensFuturos.Rows
             If row.IsNewRow Then Continue For
 
-            If String.Equals(
+            If (String.IsNullOrWhiteSpace(exchange) OrElse
+                Not _dgOrdensFuturos.Columns.Contains("Exchange") OrElse
+                String.Equals(
+                    NormalizeFuturesExchange(row.Cells("Exchange").Value?.ToString()),
+                    NormalizeFuturesExchange(exchange),
+                    StringComparison.OrdinalIgnoreCase)) AndAlso
+               String.Equals(
                    ToFuturesUsdtSymbol(row.Cells("Symbol").Value?.ToString()),
                    normalizedSymbol,
                    StringComparison.OrdinalIgnoreCase) Then
@@ -6059,6 +6982,13 @@ Public Class FormMain
                           Return False
                       End If
 
+                      If Not String.Equals(
+                             NormalizeFuturesExchange(order.Exchange),
+                             NormalizeFuturesExchange(position.Exchange),
+                             StringComparison.OrdinalIgnoreCase) Then
+                          Return False
+                      End If
+
                       If Not String.IsNullOrWhiteSpace(order.PositionSide) AndAlso
                          Not order.PositionSide.Equals("BOTH", StringComparison.OrdinalIgnoreCase) AndAlso
                          Not position.PositionSide.Equals("BOTH", StringComparison.OrdinalIgnoreCase) AndAlso
@@ -6085,6 +7015,7 @@ Public Class FormMain
     Private Sub ConfigureFuturesGrid()
         Dim headers As New Dictionary(Of String, String) From {
             {"Symbol", "Cripto"},
+            {"Exchange", "Exchange"},
             {"PositionSide", "Lado"},
             {"Notional", "Notional"},
             {"InitialMargin", "Margem (USDT)"},
@@ -6149,8 +7080,8 @@ Public Class FormMain
                 .Alignment = DataGridViewContentAlignment.MiddleRight,
                 .BackColor = Color.FromArgb(64, 64, 64),
                 .ForeColor = Color.Gold,
-                .SelectionBackColor = Color.White,
-                .SelectionForeColor = Color.Black
+                .SelectionBackColor = Color.FromArgb(64, 64, 64),
+                .SelectionForeColor = Color.Gold
             }
             dgFuturos.Columns.Add(priceColumn)
         End If
@@ -6203,7 +7134,7 @@ Public Class FormMain
         Next
 
         Dim futuresColumnOrder As String() = {
-            "Symbol", "PositionSide", "InitialMargin", "Leverage", "Notional",
+            "Symbol", "Exchange", "PositionSide", "InitialMargin", "Leverage", "Notional",
             "EntryPrice", "MarkPrice", "UnrealizedProfit", "ROI", "TakeProfit",
             "StopLoss", "LiquidationPrice", "FuturesExitPrice", "FuturesClose"
         }
@@ -6254,6 +7185,7 @@ Public Class FormMain
 
         Dim row = dgFuturos.Rows(e.RowIndex)
         Dim symbol = row.Cells("Symbol").Value?.ToString().Trim().ToUpperInvariant()
+        Dim exchange = GetRowFuturesExchange(row)
         Dim positionSide = row.Cells("PositionSide").Value?.ToString().Trim().ToUpperInvariant()
         Dim quantity As Decimal
         Dim limitPrice As Decimal
@@ -6286,13 +7218,17 @@ Public Class FormMain
 
         Try
             dgFuturos.Cursor = Cursors.WaitCursor
-            Await B.BINANCE_CloseFuturesPositionAsync(symbol, positionSide, absoluteQuantity, limitPrice)
+            If exchange = "GATE" Then
+                Await _gateFutures.GATE_CloseFuturesPositionAsync(symbol, positionSide, absoluteQuantity, limitPrice)
+            Else
+                Await B.BINANCE_CloseFuturesPositionAsync(symbol, positionSide, absoluteQuantity, limitPrice)
+            End If
             row.Cells("FuturesExitPrice").Value = String.Empty
             Await LoadFuturesPositionsAsync()
             If PanelFuturos.Visible Then
                 Await LoadFuturesOrdersAsync()
             End If
-            MessageBox.Show("Ordem de fechamento enviada para a Binance.", "Fechar posição", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show($"Ordem de fechamento enviada para {exchange}.", "Fechar posição", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show("Erro ao fechar a posição: " & ex.Message, "Fechar posição", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
@@ -6343,6 +7279,12 @@ Public Class FormMain
                 Dim symbolColor = GetFuturesProfitColor(dgFuturos.Rows(e.RowIndex).Cells("UnrealizedProfit").Value)
                 e.CellStyle.ForeColor = symbolColor
                 e.CellStyle.SelectionForeColor = symbolColor
+                e.FormattingApplied = True
+            Case "Exchange"
+                Dim exchange = NormalizeFuturesExchange(e.Value?.ToString())
+                Dim exchangeColor = If(exchange = "GATE", Color.DeepSkyBlue, Color.Gold)
+                e.CellStyle.ForeColor = exchangeColor
+                e.CellStyle.SelectionForeColor = exchangeColor
                 e.FormattingApplied = True
             Case "PositionSide"
                 Dim sideColor = GetFuturesPositionSideColor(e.Value)
@@ -6435,6 +7377,7 @@ Public Class FormMain
         If row Is Nothing OrElse row.IsNewRow Then Return
 
         Dim symbol = row.Cells("Symbol").Value?.ToString().Trim().ToUpperInvariant()
+        Dim exchange = GetRowFuturesExchange(row)
         Dim positionSide = row.Cells("PositionSide").Value?.ToString().Trim().ToUpperInvariant()
         Dim quantity As Decimal
 
@@ -6469,7 +7412,12 @@ Public Class FormMain
             Dim existingStopOrders As New List(Of BinanceFuturesProtectionOrder)()
 
             If protectionType = "STOP_LOSS" Then
-                Dim openProtections = Await B.BINANCE_GetFuturesProtectionOrdersAsync()
+                Dim openProtections As List(Of BinanceFuturesProtectionOrder)
+                If exchange = "GATE" Then
+                    openProtections = Await _gateFutures.GATE_GetFuturesProtectionOrdersAsync()
+                Else
+                    openProtections = Await B.BINANCE_GetFuturesProtectionOrdersAsync()
+                End If
                 existingStopOrders = openProtections.
                     Where(Function(order)
                               If Not order.OrderType.Contains("STOP", StringComparison.OrdinalIgnoreCase) OrElse
@@ -6493,7 +7441,7 @@ Public Class FormMain
             End If
 
             Dim confirmation =
-                $"Enviar {protectionName} para a Binance?" & Environment.NewLine & Environment.NewLine &
+                $"Enviar {protectionName} para {exchange}?" & Environment.NewLine & Environment.NewLine &
                 $"Símbolo: {symbol}" & Environment.NewLine &
                 $"Posição: {positionSide}" & Environment.NewLine &
                 $"Ação: {side}" & Environment.NewLine &
@@ -6508,17 +7456,24 @@ Public Class FormMain
 
             Try
                 dgFuturos.Cursor = Cursors.WaitCursor
-                Await B.BINANCE_CreateFuturesProtectionOrderAsync(symbol, positionSide, protectionType, protectionQuantity, triggerPrice)
+                If exchange = "GATE" Then
+                    Await _gateFutures.GATE_CreateFuturesProtectionOrderAsync(symbol, positionSide, protectionType, protectionQuantity, triggerPrice)
+                Else
+                    Await B.BINANCE_CreateFuturesProtectionOrderAsync(symbol, positionSide, protectionType, protectionQuantity, triggerPrice)
+                End If
 
                 For Each existingStop In existingStopOrders
-                    If Not Await B.BINANCE_CancelFuturesProtectionOrderAsync(symbol, existingStop.AlgoId) Then
+                    Dim cancelled = If(exchange = "GATE",
+                                       Await _gateFutures.GATE_CancelFuturesProtectionOrderAsync(symbol, existingStop.AlgoId),
+                                       Await B.BINANCE_CancelFuturesProtectionOrderAsync(symbol, existingStop.AlgoId))
+                    If Not cancelled Then
                         Throw New Exception($"Não foi possível cancelar a SL anterior #{existingStop.AlgoId}.")
                     End If
                 Next
 
                 Await LoadFuturesPositionsAsync()
                 If PanelFuturos.Visible Then Await LoadFuturesOrdersAsync()
-                MessageBox.Show($"{protectionName} enviado para a Binance.", "Proteção Futures", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                MessageBox.Show($"{protectionName} enviado para {exchange}.", "Proteção Futures", MessageBoxButtons.OK, MessageBoxIcon.Information)
             Catch ex As Exception
                 MessageBox.Show("Erro ao enviar a proteção: " & ex.Message, "Proteção Futures", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Finally
@@ -6534,6 +7489,7 @@ Public Class FormMain
             Await _gateWs.StopAsync()
             Await _binanceSpotUserWs.StopAsync()
             Await _binanceFuturesMarketWs.StopAsync()
+            Await _gateFuturesMarketWs.StopAsync()
             Await _binanceFuturesUserWs.StopAsync()
         Catch
         End Try

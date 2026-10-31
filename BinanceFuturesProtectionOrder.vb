@@ -1,4 +1,5 @@
 Public Class BinanceFuturesProtectionOrder
+    Public Property Exchange As String = String.Empty
     Public Property AlgoId As Long
     Public Property Symbol As String = String.Empty
     Public Property PositionSide As String = String.Empty

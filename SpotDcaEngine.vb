@@ -149,6 +149,22 @@ Public NotInheritable Class SpotDcaEngine
         RaiseUpdated()
     End Sub
 
+    Public Sub RemovePlan(symbol As String)
+        Dim normalized = NormalizeSymbol(symbol)
+        If String.IsNullOrWhiteSpace(normalized) Then Return
+
+        SyncLock _sync
+            _plans.Remove(normalized)
+            _states.Remove(normalized)
+            _candles.Remove(normalized)
+            _currentCandles.Remove(normalized)
+            If _plans.Count = 0 Then _running = False
+        End SyncLock
+
+        SpotDcaRepository.DeletePlan(normalized)
+        RaiseUpdated()
+    End Sub
+
     Public Sub ResetSimulation()
         SyncLock _sync
             For Each state In _states.Values

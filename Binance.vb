@@ -17,6 +17,7 @@ Public Class BinanceFuturesAccountSummary
 End Class
 
 Public Class BinanceSpotOrder
+    Public Property Exchange As String = String.Empty
     Public Property Symbol As String
     Public Property OrderId As Long
     Public Property Side As String
@@ -30,6 +31,7 @@ Public Class BinanceSpotOrder
 End Class
 
 Public Class BinanceFuturesOrder
+    Public Property Exchange As String = String.Empty
     Public Property Symbol As String
     Public Property OrderId As Long
     Public Property PositionSide As String

@@ -511,6 +511,213 @@ Public NotInheritable Class SpotBotWavePullbackStrategy
     End Function
 End Class
 
+''' <summary>
+''' Pullback de tendência na zona de valor, inspirado nos quadros do vídeo:
+''' M5 define o contexto, M2 confirma o retorno à EMA 9/20 e M1 confirma a
+''' retomada. O VWAP diário funciona como filtro de viés. No Spot a versão é
+''' deliberadamente long-only; a versão Short deve ser implementada no módulo
+''' de Futures, onde há suporte a posições vendidas.
+''' </summary>
+Public NotInheritable Class SpotBotValueZonePullbackStrategy
+    Implements ISpotBotMultiTimeframeStrategy
+
+    Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
+        Get
+            Return SpotBotStrategyKind.ValueZonePullback
+        End Get
+    End Property
+
+    Public Function Evaluate(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
+
+        Return HoldSignal("pullback zona de valor aguardando candles M5/M2/M1")
+    End Function
+
+    Public Function EvaluateMultiTimeframe(
+        symbol As String,
+        m1Candles As IReadOnlyList(Of SpotBotPricePoint),
+        m2Candles As IReadOnlyList(Of SpotBotPricePoint),
+        m5Candles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotMultiTimeframeStrategy.EvaluateMultiTimeframe
+
+        Dim fastPeriod = Math.Max(2, configuration.ValueZoneFastEmaPeriod)
+        Dim slowPeriod = Math.Max(fastPeriod + 1, configuration.ValueZoneSlowEmaPeriod)
+        Dim atrPeriod = Math.Max(3, configuration.ValueZoneAtrPeriod)
+        Dim structureLookback = Math.Max(5, configuration.ValueZoneStructureLookback)
+
+        If m1Candles Is Nothing OrElse m2Candles Is Nothing OrElse m5Candles Is Nothing OrElse
+           m1Candles.Count < 3 OrElse
+           m2Candles.Count < Math.Max(slowPeriod + 2, atrPeriod + 2) OrElse
+           m5Candles.Count < slowPeriod + 3 Then
+            Return HoldSignal("pullback zona de valor: histórico M5/M2/M1 insuficiente")
+        End If
+
+        Dim m5Last = m5Candles.Count - 1
+        Dim m5Previous = Math.Max(0, m5Last - 2)
+        Dim m5Fast = CalculateEma(m5Candles, m5Last, fastPeriod)
+        Dim m5Slow = CalculateEma(m5Candles, m5Last, slowPeriod)
+        Dim m5FastPrevious = CalculateEma(m5Candles, m5Previous, fastPeriod)
+        Dim m5TrendUp = m5Fast > m5Slow AndAlso m5Fast > m5FastPrevious AndAlso
+                        m5Candles(m5Last).Close > m5Slow
+        If Not m5TrendUp Then
+            Return HoldSignal($"pullback zona de valor: M5 sem tendência de alta (EMA {fastPeriod}/{slowPeriod})")
+        End If
+
+        Dim dailyVwap = CalculateDailyValue(m5Candles, m5Last)
+        If configuration.ValueZoneRequireVwap AndAlso dailyVwap > 0D AndAlso
+           m5Candles(m5Last).Close < dailyVwap Then
+            Return HoldSignal($"pullback zona de valor: preço abaixo da VWAP diária ({dailyVwap:F8})")
+        End If
+
+        Dim m2PullbackIndex = m2Candles.Count - 2
+        Dim m2ConfirmationIndex = m2Candles.Count - 1
+        Dim m2Pullback = m2Candles(m2PullbackIndex)
+        Dim m2Confirmation = m2Candles(m2ConfirmationIndex)
+        Dim m2Fast = CalculateEma(m2Candles, m2PullbackIndex, fastPeriod)
+        Dim m2Slow = CalculateEma(m2Candles, m2PullbackIndex, slowPeriod)
+        Dim zoneLow = Math.Min(m2Fast, m2Slow)
+        Dim zoneHigh = Math.Max(m2Fast, m2Slow)
+        Dim atr = CalculateAverageTrueRange(m2Candles, m2ConfirmationIndex, atrPeriod)
+        If atr <= 0D Then Return HoldSignal("pullback zona de valor: ATR inválido")
+
+        Dim tolerance = atr * Math.Max(0D, configuration.ValueZoneToleranceAtr)
+        Dim touchedZone = m2Pullback.Low <= zoneHigh + tolerance AndAlso
+                          m2Pullback.High >= zoneLow - tolerance
+        If Not touchedZone Then
+            Return HoldSignal("pullback zona de valor: M2 ainda não retornou à zona EMA 9/20")
+        End If
+
+        Dim m2Confirmed = m2Confirmation.IsBullish AndAlso
+                         m2Confirmation.Close > m2Pullback.High AndAlso
+                         m2Confirmation.Close > m2Fast
+        If Not m2Confirmed Then
+            Return HoldSignal("pullback zona de valor: aguardando confirmação de retomada no M2")
+        End If
+
+        Dim m1Previous = m1Candles(m1Candles.Count - 2)
+        Dim m1Confirmation = m1Candles(m1Candles.Count - 1)
+        If Not m1Confirmation.IsBullish OrElse m1Confirmation.Close <= m1Previous.High Then
+            Return HoldSignal("pullback zona de valor: M1 sem rompimento de confirmação")
+        End If
+
+        Dim entryPrice = m1Confirmation.Close
+        Dim supportFirst = Math.Max(0, m2Candles.Count - structureLookback - 2)
+        Dim supportLast = m2Candles.Count - 2
+        Dim support = Decimal.MaxValue
+        For index = supportFirst To supportLast
+            support = Math.Min(support, m2Candles(index).Low)
+        Next
+        If support = Decimal.MaxValue Then support = m2Pullback.Low
+
+        Dim stopPrice = Math.Min(m2Pullback.Low, support) - (atr * 0.25D)
+        If stopPrice <= 0D OrElse stopPrice >= entryPrice Then
+            Return HoldSignal("pullback zona de valor: suporte sem distância válida para o stop")
+        End If
+
+        Dim risk = entryPrice - stopPrice
+        Dim resistance = Decimal.MinValue
+        Dim resistanceFirst = Math.Max(0, m5Candles.Count - structureLookback - 1)
+        Dim resistanceLast = m5Candles.Count - 2
+        For index = resistanceFirst To resistanceLast
+            If m5Candles(index).High > entryPrice Then
+                resistance = Math.Max(resistance, m5Candles(index).High)
+            End If
+        Next
+
+        Dim minimumRiskReward = Math.Max(1D, configuration.ValueZoneMinimumRiskReward)
+        Dim targetPrice = entryPrice + (risk * minimumRiskReward)
+        If resistance > entryPrice AndAlso resistance - entryPrice >= risk * minimumRiskReward Then
+            targetPrice = resistance
+        End If
+
+        Dim vwapText = If(dailyVwap > 0D, $"; VWAP {dailyVwap:F8}", String.Empty)
+        Return New SpotBotStrategySignal With {
+            .Strategy = Kind,
+            .Direction = SpotBotSignalDirection.Buy,
+            .Confidence = If(configuration.ValueZoneRequireVwap, 1D, 0.85D),
+            .ObservedValue = (entryPrice - m2Fast) / entryPrice * 100D,
+            .EntryPrice = entryPrice,
+            .StopPrice = stopPrice,
+            .TakeProfitPrice = targetPrice,
+            .Reason = $"pullback zona de valor: M5 tendência, retorno à EMA {fastPeriod}/{slowPeriod}, confirmação M2/M1{vwapText}; RR {(targetPrice - entryPrice) / risk:F2}:1"
+        }
+    End Function
+
+    Private Shared Function CalculateEma(
+        candles As IReadOnlyList(Of SpotBotPricePoint),
+        lastIndex As Integer,
+        period As Integer) As Decimal
+
+        If candles Is Nothing OrElse candles.Count = 0 Then Return 0D
+        Dim boundedLast = Math.Min(lastIndex, candles.Count - 1)
+        Dim smoothing = 2D / (period + 1D)
+        Dim ema = candles(0).Close
+        For index = 1 To boundedLast
+            ema = (candles(index).Close - ema) * smoothing + ema
+        Next
+        Return ema
+    End Function
+
+    Private Shared Function CalculateAverageTrueRange(
+        candles As IReadOnlyList(Of SpotBotPricePoint),
+        lastIndex As Integer,
+        period As Integer) As Decimal
+
+        Dim first = Math.Max(1, lastIndex - period + 1)
+        Dim total = 0D
+        Dim count = 0
+        For index = first To lastIndex
+            Dim previousClose = candles(index - 1).Close
+            Dim trueRange = Math.Max(
+                candles(index).High - candles(index).Low,
+                Math.Max(Math.Abs(candles(index).High - previousClose),
+                         Math.Abs(candles(index).Low - previousClose)))
+            total += Math.Max(0D, trueRange)
+            count += 1
+        Next
+        Return If(count = 0, 0D, total / count)
+    End Function
+
+    Private Shared Function CalculateDailyValue(
+        candles As IReadOnlyList(Of SpotBotPricePoint),
+        lastIndex As Integer) As Decimal
+
+        If candles Is Nothing OrElse candles.Count = 0 Then Return 0D
+        Dim lastDate = candles(lastIndex).TimestampUtc.Date
+        Dim weightedTotal = 0D
+        Dim volumeTotal = 0D
+        Dim simpleTotal = 0D
+        Dim simpleCount = 0
+
+        For index = 0 To lastIndex
+            If candles(index).TimestampUtc.Date <> lastDate Then Continue For
+            Dim typical = (candles(index).High + candles(index).Low + candles(index).Close) / 3D
+            If candles(index).Volume > 0D Then
+                weightedTotal += typical * candles(index).Volume
+                volumeTotal += candles(index).Volume
+            Else
+                simpleTotal += typical
+                simpleCount += 1
+            End If
+        Next
+
+        If volumeTotal > 0D Then Return weightedTotal / volumeTotal
+        If simpleCount > 0 Then Return simpleTotal / simpleCount
+
+        Return 0D
+    End Function
+
+    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
+        Return New SpotBotStrategySignal With {
+            .Strategy = SpotBotStrategyKind.ValueZonePullback,
+            .Direction = SpotBotSignalDirection.Hold,
+            .Reason = reason
+        }
+    End Function
+End Class
+
 Public NotInheritable Class SpotBotGridStrategy
     Implements ISpotBotStrategy
 
@@ -860,6 +1067,255 @@ Public NotInheritable Class SpotBotGridRegimeStrategy
     Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
         Return New SpotBotStrategySignal With {
             .Strategy = SpotBotStrategyKind.GridRegime,
+            .Direction = SpotBotSignalDirection.Hold,
+            .Reason = reason
+        }
+    End Function
+End Class
+
+''' <summary>
+''' Grade adaptativa v2. Mantém a lógica de reversão somente em regime lateral,
+''' calcula o espaçamento pela volatilidade recente e pausa quando há expansão
+''' de faixa compatível com rompimento. O motor de simulação pode acumular até
+''' os níveis configurados para o mesmo ativo.
+''' </summary>
+Public NotInheritable Class SpotBotGridAdaptiveStrategy
+    Implements ISpotBotTrendFilterStrategy
+
+    Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
+        Get
+            Return SpotBotStrategyKind.GridAdaptive
+        End Get
+    End Property
+
+    Public Function Evaluate(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
+
+        Return EvaluateInternal(symbol, prices, Nothing, configuration)
+    End Function
+
+    Public Function EvaluateWithTrend(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotTrendFilterStrategy.EvaluateWithTrend
+
+        Return EvaluateInternal(symbol, prices, trendCandles, configuration)
+    End Function
+
+    Private Function EvaluateInternal(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal
+
+        If configuration.GridV2EmaFilterEnabled AndAlso trendCandles IsNot Nothing Then
+            Dim regimeReason As String = String.Empty
+            If Not IsLateralByEma(trendCandles, configuration, regimeReason) Then
+                Return HoldSignal(regimeReason)
+            End If
+        End If
+
+        Dim lookback = Math.Max(20, configuration.GridV2Lookback)
+        Dim volatilityPeriod = Math.Max(5, configuration.GridV2VolatilityPeriod)
+        If prices Is Nothing OrElse prices.Count < Math.Max(lookback + 1, volatilityPeriod + 2) Then
+            Return HoldSignal("histórico insuficiente para a grade adaptativa")
+        End If
+
+        Dim window = prices.Skip(prices.Count - lookback).ToList()
+        Dim latest = window(window.Count - 1).Close
+        Dim regimeWindow = window.Take(window.Count - 1).ToList()
+        Dim highest = regimeWindow.Max(Function(item) item.High)
+        Dim lowest = regimeWindow.Min(Function(item) item.Low)
+        Dim midpoint = (highest + lowest) / 2D
+        If latest <= 0D OrElse midpoint <= 0D Then
+            Return HoldSignal("faixa de regime inválida")
+        End If
+
+        Dim rangePercent = (highest - lowest) / midpoint * 100D
+        If rangePercent > Math.Max(0.1D, configuration.GridV2MaxRangePercent) Then
+            Return HoldSignal($"grade pausada: faixa de {rangePercent:0.##}% indica tendência")
+        End If
+
+        Dim emaPeriod = Math.Min(10, Math.Max(3, lookback \ 3))
+        Dim emaCurrent = CalculateEma(window, emaPeriod)
+        Dim previousWindow = window.Take(window.Count - 1).ToList()
+        Dim emaPrevious = CalculateEma(previousWindow, emaPeriod)
+        Dim slopePercent = If(emaPrevious = 0D, 0D, Math.Abs(emaCurrent - emaPrevious) / emaPrevious * 100D)
+        If slopePercent > Math.Max(0.1D, configuration.GridV2MaxSlopePercent) Then
+            Return HoldSignal($"grade pausada: inclinação de {slopePercent:0.##}% indica tendência")
+        End If
+
+        Dim volatilityPercent = CalculateReturnVolatility(window, volatilityPeriod)
+        Dim spacingPercent = Math.Max(
+            configuration.GridV2SpacingMinimumPercent,
+            Math.Min(configuration.GridV2SpacingMaximumPercent, volatilityPercent * 2.5D))
+        spacingPercent = Math.Max(0.01D, spacingPercent)
+
+        Dim minimumStopPercent = Math.Max(0D, configuration.GridV2MinimumStopPercent)
+        Dim stopVolatilityMultiplier = Math.Max(0D, configuration.GridV2StopVolatilityMultiplier)
+        Dim dynamicStopPercent = Math.Max(minimumStopPercent, volatilityPercent * stopVolatilityMultiplier)
+        Dim maximumStopPercent = Math.Max(minimumStopPercent, configuration.GridV2MaximumStopPercent)
+        If dynamicStopPercent > maximumStopPercent Then
+            Return HoldSignal($"grade pausada: stop dinâmico de {dynamicStopPercent:0.##}% acima do limite de {maximumStopPercent:0.##}%")
+        End If
+
+        Dim averageRange = CalculateAverageRange(regimeWindow, volatilityPeriod)
+        Dim breakoutBuffer = averageRange * Math.Max(0D, configuration.GridV2BreakoutAtrMultiplier)
+        If breakoutBuffer > 0D AndAlso (latest > highest + breakoutBuffer OrElse latest < lowest - breakoutBuffer) Then
+            Return HoldSignal("grade pausada: rompimento da faixa detectado")
+        End If
+
+        Dim reference = If(configuration.GridReferencePrice > 0D, configuration.GridReferencePrice, midpoint)
+        Dim buyLevel = reference * (1D - spacingPercent / 100D)
+        Dim sellLevel = reference * (1D + spacingPercent / 100D)
+
+        If latest <= buyLevel Then
+            Dim supportPrice = lowest
+            If configuration.GridV2UseNearestSupportStop Then
+                Dim nearestSupport = FindNearestSupportBelow(regimeWindow, latest)
+                If nearestSupport > 0D Then supportPrice = nearestSupport
+            End If
+
+            Dim supportBuffer = averageRange * Math.Max(0D, configuration.GridV2SupportBufferAtr)
+            Dim structuralStopPrice = Math.Max(0D, supportPrice - supportBuffer)
+            Dim minimumStopPrice = latest * (1D - dynamicStopPercent / 100D)
+            Dim stopPrice = Math.Max(0D, Math.Min(structuralStopPrice, minimumStopPrice))
+            Dim maximumStopPrice = latest * (1D - maximumStopPercent / 100D)
+            stopPrice = Math.Max(stopPrice, maximumStopPrice)
+            Dim stopDistancePercent = If(latest <= 0D, 0D, (latest - stopPrice) / latest * 100D)
+            Return New SpotBotStrategySignal With {
+                .Strategy = Kind,
+                .Direction = SpotBotSignalDirection.Buy,
+                .Confidence = 1D,
+                .ObservedValue = spacingPercent,
+                .EntryPrice = latest,
+                .StopPrice = stopPrice,
+                .GridManaged = True,
+                .Reason = $"grade v2 em regime lateral: compra {buyLevel:F8}, espaçamento {spacingPercent:0.##}%, suporte {supportPrice:F8}, SL {stopDistancePercent:0.##}%"
+            }
+        End If
+
+        If latest >= sellLevel Then
+            Return New SpotBotStrategySignal With {
+                .Strategy = Kind,
+                .Direction = SpotBotSignalDirection.Sell,
+                .Confidence = 1D,
+                .ObservedValue = spacingPercent,
+                .EntryPrice = latest,
+                .GridManaged = True,
+                .Reason = $"grade v2 em regime lateral: venda {sellLevel:F8}, espaçamento {spacingPercent:0.##}%"
+            }
+        End If
+
+        Return HoldSignal($"grade v2 ativa; faixa {rangePercent:0.##}%, espaçamento {spacingPercent:0.##}%")
+    End Function
+
+    Private Shared Function FindNearestSupportBelow(
+        candles As IReadOnlyList(Of SpotBotPricePoint),
+        entryPrice As Decimal) As Decimal
+
+        If candles Is Nothing OrElse candles.Count = 0 OrElse entryPrice <= 0D Then Return 0D
+
+        Dim nearest = 0D
+        Dim lowest = Decimal.MaxValue
+        For index = 0 To candles.Count - 1
+            Dim low = candles(index).Low
+            If low > 0D AndAlso low < entryPrice Then
+                lowest = Math.Min(lowest, low)
+            End If
+
+            If index <= 0 OrElse index >= candles.Count - 1 Then Continue For
+            If low < entryPrice AndAlso
+               low <= candles(index - 1).Low AndAlso
+               low <= candles(index + 1).Low Then
+                nearest = Math.Max(nearest, low)
+            End If
+        Next
+
+        Return If(nearest > 0D, nearest, If(lowest = Decimal.MaxValue, 0D, lowest))
+    End Function
+
+    Private Shared Function IsLateralByEma(
+        candles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration,
+        ByRef reason As String) As Boolean
+
+        Dim fastPeriod = Math.Max(2, configuration.GridV2FastEmaPeriod)
+        Dim slowPeriod = Math.Max(fastPeriod + 1, configuration.GridV2SlowEmaPeriod)
+        If candles Is Nothing OrElse candles.Count < slowPeriod + 3 Then
+            ' O WebSocket pode iniciar sem histórico M5. Nesse período os
+            ' filtros estruturais originais da grade continuam valendo; assim
+            ' o Grid não fica travado por horas apenas por causa do warm-up.
+            reason = $"filtro EMA {fastPeriod}/{slowPeriod} em aquecimento; filtros originais da grade ativos"
+            Return True
+        End If
+
+        Dim latest = candles(candles.Count - 1).Close
+        If latest <= 0D Then
+            reason = "grade pausada: preço M5 inválido para filtro EMA"
+            Return False
+        End If
+
+        Dim fast = CalculateEma(candles, fastPeriod)
+        Dim slow = CalculateEma(candles, slowPeriod)
+        Dim previousSlow = CalculateEma(candles.Take(candles.Count - 2).ToList(), slowPeriod)
+        If slow <= 0D OrElse previousSlow <= 0D Then
+            reason = "grade pausada: EMA M5 inválida"
+            Return False
+        End If
+
+        Dim spreadPercent = Math.Abs(fast - slow) / latest * 100D
+        Dim slopePercent = Math.Abs(slow - previousSlow) / previousSlow * 100D
+        Dim maxSpread = Math.Max(0.01D, configuration.GridV2EmaMaxSpreadPercent)
+        Dim maxSlope = Math.Max(0.01D, configuration.GridV2EmaMaxSlopePercent)
+        If spreadPercent > maxSpread OrElse slopePercent > maxSlope Then
+            reason = $"grade pausada: EMA {fastPeriod}/{slowPeriod} M5 indica tendência (distância {spreadPercent:0.##}%, inclinação {slopePercent:0.##}%)"
+            Return False
+        End If
+
+        Return True
+    End Function
+
+    Private Shared Function CalculateEma(prices As IReadOnlyList(Of SpotBotPricePoint), period As Integer) As Decimal
+        If prices Is Nothing OrElse prices.Count = 0 Then Return 0D
+        Dim smoothing = 2D / (period + 1D)
+        Dim ema = prices(0).Close
+        For index = 1 To prices.Count - 1
+            ema = (prices(index).Close - ema) * smoothing + ema
+        Next
+        Return ema
+    End Function
+
+    Private Shared Function CalculateAverageRange(prices As IReadOnlyList(Of SpotBotPricePoint), period As Integer) As Decimal
+        Dim first = Math.Max(1, prices.Count - period)
+        Dim total = 0D
+        Dim count = 0
+        For index = first To prices.Count - 1
+            total += Math.Max(prices(index).Range, Math.Abs(prices(index).Close - prices(index - 1).Close))
+            count += 1
+        Next
+        Return If(count = 0, 0D, total / count)
+    End Function
+
+    Private Shared Function CalculateReturnVolatility(prices As IReadOnlyList(Of SpotBotPricePoint), period As Integer) As Decimal
+        Dim first = Math.Max(1, prices.Count - period)
+        Dim returns As New List(Of Decimal)()
+        For index = first To prices.Count - 1
+            Dim previous = prices(index - 1).Close
+            If previous > 0D Then returns.Add((prices(index).Close - previous) / previous * 100D)
+        Next
+        If returns.Count = 0 Then Return 0D
+        Dim average = returns.Average()
+        Dim variance = returns.Sum(Function(item) (item - average) * (item - average)) / returns.Count
+        Return CDec(Math.Sqrt(CDbl(Math.Max(0D, variance))))
+    End Function
+
+    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
+        Return New SpotBotStrategySignal With {
+            .Strategy = SpotBotStrategyKind.GridAdaptive,
             .Direction = SpotBotSignalDirection.Hold,
             .Reason = reason
         }

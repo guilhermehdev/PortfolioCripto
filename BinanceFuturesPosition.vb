@@ -1,4 +1,5 @@
 Public Class BinanceFuturesPosition
+    Public Property Exchange As String = String.Empty
     Public Property Symbol As String = String.Empty
     Public Property PositionAmount As Decimal
     Public Property EntryPrice As Decimal

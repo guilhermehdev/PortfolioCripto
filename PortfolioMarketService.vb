@@ -37,12 +37,37 @@ Public NotInheritable Class PortfolioMarketService
             Dim gec As New Coingecko
             Dim formatter As New JSON
 
-            Await b.SyncBinanceTime()
+            Dim hasBinanceCredentials =
+                Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceAPIKey) AndAlso
+                Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceSecretKey)
+
+            If hasBinanceCredentials Then
+                Try
+                    Await b.SyncBinanceTime()
+                Catch ex As Exception
+                    Debug.WriteLine("[BINANCE] Sincronização de horário indisponível: " & ex.Message)
+                End Try
+            End If
 
             ' O portfólio Spot deve usar somente a conta Spot. O saldo da
             ' carteira Futures é tratado separadamente no dgFuturos.
-            Dim binanceAssets = Await b.BINANCE_GetSpotAssetsFull()
-            Dim gateAssets = Await gate.GATE_GetAllSpotAssets()
+            Dim binanceAssets As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+            If hasBinanceCredentials Then
+                Try
+                    binanceAssets = Await b.BINANCE_GetSpotAssetsFull()
+                Catch ex As Exception
+                    Debug.WriteLine("[BINANCE] Saldo Spot indisponível: " & ex.Message)
+                End Try
+            End If
+            Dim gateAssets As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+            If Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateAPIKey) AndAlso
+               Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateSecretKey) Then
+                Try
+                    gateAssets = Await gate.GATE_GetAllSpotAssets()
+                Catch ex As Exception
+                    Debug.WriteLine("[GATE.IO] Saldo Spot indisponível: " & ex.Message)
+                End Try
+            End If
 
             ' Procura moedas existentes nas corretoras mas ainda não cadastradas
             ' no portfólio e permite adicioná-las ao SQLite.
@@ -106,7 +131,9 @@ Public NotInheritable Class PortfolioMarketService
 
             If usdBrl <= 0D Then
                 Try
-                    usdBrl = Await b.BINANCE_GetUSDTBRL()
+                    If hasBinanceCredentials Then
+                        usdBrl = Await b.BINANCE_GetUSDTBRL()
+                    End If
                 Catch ex As Exception
                     Debug.WriteLine("[MARKET] Binance USDT/BRL indisponível: " & ex.Message)
                 End Try
@@ -131,8 +158,14 @@ Public NotInheritable Class PortfolioMarketService
                 If(dom > 0D, $"{dom:F2}%", "--")
 
             ' Valor inicial do BTC. Depois o WebSocket assume o realtime.
-            Dim btcPriceString As String =
-                Await b.BINANCE_GetCoinsInfo("BTC")
+            Dim btcPriceString As String = String.Empty
+            If hasBinanceCredentials Then
+                Try
+                    btcPriceString = Await b.BINANCE_GetCoinsInfo("BTC")
+                Catch ex As Exception
+                    Debug.WriteLine("[BINANCE] Cotação BTC indisponível: " & ex.Message)
+                End Try
+            End If
 
             Dim btcPrice As Decimal = 0D
             Dim btcParts() As String =
@@ -140,6 +173,16 @@ Public NotInheritable Class PortfolioMarketService
 
             If btcParts.Length > 0 Then
                 btcPrice = formatter.decimalBR(btcParts(0))
+            End If
+
+            If btcPrice <= 0D AndAlso
+               Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateAPIKey) AndAlso
+               Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateSecretKey) Then
+                Try
+                    btcPrice = Await gate.GATE_GetCoinsPrice("BTC")
+                Catch ex As Exception
+                    Debug.WriteLine("[GATE.IO] Cotação BTC indisponível: " & ex.Message)
+                End Try
             End If
 
             Dim profit As Decimal = 0D
@@ -207,11 +250,16 @@ Public NotInheritable Class PortfolioMarketService
 
                     Case "BINANCE"
 
-                        quantity =
-                            binanceAssets.GetValueOrDefault(symbol, 0D)
+                        quantity = binanceAssets.GetValueOrDefault(symbol, 0D)
 
-                        Dim priceString As String =
-                            Await b.BINANCE_GetCoinsInfo(symbol)
+                        Dim priceString As String = String.Empty
+                        If hasBinanceCredentials Then
+                            Try
+                                priceString = Await b.BINANCE_GetCoinsInfo(symbol)
+                            Catch ex As Exception
+                                Debug.WriteLine($"[BINANCE LOAD] {symbol}: {ex.Message}")
+                            End Try
+                        End If
 
                         If Not String.IsNullOrWhiteSpace(priceString) Then
 

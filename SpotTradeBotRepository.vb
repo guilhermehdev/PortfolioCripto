@@ -49,6 +49,12 @@ Public NotInheritable Class SpotTradeBotRepository
                         "BollingerPeriod INTEGER NOT NULL DEFAULT 20, " &
                         "BollingerStandardDeviations REAL NOT NULL DEFAULT 3, " &
                         "BollingerCandleMinutes INTEGER NOT NULL DEFAULT 1440, " &
+                         "BreakEvenEnabled INTEGER NOT NULL DEFAULT 1, " &
+                         "BreakEvenTriggerPercent REAL NOT NULL DEFAULT 1.5, " &
+                         "BreakEvenOffsetPercent REAL NOT NULL DEFAULT 0.1, " &
+                         "TrailingStopEnabled INTEGER NOT NULL DEFAULT 0, " &
+                         "TrailingStopDistancePercent REAL NOT NULL DEFAULT 1, " &
+                        "PostExitCooldownMinutes REAL NOT NULL DEFAULT 5, " &
                         "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                         ");"
                     command.ExecuteNonQuery()
@@ -57,6 +63,12 @@ Public NotInheritable Class SpotTradeBotRepository
                 EnsureColumn(connection, "SpotBotRuns", "BollingerPeriod", "INTEGER NOT NULL DEFAULT 20")
                 EnsureColumn(connection, "SpotBotRuns", "BollingerStandardDeviations", "REAL NOT NULL DEFAULT 3")
                 EnsureColumn(connection, "SpotBotRuns", "BollingerCandleMinutes", "INTEGER NOT NULL DEFAULT 1440")
+                EnsureColumn(connection, "SpotBotRuns", "BreakEvenEnabled", "INTEGER NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "BreakEvenTriggerPercent", "REAL NOT NULL DEFAULT 1.5")
+                EnsureColumn(connection, "SpotBotRuns", "BreakEvenOffsetPercent", "REAL NOT NULL DEFAULT 0.1")
+                EnsureColumn(connection, "SpotBotRuns", "TrailingStopEnabled", "INTEGER NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotRuns", "TrailingStopDistancePercent", "REAL NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "PostExitCooldownMinutes", "REAL NOT NULL DEFAULT 5")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -86,6 +98,8 @@ Public NotInheritable Class SpotTradeBotRepository
                         "GrossProceeds REAL NOT NULL, " &
                         "Fees REAL NOT NULL, " &
                         "Pnl REAL NOT NULL, " &
+                        "Strategy TEXT NOT NULL DEFAULT '', " &
+                        "ExitReason TEXT NOT NULL DEFAULT '', " &
                         "OpenedAtUtc TEXT NOT NULL, " &
                         "ClosedAtUtc TEXT NOT NULL, " &
                         "CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, " &
@@ -93,6 +107,9 @@ Public NotInheritable Class SpotTradeBotRepository
                         ");"
                     command.ExecuteNonQuery()
                 End Using
+
+                EnsureColumn(connection, "SpotBotTrades", "Strategy", "TEXT NOT NULL DEFAULT ''")
+                EnsureColumn(connection, "SpotBotTrades", "ExitReason", "TEXT NOT NULL DEFAULT ''")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -117,6 +134,8 @@ Public NotInheritable Class SpotTradeBotRepository
                 ' estruturais da estratégia de Bollinger.
                 EnsureColumn(connection, "SpotBotOpenPositions", "StopPrice", "REAL NOT NULL DEFAULT 0")
                 EnsureColumn(connection, "SpotBotOpenPositions", "TakeProfitPrice", "REAL NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotOpenPositions", "PeakPrice", "REAL NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotOpenPositions", "Strategy", "TEXT NOT NULL DEFAULT ''")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -152,10 +171,14 @@ Public NotInheritable Class SpotTradeBotRepository
                     "INSERT INTO SpotBotRuns (" &
                     "StartedAt, Status, EnabledStrategies, CombinationMode, RequiredConfirmations, " &
                         "StartingQuote, AllocationPercent, FeeRate, Equity, QuoteBalance, " &
-                        "BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes) " &
+                        "BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes, " &
+                        "BreakEvenEnabled, BreakEvenTriggerPercent, BreakEvenOffsetPercent, " &
+                        "TrailingStopEnabled, TrailingStopDistancePercent, PostExitCooldownMinutes) " &
                     "VALUES ($startedAt, $status, $enabledStrategies, $combinationMode, $requiredConfirmations, " &
                         "$startingQuote, $allocationPercent, $feeRate, $equity, $quoteBalance, " &
-                        "$bollingerPeriod, $bollingerStandardDeviations, $bollingerCandleMinutes);"
+                        "$bollingerPeriod, $bollingerStandardDeviations, $bollingerCandleMinutes, " &
+                        "$breakEvenEnabled, $breakEvenTriggerPercent, $breakEvenOffsetPercent, " &
+                        "$trailingStopEnabled, $trailingStopDistancePercent, $postExitCooldownMinutes);"
 
                 command.Parameters.AddWithValue("$startedAt", UtcText(DateTime.UtcNow))
                 command.Parameters.AddWithValue("$status", "RUNNING")
@@ -170,6 +193,12 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.Parameters.AddWithValue("$bollingerPeriod", Math.Max(2, configuration.BollingerPeriod))
                 AddRealParameter(command, "$bollingerStandardDeviations", Math.Max(0.1D, configuration.BollingerStandardDeviations))
                 command.Parameters.AddWithValue("$bollingerCandleMinutes", If(configuration.BollingerCandleMinutes = 240, 240, 1440))
+                command.Parameters.AddWithValue("$breakEvenEnabled", If(configuration.BreakEvenEnabled, 1, 0))
+                AddRealParameter(command, "$breakEvenTriggerPercent", Math.Max(0D, configuration.BreakEvenTriggerPercent))
+                AddRealParameter(command, "$breakEvenOffsetPercent", Math.Max(0D, configuration.BreakEvenOffsetPercent))
+                command.Parameters.AddWithValue("$trailingStopEnabled", If(configuration.TrailingStopEnabled, 1, 0))
+                AddRealParameter(command, "$trailingStopDistancePercent", Math.Max(0.01D, configuration.TrailingStopDistancePercent))
+                AddRealParameter(command, "$postExitCooldownMinutes", Math.Max(0D, configuration.PostExitCooldownMinutes))
                 command.ExecuteNonQuery()
             End Using
 
@@ -214,10 +243,12 @@ Public NotInheritable Class SpotTradeBotRepository
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
                     "INSERT INTO SpotBotTrades(" &
-                    "RunId, Symbol, Quantity, EntryPrice, ExitPrice, CostBasis, GrossProceeds, Fees, Pnl, OpenedAtUtc, ClosedAtUtc) " &
-                    "VALUES($runId, $symbol, $quantity, $entryPrice, $exitPrice, $costBasis, $grossProceeds, $fees, $pnl, $openedAtUtc, $closedAtUtc);"
+                    "RunId, Symbol, Strategy, ExitReason, Quantity, EntryPrice, ExitPrice, CostBasis, GrossProceeds, Fees, Pnl, OpenedAtUtc, ClosedAtUtc) " &
+                    "VALUES($runId, $symbol, $strategy, $exitReason, $quantity, $entryPrice, $exitPrice, $costBasis, $grossProceeds, $fees, $pnl, $openedAtUtc, $closedAtUtc);"
                 command.Parameters.AddWithValue("$runId", runId)
                 command.Parameters.AddWithValue("$symbol", If(trade.Symbol, String.Empty).Trim().ToUpperInvariant())
+                command.Parameters.AddWithValue("$strategy", If(trade.Strategy, String.Empty))
+                command.Parameters.AddWithValue("$exitReason", If(trade.ExitReason, String.Empty))
                 AddRealParameter(command, "$quantity", trade.Quantity)
                 AddRealParameter(command, "$entryPrice", trade.EntryPrice)
                 AddRealParameter(command, "$exitPrice", trade.ExitPrice)
@@ -257,17 +288,19 @@ Public NotInheritable Class SpotTradeBotRepository
                             insertCommand.Transaction = transaction
                             insertCommand.CommandText =
                                 "INSERT INTO SpotBotOpenPositions(" &
-                                "RunId, Symbol, Side, Quantity, EntryPrice, CurrentPrice, CostBasis, StopPrice, TakeProfitPrice, OpenedAtUtc) " &
-                                "VALUES($runId, $symbol, $side, $quantity, $entryPrice, $currentPrice, $costBasis, $stopPrice, $takeProfitPrice, $openedAtUtc);"
+                                "RunId, Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc) " &
+                                "VALUES($runId, $symbol, $side, $strategy, $quantity, $entryPrice, $currentPrice, $costBasis, $stopPrice, $takeProfitPrice, $peakPrice, $openedAtUtc);"
                             insertCommand.Parameters.AddWithValue("$runId", runId)
                             insertCommand.Parameters.AddWithValue("$symbol", position.Symbol.Trim().ToUpperInvariant())
                             insertCommand.Parameters.AddWithValue("$side", If(String.IsNullOrWhiteSpace(position.Side), "LONG", position.Side.Trim().ToUpperInvariant()))
+                            insertCommand.Parameters.AddWithValue("$strategy", If(position.Strategy, String.Empty))
                             AddRealParameter(insertCommand, "$quantity", position.Quantity)
                             AddRealParameter(insertCommand, "$entryPrice", position.EntryPrice)
                             AddRealParameter(insertCommand, "$currentPrice", If(position.CurrentPrice > 0D, position.CurrentPrice, position.EntryPrice))
                             AddRealParameter(insertCommand, "$costBasis", position.CostBasis)
                             AddRealParameter(insertCommand, "$stopPrice", position.StopPrice)
                             AddRealParameter(insertCommand, "$takeProfitPrice", position.TakeProfitPrice)
+                            AddRealParameter(insertCommand, "$peakPrice", Math.Max(position.HighestPrice, position.CurrentPrice))
                             insertCommand.Parameters.AddWithValue("$openedAtUtc", UtcText(position.OpenedAtUtc))
                             insertCommand.ExecuteNonQuery()
                         End Using
@@ -330,8 +363,51 @@ Public NotInheritable Class SpotTradeBotRepository
                     "RequiredConfirmations, StartingQuote, AllocationPercent, FeeRate, CompletedTrades, " &
                     "WinningTrades, LosingTrades, RealizedPnl, UnrealizedPnl, Equity, TotalPnl, " &
                         "QuoteBalance, OpenValue, OpenPositions, LastAction, " &
-                        "BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes, UpdatedAt " &
+                        "BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes, " &
+                        "PostExitCooldownMinutes, UpdatedAt " &
                     "FROM SpotBotRuns ORDER BY Id DESC;"
+                Using reader = command.ExecuteReader()
+                    table.Load(reader)
+                End Using
+            End Using
+        End Using
+
+        Return table
+    End Function
+
+    Public Shared Function GetTrades(runId As Long) As DataTable
+        Initialize()
+        Dim table As New DataTable()
+
+        Using connection As New SqliteConnection(GetConnectionString())
+            connection.Open()
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "SELECT Id, RunId, Symbol, Strategy, ExitReason, Quantity, EntryPrice, ExitPrice, CostBasis, " &
+                    "GrossProceeds, Fees, Pnl, OpenedAtUtc, ClosedAtUtc " &
+                    "FROM SpotBotTrades WHERE RunId = $runId ORDER BY ClosedAtUtc, Id;"
+                command.Parameters.AddWithValue("$runId", runId)
+                Using reader = command.ExecuteReader()
+                    table.Load(reader)
+                End Using
+            End Using
+        End Using
+
+        Return table
+    End Function
+
+    Public Shared Function GetOpenPositions(runId As Long) As DataTable
+        Initialize()
+        Dim table As New DataTable()
+
+        Using connection As New SqliteConnection(GetConnectionString())
+            connection.Open()
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "SELECT Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, " &
+                    "StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc " &
+                    "FROM SpotBotOpenPositions WHERE RunId = $runId ORDER BY Symbol;"
+                command.Parameters.AddWithValue("$runId", runId)
                 Using reader = command.ExecuteReader()
                     table.Load(reader)
                 End Using
@@ -353,7 +429,9 @@ Public NotInheritable Class SpotTradeBotRepository
                     "SELECT Id, Status, EnabledStrategies, CombinationMode, RequiredConfirmations, " &
                     "StartingQuote, AllocationPercent, FeeRate, QuoteBalance, OpenValue, RealizedPnl, " &
                     "UnrealizedPnl, Equity, TotalPnl, CompletedTrades, WinningTrades, LosingTrades, " &
-                        "OpenPositions, LastAction, BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes " &
+                        "OpenPositions, LastAction, BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes, " &
+                        "BreakEvenEnabled, BreakEvenTriggerPercent, BreakEvenOffsetPercent, TrailingStopEnabled, " &
+                        "TrailingStopDistancePercent, PostExitCooldownMinutes " &
                     "FROM SpotBotRuns ORDER BY Id DESC LIMIT 1;"
 
                 Using reader = command.ExecuteReader()
@@ -382,7 +460,13 @@ Public NotInheritable Class SpotTradeBotRepository
                         },
                         .BollingerPeriod = If(reader.IsDBNull(19), 20, Math.Max(2, reader.GetInt32(19))),
                         .BollingerStandardDeviations = If(reader.IsDBNull(20), 3D, Math.Max(0.1D, ReadDecimal(reader, 20))),
-                        .BollingerCandleMinutes = If(reader.IsDBNull(21), 1440, If(reader.GetInt32(21) = 240, 240, 1440))
+                         .BollingerCandleMinutes = If(reader.IsDBNull(21), 1440, If(reader.GetInt32(21) = 240, 240, 1440)),
+                         .BreakEvenEnabled = If(reader.IsDBNull(22), True, reader.GetInt32(22) <> 0),
+                         .BreakEvenTriggerPercent = If(reader.IsDBNull(23), 1.5D, Math.Max(0D, ReadDecimal(reader, 23))),
+                         .BreakEvenOffsetPercent = If(reader.IsDBNull(24), 0.1D, Math.Max(0D, ReadDecimal(reader, 24))),
+                         .TrailingStopEnabled = If(reader.IsDBNull(25), False, reader.GetInt32(25) <> 0),
+                         .TrailingStopDistancePercent = If(reader.IsDBNull(26), 1D, Math.Max(0.01D, ReadDecimal(reader, 26))),
+                         .PostExitCooldownMinutes = If(reader.IsDBNull(27), 5D, Math.Max(0D, ReadDecimal(reader, 27)))
                     }
 
                     If Not reader.IsDBNull(2) Then
@@ -398,31 +482,34 @@ Public NotInheritable Class SpotTradeBotRepository
 
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
-                        "SELECT Symbol, Side, Quantity, EntryPrice, CurrentPrice, CostBasis, StopPrice, TakeProfitPrice, OpenedAtUtc " &
+                        "SELECT Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc " &
                     "FROM SpotBotOpenPositions WHERE RunId = $runId ORDER BY Symbol;"
                 command.Parameters.AddWithValue("$runId", state.RunId)
 
                 Using reader = command.ExecuteReader()
                     While reader.Read()
-                        Dim openedAt = ParseUtc(reader.GetString(8))
-                        Dim entryPrice = ReadDecimal(reader, 3)
-                        Dim currentPrice = ReadDecimal(reader, 4)
-                        Dim quantity = ReadDecimal(reader, 2)
-                        Dim costBasis = ReadDecimal(reader, 5)
-                        Dim stopPrice = ReadDecimal(reader, 6)
-                        Dim takeProfitPrice = ReadDecimal(reader, 7)
+                        Dim openedAt = ParseUtc(reader.GetString(10))
+                        Dim entryPrice = ReadDecimal(reader, 4)
+                        Dim currentPrice = ReadDecimal(reader, 5)
+                        Dim quantity = ReadDecimal(reader, 3)
+                        Dim costBasis = ReadDecimal(reader, 6)
+                        Dim stopPrice = ReadDecimal(reader, 7)
+                        Dim takeProfitPrice = ReadDecimal(reader, 8)
+                        Dim peakPrice = ReadDecimal(reader, 9)
                         Dim notional = quantity * currentPrice
                         Dim unrealizedPnl = notional - costBasis
 
                         state.Positions.Add(New SpotBotOpenPosition With {
                             .Symbol = reader.GetString(0),
                             .Side = If(reader.IsDBNull(1), "LONG", reader.GetString(1)),
+                            .Strategy = If(reader.IsDBNull(2), String.Empty, reader.GetString(2)),
                             .Quantity = quantity,
                             .EntryPrice = entryPrice,
                             .CurrentPrice = currentPrice,
                             .CostBasis = costBasis,
                             .StopPrice = stopPrice,
                             .TakeProfitPrice = takeProfitPrice,
+                            .HighestPrice = peakPrice,
                             .Notional = notional,
                             .UnrealizedPnl = unrealizedPnl,
                             .RoiPercent = If(costBasis = 0D, 0D, unrealizedPnl / costBasis * 100D),
@@ -432,7 +519,6 @@ Public NotInheritable Class SpotTradeBotRepository
                 End Using
             End Using
 
-            If state.Positions.Count = 0 Then Return Nothing
             state.Snapshot.OpenPositions = state.Positions.Count
             Return state
         End Using

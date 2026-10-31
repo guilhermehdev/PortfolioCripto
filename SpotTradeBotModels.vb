@@ -28,6 +28,9 @@ Public Enum SpotBotStrategyKind
     BreakoutRetest = 8
     MomentumVolume = 9
     GridRegime = 10
+    GridAdaptive = 11
+    ' Pullback de tendência na zona EMA/VWAP, adaptado do vídeo analisado.
+    ValueZonePullback = 12
 End Enum
 
 Public Enum SpotBotUniverseMode
@@ -98,6 +101,7 @@ Public NotInheritable Class SpotBotStrategySignal
     Public Property EntryPrice As Decimal
     Public Property StopPrice As Decimal
     Public Property TakeProfitPrice As Decimal
+    Public Property GridManaged As Boolean
 End Class
 
 Public NotInheritable Class SpotBotSignal
@@ -114,6 +118,7 @@ Public NotInheritable Class SpotBotSignal
     Public Property Reasons As New List(Of String)
     Public Property StrategySignals As New List(Of SpotBotStrategySignal)
     Public Property SimulationOnly As Boolean = True
+    Public Property GridManaged As Boolean
 End Class
 
 Public NotInheritable Class SpotBotConfiguration
@@ -126,6 +131,9 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property RequiredConfirmations As Integer = 2
     Public Property MinimumWeightedScore As Decimal = 0.6D
     Public Property Cooldown As TimeSpan = TimeSpan.FromMinutes(5)
+    ' Impede uma nova entrada no mesmo ativo imediatamente após o fechamento.
+    ' O bloqueio não atrasa stop, alvo ou fechamento manual; ele só filtra reentradas.
+    Public Property PostExitCooldownMinutes As Decimal = 5D
     Public Property MaximumPriceHistory As Integer = 250
 
     Public Property EmaFastPeriod As Integer = 9
@@ -171,6 +179,45 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property SimulationFeeRate As Decimal = 0.001D
     Public Property TakeProfitPercent As Decimal = 2D
     Public Property StopLossPercent As Decimal = 1D
+    Public Property BreakEvenEnabled As Boolean = True
+    Public Property BreakEvenTriggerPercent As Decimal = 1.5D
+    Public Property BreakEvenOffsetPercent As Decimal = 0.1D
+    Public Property TrailingStopEnabled As Boolean = False
+    Public Property TrailingStopDistancePercent As Decimal = 1D
+
+    ' Parâmetros da grade adaptativa v2. O espaçamento é calculado pela
+    ' volatilidade recente e limitado para evitar uma grade apertada demais
+    ' ou distante demais.
+    Public Property GridV2Lookback As Integer = 48
+    Public Property GridV2VolatilityPeriod As Integer = 14
+    Public Property GridV2SpacingMinimumPercent As Decimal = 0.8D
+    Public Property GridV2SpacingMaximumPercent As Decimal = 2.5D
+    Public Property GridV2MaxRangePercent As Decimal = 12D
+    Public Property GridV2MaxSlopePercent As Decimal = 2D
+    Public Property GridV2MaxLevels As Integer = 5
+    Public Property GridV2LevelAllocationPercent As Decimal = 10D
+    Public Property GridV2MaxExposurePercent As Decimal = 50D
+    Public Property GridV2BreakoutAtrMultiplier As Decimal = 0.5D
+    Public Property GridV2MinimumStopPercent As Decimal = 1.2D
+    Public Property GridV2StopVolatilityMultiplier As Decimal = 1.5D
+    Public Property GridV2MaximumStopPercent As Decimal = 3D
+    Public Property GridV2EmaFilterEnabled As Boolean = True
+    Public Property GridV2FastEmaPeriod As Integer = 9
+    Public Property GridV2SlowEmaPeriod As Integer = 21
+    Public Property GridV2EmaMaxSpreadPercent As Decimal = 1.5D
+    Public Property GridV2EmaMaxSlopePercent As Decimal = 0.5D
+    Public Property GridV2UseNearestSupportStop As Boolean = True
+    Public Property GridV2SupportBufferAtr As Decimal = 0.5D
+
+    ' Parâmetros do pullback em zona de valor. A estratégia usa M5 para
+    ' contexto, M2 para o retorno à zona e M1 para a confirmação da entrada.
+    Public Property ValueZoneFastEmaPeriod As Integer = 9
+    Public Property ValueZoneSlowEmaPeriod As Integer = 20
+    Public Property ValueZoneAtrPeriod As Integer = 14
+    Public Property ValueZoneToleranceAtr As Decimal = 0.35D
+    Public Property ValueZoneMinimumRiskReward As Decimal = 1.5D
+    Public Property ValueZoneStructureLookback As Integer = 20
+    Public Property ValueZoneRequireVwap As Boolean = True
 
     ' O motor começa sempre em simulação. A execução real será conectada
     ' depois de validarmos os sinais e os limites de risco.
@@ -222,6 +269,8 @@ End Class
 
 Public NotInheritable Class SpotBotSimulationTrade
     Public Property Symbol As String = String.Empty
+    Public Property Strategy As String = String.Empty
+    Public Property ExitReason As String = String.Empty
     Public Property Quantity As Decimal
     Public Property EntryPrice As Decimal
     Public Property ExitPrice As Decimal
@@ -235,6 +284,7 @@ End Class
 
 Public NotInheritable Class SpotBotOpenPosition
     Public Property Symbol As String = String.Empty
+    Public Property Strategy As String = String.Empty
     Public Property Side As String = "LONG"
     Public Property Quantity As Decimal
     Public Property EntryPrice As Decimal
@@ -245,6 +295,8 @@ Public NotInheritable Class SpotBotOpenPosition
     Public Property RoiPercent As Decimal
     Public Property StopPrice As Decimal
     Public Property TakeProfitPrice As Decimal
+    Public Property HighestPrice As Decimal
+    Public Property GridLevelCount As Integer
     Public Property OpenedAtUtc As DateTime
 End Class
 
@@ -261,6 +313,12 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property BollingerCandleMinutes As Integer = 1440
     Public Property AllocationPercent As Decimal = 10D
     Public Property FeeRate As Decimal = 0.001D
+    Public Property BreakEvenEnabled As Boolean = True
+    Public Property BreakEvenTriggerPercent As Decimal = 1.5D
+    Public Property BreakEvenOffsetPercent As Decimal = 0.1D
+    Public Property TrailingStopEnabled As Boolean = False
+    Public Property TrailingStopDistancePercent As Decimal = 1D
+    Public Property PostExitCooldownMinutes As Decimal = 5D
 End Class
 
 Public NotInheritable Class SpotBotSimulationEventArgs
@@ -288,5 +346,35 @@ Public Interface ISpotBotCandleStrategy
     Function EvaluateCandles(
         symbol As String,
         candles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal
+End Interface
+
+''' <summary>
+''' Estratégia que precisa de candles fechados em mais de um timeframe.
+''' O motor fornece as séries já agregadas para evitar misturar ticks com
+''' candles de contexto e para manter a confirmação sem look-ahead.
+''' </summary>
+Public Interface ISpotBotMultiTimeframeStrategy
+    Inherits ISpotBotStrategy
+
+    Function EvaluateMultiTimeframe(
+        symbol As String,
+        m1Candles As IReadOnlyList(Of SpotBotPricePoint),
+        m2Candles As IReadOnlyList(Of SpotBotPricePoint),
+        m5Candles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal
+End Interface
+
+''' <summary>
+''' Permite que estratégias que continuam avaliando ticks usem uma série de
+''' candles fechados apenas como filtro de regime.
+''' </summary>
+Public Interface ISpotBotTrendFilterStrategy
+    Inherits ISpotBotStrategy
+
+    Function EvaluateWithTrend(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        trendCandles As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal
 End Interface

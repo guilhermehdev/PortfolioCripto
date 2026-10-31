@@ -176,6 +176,110 @@ Public Class Gateio
         End Try
     End Function
 
+    Public Async Function GATE_GetSpotOpenOrdersAsync(
+        Optional symbol As String = "") As Task(Of List(Of BinanceSpotOrder))
+
+        If String.IsNullOrWhiteSpace(symbol) Then
+            ' Esta rota retorna todos os pares com ordens pendentes e não
+            ' exige que o par seja conhecido previamente pelo SQLite.
+            Dim rawAll = Await SendSignedSpotAsync("GET", "/api/v4/spot/open_orders", String.Empty, String.Empty)
+            Dim groups = TryCast(JToken.Parse(rawAll), JArray)
+            Dim consolidated As New List(Of BinanceSpotOrder)()
+            If groups Is Nothing Then Return consolidated
+
+            For Each group In groups.OfType(Of JObject)()
+                Dim groupOrders = TryCast(group("orders"), JArray)
+                If groupOrders Is Nothing Then Continue For
+                For Each item In groupOrders.OfType(Of JObject)()
+                    Dim mapped = MapGateSpotOrder(item)
+                    If mapped IsNot Nothing Then consolidated.Add(mapped)
+                Next
+            Next
+            Return consolidated
+        End If
+
+        Dim query = "currency_pair=" & Uri.EscapeDataString(ToGatePair(symbol)) & "&status=open&limit=100"
+        Dim raw = Await SendSignedSpotAsync("GET", "/api/v4/spot/orders", query, String.Empty)
+        Dim orders = TryCast(JToken.Parse(raw), JArray)
+        Dim result As New List(Of BinanceSpotOrder)()
+        If orders Is Nothing Then Return result
+
+        For Each item In orders.OfType(Of JObject)()
+            Dim mapped = MapGateSpotOrder(item)
+            If mapped IsNot Nothing Then result.Add(mapped)
+        Next
+
+        Return result
+    End Function
+
+    Private Shared Function MapGateSpotOrder(item As JObject) As BinanceSpotOrder
+        Dim pair = ReadString(item, "currency_pair", "currencyPair")
+        If String.IsNullOrWhiteSpace(pair) Then Return Nothing
+
+        Dim orderId As Long
+        Long.TryParse(ReadString(item, "id", "order_id"), NumberStyles.Integer, CultureInfo.InvariantCulture, orderId)
+        Dim amount = ReadDecimal(item, "amount", "quantity")
+        Dim left = ReadDecimal(item, "left", "remaining")
+
+        Return New BinanceSpotOrder With {
+            .Exchange = "GATE.IO",
+            .Symbol = pair.Replace("_", String.Empty, StringComparison.OrdinalIgnoreCase),
+            .OrderId = orderId,
+            .Side = ReadString(item, "side").ToUpperInvariant(),
+            .OrderType = ReadString(item, "type").ToUpperInvariant(),
+            .Status = ReadString(item, "status", "account"),
+            .Quantity = Math.Abs(amount),
+            .ExecutedQuantity = Math.Max(0D, Math.Abs(amount - left)),
+            .Price = ReadDecimal(item, "price"),
+            .StopPrice = ReadDecimal(item, "stop_price", "trigger_price"),
+            .OrderTime = ReadGateDateTime(item, "create_time_ms", "create_time", "update_time")
+        }
+    End Function
+
+    Public Async Function GATE_CancelSpotOrderAsync(symbol As String, orderId As Long) As Task(Of Boolean)
+        If String.IsNullOrWhiteSpace(symbol) Then Throw New ArgumentException("O símbolo da ordem é obrigatório.", NameOf(symbol))
+        If orderId <= 0 Then Throw New ArgumentException("O identificador da ordem é inválido.", NameOf(orderId))
+
+        Dim query = "currency_pair=" & Uri.EscapeDataString(ToGatePair(symbol))
+        Await SendSignedSpotAsync("DELETE", "/api/v4/spot/orders/" & orderId.ToString(CultureInfo.InvariantCulture), query, String.Empty)
+        Return True
+    End Function
+
+    Public Async Function GATE_CreateSpotOrderAsync(
+        symbol As String,
+        side As String,
+        orderType As String,
+        quantity As Decimal,
+        Optional limitPrice As Decimal = 0D) As Task(Of String)
+
+        Dim normalizedSide = side?.Trim().ToLowerInvariant()
+        Dim normalizedType = orderType?.Trim().ToLowerInvariant()
+        If String.IsNullOrWhiteSpace(symbol) OrElse quantity <= 0D Then
+            Throw New ArgumentException("Símbolo e quantidade válidos são obrigatórios.")
+        End If
+        If normalizedSide <> "buy" AndAlso normalizedSide <> "sell" Then
+            Throw New ArgumentException("O lado deve ser BUY ou SELL.", NameOf(side))
+        End If
+        If normalizedType <> "limit" AndAlso normalizedType <> "market" Then
+            Throw New ArgumentException("O tipo deve ser LIMIT ou MARKET.", NameOf(orderType))
+        End If
+        If normalizedType = "limit" AndAlso limitPrice <= 0D Then
+            Throw New ArgumentException("O preço limite deve ser maior que zero.", NameOf(limitPrice))
+        End If
+
+        Dim body As New JObject From {
+            {"currency_pair", ToGatePair(symbol)},
+            {"type", normalizedType},
+            {"account", "spot"},
+            {"side", normalizedSide},
+            {"amount", quantity.ToString("0.########", CultureInfo.InvariantCulture)},
+            {"price", If(normalizedType = "limit", limitPrice.ToString("0.########", CultureInfo.InvariantCulture), "0")},
+            {"time_in_force", If(normalizedType = "limit", "gtc", "ioc")}
+        }
+
+        Return Await SendSignedSpotAsync("POST", "/api/v4/spot/orders", String.Empty, body.ToString(Newtonsoft.Json.Formatting.None))
+    End Function
+
     Public Async Function ParExisteNaGateIo(symbol As String) As Task(Of Boolean)
         Try
             Dim parComUnderline As String = $"{symbol.Trim().ToUpper()}_USDT"
@@ -187,6 +291,92 @@ Public Class Gateio
         Catch
             Return False
         End Try
+    End Function
+
+    Private Shared Function ToGatePair(symbol As String) As String
+        Dim normalized = If(symbol, String.Empty).Trim().ToUpperInvariant().Replace("-", "_")
+        If normalized.EndsWith("USDT", StringComparison.OrdinalIgnoreCase) AndAlso Not normalized.EndsWith("_USDT", StringComparison.OrdinalIgnoreCase) Then
+            normalized = normalized.Substring(0, normalized.Length - 4) & "_USDT"
+        End If
+        If Not normalized.EndsWith("_USDT", StringComparison.OrdinalIgnoreCase) Then normalized &= "_USDT"
+        Return normalized
+    End Function
+
+    Private Shared Async Function SendSignedSpotAsync(
+        method As String,
+        endpoint As String,
+        query As String,
+        body As String) As Task(Of String)
+
+        Dim apiKey = ExchangeCredentials.GateAPIKey.Trim()
+        Dim secret = ExchangeCredentials.GateSecretKey.Trim()
+        If String.IsNullOrWhiteSpace(apiKey) OrElse String.IsNullOrWhiteSpace(secret) Then
+            Throw New InvalidOperationException("As credenciais da Gate não estão configuradas no Windows.")
+        End If
+
+        Dim timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)
+        Dim bodyHash As String
+        Using sha As SHA512 = SHA512.Create()
+            bodyHash = Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(If(body, String.Empty)))).ToLowerInvariant()
+        End Using
+        Dim signatureText = method.ToUpperInvariant() & vbLf & endpoint & vbLf & If(query, String.Empty) & vbLf & bodyHash & vbLf & timestamp
+        Dim signature As String
+        Using hmac As New HMACSHA512(Encoding.UTF8.GetBytes(secret))
+            signature = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(signatureText))).ToLowerInvariant()
+        End Using
+
+        Dim url = "https://api.gateio.ws" & endpoint & If(String.IsNullOrWhiteSpace(query), String.Empty, "?" & query)
+        Using client As New HttpClient()
+            client.DefaultRequestHeaders.TryAddWithoutValidation("KEY", apiKey)
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Timestamp", timestamp)
+            client.DefaultRequestHeaders.TryAddWithoutValidation("SIGN", signature)
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("PortfolioCripto/1.0")
+
+            Using request As New HttpRequestMessage(New HttpMethod(method), url)
+                If Not String.IsNullOrWhiteSpace(body) Then
+                    request.Content = New StringContent(body, Encoding.UTF8, "application/json")
+                End If
+                Using response = Await client.SendAsync(request)
+                    Dim responseBody = Await response.Content.ReadAsStringAsync()
+                    If Not response.IsSuccessStatusCode Then
+                        Try
+                            Dim errorObject = JObject.Parse(responseBody)
+                            Throw New InvalidOperationException($"Gate.io HTTP {CInt(response.StatusCode)}: {ReadString(errorObject, "label", "message")}")
+                        Catch ex As Newtonsoft.Json.JsonException
+                            Throw New InvalidOperationException($"Gate.io HTTP {CInt(response.StatusCode)}: {responseBody}")
+                        End Try
+                    End If
+                    Return responseBody
+                End Using
+            End Using
+        End Using
+    End Function
+
+    Private Shared Function ReadString(item As JObject, ParamArray names() As String) As String
+        For Each name In names
+            Dim token = item(name)
+            If token IsNot Nothing AndAlso token.Type <> JTokenType.Null Then Return token.ToString()
+        Next
+        Return String.Empty
+    End Function
+
+    Private Shared Function ReadDecimal(item As JObject, ParamArray names() As String) As Decimal
+        Dim value As Decimal
+        Decimal.TryParse(ReadString(item, names), NumberStyles.Any, CultureInfo.InvariantCulture, value)
+        Return value
+    End Function
+
+    Private Shared Function ReadGateDateTime(item As JObject, ParamArray names() As String) As DateTime
+        Dim raw = ReadString(item, names)
+        Dim number As Decimal
+        If Decimal.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, number) Then
+            If raw.Length >= 13 Then number /= 1000D
+            Return DateTimeOffset.FromUnixTimeSeconds(CLng(number)).LocalDateTime
+        End If
+
+        Dim parsed As DateTime
+        If DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, parsed) Then Return parsed.ToLocalTime()
+        Return DateTime.MinValue
     End Function
 
 End Class

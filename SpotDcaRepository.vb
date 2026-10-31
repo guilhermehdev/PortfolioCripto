@@ -214,6 +214,24 @@ Public NotInheritable Class SpotDcaRepository
         End Using
     End Sub
 
+    Public Shared Sub DeletePlan(symbol As String)
+        Initialize()
+        Using connection As New SqliteConnection(GetConnectionString())
+            connection.Open()
+            Using transaction = connection.BeginTransaction()
+                Using command = connection.CreateCommand()
+                    command.Transaction = transaction
+                    command.CommandText =
+                        "DELETE FROM DcaPlans WHERE Symbol = $symbol; " &
+                        "DELETE FROM DcaStates WHERE Symbol = $symbol;"
+                    command.Parameters.AddWithValue("$symbol", NormalizeSymbol(symbol))
+                    command.ExecuteNonQuery()
+                End Using
+                transaction.Commit()
+            End Using
+        End Using
+    End Sub
+
     Private Shared Function GetConnectionString() As String
         Return $"Data Source={PortfolioRepository.GetDatabasePath()}"
     End Function
