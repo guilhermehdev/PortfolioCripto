@@ -51,6 +51,7 @@ End Class
 
 Public NotInheritable Class DcaPlan
     Public Property Symbol As String = String.Empty
+    Public Property Exchange As String = "BINANCE"
     Public Property Enabled As Boolean = True
     Public Property BudgetQuote As Decimal = 100D
     Public Property CooldownMinutes As Integer = 60
@@ -102,12 +103,18 @@ End Class
 
 Public NotInheritable Class DcaPurchase
     Public Property Symbol As String = String.Empty
+    Public Property Exchange As String = "BINANCE"
     Public Property DropPercent As Decimal
     Public Property Price As Decimal
     Public Property Quantity As Decimal
     Public Property QuoteAmount As Decimal
     Public Property AveragePrice As Decimal
     Public Property TimestampUtc As DateTime
+    Public Property LevelKey As String = String.Empty
+    Public Property PreviousQuantity As Decimal
+    Public Property PreviousInvestedQuote As Decimal
+    Public Property PreviousAveragePrice As Decimal
+    Public Property PreviousLastPurchaseAtUtc As DateTime
 End Class
 
 Public NotInheritable Class DcaPurchaseEventArgs

@@ -644,6 +644,8 @@ Public NotInheritable Class SpotTradeBotEngine
                                      .HighestPrice = executionPrice,
                                     .StopPrice = signal.StopPrice,
                                     .TakeProfitPrice = signal.TakeProfitPrice,
+                                     .SupportPrice = signal.SupportPrice,
+                                     .InitialStopPrice = signal.StopPrice,
                                     .GridManaged = isGridSignal,
                                     .GridLevelCount = If(isGridSignal, 1, 0),
                                     .EntryTimestampUtc = signal.TimestampUtc
@@ -672,6 +674,12 @@ Public NotInheritable Class SpotTradeBotEngine
                                 position.CostBasis += notional + fee
                                 position.LastPrice = executionPrice
                                  position.HighestPrice = Math.Max(position.HighestPrice, executionPrice)
+                                 If signal.SupportPrice > 0D Then
+                                     position.SupportPrice = signal.SupportPrice
+                                 End If
+                                 If position.InitialStopPrice <= 0D AndAlso signal.StopPrice > 0D Then
+                                     position.InitialStopPrice = signal.StopPrice
+                                 End If
                                 If signal.StopPrice > 0D Then
                                     position.StopPrice = If(position.StopPrice <= 0D, signal.StopPrice, Math.Min(position.StopPrice, signal.StopPrice))
                                 End If
@@ -761,6 +769,9 @@ Public NotInheritable Class SpotTradeBotEngine
             .GrossProceeds = gross,
             .Fees = fee,
             .Pnl = tradePnl,
+            .SupportPrice = position.SupportPrice,
+            .InitialStopPrice = position.InitialStopPrice,
+            .ExitStopPrice = position.StopPrice,
             .OpenedAtUtc = position.EntryTimestampUtc,
             .ClosedAtUtc = timestampUtc
         }
@@ -822,6 +833,9 @@ Public NotInheritable Class SpotTradeBotEngine
             .GrossProceeds = gross,
             .Fees = fee,
             .Pnl = tradePnl,
+            .SupportPrice = position.SupportPrice,
+            .InitialStopPrice = position.InitialStopPrice,
+            .ExitStopPrice = position.StopPrice,
             .OpenedAtUtc = position.EntryTimestampUtc,
             .ClosedAtUtc = timestampUtc
         }
@@ -881,6 +895,10 @@ Public NotInheritable Class SpotTradeBotEngine
         _configuration.TrailingStopEnabled = state.TrailingStopEnabled
         _configuration.TrailingStopDistancePercent = Math.Max(0.01D, state.TrailingStopDistancePercent)
         _configuration.PostExitCooldownMinutes = Math.Max(0D, state.PostExitCooldownMinutes)
+        _configuration.GridV2UseNearestSupportStop = state.GridV2UseNearestSupportStop
+        _configuration.GridV2SupportBufferAtr = Math.Max(0D, state.GridV2SupportBufferAtr)
+        _configuration.GridV2MinimumStopPercent = Math.Max(0D, state.GridV2MinimumStopPercent)
+        _configuration.GridV2MaximumStopPercent = Math.Max(_configuration.GridV2MinimumStopPercent, state.GridV2MaximumStopPercent)
         _simulationQuoteBalance = Math.Max(0D, state.Snapshot.QuoteBalance)
         _simulationRealizedPnl = state.Snapshot.RealizedPnl
         _simulationCompletedTrades = state.Snapshot.CompletedTrades
@@ -908,6 +926,10 @@ Public NotInheritable Class SpotTradeBotEngine
                 .LastPrice = If(persistedPosition.CurrentPrice > 0D, persistedPosition.CurrentPrice, persistedPosition.EntryPrice),
                  .HighestPrice = Math.Max(persistedPosition.HighestPrice,
                                          Math.Max(persistedPosition.CurrentPrice, persistedPosition.EntryPrice)),
+                 .SupportPrice = persistedPosition.SupportPrice,
+                 .InitialStopPrice = If(persistedPosition.InitialStopPrice > 0D,
+                                        persistedPosition.InitialStopPrice,
+                                        persistedPosition.StopPrice),
                 .StopPrice = persistedPosition.StopPrice,
                 .TakeProfitPrice = persistedPosition.TakeProfitPrice,
                 .GridManaged = state.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
@@ -1335,6 +1357,8 @@ Public NotInheritable Class SpotTradeBotEngine
                                .Notional = notional,
                                .UnrealizedPnl = unrealizedPnl,
                                .RoiPercent = If(position.CostBasis = 0D, 0D, unrealizedPnl / position.CostBasis * 100D),
+                                .SupportPrice = position.SupportPrice,
+                                .InitialStopPrice = position.InitialStopPrice,
                                 .StopPrice = position.StopPrice,
                                 .TakeProfitPrice = position.TakeProfitPrice,
                                 .HighestPrice = position.HighestPrice,
@@ -1422,6 +1446,10 @@ Public NotInheritable Class SpotTradeBotEngine
             Select(Function(item) item.StopPrice).
             DefaultIfEmpty(0D).
             First()
+        Dim supportPrice = selected.Where(Function(item) item.SupportPrice > 0D).
+            Select(Function(item) item.SupportPrice).
+            DefaultIfEmpty(0D).
+            First()
         Dim takeProfitPrice = selected.Where(Function(item) item.TakeProfitPrice > 0D).
             Select(Function(item) item.TakeProfitPrice).
             DefaultIfEmpty(0D).
@@ -1435,6 +1463,7 @@ Public NotInheritable Class SpotTradeBotEngine
             .EntryPrice = entryPrice,
             .StopPrice = stopPrice,
             .TakeProfitPrice = takeProfitPrice,
+            .SupportPrice = supportPrice,
             .Direction = direction,
             .Confirmations = selected.Count,
             .ActiveStrategies = activeCount,
@@ -1598,6 +1627,8 @@ Public NotInheritable Class SpotTradeBotEngine
         Public Property CostBasis As Decimal
         Public Property LastPrice As Decimal
         Public Property HighestPrice As Decimal
+        Public Property SupportPrice As Decimal
+        Public Property InitialStopPrice As Decimal
         Public Property StopPrice As Decimal
         Public Property TakeProfitPrice As Decimal
         Public Property GridManaged As Boolean

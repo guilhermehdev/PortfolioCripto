@@ -101,6 +101,7 @@ Public NotInheritable Class SpotBotStrategySignal
     Public Property EntryPrice As Decimal
     Public Property StopPrice As Decimal
     Public Property TakeProfitPrice As Decimal
+    Public Property SupportPrice As Decimal
     Public Property GridManaged As Boolean
 End Class
 
@@ -111,6 +112,7 @@ Public NotInheritable Class SpotBotSignal
     Public Property EntryPrice As Decimal
     Public Property StopPrice As Decimal
     Public Property TakeProfitPrice As Decimal
+    Public Property SupportPrice As Decimal
     Public Property Direction As SpotBotSignalDirection
     Public Property Confirmations As Integer
     Public Property ActiveStrategies As Integer
@@ -207,7 +209,7 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property GridV2EmaMaxSpreadPercent As Decimal = 1.5D
     Public Property GridV2EmaMaxSlopePercent As Decimal = 0.5D
     Public Property GridV2UseNearestSupportStop As Boolean = True
-    Public Property GridV2SupportBufferAtr As Decimal = 0.5D
+    Public Property GridV2SupportBufferAtr As Decimal = 1D
 
     ' Parâmetros do pullback em zona de valor. A estratégia usa M5 para
     ' contexto, M2 para o retorno à zona e M1 para a confirmação da entrada.
@@ -278,6 +280,9 @@ Public NotInheritable Class SpotBotSimulationTrade
     Public Property GrossProceeds As Decimal
     Public Property Fees As Decimal
     Public Property Pnl As Decimal
+    Public Property SupportPrice As Decimal
+    Public Property InitialStopPrice As Decimal
+    Public Property ExitStopPrice As Decimal
     Public Property OpenedAtUtc As DateTime
     Public Property ClosedAtUtc As DateTime
 End Class
@@ -293,6 +298,8 @@ Public NotInheritable Class SpotBotOpenPosition
     Public Property Notional As Decimal
     Public Property UnrealizedPnl As Decimal
     Public Property RoiPercent As Decimal
+    Public Property SupportPrice As Decimal
+    Public Property InitialStopPrice As Decimal
     Public Property StopPrice As Decimal
     Public Property TakeProfitPrice As Decimal
     Public Property HighestPrice As Decimal
@@ -319,6 +326,10 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property TrailingStopEnabled As Boolean = False
     Public Property TrailingStopDistancePercent As Decimal = 1D
     Public Property PostExitCooldownMinutes As Decimal = 5D
+    Public Property GridV2UseNearestSupportStop As Boolean = True
+    Public Property GridV2SupportBufferAtr As Decimal = 1D
+    Public Property GridV2MinimumStopPercent As Decimal = 1.2D
+    Public Property GridV2MaximumStopPercent As Decimal = 3D
 End Class
 
 Public NotInheritable Class SpotBotSimulationEventArgs

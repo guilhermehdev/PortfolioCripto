@@ -48,10 +48,11 @@ Public NotInheritable Class SpotDcaEngine
         End SyncLock
     End Function
 
-    Public Function GetRequiredCandleIntervals() As IReadOnlyList(Of String)
+    Public Function GetRequiredCandleIntervals(Optional exchange As String = "BINANCE") As IReadOnlyList(Of String)
         SyncLock _sync
             Return _plans.Values.
-                Where(Function(item) item.Enabled AndAlso item.UseAutomaticSupports).
+                Where(Function(item) item.Enabled AndAlso item.UseAutomaticSupports AndAlso
+                              String.Equals(NormalizeExchange(item.Exchange), NormalizeExchange(exchange), StringComparison.OrdinalIgnoreCase)).
                 Select(Function(item) NormalizeInterval(item.CandleInterval)).
                 Distinct(StringComparer.OrdinalIgnoreCase).
                 ToList()
@@ -59,7 +60,7 @@ Public NotInheritable Class SpotDcaEngine
     End Function
 
     Public Async Function LoadHistoricalCandlesAsync(
-        loader As Func(Of String, String, Integer, Task(Of List(Of DcaCandle)))) As Task
+        loader As Func(Of DcaPlan, String, Integer, Task(Of List(Of DcaCandle)))) As Task
 
         If loader Is Nothing Then Throw New ArgumentNullException(NameOf(loader))
 
@@ -70,7 +71,7 @@ Public NotInheritable Class SpotDcaEngine
         For Each plan In plans
             Dim interval = NormalizeInterval(plan.CandleInterval)
             Dim limit = Math.Max(30, Math.Min(1000, plan.SupportLookbackCandles))
-            Dim loaded = Await loader(plan.Symbol, interval, limit)
+            Dim loaded = Await loader(plan, interval, limit)
             If loaded Is Nothing OrElse loaded.Count = 0 Then
                 Throw New InvalidOperationException(
                     $"Não foi possível carregar candles de {plan.Symbol} ({interval}) para calcular os suportes.")
@@ -98,6 +99,7 @@ Public NotInheritable Class SpotDcaEngine
         If plan Is Nothing Then Throw New ArgumentNullException(NameOf(plan))
 
         plan.Symbol = NormalizeSymbol(plan.Symbol)
+        plan.Exchange = NormalizeExchange(plan.Exchange)
         If String.IsNullOrWhiteSpace(plan.Symbol) Then
             Throw New ArgumentException("Informe a moeda do plano DCA.", NameOf(plan))
         End If
@@ -139,6 +141,27 @@ Public NotInheritable Class SpotDcaEngine
         SyncLock _sync
             _running = True
         End SyncLock
+        RaiseUpdated()
+    End Sub
+
+    Public Sub RollbackPurchase(purchase As DcaPurchase)
+        If purchase Is Nothing OrElse String.IsNullOrWhiteSpace(purchase.Symbol) Then Return
+
+        Dim normalized = NormalizeSymbol(purchase.Symbol)
+        SyncLock _sync
+            Dim state As DcaState = Nothing
+            If Not _states.TryGetValue(normalized, state) Then Return
+            If String.IsNullOrWhiteSpace(purchase.LevelKey) OrElse
+               Not state.TriggeredLevels.Contains(purchase.LevelKey) Then Return
+
+            state.Quantity = Math.Max(0D, purchase.PreviousQuantity)
+            state.InvestedQuote = Math.Max(0D, purchase.PreviousInvestedQuote)
+            state.AveragePrice = Math.Max(0D, purchase.PreviousAveragePrice)
+            state.LastPurchaseAtUtc = purchase.PreviousLastPurchaseAtUtc
+            state.TriggeredLevels.Remove(purchase.LevelKey)
+            SpotDcaRepository.SaveState(state)
+        End SyncLock
+
         RaiseUpdated()
     End Sub
 
@@ -192,7 +215,8 @@ Public NotInheritable Class SpotDcaEngine
         lowPrice As Decimal,
         closePrice As Decimal,
         volume As Decimal,
-        isClosed As Boolean)
+        isClosed As Boolean,
+        Optional exchange As String = "BINANCE")
 
         Dim normalized = NormalizeSymbol(symbol)
         If String.IsNullOrWhiteSpace(normalized) OrElse closePrice <= 0D Then Return
@@ -203,6 +227,7 @@ Public NotInheritable Class SpotDcaEngine
             If Not _plans.TryGetValue(normalized, plan) OrElse
                Not plan.Enabled OrElse
                Not plan.UseAutomaticSupports OrElse
+               Not String.Equals(NormalizeExchange(plan.Exchange), NormalizeExchange(exchange), StringComparison.OrdinalIgnoreCase) OrElse
                Not String.Equals(NormalizeInterval(interval), NormalizeInterval(plan.CandleInterval), StringComparison.OrdinalIgnoreCase) Then
                 Return
             End If
@@ -268,7 +293,8 @@ Public NotInheritable Class SpotDcaEngine
     Public Function ProcessPrice(
         symbol As String,
         price As Decimal,
-        Optional timestampUtc As DateTime = Nothing) As DcaPurchase
+        Optional timestampUtc As DateTime = Nothing,
+        Optional exchange As String = "BINANCE") As DcaPurchase
 
         Dim normalized = NormalizeSymbol(symbol)
         If String.IsNullOrWhiteSpace(normalized) OrElse price <= 0D Then Return Nothing
@@ -279,7 +305,9 @@ Public NotInheritable Class SpotDcaEngine
             If Not _running Then Return Nothing
 
             Dim plan As DcaPlan = Nothing
-            If Not _plans.TryGetValue(normalized, plan) OrElse Not plan.Enabled Then Return Nothing
+            If Not _plans.TryGetValue(normalized, plan) OrElse
+               Not plan.Enabled OrElse
+               Not String.Equals(NormalizeExchange(plan.Exchange), NormalizeExchange(exchange), StringComparison.OrdinalIgnoreCase) Then Return Nothing
 
             Dim state = GetOrCreateStateLocked(normalized)
             If state.AnchorPrice <= 0D OrElse price > state.AnchorPrice Then
@@ -380,6 +408,10 @@ Public NotInheritable Class SpotDcaEngine
             Return Nothing
         End If
 
+        Dim previousQuantity = state.Quantity
+        Dim previousInvestedQuote = state.InvestedQuote
+        Dim previousAveragePrice = state.AveragePrice
+        Dim previousLastPurchaseAtUtc = state.LastPurchaseAtUtc
         Dim quantity = quoteAmount / price
         state.Quantity += quantity
         state.InvestedQuote += quoteAmount
@@ -389,12 +421,18 @@ Public NotInheritable Class SpotDcaEngine
 
         Return New DcaPurchase With {
             .Symbol = state.Symbol,
+            .Exchange = plan.Exchange,
             .DropPercent = dropPercent,
             .Price = price,
             .Quantity = quantity,
             .QuoteAmount = quoteAmount,
             .AveragePrice = state.AveragePrice,
-            .TimestampUtc = observedAt}
+            .TimestampUtc = observedAt,
+            .LevelKey = key,
+            .PreviousQuantity = previousQuantity,
+            .PreviousInvestedQuote = previousInvestedQuote,
+            .PreviousAveragePrice = previousAveragePrice,
+            .PreviousLastPurchaseAtUtc = previousLastPurchaseAtUtc}
     End Function
 
     Private Sub RefreshSupportsLocked(plan As DcaPlan, state As DcaState, currentPrice As Decimal)
@@ -451,6 +489,14 @@ Public NotInheritable Class SpotDcaEngine
 
     Private Shared Function NormalizeSymbol(symbol As String) As String
         Return If(symbol, String.Empty).Trim().ToUpperInvariant().Replace("USDT", String.Empty)
+    End Function
+
+    Private Shared Function NormalizeExchange(value As String) As String
+        If String.Equals(value?.Trim(), "GATE.IO", StringComparison.OrdinalIgnoreCase) OrElse
+           String.Equals(value?.Trim(), "GATE", StringComparison.OrdinalIgnoreCase) Then
+            Return "GATE.IO"
+        End If
+        Return "BINANCE"
     End Function
 
     Private Shared Function NormalizeInterval(value As String) As String

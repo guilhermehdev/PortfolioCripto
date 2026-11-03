@@ -1193,6 +1193,7 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
                 .ObservedValue = spacingPercent,
                 .EntryPrice = latest,
                 .StopPrice = stopPrice,
+                .SupportPrice = supportPrice,
                 .GridManaged = True,
                 .Reason = $"grade v2 em regime lateral: compra {buyLevel:F8}, espaçamento {spacingPercent:0.##}%, suporte {supportPrice:F8}, SL {stopDistancePercent:0.##}%"
             }

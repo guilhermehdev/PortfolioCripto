@@ -115,6 +115,8 @@ Public Class FormMain
     Private _lastBotSummaryUpdateUtc As DateTime
     Private _lastBotSimulationAction As String = String.Empty
     Private _cbDcaSymbol As ComboBox
+    Private _cbDcaExchange As ComboBox
+    Private _dcaCashRefreshRunning As Boolean
     Private _txtDcaLevels As TextBox
     Private _nudDcaBudget As NumericUpDown
     Private _nudDcaCooldown As NumericUpDown
@@ -132,6 +134,7 @@ Public Class FormMain
     Private _btDcaReset As Button
     Private _dgDca As DataGridView
     Private _lbDcaStatus As Label
+    Private ReadOnly _dcaOrderInFlight As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
     Private ReadOnly Property UseGateFutures As Boolean
         Get
@@ -1105,14 +1108,28 @@ Public Class FormMain
             .Height = 126,
             .BackColor = Color.FromArgb(30, 30, 30)}
 
-        AddBotLabel(editor, "Moeda", 6, 3, 110)
+        AddBotLabel(editor, "Exchange", 6, 3, 80)
+        _cbDcaExchange = New ComboBox With {
+            .Name = "cbDcaExchange",
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .BackColor = Color.FromArgb(64, 64, 64),
+            .ForeColor = Color.White,
+            .FlatStyle = FlatStyle.Flat,
+            .Location = New Point(6, 24),
+            .Width = 88}
+        _cbDcaExchange.Items.AddRange(New Object() {"BINANCE", "GATE.IO"})
+        _cbDcaExchange.SelectedIndex = 0
+        AddHandler _cbDcaExchange.SelectedIndexChanged, AddressOf DcaExchange_SelectedIndexChanged
+        editor.Controls.Add(_cbDcaExchange)
+
+        AddBotLabel(editor, "Moeda", 102, 3, 110)
         _cbDcaSymbol = New ComboBox With {
             .Name = "cbDcaSymbol",
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
             .FlatStyle = FlatStyle.Flat,
-            .Location = New Point(6, 24),
+            .Location = New Point(102, 24),
             .Width = 125}
         For Each symbol In GetManualSpotBotUniverseCandidates()
             _cbDcaSymbol.Items.Add(symbol)
@@ -1120,23 +1137,23 @@ Public Class FormMain
         If _cbDcaSymbol.Items.Count > 0 Then _cbDcaSymbol.SelectedIndex = 0
         editor.Controls.Add(_cbDcaSymbol)
 
-        AddBotLabel(editor, "Orçamento por moeda (USDT)", 140, 3, 170)
-        _nudDcaBudget = CreateBotNumeric(100D, 1D, 100000000D, 2, 140, 24, 125)
+        AddBotLabel(editor, "Caixa", 240, 3, 110)
+        _nudDcaBudget = CreateBotNumeric(0D, 0D, 100000000D, 2, 240, 24, 125)
         editor.Controls.Add(_nudDcaBudget)
 
-        AddBotLabel(editor, "Níveis/ajustes valor:alocação", 278, 3, 250)
+        AddBotLabel(editor, "Níveis/ajustes valor:alocação", 378, 3, 250)
         _txtDcaLevels = New TextBox With {
             .Name = "txtDcaLevels",
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
             .BorderStyle = BorderStyle.FixedSingle,
-            .Location = New Point(278, 24),
+            .Location = New Point(378, 24),
             .Width = 250,
             .Text = ""}
         editor.Controls.Add(_txtDcaLevels)
 
-        AddBotLabel(editor, "Intervalo (min)", 540, 3, 110)
-        _nudDcaCooldown = CreateBotNumeric(60D, 0D, 10080D, 0, 540, 24, 90)
+        AddBotLabel(editor, "Intervalo (min)", 640, 3, 110)
+        _nudDcaCooldown = CreateBotNumeric(60D, 0D, 10080D, 0, 640, 24, 90)
         editor.Controls.Add(_nudDcaCooldown)
 
         _chkDcaEnabled = New CheckBox With {
@@ -1146,7 +1163,7 @@ Public Class FormMain
             .AutoSize = True,
             .ForeColor = Color.White,
             .BackColor = Color.FromArgb(30, 30, 30),
-            .Location = New Point(642, 27),
+            .Location = New Point(738, 27),
             .Cursor = Cursors.Hand}
         editor.Controls.Add(_chkDcaEnabled)
 
@@ -1202,17 +1219,17 @@ Public Class FormMain
             .Cursor = Cursors.Hand}
         editor.Controls.Add(_chkDcaRequireRejection)
 
-        _btDcaAdd = CreateBotButton("Salvar plano", 710, 24, 110, Color.FromArgb(55, 75, 105))
+        _btDcaAdd = CreateBotButton("Salvar plano", 800, 24, 110, Color.FromArgb(55, 75, 105))
         AddHandler _btDcaAdd.Click, AddressOf DcaSavePlan_Click
         editor.Controls.Add(_btDcaAdd)
-        _btDcaStart = CreateBotButton("Iniciar DCA", 830, 24, 100, Color.DarkGreen)
+        _btDcaStart = CreateBotButton("Iniciar DCA", 920, 24, 100, Color.DarkGreen)
         AddHandler _btDcaStart.Click, AddressOf DcaStart_Click
         editor.Controls.Add(_btDcaStart)
-        _btDcaStop = CreateBotButton("Parar", 940, 24, 75, Color.IndianRed)
+        _btDcaStop = CreateBotButton("Parar", 1030, 24, 75, Color.IndianRed)
         _btDcaStop.Enabled = False
         AddHandler _btDcaStop.Click, AddressOf DcaStop_Click
         editor.Controls.Add(_btDcaStop)
-        _btDcaReset = CreateBotButton("Zerar simulação", 1025, 24, 105, Color.FromArgb(80, 60, 35))
+        _btDcaReset = CreateBotButton("Zerar DCA", 1115, 24, 105, Color.FromArgb(80, 60, 35))
         AddHandler _btDcaReset.Click, AddressOf DcaReset_Click
         editor.Controls.Add(_btDcaReset)
 
@@ -1254,6 +1271,7 @@ Public Class FormMain
             .SelectionForeColor = Color.White,
             .Font = New Font("Calibri", 10.0F)}
         AddDcaGridColumn("Symbol", "Cripto")
+        AddDcaGridColumn("Exchange", "Exchange")
         AddDcaGridColumn("Enabled", "Ativo")
         AddDcaGridColumn("Anchor", "Topo")
         AddDcaGridColumn("LastPrice", "Preço")
@@ -1290,6 +1308,7 @@ Public Class FormMain
 
         AddHandler _spotDca.PurchaseSimulated, AddressOf Dca_PurchaseSimulated
         AddHandler _spotDca.SimulationUpdated, AddressOf Dca_SimulationUpdated
+        DcaExchange_SelectedIndexChanged(Nothing, EventArgs.Empty)
         UpdateDcaGrid()
 
         _btDca = New Button With {
@@ -1316,11 +1335,63 @@ Public Class FormMain
             .AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill})
     End Sub
 
+    Private Async Function LoadDcaHistoricalCandlesAsync(
+        plan As DcaPlan,
+        interval As String,
+        limit As Integer) As Task(Of List(Of DcaCandle))
+
+        If plan IsNot Nothing AndAlso String.Equals(plan.Exchange, "GATE.IO", StringComparison.OrdinalIgnoreCase) Then
+            Return Await _gateSpot.GATE_GetSpotKlinesAsync(plan.Symbol, interval, limit)
+        End If
+
+        Return Await B.BINANCE_GetSpotKlinesAsync(plan?.Symbol, interval, limit)
+    End Function
+
+    Private Async Sub DcaExchange_SelectedIndexChanged(sender As Object, e As EventArgs)
+        Await RefreshDcaExchangeCashAsync()
+    End Sub
+
+    Private Async Function RefreshDcaExchangeCashAsync() As Task
+        If _cbDcaExchange Is Nothing OrElse _nudDcaBudget Is Nothing OrElse _dcaCashRefreshRunning Then Return
+
+        _dcaCashRefreshRunning = True
+        Dim selectedExchange = If(_cbDcaExchange.Text.Trim().ToUpperInvariant(), "BINANCE")
+        Try
+            Dim assets As Dictionary(Of String, Decimal)
+            If String.Equals(selectedExchange, "GATE.IO", StringComparison.OrdinalIgnoreCase) Then
+                assets = Await _gateSpot.GATE_GetAllSpotAssets()
+            Else
+                assets = Await B.BINANCE_GetSpotAssetsFull()
+            End If
+
+            Dim cash = 0D
+            If assets IsNot Nothing Then
+                For Each asset In assets
+                    If Cjson.stablecoins.Contains(asset.Key) Then cash += Math.Max(0D, asset.Value)
+                Next
+            End If
+
+            ' Não sobrescreve o campo se o usuário trocou de exchange durante a consulta.
+            If String.Equals(selectedExchange, _cbDcaExchange.Text.Trim().ToUpperInvariant(), StringComparison.OrdinalIgnoreCase) Then
+                _nudDcaBudget.Value = Math.Max(_nudDcaBudget.Minimum, Math.Min(_nudDcaBudget.Maximum, cash))
+                SetDcaStatus($"Caixa {selectedExchange}: {cash:0.00} USDT.", Color.Gold)
+            End If
+        Catch ex As Exception
+            Debug.WriteLine($"Erro carregando caixa DCA {selectedExchange}: {ex.Message}")
+            If String.Equals(selectedExchange, _cbDcaExchange.Text.Trim().ToUpperInvariant(), StringComparison.OrdinalIgnoreCase) Then
+                SetDcaStatus($"Caixa {selectedExchange}: não foi possível consultar o saldo.", Color.IndianRed)
+            End If
+        Finally
+            _dcaCashRefreshRunning = False
+        End Try
+    End Function
+
     Private Async Sub DcaSavePlan_Click(sender As Object, e As EventArgs)
         Try
             Dim automaticSupports = _chkDcaAutomaticSupports IsNot Nothing AndAlso _chkDcaAutomaticSupports.Checked
             Dim plan = New DcaPlan With {
                 .Symbol = If(_cbDcaSymbol.SelectedItem, String.Empty).ToString(),
+                .Exchange = If(_cbDcaExchange?.Text.Trim().ToUpperInvariant(), "BINANCE"),
                 .BudgetQuote = _nudDcaBudget.Value,
                 .CooldownMinutes = CInt(_nudDcaCooldown.Value),
                 .Enabled = _chkDcaEnabled.Checked,
@@ -1340,8 +1411,9 @@ Public Class FormMain
                                      plan.Levels.Count)
             SetDcaStatus($"Plano {plan.Symbol} salvo com {configuredLevels} ajuste(s)/nível(is).", Color.LimeGreen)
             If _spotDca.IsRunning Then
-                Await _spotDca.LoadHistoricalCandlesAsync(AddressOf B.BINANCE_GetSpotKlinesAsync)
+                Await _spotDca.LoadHistoricalCandlesAsync(AddressOf LoadDcaHistoricalCandlesAsync)
                 Await StartBinanceWebSocket()
+                Await StartGateWebSocket()
             End If
         Catch ex As Exception
             SetDcaStatus("Erro no plano DCA: " & ex.Message, Color.IndianRed)
@@ -1349,19 +1421,44 @@ Public Class FormMain
     End Sub
 
     Private Async Sub DcaStart_Click(sender As Object, e As EventArgs)
-        If _spotDca.GetPlans().Count = 0 Then
+        Dim plans = _spotDca.GetPlans().Where(Function(item) item.Enabled).ToList()
+        If plans.Count = 0 Then
             SetDcaStatus("Salve pelo menos um plano antes de iniciar.", Color.Gold)
             Return
         End If
 
+        If plans.Any(Function(item) String.Equals(item.Exchange, "GATE.IO", StringComparison.OrdinalIgnoreCase)) AndAlso
+           (String.IsNullOrWhiteSpace(ExchangeCredentials.GateAPIKey) OrElse
+            String.IsNullOrWhiteSpace(ExchangeCredentials.GateSecretKey)) Then
+            SetDcaStatus("Configure as credenciais da Gate.io antes de iniciar o DCA.", Color.IndianRed)
+            Return
+        End If
+
+        If plans.Any(Function(item) Not String.Equals(item.Exchange, "GATE.IO", StringComparison.OrdinalIgnoreCase)) AndAlso
+           (String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceAPIKey) OrElse
+            String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceSecretKey)) Then
+            SetDcaStatus("Configure as credenciais da Binance antes de iniciar o DCA.", Color.IndianRed)
+            Return
+        End If
+
         Try
+            If MessageBox.Show(
+                   "O DCA enviará ordens MARKET reais na exchange definida em cada plano." & Environment.NewLine &
+                   "Deseja continuar?",
+                   "Confirmar DCA real",
+                   MessageBoxButtons.YesNo,
+                   MessageBoxIcon.Warning) <> DialogResult.Yes Then
+                Return
+            End If
+
             SetDcaStatus("Carregando candles e recalculando suportes...", Color.Gold)
-            Await _spotDca.LoadHistoricalCandlesAsync(AddressOf B.BINANCE_GetSpotKlinesAsync)
+            Await _spotDca.LoadHistoricalCandlesAsync(AddressOf LoadDcaHistoricalCandlesAsync)
             _spotDca.Start()
             _btDcaStart.Enabled = False
             _btDcaStop.Enabled = True
-            SetDcaStatus("DCA iniciado em modo SIMULAÇÃO; suportes automáticos ativos.", Color.LimeGreen)
+            SetDcaStatus("DCA ativo; ordens MARKET reais e suportes automáticos ativos.", Color.LimeGreen)
             Await StartBinanceWebSocket()
+            Await StartGateWebSocket()
         Catch ex As Exception
             _spotDca.Stop()
             SetDcaStatus("Erro iniciando DCA: " & ex.Message, Color.IndianRed)
@@ -1376,10 +1473,10 @@ Public Class FormMain
     End Sub
 
     Private Sub DcaReset_Click(sender As Object, e As EventArgs)
-        If MessageBox.Show("Zerar quantidades, níveis acionados e capital simulado do DCA?", "DCA", MessageBoxButtons.YesNo, MessageBoxIcon.Question) <> DialogResult.Yes Then Return
+        If MessageBox.Show("Zerar quantidades, níveis acionados e capital registrado do DCA?", "DCA", MessageBoxButtons.YesNo, MessageBoxIcon.Question) <> DialogResult.Yes Then Return
         _spotDca.ResetSimulation()
         UpdateDcaGrid()
-        SetDcaStatus("Simulação DCA zerada.", Color.Gold)
+        SetDcaStatus("Estado do DCA zerado.", Color.Gold)
     End Sub
 
     Private Async Sub DcaGrid_CellContentClick(sender As Object, e As DataGridViewCellEventArgs)
@@ -1426,6 +1523,7 @@ Public Class FormMain
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
         _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
         _btDca.BackColor = Color.SteelBlue
+        DcaExchange_SelectedIndexChanged(Nothing, EventArgs.Empty)
         UpdateDcaGrid()
     End Sub
 
@@ -1500,9 +1598,54 @@ Public Class FormMain
         End If
     End Sub
 
-    Private Sub Dca_PurchaseSimulated(sender As Object, e As DcaPurchaseEventArgs)
+    Private Async Sub Dca_PurchaseSimulated(sender As Object, e As DcaPurchaseEventArgs)
         If e Is Nothing OrElse e.Purchase Is Nothing Then Return
-        SetDcaStatus($"Compra simulada {e.Purchase.Symbol}: {e.Purchase.QuoteAmount:0.00} USDT em -{e.Purchase.DropPercent:0.##}%.", Color.LimeGreen)
+
+        Dim purchase = e.Purchase
+        Dim exchange = If(String.Equals(purchase.Exchange, "GATE.IO", StringComparison.OrdinalIgnoreCase), "GATE.IO", "BINANCE")
+        Dim symbol = ToSpotUsdtSymbol(purchase.Symbol)
+        Dim key = exchange & "|" & symbol
+
+        SyncLock _dcaOrderInFlight
+            If Not _dcaOrderInFlight.Add(key) Then Return
+        End SyncLock
+
+        Try
+            SetDcaStatus($"Enviando DCA {exchange}: {purchase.Symbol} {purchase.QuoteAmount:0.00} USDT...", Color.Gold)
+            Dim orderResponse As String
+            If exchange = "GATE.IO" Then
+                orderResponse = Await _gateSpot.GATE_CreateSpotOrderAsync(
+                    symbol,
+                    "BUY",
+                    "MARKET",
+                    purchase.QuoteAmount)
+            Else
+                orderResponse = Await B.BINANCE_CreateSpotMarketBuyByQuoteAsync(
+                    symbol,
+                    purchase.QuoteAmount)
+            End If
+
+            If String.IsNullOrWhiteSpace(orderResponse) Then
+                Throw New InvalidOperationException("A exchange não retornou confirmação da ordem DCA.")
+            End If
+
+            SetDcaStatus(
+                $"DCA executado {exchange}: {purchase.Symbol} {purchase.QuoteAmount:0.00} USDT em -{purchase.DropPercent:0.##}%.",
+                Color.LimeGreen)
+
+            Try
+                Await refreshMarket()
+            Catch ex As Exception
+                Debug.WriteLine("DCA: ordem enviada, mas a atualização do portfólio falhou: " & ex.Message)
+            End Try
+        Catch ex As Exception
+            _spotDca.RollbackPurchase(purchase)
+            SetDcaStatus($"Erro na ordem DCA de {purchase.Symbol}: {ex.Message}", Color.IndianRed)
+        Finally
+            SyncLock _dcaOrderInFlight
+                _dcaOrderInFlight.Remove(key)
+            End SyncLock
+        End Try
     End Sub
 
     Private Sub Dca_SimulationUpdated(sender As Object, e As DcaSimulationEventArgs)
@@ -1516,6 +1659,10 @@ Public Class FormMain
 
     Private Sub SetDcaStatus(text As String, color As Color)
         If _lbDcaStatus Is Nothing Then Return
+        If InvokeRequired Then
+            BeginInvoke(New Action(Of String, Color)(AddressOf SetDcaStatus), text, color)
+            Return
+        End If
         _lbDcaStatus.Text = text
         _lbDcaStatus.ForeColor = color
     End Sub
@@ -1531,6 +1678,7 @@ Public Class FormMain
             Dim index = _dgDca.Rows.Add()
             Dim row = _dgDca.Rows(index)
             row.Cells("Symbol").Value = plan.Symbol
+            row.Cells("Exchange").Value = plan.Exchange
             row.Cells("Enabled").Value = If(plan.Enabled, "SIM", "NÃO")
             row.Cells("Anchor").Value = If(state.AnchorPrice <= 0D, "-", state.AnchorPrice.ToString("0.########", CultureInfo.InvariantCulture))
             row.Cells("LastPrice").Value = If(state.LastPrice <= 0D, "-", state.LastPrice.ToString("0.########", CultureInfo.InvariantCulture))
@@ -2137,12 +2285,14 @@ Public Class FormMain
                 WriteSpotBotSummaryCsv(basePath & "_resumo.csv", state)
                 WriteSpotBotDataTableCsv(basePath & "_trades.csv", SpotTradeBotRepository.GetTrades(state.RunId))
                 WriteSpotBotDataTableCsv(basePath & "_posicoes.csv", SpotTradeBotRepository.GetOpenPositions(state.RunId))
+                WriteSpotBotComparisonCsv(basePath & "_comparacao.csv", state)
 
                 MessageBox.Show(
-                    "Resultados exportados em três arquivos CSV:" & Environment.NewLine &
+                    "Resultados exportados em quatro arquivos CSV:" & Environment.NewLine &
                     Path.GetFileName(basePath & "_resumo.csv") & Environment.NewLine &
                     Path.GetFileName(basePath & "_trades.csv") & Environment.NewLine &
-                    Path.GetFileName(basePath & "_posicoes.csv"),
+                    Path.GetFileName(basePath & "_posicoes.csv") & Environment.NewLine &
+                    Path.GetFileName(basePath & "_comparacao.csv"),
                     "Exportar Tradebot",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information)
@@ -2185,11 +2335,100 @@ Public Class FormMain
         AppendSpotBotCsvPair(builder, "TrailingAtivo", state.TrailingStopEnabled)
         AppendSpotBotCsvPair(builder, "TrailingDistanciaPercentual", state.TrailingStopDistancePercent)
         AppendSpotBotCsvPair(builder, "CooldownPosSaidaMinutos", state.PostExitCooldownMinutes)
+        AppendSpotBotCsvPair(builder, "GridV2SuporteMaisProximo", state.GridV2UseNearestSupportStop)
+        AppendSpotBotCsvPair(builder, "GridV2BufferSuporteATR", state.GridV2SupportBufferAtr)
+        AppendSpotBotCsvPair(builder, "GridV2StopMinimoPercentual", state.GridV2MinimumStopPercent)
+        AppendSpotBotCsvPair(builder, "GridV2StopMaximoPercentual", state.GridV2MaximumStopPercent)
         AppendSpotBotCsvPair(builder, "AlocacaoPercentual", state.AllocationPercent)
         AppendSpotBotCsvPair(builder, "Taxa", state.FeeRate)
         AppendSpotBotCsvPair(builder, "UltimaAcao", snapshot.LastAction)
         File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
     End Sub
+
+    Private Shared Sub WriteSpotBotComparisonCsv(filePath As String, state As SpotBotPersistedSimulationState)
+        Dim builder As New StringBuilder()
+        builder.AppendLine("Campo;Atual;Run anterior;Delta")
+
+        If state Is Nothing OrElse state.Snapshot Is Nothing Then
+            File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
+            Return
+        End If
+
+        Dim runs = SpotTradeBotRepository.GetRuns()
+        Dim previousRun As DataRow = Nothing
+        If runs IsNot Nothing Then
+            previousRun = runs.AsEnumerable().
+                Where(Function(row) Not row.IsNull("Id") AndAlso Convert.ToInt64(row("Id"), CultureInfo.InvariantCulture) < state.RunId).
+                OrderByDescending(Function(row) Convert.ToInt64(row("Id"), CultureInfo.InvariantCulture)).
+                FirstOrDefault()
+        End If
+
+        Dim currentTrades = SpotTradeBotRepository.GetTrades(state.RunId)
+        Dim currentStops = If(currentTrades Is Nothing,
+                              0D,
+                              currentTrades.AsEnumerable().Count(Function(row) String.Equals(Convert.ToString(row("ExitReason"), CultureInfo.InvariantCulture), "SL", StringComparison.OrdinalIgnoreCase)))
+        Dim currentFees = If(currentTrades Is Nothing,
+                             0D,
+                             currentTrades.AsEnumerable().Sum(Function(row) DecimalFromDataRow(row, "Fees")))
+
+        Dim previousRunId As Object = Nothing
+        Dim previousTrades As DataTable = Nothing
+        Dim previousPnl = 0D
+        Dim previousTradesCount = 0D
+        Dim previousStops = 0D
+        Dim previousWinRate = 0D
+        Dim previousFees = 0D
+
+        If previousRun IsNot Nothing Then
+            previousRunId = previousRun("Id")
+            Dim previousId = Convert.ToInt64(previousRun("Id"), CultureInfo.InvariantCulture)
+            previousTrades = SpotTradeBotRepository.GetTrades(previousId)
+            previousTradesCount = DecimalFromDataRow(previousRun, "CompletedTrades")
+            previousPnl = DecimalFromDataRow(previousRun, "TotalPnl")
+            Dim previousWins = DecimalFromDataRow(previousRun, "WinningTrades")
+            previousWinRate = If(previousTradesCount = 0D, 0D, previousWins * 100D / previousTradesCount)
+            previousStops = If(previousTrades Is Nothing,
+                               0D,
+                               previousTrades.AsEnumerable().Count(Function(row) String.Equals(Convert.ToString(row("ExitReason"), CultureInfo.InvariantCulture), "SL", StringComparison.OrdinalIgnoreCase)))
+            previousFees = If(previousTrades Is Nothing,
+                              0D,
+                              previousTrades.AsEnumerable().Sum(Function(row) DecimalFromDataRow(row, "Fees")))
+        End If
+
+        AppendSpotBotComparisonRow(builder, "RunId", state.RunId, previousRunId)
+        AppendSpotBotComparisonRow(builder, "PnlTotalUSDT", state.Snapshot.TotalPnl, If(previousRun Is Nothing, Nothing, previousPnl))
+        AppendSpotBotComparisonRow(builder, "Trades", state.Snapshot.CompletedTrades, If(previousRun Is Nothing, Nothing, previousTradesCount))
+        AppendSpotBotComparisonRow(builder, "StopsSL", currentStops, If(previousRun Is Nothing, Nothing, previousStops))
+        AppendSpotBotComparisonRow(builder, "WinRatePercentual", state.Snapshot.WinRatePercent, If(previousRun Is Nothing, Nothing, previousWinRate))
+        AppendSpotBotComparisonRow(builder, "TaxasUSDT", currentFees, If(previousRun Is Nothing, Nothing, previousFees))
+
+        File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
+    End Sub
+
+    Private Shared Sub AppendSpotBotComparisonRow(builder As StringBuilder, name As String, currentValue As Object, previousValue As Object)
+        Dim currentText = FormatSpotBotCsvValue(currentValue)
+        Dim previousText = If(previousValue Is Nothing, String.Empty, FormatSpotBotCsvValue(previousValue))
+        Dim deltaText = String.Empty
+
+        If previousValue IsNot Nothing AndAlso TypeOf currentValue Is IConvertible Then
+            Dim currentNumber As Decimal
+            Dim previousNumber As Decimal
+            If Decimal.TryParse(currentText, NumberStyles.Any, CultureInfo.InvariantCulture, currentNumber) AndAlso
+               Decimal.TryParse(previousText, NumberStyles.Any, CultureInfo.InvariantCulture, previousNumber) Then
+                deltaText = FormatSpotBotCsvValue(currentNumber - previousNumber)
+            End If
+        End If
+
+        builder.Append(CsvEscape(name)).Append(";").
+            Append(CsvEscape(currentText)).Append(";").
+            Append(CsvEscape(previousText)).Append(";").
+            AppendLine(CsvEscape(deltaText))
+    End Sub
+
+    Private Shared Function DecimalFromDataRow(row As DataRow, columnName As String) As Decimal
+        If row Is Nothing OrElse Not row.Table.Columns.Contains(columnName) OrElse row.IsNull(columnName) Then Return 0D
+        Return Convert.ToDecimal(row(columnName), CultureInfo.InvariantCulture)
+    End Function
 
     Private Shared Sub AppendSpotBotCsvPair(builder As StringBuilder, name As String, value As Object)
         builder.Append(CsvEscape(name)).Append(";").AppendLine(CsvEscape(FormatSpotBotCsvValue(value)))
@@ -2823,6 +3062,14 @@ Public Class FormMain
             Next
         End If
 
+        For Each dcaPlan In _spotDca.GetPlans()
+            If dcaPlan.Enabled AndAlso
+               String.Equals(dcaPlan.Exchange, "GATE.IO", StringComparison.OrdinalIgnoreCase) AndAlso
+               Not String.IsNullOrWhiteSpace(dcaPlan.Symbol) Then
+                symbols.Add(dcaPlan.Symbol.Trim().ToUpperInvariant())
+            End If
+        Next
+
         If symbols.Count > 0 Then
             Await _gateWs.StartAsync(symbols.Distinct())
         End If
@@ -2971,6 +3218,7 @@ Public Class FormMain
                     UpdateGateRow(symbol, price)
                     UpdateSpotOrdersCurrentPrice(symbol, price, "GATE.IO")
                     UpdateSpotOrderCurrentPrice()
+                    _spotDca.ProcessPrice(symbol, price, exchange:="GATE.IO")
                 End Sub))
 
             Return
@@ -2980,6 +3228,7 @@ Public Class FormMain
         UpdateGateRow(symbol, price)
         UpdateSpotOrdersCurrentPrice(symbol, price, "GATE.IO")
         UpdateSpotOrderCurrentPrice()
+        _spotDca.ProcessPrice(symbol, price, exchange:="GATE.IO")
 
     End Sub
 
@@ -3089,7 +3338,9 @@ Public Class FormMain
             Next
 
             For Each dcaPlan In _spotDca.GetPlans()
-                If dcaPlan.Enabled AndAlso Not String.IsNullOrWhiteSpace(dcaPlan.Symbol) Then
+                If dcaPlan.Enabled AndAlso
+                   Not String.Equals(dcaPlan.Exchange, "GATE.IO", StringComparison.OrdinalIgnoreCase) AndAlso
+                   Not String.IsNullOrWhiteSpace(dcaPlan.Symbol) Then
                     symbols.Add(dcaPlan.Symbol.Trim().ToUpperInvariant())
                 End If
             Next
@@ -3106,7 +3357,7 @@ Public Class FormMain
 
             End If
 
-            Await _binanceWs.StartAsync(symbols, _spotDca.GetRequiredCandleIntervals())
+            Await _binanceWs.StartAsync(symbols, _spotDca.GetRequiredCandleIntervals("BINANCE"))
 
         Catch ex As Exception
 

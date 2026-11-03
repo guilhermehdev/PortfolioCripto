@@ -245,6 +245,76 @@ Public Class Gateio
         Return True
     End Function
 
+    Public Async Function GATE_GetSpotKlinesAsync(
+        symbol As String,
+        interval As String,
+        limit As Integer) As Task(Of List(Of DcaCandle))
+
+        Dim result As New List(Of DcaCandle)()
+        Dim normalizedSymbol = If(symbol, String.Empty).Trim().ToUpperInvariant().Replace("-", "_")
+        If normalizedSymbol.EndsWith("USDT", StringComparison.OrdinalIgnoreCase) AndAlso
+           Not normalizedSymbol.EndsWith("_USDT", StringComparison.OrdinalIgnoreCase) Then
+            normalizedSymbol = normalizedSymbol.Substring(0, normalizedSymbol.Length - 4) & "_USDT"
+        ElseIf Not normalizedSymbol.EndsWith("_USDT", StringComparison.OrdinalIgnoreCase) Then
+            normalizedSymbol &= "_USDT"
+        End If
+
+        Dim normalizedInterval = If(String.Equals(interval?.Trim(), "1d", StringComparison.OrdinalIgnoreCase), "1d", "4h")
+        Dim requestedLimit = Math.Max(30, Math.Min(1000, limit))
+        Dim url = "https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=" &
+                  Uri.EscapeDataString(normalizedSymbol) &
+                  "&interval=" & Uri.EscapeDataString(normalizedInterval) &
+                  "&limit=" & requestedLimit.ToString(CultureInfo.InvariantCulture)
+
+        Using client As New HttpClient()
+            client.DefaultRequestHeaders.Add("User-Agent", "PortfolioCripto/1.0")
+            Dim response = Await client.GetAsync(url)
+            Dim content = Await response.Content.ReadAsStringAsync()
+            If Not response.IsSuccessStatusCode Then
+                Throw New InvalidOperationException(
+                    $"Gate.io não carregou candles de {normalizedSymbol}: HTTP {CInt(response.StatusCode)}.")
+            End If
+
+            Dim raw = TryCast(JToken.Parse(content), JArray)
+            If raw Is Nothing Then Return result
+
+            For Each item In raw.OfType(Of JArray)()
+                If item.Count < 6 Then Continue For
+                Dim startSeconds As Long
+                If Not Long.TryParse(item(0)?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, startSeconds) Then Continue For
+
+                Dim startUtc = DateTimeOffset.FromUnixTimeSeconds(startSeconds).UtcDateTime
+                Dim duration = If(normalizedInterval = "1d", TimeSpan.FromDays(1), TimeSpan.FromHours(4))
+                Dim closeUtc = startUtc.Add(duration)
+                Dim volume As Decimal
+                Dim close As Decimal
+                Dim high As Decimal
+                Dim low As Decimal
+                Dim open As Decimal
+                Decimal.TryParse(item(1)?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, volume)
+                Decimal.TryParse(item(2)?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, close)
+                Decimal.TryParse(item(3)?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, high)
+                Decimal.TryParse(item(4)?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, low)
+                Decimal.TryParse(item(5)?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, open)
+
+                result.Add(New DcaCandle With {
+                    .StartUtc = startUtc,
+                    .CloseUtc = closeUtc,
+                    .Open = open,
+                    .High = high,
+                    .Low = low,
+                    .Close = close,
+                    .Volume = volume,
+                    .IsClosed = closeUtc <= DateTime.UtcNow})
+            Next
+        End Using
+
+        Return result.
+            Where(Function(item) item.IsClosed AndAlso item.Low > 0D AndAlso item.Close > 0D).
+            OrderBy(Function(item) item.StartUtc).
+            ToList()
+    End Function
+
     Public Async Function GATE_CreateSpotOrderAsync(
         symbol As String,
         side As String,

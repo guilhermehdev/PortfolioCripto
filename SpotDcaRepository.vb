@@ -25,6 +25,7 @@ Public NotInheritable Class SpotDcaRepository
                         "CREATE TABLE IF NOT EXISTS DcaPlans (" &
                         "Id INTEGER PRIMARY KEY AUTOINCREMENT, " &
                         "Symbol TEXT NOT NULL UNIQUE, " &
+                        "Exchange TEXT NOT NULL DEFAULT 'BINANCE', " &
                         "Enabled INTEGER NOT NULL DEFAULT 1, " &
                         "BudgetQuote REAL NOT NULL DEFAULT 100, " &
                         "CooldownMinutes INTEGER NOT NULL DEFAULT 60, " &
@@ -44,6 +45,7 @@ Public NotInheritable Class SpotDcaRepository
                 ' Migração compatível com planos DCA criados antes do modo
                 ' automático por zonas de suporte.
                 EnsureColumn(connection, "DcaPlans", "UseAutomaticSupports", "INTEGER NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "DcaPlans", "Exchange", "TEXT NOT NULL DEFAULT 'BINANCE'")
                 EnsureColumn(connection, "DcaPlans", "CandleInterval", "TEXT NOT NULL DEFAULT '4h'")
                 EnsureColumn(connection, "DcaPlans", "SupportLookbackCandles", "INTEGER NOT NULL DEFAULT 200")
                 EnsureColumn(connection, "DcaPlans", "SupportTolerancePercent", "REAL NOT NULL DEFAULT 0.5")
@@ -80,20 +82,21 @@ Public NotInheritable Class SpotDcaRepository
             connection.Open()
             Using command = connection.CreateCommand()
                 command.CommandText =
-                    "INSERT INTO DcaPlans(Symbol, Enabled, BudgetQuote, CooldownMinutes, DropLevels, " &
+                    "INSERT INTO DcaPlans(Symbol, Exchange, Enabled, BudgetQuote, CooldownMinutes, DropLevels, " &
                     "UseAutomaticSupports, CandleInterval, SupportLookbackCandles, SupportTolerancePercent, " &
                     "SupportMinimumTouches, SupportMaxLevels, RequireSupportRejection, ManualSupportLevels, UpdatedAt) " &
-                    "VALUES($symbol, $enabled, $budget, $cooldown, $levels, $automatic, $interval, $lookback, " &
+                    "VALUES($symbol, $exchange, $enabled, $budget, $cooldown, $levels, $automatic, $interval, $lookback, " &
                     "$tolerance, $minTouches, $maxLevels, $rejection, $manualSupports, CURRENT_TIMESTAMP) " &
                     "ON CONFLICT(Symbol) DO UPDATE SET Enabled = excluded.Enabled, " &
                     "BudgetQuote = excluded.BudgetQuote, CooldownMinutes = excluded.CooldownMinutes, " &
-                    "DropLevels = excluded.DropLevels, UseAutomaticSupports = excluded.UseAutomaticSupports, " &
+                    "Exchange = excluded.Exchange, DropLevels = excluded.DropLevels, UseAutomaticSupports = excluded.UseAutomaticSupports, " &
                     "CandleInterval = excluded.CandleInterval, SupportLookbackCandles = excluded.SupportLookbackCandles, " &
                     "SupportTolerancePercent = excluded.SupportTolerancePercent, " &
                     "SupportMinimumTouches = excluded.SupportMinimumTouches, SupportMaxLevels = excluded.SupportMaxLevels, " &
                     "RequireSupportRejection = excluded.RequireSupportRejection, " &
                     "ManualSupportLevels = excluded.ManualSupportLevels, UpdatedAt = CURRENT_TIMESTAMP;"
                 command.Parameters.AddWithValue("$symbol", NormalizeSymbol(plan.Symbol))
+                command.Parameters.AddWithValue("$exchange", NormalizeExchange(plan.Exchange))
                 command.Parameters.AddWithValue("$enabled", If(plan.Enabled, 1, 0))
                 command.Parameters.AddWithValue("$budget", Convert.ToDouble(Math.Max(0D, plan.BudgetQuote), CultureInfo.InvariantCulture))
                 command.Parameters.AddWithValue("$cooldown", Math.Max(0, plan.CooldownMinutes))
@@ -119,7 +122,7 @@ Public NotInheritable Class SpotDcaRepository
             connection.Open()
             Using command = connection.CreateCommand()
                 command.CommandText =
-                    "SELECT Symbol, Enabled, BudgetQuote, CooldownMinutes, DropLevels, " &
+                    "SELECT Symbol, Exchange, Enabled, BudgetQuote, CooldownMinutes, DropLevels, " &
                     "UseAutomaticSupports, CandleInterval, SupportLookbackCandles, SupportTolerancePercent, " &
                     "SupportMinimumTouches, SupportMaxLevels, RequireSupportRejection, ManualSupportLevels " &
                     "FROM DcaPlans ORDER BY Symbol;"
@@ -127,18 +130,19 @@ Public NotInheritable Class SpotDcaRepository
                     While reader.Read()
                         result.Add(New DcaPlan With {
                             .Symbol = reader.GetString(0),
-                            .Enabled = reader.GetInt32(1) <> 0,
-                            .BudgetQuote = ReadDecimal(reader, 2),
-                            .CooldownMinutes = Math.Max(0, reader.GetInt32(3)),
-                            .Levels = DeserializeLevels(If(reader.IsDBNull(4), String.Empty, reader.GetString(4))),
-                            .UseAutomaticSupports = reader.GetInt32(5) <> 0,
-                            .CandleInterval = NormalizeInterval(If(reader.IsDBNull(6), "4h", reader.GetString(6))),
-                            .SupportLookbackCandles = Math.Max(30, reader.GetInt32(7)),
-                            .SupportTolerancePercent = Math.Max(0.05D, ReadDecimal(reader, 8)),
-                            .SupportMinimumTouches = Math.Max(1, reader.GetInt32(9)),
-                            .SupportMaxLevels = Math.Max(1, reader.GetInt32(10)),
-                            .RequireSupportRejection = reader.GetInt32(11) <> 0,
-                            .ManualSupportOverrides = DeserializeManualSupports(If(reader.IsDBNull(12), String.Empty, reader.GetString(12)))})
+                            .Exchange = NormalizeExchange(If(reader.IsDBNull(1), "BINANCE", reader.GetString(1))),
+                            .Enabled = reader.GetInt32(2) <> 0,
+                            .BudgetQuote = ReadDecimal(reader, 3),
+                            .CooldownMinutes = Math.Max(0, reader.GetInt32(4)),
+                            .Levels = DeserializeLevels(If(reader.IsDBNull(5), String.Empty, reader.GetString(5))),
+                            .UseAutomaticSupports = reader.GetInt32(6) <> 0,
+                            .CandleInterval = NormalizeInterval(If(reader.IsDBNull(7), "4h", reader.GetString(7))),
+                            .SupportLookbackCandles = Math.Max(30, reader.GetInt32(8)),
+                            .SupportTolerancePercent = Math.Max(0.05D, ReadDecimal(reader, 9)),
+                            .SupportMinimumTouches = Math.Max(1, reader.GetInt32(10)),
+                            .SupportMaxLevels = Math.Max(1, reader.GetInt32(11)),
+                            .RequireSupportRejection = reader.GetInt32(12) <> 0,
+                            .ManualSupportOverrides = DeserializeManualSupports(If(reader.IsDBNull(13), String.Empty, reader.GetString(13)))})
                     End While
                 End Using
             End Using
@@ -304,6 +308,14 @@ Public NotInheritable Class SpotDcaRepository
             End If
         Next
         Return result
+    End Function
+
+    Private Shared Function NormalizeExchange(value As String) As String
+        If String.Equals(value?.Trim(), "GATE.IO", StringComparison.OrdinalIgnoreCase) OrElse
+           String.Equals(value?.Trim(), "GATE", StringComparison.OrdinalIgnoreCase) Then
+            Return "GATE.IO"
+        End If
+        Return "BINANCE"
     End Function
 
     Private Shared Function NormalizeInterval(value As String) As String

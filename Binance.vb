@@ -466,6 +466,57 @@ Public Class Binance
         Return json
     End Function
 
+    ''' <summary>
+    ''' Envia uma compra MARKET informando diretamente o valor da moeda de cotação
+    ''' (USDT). Isso evita arredondar a quantidade base antes do envio e respeita
+    ''' o orçamento definido pelo DCA.
+    ''' </summary>
+    Public Async Function BINANCE_CreateSpotMarketBuyByQuoteAsync(
+        symbol As String,
+        quoteAmount As Decimal) As Task(Of String)
+
+        Dim normalizedSymbol = symbol?.Trim().ToUpperInvariant()
+        If String.IsNullOrWhiteSpace(normalizedSymbol) Then
+            Throw New ArgumentException("O símbolo da ordem é obrigatório.", NameOf(symbol))
+        End If
+
+        If quoteAmount <= 0D Then
+            Throw New ArgumentException("O valor em USDT deve ser maior que zero.", NameOf(quoteAmount))
+        End If
+
+        Dim filters = Await BINANCE_GetSpotSymbolFiltersAsync(normalizedSymbol)
+        If filters IsNot Nothing AndAlso
+           filters.MinNotional > 0D AndAlso
+           quoteAmount < filters.MinNotional Then
+            Throw New ArgumentException(
+                $"O valor mínimo da ordem para {normalizedSymbol} é ${filters.MinNotional.ToString("0.##", CultureInfo.InvariantCulture)}.")
+        End If
+
+        Dim parameters As New List(Of String) From {
+            "symbol=" & Uri.EscapeDataString(normalizedSymbol),
+            "side=BUY",
+            "type=MARKET",
+            "quoteOrderQty=" & quoteAmount.ToString("0.################", CultureInfo.InvariantCulture),
+            "recvWindow=60000"
+        }
+
+        Dim json = Await QuerySignedAsync(
+            "/api/v3/order",
+            String.Join("&", parameters),
+            httpMethod:="POST")
+
+        If String.IsNullOrWhiteSpace(json) Then
+            Throw New Exception("A Binance não retornou o resultado da ordem DCA.")
+        End If
+
+        Dim response As JObject = JObject.Parse(json)
+        If response("code") IsNot Nothing Then
+            Throw New Exception($"Binance ({response("code")}): {response("msg")}")
+        End If
+
+        Return json
+    End Function
+
     Public Async Function BINANCE_GetSpotSymbolFiltersAsync(symbol As String) As Task(Of BinanceSpotSymbolFilters)
         Dim normalizedSymbol = symbol?.Trim().ToUpperInvariant()
         If String.IsNullOrWhiteSpace(normalizedSymbol) Then
