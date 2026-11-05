@@ -231,6 +231,11 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property BitcoinFlushVolumeMultiplier As Decimal = 1.8D
     Public Property BitcoinFlushVolumeLookback As Integer = 20
     Public Property BitcoinFlushPauseMinutes As Decimal = 30D
+    ' Proteção diária do BTC. A queda é comparada ao fechamento diário anterior
+    ' e o drawdown mede a distância da máxima do dia até o preço atual.
+    Public Property BitcoinDailyProtectionEnabled As Boolean = True
+    Public Property BitcoinDailyDropPercent As Decimal = 4D
+    Public Property BitcoinDailyDrawdownPercent As Decimal = 5D
 
     ' Parâmetros do pullback em zona de valor. A estratégia usa M5 para
     ' contexto, M2 para o retorno à zona e M1 para a confirmação da entrada.
@@ -285,6 +290,9 @@ Public NotInheritable Class SpotBotBitcoinFlushStatus
     Public Property DropPercent As Decimal
     Public Property CandleDropPercent As Decimal
     Public Property VolumeRatio As Decimal
+    Public Property DailyDropPercent As Decimal
+    Public Property DailyDrawdownPercent As Decimal
+    Public Property DailyRangePercent As Decimal
     Public Property PauseUntilUtc As DateTime
     Public Property Reason As String = String.Empty
 End Class
@@ -389,6 +397,9 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property BitcoinFlushVolumeMultiplier As Decimal = 1.8D
     Public Property BitcoinFlushVolumeLookback As Integer = 20
     Public Property BitcoinFlushPauseMinutes As Decimal = 30D
+    Public Property BitcoinDailyProtectionEnabled As Boolean = True
+    Public Property BitcoinDailyDropPercent As Decimal = 4D
+    Public Property BitcoinDailyDrawdownPercent As Decimal = 5D
     Public Property UniverseMinimumTrades24h As Integer = 1000
 End Class
 

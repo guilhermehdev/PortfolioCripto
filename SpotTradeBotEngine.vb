@@ -17,6 +17,7 @@ Public NotInheritable Class SpotTradeBotEngine
     Private ReadOnly _valueZoneM2CurrentCandles As New Dictionary(Of String, CandleState)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _valueZoneM5CurrentCandles As New Dictionary(Of String, CandleState)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _bitcoinFlushCandleHistory As New List(Of SpotBotPricePoint)()
+    Private ReadOnly _bitcoinDailyCandleHistory As New List(Of SpotBotPricePoint)()
     Private ReadOnly _lastSignals As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _lastExits As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _gridRecoveryEntryPrices As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
@@ -32,6 +33,7 @@ Public NotInheritable Class SpotTradeBotEngine
     Private _activeRunId As Long
     Private _restoredStatePending As Boolean
     Private _bitcoinFlushPausedUntilUtc As DateTime
+    Private _bitcoinDailyLastPauseUtc As DateTime
 
     Public Event SignalGenerated As EventHandler(Of SpotBotSignalEventArgs)
     Public Event SimulationUpdated As EventHandler(Of SpotBotSimulationEventArgs)
@@ -82,6 +84,14 @@ Public NotInheritable Class SpotTradeBotEngine
         Get
             SyncLock _sync
                 Return _running
+            End SyncLock
+        End Get
+    End Property
+
+    Public ReadOnly Property ActiveRunId As Long
+        Get
+            SyncLock _sync
+                Return _activeRunId
             End SyncLock
         End Get
     End Property
@@ -199,10 +209,12 @@ Public NotInheritable Class SpotTradeBotEngine
                 _valueZoneM2CurrentCandles.Clear()
                 _valueZoneM5CurrentCandles.Clear()
                 _bitcoinFlushCandleHistory.Clear()
+                _bitcoinDailyCandleHistory.Clear()
                 _lastSignals.Clear()
                 _lastExits.Clear()
                 _gridRecoveryEntryPrices.Clear()
                 _bitcoinFlushPausedUntilUtc = DateTime.MinValue
+                _bitcoinDailyLastPauseUtc = DateTime.MinValue
                 ResetSimulationLocked()
                 If Not _running Then
                     _activeRunId = 0
@@ -223,7 +235,9 @@ Public NotInheritable Class SpotTradeBotEngine
                 _valueZoneM5CurrentCandles.Remove(normalized)
                 If String.Equals(normalized, "BTC", StringComparison.OrdinalIgnoreCase) Then
                     _bitcoinFlushCandleHistory.Clear()
+                    _bitcoinDailyCandleHistory.Clear()
                     _bitcoinFlushPausedUntilUtc = DateTime.MinValue
+                    _bitcoinDailyLastPauseUtc = DateTime.MinValue
                 End If
                 For Each key In _lastSignals.Keys.
                     Where(Function(item) item.StartsWith(normalized & "|", StringComparison.OrdinalIgnoreCase)).
@@ -348,6 +362,10 @@ Public NotInheritable Class SpotTradeBotEngine
             AddWarmupRequirement(result, "1m", oneMinuteLimit)
         End If
 
+        If configuration.BitcoinDailyProtectionEnabled Then
+            AddWarmupRequirement(result, "1d", 30)
+        End If
+
         If enabled.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
            enabled.Contains(SpotBotStrategyKind.ValueZonePullback) Then
             Dim fiveMinuteLimit = Math.Max(
@@ -444,14 +462,40 @@ Public NotInheritable Class SpotTradeBotEngine
                         points.Last().Close)
                 End If
 
+            Case "1d"
+                If String.Equals(symbol, "BTC", StringComparison.OrdinalIgnoreCase) AndAlso
+                   configuration.BitcoinDailyProtectionEnabled Then
+                    _bitcoinDailyCandleHistory.Clear()
+                    Dim dailyHistoryLimit = Math.Max(30, Math.Min(365, configuration.MaximumPriceHistory))
+                    _bitcoinDailyCandleHistory.AddRange(
+                        points.Skip(Math.Max(0, points.Count - dailyHistoryLimit)))
+                End If
+
+                If configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion) OrElse
+                   configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BaseOriginalProtected) OrElse
+                   configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BnfContrarian) Then
+                    ReplaceHistoryLocked(_bollingerCandleHistory, symbol, points, configuration.MaximumPriceHistory)
+                    _bollingerCurrentCandles(symbol) = CreateCandleState(
+                        TruncateToBollingerInterval(DateTime.UtcNow, 1440),
+                        points.Last().Close)
+                End If
+
+                If configuration.EnabledStrategies.Contains(SpotBotStrategyKind.WavePullback) OrElse
+                   configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BreakoutRetest) Then
+                    ReplaceHistoryLocked(_waveCandleHistory, symbol, points, configuration.MaximumPriceHistory)
+                    _waveCurrentCandles(symbol) = CreateCandleState(
+                        TruncateToBollingerInterval(DateTime.UtcNow, 1440),
+                        points.Last().Close)
+                End If
+
             Case "5m"
                 ReplaceHistoryLocked(_valueZoneM5CandleHistory, symbol, points, configuration.MaximumPriceHistory)
                 _valueZoneM5CurrentCandles(symbol) = CreateCandleState(
                     TruncateToFixedInterval(DateTime.UtcNow, 5),
                     points.Last().Close)
 
-            Case "4h", "1d"
-                Dim slowIntervalMinutes = If(interval.Equals("4h", StringComparison.OrdinalIgnoreCase), 240, 1440)
+            Case "4h"
+                Dim slowIntervalMinutes = 240
                 If configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion) OrElse
                    configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BaseOriginalProtected) OrElse
                    configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BnfContrarian) Then
@@ -545,13 +589,25 @@ Public NotInheritable Class SpotTradeBotEngine
         volume As Decimal,
         isClosed As Boolean) As SpotBotBitcoinFlushStatus
 
-        If Not String.Equals(interval?.Trim(), "1m", StringComparison.OrdinalIgnoreCase) OrElse
+        Dim normalizedInterval = interval?.Trim().ToLowerInvariant()
+        If (normalizedInterval <> "1m" AndAlso normalizedInterval <> "1d") OrElse
            openPrice <= 0D OrElse highPrice <= 0D OrElse lowPrice <= 0D OrElse
-           closePrice <= 0D OrElse Not isClosed Then
+           closePrice <= 0D OrElse (normalizedInterval = "1m" AndAlso Not isClosed) Then
             Return Nothing
         End If
 
         SyncLock _sync
+            If normalizedInterval = "1d" Then
+                Return ProcessBitcoinDailyCandleLocked(
+                    candleStartUtc,
+                    openPrice,
+                    highPrice,
+                    lowPrice,
+                    closePrice,
+                    volume,
+                    isClosed)
+            End If
+
             Dim status As New SpotBotBitcoinFlushStatus With {
                 .CurrentPrice = closePrice}
 
@@ -663,6 +719,113 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
             Return status
         End SyncLock
+    End Function
+
+    Private Function ProcessBitcoinDailyCandleLocked(
+        candleStartUtc As DateTime,
+        openPrice As Decimal,
+        highPrice As Decimal,
+        lowPrice As Decimal,
+        closePrice As Decimal,
+        volume As Decimal,
+        isClosed As Boolean) As SpotBotBitcoinFlushStatus
+
+        Dim status As New SpotBotBitcoinFlushStatus With {
+            .CurrentPrice = closePrice}
+
+        If Not _running OrElse Not _configuration.BitcoinDailyProtectionEnabled Then
+            Return status
+        End If
+
+        Dim candleTimestamp = If(
+            candleStartUtc.Kind = DateTimeKind.Unspecified,
+            DateTime.SpecifyKind(candleStartUtc, DateTimeKind.Utc),
+            candleStartUtc.ToUniversalTime())
+        Dim candle = New SpotBotPricePoint(
+            candleTimestamp,
+            closePrice,
+            openPrice,
+            highPrice,
+            lowPrice,
+            Math.Max(0D, volume))
+
+        If _bitcoinDailyCandleHistory.Count > 0 AndAlso
+           _bitcoinDailyCandleHistory(_bitcoinDailyCandleHistory.Count - 1).TimestampUtc = candle.TimestampUtc Then
+            _bitcoinDailyCandleHistory(_bitcoinDailyCandleHistory.Count - 1) = candle
+        Else
+            _bitcoinDailyCandleHistory.Add(candle)
+        End If
+
+        Dim dailyHistoryLimit = Math.Max(30, Math.Min(365, _configuration.MaximumPriceHistory))
+        If _bitcoinDailyCandleHistory.Count > dailyHistoryLimit Then
+            _bitcoinDailyCandleHistory.RemoveRange(
+                0,
+                _bitcoinDailyCandleHistory.Count - dailyHistoryLimit)
+        End If
+
+        Dim nowUtc = DateTime.UtcNow
+        status.IsPaused = _bitcoinFlushPausedUntilUtc > nowUtc
+        status.PauseUntilUtc = _bitcoinFlushPausedUntilUtc
+        If _bitcoinDailyCandleHistory.Count < 2 Then
+            If status.IsPaused Then
+                status.Reason = $"proteção BTC ativa até {_bitcoinFlushPausedUntilUtc.ToLocalTime():HH:mm:ss}"
+            End If
+            Return status
+        End If
+
+        Dim currentCandle = _bitcoinDailyCandleHistory(_bitcoinDailyCandleHistory.Count - 1)
+        Dim referenceCandle = _bitcoinDailyCandleHistory(_bitcoinDailyCandleHistory.Count - 2)
+        If referenceCandle.Close <= 0D OrElse currentCandle.Close <= 0D Then Return status
+
+        status.DailyDropPercent = Math.Max(
+            0D,
+            (referenceCandle.Close - currentCandle.Close) / referenceCandle.Close * 100D)
+        status.DailyDrawdownPercent = Math.Max(
+            0D,
+            (currentCandle.High - currentCandle.Close) / currentCandle.High * 100D)
+        status.DailyRangePercent = If(
+            currentCandle.Low <= 0D,
+            0D,
+            (currentCandle.High - currentCandle.Low) / currentCandle.Low * 100D)
+
+        Dim dropThreshold = Math.Max(0.1D, _configuration.BitcoinDailyDropPercent)
+        Dim drawdownThreshold = Math.Max(0.1D, _configuration.BitcoinDailyDrawdownPercent)
+        Dim dailyProtectionTriggered = currentCandle.IsBearish AndAlso
+                                        (status.DailyDropPercent >= dropThreshold OrElse
+                                         status.DailyDrawdownPercent >= drawdownThreshold)
+
+        If dailyProtectionTriggered Then
+            Dim pauseMinutes = Math.Max(1D, _configuration.BitcoinFlushPauseMinutes)
+            Dim canExtendPause = _bitcoinDailyLastPauseUtc = DateTime.MinValue OrElse
+                                 _bitcoinDailyLastPauseUtc.AddMinutes(CDbl(pauseMinutes)) <= nowUtc
+            If canExtendPause Then
+                Dim wasPaused = _bitcoinFlushPausedUntilUtc > nowUtc
+                _bitcoinFlushPausedUntilUtc = If(
+                    _bitcoinFlushPausedUntilUtc > nowUtc,
+                    _bitcoinFlushPausedUntilUtc,
+                    nowUtc).AddMinutes(CDbl(pauseMinutes))
+                _bitcoinDailyLastPauseUtc = nowUtc
+                status.NewFlushDetected = Not wasPaused
+            End If
+
+            status.IsPaused = _bitcoinFlushPausedUntilUtc > nowUtc
+            status.PauseUntilUtc = _bitcoinFlushPausedUntilUtc
+            status.Reason =
+                $"proteção diária BTC: queda {status.DailyDropPercent:0.##}% " &
+                $"e drawdown da máxima {status.DailyDrawdownPercent:0.##}% " &
+                $"(amplitude {status.DailyRangePercent:0.##}%); novas entradas pausadas até " &
+                $"{_bitcoinFlushPausedUntilUtc.ToLocalTime():HH:mm:ss}"
+            _simulationLastAction = "Proteção BTC: " & status.Reason
+            Return status
+        End If
+
+        If status.IsPaused Then
+            status.Reason = $"proteção BTC ativa até {_bitcoinFlushPausedUntilUtc.ToLocalTime():HH:mm:ss}"
+        Else
+            _bitcoinDailyLastPauseUtc = DateTime.MinValue
+        End If
+
+        Return status
     End Function
 
     Public Function ProcessPrice(
@@ -1456,6 +1619,9 @@ Public NotInheritable Class SpotTradeBotEngine
         _configuration.BitcoinFlushVolumeMultiplier = Math.Max(1.1D, state.BitcoinFlushVolumeMultiplier)
         _configuration.BitcoinFlushVolumeLookback = Math.Max(5, state.BitcoinFlushVolumeLookback)
         _configuration.BitcoinFlushPauseMinutes = Math.Max(1D, state.BitcoinFlushPauseMinutes)
+        _configuration.BitcoinDailyProtectionEnabled = state.BitcoinDailyProtectionEnabled
+        _configuration.BitcoinDailyDropPercent = Math.Max(0.1D, state.BitcoinDailyDropPercent)
+        _configuration.BitcoinDailyDrawdownPercent = Math.Max(0.1D, state.BitcoinDailyDrawdownPercent)
         _simulationQuoteBalance = Math.Max(0D, state.Snapshot.QuoteBalance)
         _simulationRealizedPnl = state.Snapshot.RealizedPnl
         _simulationCompletedTrades = state.Snapshot.CompletedTrades
@@ -2113,6 +2279,9 @@ Public NotInheritable Class SpotTradeBotEngine
             .BitcoinFlushVolumeMultiplier = source.BitcoinFlushVolumeMultiplier,
             .BitcoinFlushVolumeLookback = source.BitcoinFlushVolumeLookback,
             .BitcoinFlushPauseMinutes = source.BitcoinFlushPauseMinutes,
+            .BitcoinDailyProtectionEnabled = source.BitcoinDailyProtectionEnabled,
+            .BitcoinDailyDropPercent = source.BitcoinDailyDropPercent,
+            .BitcoinDailyDrawdownPercent = source.BitcoinDailyDrawdownPercent,
             .ValueZoneFastEmaPeriod = source.ValueZoneFastEmaPeriod,
             .ValueZoneSlowEmaPeriod = source.ValueZoneSlowEmaPeriod,
             .ValueZoneAtrPeriod = source.ValueZoneAtrPeriod,

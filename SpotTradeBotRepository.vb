@@ -73,6 +73,9 @@ Public NotInheritable Class SpotTradeBotRepository
                          "BitcoinFlushVolumeMultiplier REAL NOT NULL DEFAULT 1.8, " &
                          "BitcoinFlushVolumeLookback INTEGER NOT NULL DEFAULT 20, " &
                          "BitcoinFlushPauseMinutes REAL NOT NULL DEFAULT 30, " &
+                         "BitcoinDailyProtectionEnabled INTEGER NOT NULL DEFAULT 1, " &
+                         "BitcoinDailyDropPercent REAL NOT NULL DEFAULT 4, " &
+                         "BitcoinDailyDrawdownPercent REAL NOT NULL DEFAULT 5, " &
                         "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                         ");"
                     command.ExecuteNonQuery()
@@ -105,6 +108,9 @@ Public NotInheritable Class SpotTradeBotRepository
                 EnsureColumn(connection, "SpotBotRuns", "BitcoinFlushVolumeMultiplier", "REAL NOT NULL DEFAULT 1.8")
                 EnsureColumn(connection, "SpotBotRuns", "BitcoinFlushVolumeLookback", "INTEGER NOT NULL DEFAULT 20")
                 EnsureColumn(connection, "SpotBotRuns", "BitcoinFlushPauseMinutes", "REAL NOT NULL DEFAULT 30")
+                EnsureColumn(connection, "SpotBotRuns", "BitcoinDailyProtectionEnabled", "INTEGER NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "BitcoinDailyDropPercent", "REAL NOT NULL DEFAULT 4")
+                EnsureColumn(connection, "SpotBotRuns", "BitcoinDailyDrawdownPercent", "REAL NOT NULL DEFAULT 5")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -230,7 +236,8 @@ Public NotInheritable Class SpotTradeBotRepository
                         "GridV2RequireRejection, GridV2RiskPerTradePercent, GridV2ReserveQuotePercent, GridV2MaxLevels, " &
                         "BitcoinFlushProtectionEnabled, BitcoinFlushLookbackMinutes, BitcoinFlushDropPercent, " &
                         "BitcoinFlushCandleDropPercent, BitcoinFlushVolumeMultiplier, BitcoinFlushVolumeLookback, " &
-                        "BitcoinFlushPauseMinutes) " &
+                        "BitcoinFlushPauseMinutes, BitcoinDailyProtectionEnabled, BitcoinDailyDropPercent, " &
+                        "BitcoinDailyDrawdownPercent) " &
                     "VALUES ($startedAt, $status, $enabledStrategies, $combinationMode, $requiredConfirmations, " &
                         "$startingQuote, $allocationPercent, $feeRate, $equity, $quoteBalance, " &
                         "$bollingerPeriod, $bollingerStandardDeviations, $bollingerCandleMinutes, " &
@@ -241,7 +248,8 @@ Public NotInheritable Class SpotTradeBotRepository
                         "$gridV2RequireRejection, $gridV2RiskPerTradePercent, $gridV2ReserveQuotePercent, $gridV2MaxLevels, " &
                         "$bitcoinFlushProtectionEnabled, $bitcoinFlushLookbackMinutes, $bitcoinFlushDropPercent, " &
                         "$bitcoinFlushCandleDropPercent, $bitcoinFlushVolumeMultiplier, $bitcoinFlushVolumeLookback, " &
-                        "$bitcoinFlushPauseMinutes);"
+                        "$bitcoinFlushPauseMinutes, $bitcoinDailyProtectionEnabled, $bitcoinDailyDropPercent, " &
+                        "$bitcoinDailyDrawdownPercent);"
 
                 command.Parameters.AddWithValue("$startedAt", UtcText(DateTime.UtcNow))
                 command.Parameters.AddWithValue("$status", "RUNNING")
@@ -280,6 +288,9 @@ Public NotInheritable Class SpotTradeBotRepository
                 AddRealParameter(command, "$bitcoinFlushVolumeMultiplier", Math.Max(1.1D, configuration.BitcoinFlushVolumeMultiplier))
                 command.Parameters.AddWithValue("$bitcoinFlushVolumeLookback", Math.Max(5, configuration.BitcoinFlushVolumeLookback))
                 AddRealParameter(command, "$bitcoinFlushPauseMinutes", Math.Max(1D, configuration.BitcoinFlushPauseMinutes))
+                command.Parameters.AddWithValue("$bitcoinDailyProtectionEnabled", If(configuration.BitcoinDailyProtectionEnabled, 1, 0))
+                AddRealParameter(command, "$bitcoinDailyDropPercent", Math.Max(0.1D, configuration.BitcoinDailyDropPercent))
+                AddRealParameter(command, "$bitcoinDailyDrawdownPercent", Math.Max(0.1D, configuration.BitcoinDailyDrawdownPercent))
                 command.ExecuteNonQuery()
             End Using
 
@@ -311,6 +322,9 @@ Public NotInheritable Class SpotTradeBotRepository
                     "BitcoinFlushVolumeMultiplier = $bitcoinFlushVolumeMultiplier, " &
                     "BitcoinFlushVolumeLookback = $bitcoinFlushVolumeLookback, " &
                     "BitcoinFlushPauseMinutes = $bitcoinFlushPauseMinutes, " &
+                    "BitcoinDailyProtectionEnabled = $bitcoinDailyProtectionEnabled, " &
+                    "BitcoinDailyDropPercent = $bitcoinDailyDropPercent, " &
+                    "BitcoinDailyDrawdownPercent = $bitcoinDailyDrawdownPercent, " &
                     "UpdatedAt = CURRENT_TIMESTAMP " &
                     "WHERE Id = $runId;"
                 AddRealParameter(command, "$allocationPercent", Math.Min(100D, Math.Max(0D, configuration.SimulationAllocationPercent)))
@@ -326,6 +340,9 @@ Public NotInheritable Class SpotTradeBotRepository
                 AddRealParameter(command, "$bitcoinFlushVolumeMultiplier", Math.Max(1.1D, configuration.BitcoinFlushVolumeMultiplier))
                 command.Parameters.AddWithValue("$bitcoinFlushVolumeLookback", Math.Max(5, configuration.BitcoinFlushVolumeLookback))
                 AddRealParameter(command, "$bitcoinFlushPauseMinutes", Math.Max(1D, configuration.BitcoinFlushPauseMinutes))
+                command.Parameters.AddWithValue("$bitcoinDailyProtectionEnabled", If(configuration.BitcoinDailyProtectionEnabled, 1, 0))
+                AddRealParameter(command, "$bitcoinDailyDropPercent", Math.Max(0.1D, configuration.BitcoinDailyDropPercent))
+                AddRealParameter(command, "$bitcoinDailyDrawdownPercent", Math.Max(0.1D, configuration.BitcoinDailyDrawdownPercent))
                 command.Parameters.AddWithValue("$runId", runId)
                 command.ExecuteNonQuery()
             End Using
@@ -571,7 +588,8 @@ Public NotInheritable Class SpotTradeBotRepository
                         "GridV2RequireRejection, GridV2RiskPerTradePercent, GridV2ReserveQuotePercent, GridV2MaxLevels, " &
                         "BitcoinFlushProtectionEnabled, BitcoinFlushLookbackMinutes, BitcoinFlushDropPercent, " &
                         "BitcoinFlushCandleDropPercent, BitcoinFlushVolumeMultiplier, BitcoinFlushVolumeLookback, " &
-                        "BitcoinFlushPauseMinutes " &
+                        "BitcoinFlushPauseMinutes, BitcoinDailyProtectionEnabled, BitcoinDailyDropPercent, " &
+                        "BitcoinDailyDrawdownPercent " &
                     "FROM SpotBotRuns ORDER BY Id DESC LIMIT 1;"
 
                 Using reader = command.ExecuteReader()
@@ -624,7 +642,10 @@ Public NotInheritable Class SpotTradeBotRepository
                           .BitcoinFlushCandleDropPercent = If(reader.IsDBNull(42), 1.5D, Math.Max(0.1D, ReadDecimal(reader, 42))),
                           .BitcoinFlushVolumeMultiplier = If(reader.IsDBNull(43), 1.8D, Math.Max(1.1D, ReadDecimal(reader, 43))),
                           .BitcoinFlushVolumeLookback = If(reader.IsDBNull(44), 20, Math.Max(5, reader.GetInt32(44))),
-                          .BitcoinFlushPauseMinutes = If(reader.IsDBNull(45), 30D, Math.Max(1D, ReadDecimal(reader, 45)))
+                          .BitcoinFlushPauseMinutes = If(reader.IsDBNull(45), 30D, Math.Max(1D, ReadDecimal(reader, 45))),
+                          .BitcoinDailyProtectionEnabled = If(reader.IsDBNull(46), True, reader.GetInt32(46) <> 0),
+                          .BitcoinDailyDropPercent = If(reader.IsDBNull(47), 4D, Math.Max(0.1D, ReadDecimal(reader, 47))),
+                          .BitcoinDailyDrawdownPercent = If(reader.IsDBNull(48), 5D, Math.Max(0.1D, ReadDecimal(reader, 48)))
                     }
 
                     If Not reader.IsDBNull(2) Then

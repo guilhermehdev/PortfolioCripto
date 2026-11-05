@@ -115,7 +115,11 @@ Public Class FormMain
     Private _botBtcFlushDropPercent As NumericUpDown
     Private _botBtcFlushPauseMinutes As NumericUpDown
     Private _botBtcFlushVolumeMultiplier As NumericUpDown
+    Private _botBtcDailyEnabled As CheckBox
+    Private _botBtcDailyDropPercent As NumericUpDown
+    Private _botBtcDailyDrawdownPercent As NumericUpDown
     Private _botUniverseButton As Button
+    Private _botTrades As Button
     Private ReadOnly _spotBotUniverseSymbols As New List(Of String)()
     Private _botSimulationSummary As Label
     Private _botStart As Button
@@ -805,7 +809,7 @@ Public Class FormMain
 
         Dim editor As New Panel With {
             .Dock = DockStyle.Top,
-            .Height = 180,
+            .Height = 210,
             .BackColor = Color.FromArgb(30, 30, 30)
         }
         _panelSpotBotEditor = editor
@@ -948,6 +952,10 @@ Public Class FormMain
         _botExport = CreateBotButton("Exportar CSV", 1000, 24, 100, Color.FromArgb(55, 75, 105))
         AddHandler _botExport.Click, AddressOf SpotBotExport_Click
         editor.Controls.Add(_botExport)
+
+        _botTrades = CreateBotButton("Trades da run", 884, 24, 110, Color.FromArgb(55, 75, 105))
+        AddHandler _botTrades.Click, AddressOf SpotBotTrades_Click
+        editor.Controls.Add(_botTrades)
 
         AddBotLabel(editor, "Saldo virtual (USDT)", 240, 88, 110)
         _botStartingQuote = CreateBotNumeric(1000D, 0D, 100000000D, 2, 240, 107, 98)
@@ -1183,6 +1191,49 @@ Public Class FormMain
         ToolTip1.SetToolTip(
             _botBtcFlushVolumeMultiplier,
             "Volume do candle atual em relação à média dos candles anteriores.")
+
+        AddBotLabel(editor, "Queda diária (%)", 730, 180, 78)
+        _botBtcDailyDropPercent = CreateBotNumeric(
+            _spotTradeBot.Configuration.BitcoinDailyDropPercent,
+            0.1D,
+            50D,
+            2,
+            730,
+            199,
+            72)
+        editor.Controls.Add(_botBtcDailyDropPercent)
+
+        AddBotLabel(editor, "Oscilação do dia (%)", 810, 180, 105)
+        _botBtcDailyDrawdownPercent = CreateBotNumeric(
+            _spotTradeBot.Configuration.BitcoinDailyDrawdownPercent,
+            0.1D,
+            50D,
+            2,
+            810,
+            199,
+            90)
+        editor.Controls.Add(_botBtcDailyDrawdownPercent)
+
+        _botBtcDailyEnabled = New CheckBox With {
+            .Text = "Proteger no diário",
+            .AutoSize = False,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .Location = New Point(910, 199),
+            .Size = New Size(145, 23),
+            .Checked = _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled,
+            .Cursor = Cursors.Hand
+        }
+        editor.Controls.Add(_botBtcDailyEnabled)
+        ToolTip1.SetToolTip(
+            _botBtcDailyDropPercent,
+            "Pausa novas entradas quando o BTC estiver abaixo do fechamento diário anterior por este percentual.")
+        ToolTip1.SetToolTip(
+            _botBtcDailyDrawdownPercent,
+            "Pausa quando a queda da máxima do candle diário em formação atingir este percentual, desde que o candle esteja negativo.")
+        ToolTip1.SetToolTip(
+            _botBtcDailyEnabled,
+            "Usa o candle diário em formação para detectar queda e oscilação fortes do BTC.")
 
         _botLog = New RichTextBox With {
             .Name = "rtbSpotBotLog",
@@ -2368,6 +2419,9 @@ Public Class FormMain
         _spotTradeBot.Configuration.BitcoinFlushDropPercent = _botBtcFlushDropPercent.Value
         _spotTradeBot.Configuration.BitcoinFlushPauseMinutes = _botBtcFlushPauseMinutes.Value
         _spotTradeBot.Configuration.BitcoinFlushVolumeMultiplier = _botBtcFlushVolumeMultiplier.Value
+        _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled = _botBtcDailyEnabled.Checked
+        _spotTradeBot.Configuration.BitcoinDailyDropPercent = _botBtcDailyDropPercent.Value
+        _spotTradeBot.Configuration.BitcoinDailyDrawdownPercent = _botBtcDailyDrawdownPercent.Value
         _spotTradeBot.Configuration.SimulationFeeRate = _botFee.Value / 100D
         _spotTradeBot.Configuration.TakeProfitPercent = _botTakeProfit.Value
         _spotTradeBot.Configuration.StopLossPercent = _botStopLoss.Value
@@ -2470,6 +2524,9 @@ Public Class FormMain
         _botBtcFlushPauseMinutes.Enabled = False
         _botBtcFlushEnabled.Enabled = False
         _botBtcFlushVolumeMultiplier.Enabled = False
+        _botBtcDailyDropPercent.Enabled = False
+        _botBtcDailyDrawdownPercent.Enabled = False
+        _botBtcDailyEnabled.Enabled = False
         Await StartBinanceWebSocket()
         _botStart.Enabled = False
         _botStop.Enabled = True
@@ -2513,6 +2570,12 @@ Public Class FormMain
             $"{_spotTradeBot.Configuration.BitcoinFlushLookbackMinutes}m, volume mínimo " &
             $"{_spotTradeBot.Configuration.BitcoinFlushVolumeMultiplier:0.##}x, pausa " &
             $"{_spotTradeBot.Configuration.BitcoinFlushPauseMinutes:0} min. Stops continuam ativos.",
+            Color.LightGray)
+        AppendSpotBotLog(
+            $"Proteção diária BTC: {If(_spotTradeBot.Configuration.BitcoinDailyProtectionEnabled, "ativa", "desligada")}; " &
+            $"queda {_spotTradeBot.Configuration.BitcoinDailyDropPercent:0.##}% ou drawdown da máxima " &
+            $"{_spotTradeBot.Configuration.BitcoinDailyDrawdownPercent:0.##}%. " &
+            "A pausa bloqueia novas entradas e mantém stops ativos.",
             Color.LightGray)
         If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.WavePullback) Then
             AppendSpotBotLog(
@@ -2562,6 +2625,9 @@ Public Class FormMain
         _botBtcFlushPauseMinutes.Enabled = True
         _botBtcFlushEnabled.Enabled = True
         _botBtcFlushVolumeMultiplier.Enabled = True
+        _botBtcDailyDropPercent.Enabled = True
+        _botBtcDailyDrawdownPercent.Enabled = True
+        _botBtcDailyEnabled.Enabled = True
         AppendSpotBotLog("Bot Spot parado.", Color.IndianRed)
     End Sub
 
@@ -2615,6 +2681,35 @@ Public Class FormMain
         End Try
     End Sub
 
+    Private Sub SpotBotTrades_Click(sender As Object, e As EventArgs)
+        Try
+            Dim runId = _spotTradeBot.ActiveRunId
+            If runId <= 0 Then
+                Dim state = SpotTradeBotRepository.LoadLatestRestorableState()
+                runId = If(state Is Nothing, 0L, state.RunId)
+            End If
+
+            If runId <= 0 Then
+                MessageBox.Show(
+                    "Ainda não há uma run do Tradebot com trades registrados.",
+                    "Trades da run",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information)
+                Return
+            End If
+
+            Using tradesForm As New SpotTradeBotTradesForm(runId)
+                tradesForm.ShowDialog(Me)
+            End Using
+        Catch ex As Exception
+            MessageBox.Show(
+                "Erro carregando os trades da run: " & ex.Message,
+                "Trades da run",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error)
+        End Try
+    End Sub
+
     Private Shared Sub WriteSpotBotSummaryCsv(filePath As String, state As SpotBotPersistedSimulationState)
         Dim snapshot = state.Snapshot
         Dim builder As New StringBuilder()
@@ -2658,6 +2753,9 @@ Public Class FormMain
         AppendSpotBotCsvPair(builder, "FlushBTCQuedaPercentual", state.BitcoinFlushDropPercent)
         AppendSpotBotCsvPair(builder, "FlushBTCPausaMinutos", state.BitcoinFlushPauseMinutes)
         AppendSpotBotCsvPair(builder, "FlushBTCVolumeMultiplicador", state.BitcoinFlushVolumeMultiplier)
+        AppendSpotBotCsvPair(builder, "ProtecaoDiariaBTC", state.BitcoinDailyProtectionEnabled)
+        AppendSpotBotCsvPair(builder, "QuedaDiariaBTCPercentual", state.BitcoinDailyDropPercent)
+        AppendSpotBotCsvPair(builder, "DrawdownMaximaBTCPercentual", state.BitcoinDailyDrawdownPercent)
         AppendSpotBotCsvPair(builder, "Negocios24hMinimos", state.UniverseMinimumTrades24h)
         AppendSpotBotCsvPair(builder, "AlocacaoPercentual", state.AllocationPercent)
         AppendSpotBotCsvPair(builder, "Taxa", state.FeeRate)
@@ -3665,6 +3763,12 @@ Public Class FormMain
                 End If
             Next
 
+            If _spotTradeBot.IsRunning AndAlso
+               (_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled OrElse
+                _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled) Then
+                symbols.Add("BTC")
+            End If
+
             symbols =
             symbols.Distinct().ToList()
 
@@ -3682,6 +3786,11 @@ Public Class FormMain
                _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled AndAlso
                Not candleIntervals.Contains("1m", StringComparer.OrdinalIgnoreCase) Then
                 candleIntervals.Add("1m")
+            End If
+            If _spotTradeBot.IsRunning AndAlso
+               _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled AndAlso
+               Not candleIntervals.Contains("1d", StringComparer.OrdinalIgnoreCase) Then
+                candleIntervals.Add("1d")
             End If
 
             Await _binanceWs.StartAsync(symbols, candleIntervals.Distinct(StringComparer.OrdinalIgnoreCase))
