@@ -320,6 +320,32 @@ Public Class GateFutures
         Return normalized
     End Function
 
+    ''' <summary>
+    ''' Carrega o preço de marcação inicial de um contrato Futures.
+    ''' O WebSocket continua responsável pelas atualizações seguintes.
+    ''' </summary>
+    Public Async Function GATE_GetFuturesMarkPriceAsync(symbol As String) As Task(Of Decimal)
+        Dim contract = ToContract(symbol)
+        Dim raw = Await SendPublicAsync(
+            "/futures/usdt/tickers?contract=" & Uri.EscapeDataString(contract))
+        Dim tickers = TryCast(JToken.Parse(raw), JArray)
+        If tickers Is Nothing OrElse tickers.Count = 0 Then
+            Throw New InvalidOperationException("A Gate não retornou cotação para o contrato Futures selecionado.")
+        End If
+
+        Dim item = tickers.OfType(Of JObject)().FirstOrDefault()
+        If item Is Nothing Then
+            Throw New InvalidOperationException("A Gate não retornou uma cotação Futures válida.")
+        End If
+
+        Dim markPrice = ReadDecimal(item, "mark_price", "last", "price")
+        If markPrice <= 0D Then
+            Throw New InvalidOperationException("A Gate não retornou um preço Futures válido.")
+        End If
+
+        Return markPrice
+    End Function
+
     Private Shared Async Function SendPublicAsync(path As String) As Task(Of String)
         Using response = Await Http.GetAsync(BaseUrl & path)
             Dim body = Await response.Content.ReadAsStringAsync()

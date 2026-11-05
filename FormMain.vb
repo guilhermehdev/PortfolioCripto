@@ -56,6 +56,7 @@ Public Class FormMain
     Private _dgOrdensFuturos As DataGridView
     Private _btAtualizarOrdensFuturos As Button
     Private _futuresOrdersLoadRunning As Boolean = False
+    Private _cbFuturesOrderExchange As ComboBox
     Private _cbFuturesOrderSymbol As ComboBox
     Private _cbFuturesOrderSide As ComboBox
     Private _cbFuturesOrderType As ComboBox
@@ -70,6 +71,7 @@ Public Class FormMain
     Private _futuresAvailableUsd As Decimal = 0D
     Private _futuresOrderInputUpdating As Boolean = False
     Private _futuresOrderInputMode As String = "Quantity"
+    Private _futuresOrderPriceKey As String = String.Empty
     Private _spotOrderInputUpdating As Boolean = False
     Private _spotOrderInputMode As String = "Quantity"
     Private ReadOnly _futuresLeverageBySymbol As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
@@ -176,6 +178,55 @@ Public Class FormMain
         If UseGateFutures Then Return "GATE"
         Return "BINANCE"
     End Function
+
+    Private Function GetSelectedFuturesOrderExchange() As String
+        If _cbFuturesOrderExchange Is Nothing OrElse
+           String.IsNullOrWhiteSpace(_cbFuturesOrderExchange.Text) Then
+            Return GetDefaultFuturesExchange()
+        End If
+
+        Return NormalizeFuturesExchange(_cbFuturesOrderExchange.Text)
+    End Function
+
+    Private Function IsFuturesExchangeConfigured(exchange As String) As Boolean
+        If NormalizeFuturesExchange(exchange) = "GATE" Then
+            Return UseGateFutures
+        End If
+
+        Return UseBinanceFutures
+    End Function
+
+    Private Sub RefreshFuturesOrderExchanges()
+        If _cbFuturesOrderExchange Is Nothing Then
+            Return
+        End If
+
+        Dim previousExchange = GetSelectedFuturesOrderExchange()
+        _cbFuturesOrderExchange.BeginUpdate()
+        Try
+            _cbFuturesOrderExchange.Items.Clear()
+            If UseBinanceFutures Then
+                _cbFuturesOrderExchange.Items.Add("BINANCE")
+            End If
+            If UseGateFutures Then
+                _cbFuturesOrderExchange.Items.Add("GATE")
+            End If
+
+            ' Mantém a seleção disponível mesmo antes de as credenciais serem
+            ' configuradas, para que o painel continue orientando o usuário.
+            If _cbFuturesOrderExchange.Items.Count = 0 Then
+                _cbFuturesOrderExchange.Items.AddRange(New Object() {"BINANCE", "GATE"})
+            End If
+
+            Dim selectedIndex = _cbFuturesOrderExchange.FindStringExact(previousExchange)
+            If selectedIndex < 0 Then
+                selectedIndex = _cbFuturesOrderExchange.FindStringExact(GetDefaultFuturesExchange())
+            End If
+            _cbFuturesOrderExchange.SelectedIndex = If(selectedIndex >= 0, selectedIndex, 0)
+        Finally
+            _cbFuturesOrderExchange.EndUpdate()
+        End Try
+    End Sub
 
     Private Function GetRowFuturesExchange(row As DataGridViewRow) As String
         If row IsNot Nothing AndAlso
@@ -314,10 +365,15 @@ Public Class FormMain
         OpçõesToolStripMenuItem.DropDownItems.Insert(0, _credentialsMenuItem)
     End Sub
 
-    Private Sub CredentialsMenuItem_Click(sender As Object, e As EventArgs)
+    Private Async Sub CredentialsMenuItem_Click(sender As Object, e As EventArgs)
         Using credentialsForm As New FormExchangeCredentials()
             credentialsForm.ShowDialog(Me)
         End Using
+
+        RefreshFuturesOrderExchanges()
+        If PanelFuturos IsNot Nothing AndAlso PanelFuturos.Visible Then
+            Await LoadFuturesOrdersAsync()
+        End If
     End Sub
 
     Private Sub ConfigureSpotOrdersPanel()
@@ -557,29 +613,44 @@ Public Class FormMain
             .BackColor = Color.FromArgb(30, 30, 30)
         }
 
-        AddSpotOrderEditorLabel(editor, "Cripto", 6, 1, 150)
+        AddSpotOrderEditorLabel(editor, "Exchange", 6, 1, 82)
+        _cbFuturesOrderExchange = New ComboBox With {
+            .BackColor = Color.FromArgb(45, 45, 45),
+            .DropDownStyle = ComboBoxStyle.DropDownList,
+            .FlatStyle = FlatStyle.Flat,
+            .ForeColor = Color.White,
+            .Location = New Point(6, 17),
+            .Name = "cbFuturesOrderExchange",
+            .Size = New Size(82, 23)
+        }
+        RefreshFuturesOrderExchanges()
+        AddHandler _cbFuturesOrderExchange.SelectedIndexChanged, AddressOf FuturesOrderExchangeChanged
+        editor.Controls.Add(_cbFuturesOrderExchange)
+        ToolTip1.SetToolTip(_cbFuturesOrderExchange, "Exchange usada para carregar saldo, ordens e enviar a ordem")
+
+        AddSpotOrderEditorLabel(editor, "Cripto", 94, 1, 125)
         _cbFuturesOrderSymbol = New ComboBox With {
             .BackColor = Color.FromArgb(45, 45, 45),
             .DropDownStyle = ComboBoxStyle.DropDown,
             .FlatStyle = FlatStyle.Flat,
             .ForeColor = Color.White,
-            .Location = New Point(6, 17),
+            .Location = New Point(94, 17),
             .Name = "cbFuturesOrderSymbol",
-            .Size = New Size(150, 23)
+            .Size = New Size(125, 23)
         }
         AddHandler _cbFuturesOrderSymbol.SelectedIndexChanged, AddressOf FuturesOrderSymbolChanged
         AddHandler _cbFuturesOrderSymbol.TextChanged, AddressOf FuturesOrderSymbolTextChanged
         editor.Controls.Add(_cbFuturesOrderSymbol)
 
-        _btGraficoFuturesOrder = CreateSpotOrderEditorButton("↗", 160, 15, 28)
+        _btGraficoFuturesOrder = CreateSpotOrderEditorButton("↗", 223, 15, 28)
         _btGraficoFuturesOrder.Name = "btGraficoFuturesOrder"
         _btGraficoFuturesOrder.Font = New Font("Calibri", 10.0F, FontStyle.Bold)
         AddHandler _btGraficoFuturesOrder.Click, AddressOf btGraficoFuturesOrder_Click
         editor.Controls.Add(_btGraficoFuturesOrder)
         ToolTip1.SetToolTip(_btGraficoFuturesOrder, "Abrir gráfico da moeda selecionada")
 
-        AddSpotOrderEditorLabel(editor, "Preço atual", 194, 1, 110)
-        _txtFuturesOrderCurrentPrice = CreateSpotOrderEditorTextBox("txtFuturesOrderCurrentPrice", 194, 17, 110)
+        AddSpotOrderEditorLabel(editor, "Preço atual", 257, 1, 100)
+        _txtFuturesOrderCurrentPrice = CreateSpotOrderEditorTextBox("txtFuturesOrderCurrentPrice", 257, 17, 100)
         _txtFuturesOrderCurrentPrice.ReadOnly = True
         _txtFuturesOrderCurrentPrice.TabStop = False
         _txtFuturesOrderCurrentPrice.TextAlign = HorizontalAlignment.Right
@@ -587,58 +658,58 @@ Public Class FormMain
         _txtFuturesOrderCurrentPrice.Text = "--"
         editor.Controls.Add(_txtFuturesOrderCurrentPrice)
 
-        AddSpotOrderEditorLabel(editor, "Lado", 314, 1, 76)
+        AddSpotOrderEditorLabel(editor, "Lado", 365, 1, 70)
         _cbFuturesOrderSide = New ComboBox With {
             .BackColor = Color.FromArgb(45, 45, 45),
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .FlatStyle = FlatStyle.Flat,
             .ForeColor = Color.White,
-            .Location = New Point(314, 17),
+            .Location = New Point(365, 17),
             .Name = "cbFuturesOrderSide",
-            .Size = New Size(76, 23)
+            .Size = New Size(70, 23)
         }
         _cbFuturesOrderSide.Items.AddRange(New Object() {"LONG", "SHORT"})
         _cbFuturesOrderSide.SelectedIndex = 0
         editor.Controls.Add(_cbFuturesOrderSide)
 
-        AddSpotOrderEditorLabel(editor, "Tipo", 398, 1, 76)
+        AddSpotOrderEditorLabel(editor, "Tipo", 443, 1, 70)
         _cbFuturesOrderType = New ComboBox With {
             .BackColor = Color.FromArgb(45, 45, 45),
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .FlatStyle = FlatStyle.Flat,
             .ForeColor = Color.White,
-            .Location = New Point(398, 17),
+            .Location = New Point(443, 17),
             .Name = "cbFuturesOrderType",
-            .Size = New Size(76, 23)
+            .Size = New Size(70, 23)
         }
         _cbFuturesOrderType.Items.Add("LIMIT")
         _cbFuturesOrderType.SelectedIndex = 0
         AddHandler _cbFuturesOrderType.SelectedIndexChanged, AddressOf FuturesOrderTypeChanged
         editor.Controls.Add(_cbFuturesOrderType)
 
-        AddSpotOrderEditorLabel(editor, "Disponível", 482, 1, 90)
+        AddSpotOrderEditorLabel(editor, "Disponível", 521, 1, 84)
         _lbFuturesOrderAvailable = New Label With {
             .AutoSize = False,
             .BackColor = Color.FromArgb(45, 45, 45),
             .BorderStyle = BorderStyle.FixedSingle,
             .ForeColor = Color.Gold,
-            .Location = New Point(482, 17),
+            .Location = New Point(521, 17),
             .Name = "lbFuturesOrderAvailable",
-            .Size = New Size(90, 23),
+            .Size = New Size(84, 23),
             .Text = "$0.00",
             .TextAlign = ContentAlignment.MiddleRight
         }
         editor.Controls.Add(_lbFuturesOrderAvailable)
 
-        AddSpotOrderEditorLabel(editor, "Alavancagem", 576, 1, 76)
+        AddSpotOrderEditorLabel(editor, "Alavancagem", 613, 1, 70)
         _cbFuturesOrderLeverage = New ComboBox With {
             .BackColor = Color.FromArgb(45, 45, 45),
             .DropDownStyle = ComboBoxStyle.DropDownList,
             .FlatStyle = FlatStyle.Flat,
             .ForeColor = Color.White,
-            .Location = New Point(576, 17),
+            .Location = New Point(613, 17),
             .Name = "cbFuturesOrderLeverage",
-            .Size = New Size(76, 23)
+            .Size = New Size(70, 23)
         }
         For leverage As Integer = 0 To 10
             _cbFuturesOrderLeverage.Items.Add($"{leverage}x")
@@ -646,30 +717,30 @@ Public Class FormMain
         _cbFuturesOrderLeverage.SelectedIndex = 0
         editor.Controls.Add(_cbFuturesOrderLeverage)
 
-        AddSpotOrderEditorLabel(editor, "Quantidade", 658, 1, 84)
-        _txtFuturesOrderQuantity = CreateSpotOrderEditorTextBox("txtFuturesOrderQuantity", 658, 17, 84)
+        AddSpotOrderEditorLabel(editor, "Quantidade", 689, 1, 80)
+        _txtFuturesOrderQuantity = CreateSpotOrderEditorTextBox("txtFuturesOrderQuantity", 689, 17, 80)
         AddHandler _txtFuturesOrderQuantity.TextChanged, AddressOf FuturesOrderQuantityChanged
         editor.Controls.Add(_txtFuturesOrderQuantity)
 
-        AddSpotOrderEditorLabel(editor, "Preço limite", 748, 1, 90)
-        _txtFuturesOrderPrice = CreateSpotOrderEditorTextBox("txtFuturesOrderPrice", 748, 17, 90)
+        AddSpotOrderEditorLabel(editor, "Preço limite", 775, 1, 80)
+        _txtFuturesOrderPrice = CreateSpotOrderEditorTextBox("txtFuturesOrderPrice", 775, 17, 80)
         AddHandler _txtFuturesOrderPrice.TextChanged, AddressOf FuturesOrderPriceChanged
         editor.Controls.Add(_txtFuturesOrderPrice)
 
-        AddSpotOrderEditorLabel(editor, "Valor USDT", 844, 1, 90)
-        _txtFuturesOrderNotional = CreateSpotOrderEditorTextBox("txtFuturesOrderNotional", 844, 17, 90)
+        AddSpotOrderEditorLabel(editor, "Valor USDT", 861, 1, 80)
+        _txtFuturesOrderNotional = CreateSpotOrderEditorTextBox("txtFuturesOrderNotional", 861, 17, 80)
         _txtFuturesOrderNotional.TextAlign = HorizontalAlignment.Right
         _txtFuturesOrderNotional.ForeColor = Color.Gold
         AddHandler _txtFuturesOrderNotional.TextChanged, AddressOf FuturesOrderNotionalChanged
         editor.Controls.Add(_txtFuturesOrderNotional)
 
-        _btAbrirFuturesOrder = CreateSpotOrderEditorButton("Enviar ordem", 940, 15, 100)
+        _btAbrirFuturesOrder = CreateSpotOrderEditorButton("Enviar ordem", 947, 15, 94)
         _btAbrirFuturesOrder.BackColor = Color.DarkGreen
         _btAbrirFuturesOrder.Name = "btAbrirFuturesOrder"
         AddHandler _btAbrirFuturesOrder.Click, AddressOf btAbrirFuturesOrder_Click
         editor.Controls.Add(_btAbrirFuturesOrder)
 
-        _btAtualizarOrdensFuturos = CreateSpotOrderEditorButton("Atualizar", 1046, 15, 90)
+        _btAtualizarOrdensFuturos = CreateSpotOrderEditorButton("Atualizar", 1047, 15, 89)
         _btAtualizarOrdensFuturos.Name = "btAtualizarOrdensFuturos"
         AddHandler _btAtualizarOrdensFuturos.Click, AddressOf btAtualizarOrdensFuturos_Click
         editor.Controls.Add(_btAtualizarOrdensFuturos)
@@ -5649,8 +5720,16 @@ Public Class FormMain
             Debug.WriteLine("Erro ao carregar moedas do SQLite para ordens Futures: " & ex.Message)
         End Try
 
+        Dim selectedExchange = GetSelectedFuturesOrderExchange()
         For Each row As DataGridViewRow In dgFuturos.Rows
             If row.IsNewRow Then Continue For
+            If dgFuturos.Columns.Contains("Exchange") AndAlso
+               Not String.Equals(
+                   NormalizeFuturesExchange(row.Cells("Exchange").Value?.ToString()),
+                   selectedExchange,
+                   StringComparison.OrdinalIgnoreCase) Then
+                Continue For
+            End If
             Dim positionSymbol = ToFuturesUsdtSymbol(row.Cells("Symbol").Value?.ToString())
             If Not String.IsNullOrWhiteSpace(positionSymbol) AndAlso
                Not symbols.Contains(positionSymbol, StringComparer.OrdinalIgnoreCase) Then
@@ -5742,15 +5821,69 @@ Public Class FormMain
             Return
         End If
 
+        Dim symbol = ToFuturesUsdtSymbol(_cbFuturesOrderSymbol.Text)
+        Dim exchange = GetSelectedFuturesOrderExchange()
+        Dim priceKey = If(
+            String.IsNullOrWhiteSpace(symbol),
+            String.Empty,
+            exchange & "|" & symbol)
         Dim price As Decimal
-        If TryGetFuturesCurrentPrice(_cbFuturesOrderSymbol.Text, price) Then
+        If TryGetFuturesCurrentPrice(
+               symbol,
+               exchange,
+               price) Then
             _txtFuturesOrderCurrentPrice.Text = "$" & price.ToString("0.0000", CultureInfo.GetCultureInfo("en-US"))
-        Else
+            _futuresOrderPriceKey = priceKey
+        ElseIf Not String.Equals(_futuresOrderPriceKey, priceKey, StringComparison.OrdinalIgnoreCase) Then
             _txtFuturesOrderCurrentPrice.Text = "--"
+            _futuresOrderPriceKey = priceKey
         End If
 
         UpdateFuturesOrderLinkedValue()
     End Sub
+
+    Private Async Function LoadFuturesOrderCurrentPriceAsync() As Task
+        If _txtFuturesOrderCurrentPrice Is Nothing OrElse _cbFuturesOrderSymbol Is Nothing Then
+            Return
+        End If
+
+        Dim symbol = ToFuturesUsdtSymbol(_cbFuturesOrderSymbol.Text)
+        If String.IsNullOrWhiteSpace(symbol) Then
+            Return
+        End If
+
+        Dim exchange = GetSelectedFuturesOrderExchange()
+        Dim priceKey = exchange & "|" & symbol
+        Dim currentPrice As Decimal
+        If TryGetFuturesCurrentPrice(symbol, exchange, currentPrice) Then
+            Return
+        End If
+
+        Try
+            Dim loadedPrice = If(
+                exchange = "GATE",
+                Await _gateFutures.GATE_GetFuturesMarkPriceAsync(symbol),
+                Await B.BINANCE_GetFuturesMarkPriceAsync(symbol))
+
+            If loadedPrice <= 0D OrElse
+               Not String.Equals(
+                   ToFuturesUsdtSymbol(_cbFuturesOrderSymbol.Text),
+                   symbol,
+                   StringComparison.OrdinalIgnoreCase) OrElse
+               Not String.Equals(
+                   GetSelectedFuturesOrderExchange(),
+                   exchange,
+                   StringComparison.OrdinalIgnoreCase) Then
+                Return
+            End If
+
+            _txtFuturesOrderCurrentPrice.Text = "$" & loadedPrice.ToString("0.0000", CultureInfo.GetCultureInfo("en-US"))
+            _futuresOrderPriceKey = priceKey
+            UpdateFuturesOrderLinkedValue()
+        Catch ex As Exception
+            Debug.WriteLine($"Erro ao carregar preço inicial de Futures ({exchange}/{symbol}): {ex.Message}")
+        End Try
+    End Function
 
     Private Function TryGetFuturesOrderPrice(ByRef price As Decimal) As Boolean
         If _txtFuturesOrderPrice IsNot Nothing AndAlso
@@ -5862,11 +5995,25 @@ Public Class FormMain
         UpdateFuturesOrderLinkedValue()
     End Sub
 
+    Private Async Sub FuturesOrderExchangeChanged(sender As Object, e As EventArgs)
+        If _cbFuturesOrderExchange Is Nothing OrElse _dgOrdensFuturos Is Nothing Then
+            Return
+        End If
+
+        PopulateFuturesOrderSymbols()
+        UpdateFuturesOrderCurrentPrice()
+        Await EnsureFuturesMarketWebSocketAsync()
+        UpdateFuturesOrderCurrentPrice()
+        Await LoadFuturesOrderCurrentPriceAsync()
+        Await LoadFuturesOrdersAsync()
+    End Sub
+
     Private Async Sub FuturesOrderSymbolChanged(sender As Object, e As EventArgs)
         UpdateFuturesOrderCurrentPrice()
         If Not String.IsNullOrWhiteSpace(ToFuturesUsdtSymbol(_cbFuturesOrderSymbol?.Text)) Then
             Await EnsureFuturesMarketWebSocketAsync()
             UpdateFuturesOrderCurrentPrice()
+            Await LoadFuturesOrderCurrentPriceAsync()
         End If
     End Sub
 
@@ -5892,34 +6039,36 @@ Public Class FormMain
 
         Try
             PopulateFuturesOrderSymbols()
+            Dim selectedExchange = GetSelectedFuturesOrderExchange()
             Dim availableBalance As Decimal = 0D
             Dim accountLoaded = False
-            If UseBinanceFutures Then
+            If selectedExchange = "BINANCE" AndAlso UseBinanceFutures Then
                 Try
                     Dim binanceAccount = Await B.BINANCE_GetFuturesAccountSummaryAsync()
-                    availableBalance += binanceAccount.AvailableBalance
+                    availableBalance = binanceAccount.AvailableBalance
                     accountLoaded = True
                 Catch ex As Exception
                     AppendFuturesProviderError("Binance", ex)
                 End Try
             End If
-            If UseGateFutures Then
+            If selectedExchange = "GATE" AndAlso UseGateFutures Then
                 Try
                     Dim gateAccount = Await _gateFutures.GATE_GetFuturesAccountSummaryAsync()
-                    availableBalance += gateAccount.AvailableBalance
+                    availableBalance = gateAccount.AvailableBalance
                     accountLoaded = True
                 Catch ex As Exception
                     AppendFuturesProviderError("Gate", ex)
                 End Try
             End If
             If Not accountLoaded Then
-                Throw New InvalidOperationException("Nenhuma conta de futuros está disponível. Configure as credenciais da Binance ou da Gate.")
+                Throw New InvalidOperationException(
+                    $"A conta de futuros da exchange {selectedExchange} não está disponível. Configure as credenciais e as permissões dessa exchange.")
             End If
             _futuresAvailableUsd = availableBalance
             UpdateFuturesOrderAvailableLabel()
 
             Try
-                If UseBinanceFutures Then
+                If selectedExchange = "BINANCE" AndAlso UseBinanceFutures Then
                     Dim binancePositions = Await B.BINANCE_GetFuturesPositionsAsync(includeEmptyPositions:=True)
                     For Each position In binancePositions
                         If position IsNot Nothing AndAlso position.Leverage > 0 Then
@@ -5928,7 +6077,7 @@ Public Class FormMain
                         End If
                     Next
                 End If
-                If UseGateFutures Then
+                If selectedExchange = "GATE" AndAlso UseGateFutures Then
                     Dim gatePositions = Await _gateFutures.GATE_GetFuturesPositionsAsync(includeEmptyPositions:=True)
                     For Each position In gatePositions
                         If position IsNot Nothing AndAlso position.Leverage > 0 Then
@@ -5942,7 +6091,7 @@ Public Class FormMain
             End Try
 
             Dim orders As New List(Of BinanceFuturesOrder)()
-            If UseBinanceFutures Then
+            If selectedExchange = "BINANCE" AndAlso UseBinanceFutures Then
                 Try
                     Dim binanceOrders = Await B.BINANCE_GetFuturesOpenOrdersAsync()
                     For Each order In binanceOrders
@@ -5953,7 +6102,7 @@ Public Class FormMain
                     AppendFuturesProviderError("Binance", ex)
                 End Try
             End If
-            If UseGateFutures Then
+            If selectedExchange = "GATE" AndAlso UseGateFutures Then
                 Try
                     Dim gateOrders = Await _gateFutures.GATE_GetFuturesOpenOrdersAsync()
                     For Each order In gateOrders
@@ -6016,7 +6165,7 @@ Public Class FormMain
             Next
 
             Dim protectionOrders As New List(Of BinanceFuturesProtectionOrder)()
-            If UseBinanceFutures Then
+            If selectedExchange = "BINANCE" AndAlso UseBinanceFutures Then
                 Try
                     Dim binanceProtectionOrders = Await B.BINANCE_GetFuturesProtectionOrdersAsync()
                     For Each protection In binanceProtectionOrders
@@ -6027,7 +6176,7 @@ Public Class FormMain
                     AppendFuturesProviderError("Binance", ex)
                 End Try
             End If
-            If UseGateFutures Then
+            If selectedExchange = "GATE" AndAlso UseGateFutures Then
                 Try
                     Dim gateProtectionOrders = Await _gateFutures.GATE_GetFuturesProtectionOrdersAsync()
                     For Each protection In gateProtectionOrders
@@ -6076,6 +6225,7 @@ Public Class FormMain
             _dgOrdensFuturos.DataSource = table
             ConfigureFuturesOrdersGrid()
             Await EnsureFuturesMarketWebSocketAsync()
+            Await LoadFuturesOrderCurrentPriceAsync()
         Catch ex As Exception
             Debug.WriteLine("Erro ao carregar ordens Futures: " & ex.Message)
             MessageBox.Show(
@@ -6345,7 +6495,7 @@ Public Class FormMain
         End If
 
         Dim symbol = ToFuturesUsdtSymbol(_cbFuturesOrderSymbol.Text)
-        Dim exchange = GetDefaultFuturesExchange()
+        Dim exchange = GetSelectedFuturesOrderExchange()
         Dim positionSide = _cbFuturesOrderSide.Text.Trim().ToUpperInvariant()
         Dim orderType = _cbFuturesOrderType.Text.Trim().ToUpperInvariant()
         Dim leverage As Integer = 0
@@ -6356,6 +6506,15 @@ Public Class FormMain
             Integer.TryParse(
                 _cbFuturesOrderLeverage.Text.Replace("x", String.Empty).Trim(),
                 leverage)
+        End If
+
+        If Not IsFuturesExchangeConfigured(exchange) Then
+            MessageBox.Show(
+                $"Configure as credenciais e as permissões de Futures da exchange {exchange} antes de enviar a ordem.",
+                "Ordem Futures",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning)
+            Return
         End If
 
         If String.IsNullOrWhiteSpace(symbol) OrElse

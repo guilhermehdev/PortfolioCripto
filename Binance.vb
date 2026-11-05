@@ -736,6 +736,41 @@ Public Class Binance
         End Select
     End Function
 
+    ''' <summary>
+    ''' Carrega o preço de marcação inicial de um contrato Futures.
+    ''' O WebSocket continua responsável pelas atualizações seguintes.
+    ''' </summary>
+    Public Async Function BINANCE_GetFuturesMarkPriceAsync(symbol As String) As Task(Of Decimal)
+        Dim normalizedSymbol = If(symbol, String.Empty).Trim().ToUpperInvariant()
+        If String.IsNullOrWhiteSpace(normalizedSymbol) Then
+            Throw New ArgumentException("O símbolo Futures é obrigatório.")
+        End If
+
+        Using client As New HttpClient()
+            client.DefaultRequestHeaders.Add("User-Agent", "PortfolioCripto/1.0")
+            Dim url = "https://fapi.binance.com/fapi/v1/premiumIndex?symbol=" &
+                      Uri.EscapeDataString(normalizedSymbol)
+            Using response = Await client.GetAsync(url)
+                Dim body = Await response.Content.ReadAsStringAsync()
+                If Not response.IsSuccessStatusCode Then
+                    Throw New InvalidOperationException($"Binance Futures HTTP {CInt(response.StatusCode)}: {body}")
+                End If
+
+                Dim item = JObject.Parse(body)
+                If item("code") IsNot Nothing Then
+                    Throw New Exception($"Binance ({item("code")}): {item("msg")}")
+                End If
+
+                Dim markPrice = ParseDecimalInvariant(GetTokenValue(item, "markPrice", "price"))
+                If markPrice <= 0D Then
+                    Throw New InvalidOperationException("A Binance não retornou um preço Futures válido.")
+                End If
+
+                Return markPrice
+            End Using
+        End Using
+    End Function
+
     Public Async Function BINANCE_GetFuturesOpenOrdersAsync(
         Optional symbol As String = "") As Task(Of List(Of BinanceFuturesOrder))
 
