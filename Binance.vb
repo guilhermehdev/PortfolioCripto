@@ -56,6 +56,7 @@ Public Class BinanceSpotUniverseCandidate
     Public Property Symbol As String = String.Empty
     Public Property BaseAsset As String = String.Empty
     Public Property QuoteVolume As Decimal
+    Public Property Trades24h As Long
 End Class
 
 Public Class Binance
@@ -620,11 +621,20 @@ Public Class Binance
 
     Public Async Function BINANCE_GetTopSpotSymbolsByVolumeAsync(
         maxAssets As Integer,
-        minimumQuoteVolume As Decimal) As Task(Of List(Of String))
+        minimumQuoteVolume As Decimal,
+        Optional minimumTrades24h As Integer = 0,
+        Optional allowedBaseAssets As IEnumerable(Of String) = Nothing) As Task(Of List(Of String))
 
         Dim result As New List(Of String)()
         Dim requestedCount = Math.Max(1, Math.Min(500, maxAssets))
         Dim minimumVolume = Math.Max(0D, minimumQuoteVolume)
+        Dim minimumTrades = Math.Max(0, minimumTrades24h)
+        Dim allowed = If(allowedBaseAssets Is Nothing,
+                         Nothing,
+                         New HashSet(Of String)(allowedBaseAssets.
+                             Where(Function(item) Not String.IsNullOrWhiteSpace(item)).
+                             Select(Function(item) item.Trim().ToUpperInvariant()),
+                             StringComparer.OrdinalIgnoreCase))
 
         Using client As New HttpClient()
             client.DefaultRequestHeaders.Add("User-Agent", "PortfolioCripto/1.0")
@@ -636,10 +646,17 @@ Public Class Binance
             If tickerArray Is Nothing Then Return result
 
             Dim volumes As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+            Dim trades As New Dictionary(Of String, Long)(StringComparer.OrdinalIgnoreCase)
             For Each ticker In tickerArray
                 Dim symbol = ticker("symbol")?.ToString()?.Trim().ToUpperInvariant()
                 If String.IsNullOrWhiteSpace(symbol) Then Continue For
                 volumes(symbol) = ParseDecimalInvariant(ticker("quoteVolume"))
+                Dim tradeCount As Long
+                If Long.TryParse(ticker("count")?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, tradeCount) Then
+                    trades(symbol) = tradeCount
+                Else
+                    trades(symbol) = 0L
+                End If
             Next
 
             Dim candidates As New List(Of BinanceSpotUniverseCandidate)()
@@ -656,7 +673,9 @@ Public Class Binance
                    status <> "TRADING" OrElse
                    (spotAllowed IsNot Nothing AndAlso Not spotAllowed.Value(Of Boolean)()) OrElse
                    IsStablecoinAsset(baseAsset) OrElse
-                   IsLeveragedToken(baseAsset) Then
+                   IsLeveragedToken(baseAsset) OrElse
+                   (allowed IsNot Nothing AndAlso allowed.Count > 0 AndAlso
+                    Not allowed.Contains(baseAsset) AndAlso Not allowed.Contains(symbol)) Then
                     Continue For
                 End If
 
@@ -665,10 +684,19 @@ Public Class Binance
                     Continue For
                 End If
 
+                Dim tradeCount = 0L
+                If trades.TryGetValue(symbol, tradeCount) AndAlso tradeCount < minimumTrades Then
+                    Continue For
+                End If
+                If minimumTrades > 0 AndAlso Not trades.ContainsKey(symbol) Then
+                    Continue For
+                End If
+
                 candidates.Add(New BinanceSpotUniverseCandidate With {
                     .Symbol = symbol,
                     .BaseAsset = baseAsset,
-                    .QuoteVolume = quoteVolume
+                    .QuoteVolume = quoteVolume,
+                    .Trades24h = tradeCount
                 })
             Next
 

@@ -899,6 +899,7 @@ Public NotInheritable Class SpotTradeBotEngine
         _configuration.GridV2SupportBufferAtr = Math.Max(0D, state.GridV2SupportBufferAtr)
         _configuration.GridV2MinimumStopPercent = Math.Max(0D, state.GridV2MinimumStopPercent)
         _configuration.GridV2MaximumStopPercent = Math.Max(_configuration.GridV2MinimumStopPercent, state.GridV2MaximumStopPercent)
+        _configuration.GridV2MinimumSupportDistancePercent = Math.Max(0D, state.GridV2MinimumSupportDistancePercent)
         _simulationQuoteBalance = Math.Max(0D, state.Snapshot.QuoteBalance)
         _simulationRealizedPnl = state.Snapshot.RealizedPnl
         _simulationCompletedTrades = state.Snapshot.CompletedTrades
@@ -1525,6 +1526,7 @@ Public NotInheritable Class SpotTradeBotEngine
             .GridV2EmaMaxSlopePercent = source.GridV2EmaMaxSlopePercent,
             .GridV2UseNearestSupportStop = source.GridV2UseNearestSupportStop,
             .GridV2SupportBufferAtr = source.GridV2SupportBufferAtr,
+            .GridV2MinimumSupportDistancePercent = source.GridV2MinimumSupportDistancePercent,
             .ValueZoneFastEmaPeriod = source.ValueZoneFastEmaPeriod,
             .ValueZoneSlowEmaPeriod = source.ValueZoneSlowEmaPeriod,
             .ValueZoneAtrPeriod = source.ValueZoneAtrPeriod,
@@ -1550,7 +1552,8 @@ Public NotInheritable Class SpotTradeBotEngine
             .SimulationOnly = source.SimulationOnly,
             .UniverseMode = source.UniverseMode,
             .UniverseMaxAssets = source.UniverseMaxAssets,
-            .UniverseMinimumQuoteVolume = source.UniverseMinimumQuoteVolume
+            .UniverseMinimumQuoteVolume = source.UniverseMinimumQuoteVolume,
+            .UniverseMinimumTrades24h = source.UniverseMinimumTrades24h
         }
 
         For Each kind In source.EnabledStrategies

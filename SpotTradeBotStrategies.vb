@@ -1179,6 +1179,19 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
                 If nearestSupport > 0D Then supportPrice = nearestSupport
             End If
 
+            Dim supportDistancePercent = If(
+                latest <= 0D OrElse supportPrice <= 0D,
+                0D,
+                (latest - supportPrice) / latest * 100D)
+            Dim minimumSupportDistancePercent = Math.Max(
+                0D,
+                configuration.GridV2MinimumSupportDistancePercent)
+            If supportPrice <= 0D OrElse
+               supportDistancePercent < minimumSupportDistancePercent Then
+                Return HoldSignal(
+                    $"grade ignorada: suporte próximo demais ({supportDistancePercent:0.##}% < mínimo {minimumSupportDistancePercent:0.##}%)")
+            End If
+
             Dim supportBuffer = averageRange * Math.Max(0D, configuration.GridV2SupportBufferAtr)
             Dim structuralStopPrice = Math.Max(0D, supportPrice - supportBuffer)
             Dim minimumStopPrice = latest * (1D - dynamicStopPercent / 100D)

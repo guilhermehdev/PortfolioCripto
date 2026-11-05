@@ -59,6 +59,8 @@ Public NotInheritable Class SpotTradeBotRepository
                          "GridV2SupportBufferAtr REAL NOT NULL DEFAULT 1, " &
                          "GridV2MinimumStopPercent REAL NOT NULL DEFAULT 1.2, " &
                          "GridV2MaximumStopPercent REAL NOT NULL DEFAULT 3, " &
+                        "UniverseMinimumTrades24h INTEGER NOT NULL DEFAULT 1000, " &
+                        "GridV2MinimumSupportDistancePercent REAL NOT NULL DEFAULT 0.5, " &
                         "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                         ");"
                     command.ExecuteNonQuery()
@@ -77,6 +79,8 @@ Public NotInheritable Class SpotTradeBotRepository
                 EnsureColumn(connection, "SpotBotRuns", "GridV2SupportBufferAtr", "REAL NOT NULL DEFAULT 1")
                 EnsureColumn(connection, "SpotBotRuns", "GridV2MinimumStopPercent", "REAL NOT NULL DEFAULT 1.2")
                 EnsureColumn(connection, "SpotBotRuns", "GridV2MaximumStopPercent", "REAL NOT NULL DEFAULT 3")
+                EnsureColumn(connection, "SpotBotRuns", "UniverseMinimumTrades24h", "INTEGER NOT NULL DEFAULT 1000")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2MinimumSupportDistancePercent", "REAL NOT NULL DEFAULT 0.5")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -192,13 +196,15 @@ Public NotInheritable Class SpotTradeBotRepository
                         "BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes, " &
                         "BreakEvenEnabled, BreakEvenTriggerPercent, BreakEvenOffsetPercent, " &
                         "TrailingStopEnabled, TrailingStopDistancePercent, PostExitCooldownMinutes, " &
-                        "GridV2UseNearestSupportStop, GridV2SupportBufferAtr, GridV2MinimumStopPercent, GridV2MaximumStopPercent) " &
+                        "GridV2UseNearestSupportStop, GridV2SupportBufferAtr, GridV2MinimumStopPercent, GridV2MaximumStopPercent, " &
+                        "UniverseMinimumTrades24h, GridV2MinimumSupportDistancePercent) " &
                     "VALUES ($startedAt, $status, $enabledStrategies, $combinationMode, $requiredConfirmations, " &
                         "$startingQuote, $allocationPercent, $feeRate, $equity, $quoteBalance, " &
                         "$bollingerPeriod, $bollingerStandardDeviations, $bollingerCandleMinutes, " &
                         "$breakEvenEnabled, $breakEvenTriggerPercent, $breakEvenOffsetPercent, " &
                         "$trailingStopEnabled, $trailingStopDistancePercent, $postExitCooldownMinutes, " &
-                        "$gridV2UseNearestSupportStop, $gridV2SupportBufferAtr, $gridV2MinimumStopPercent, $gridV2MaximumStopPercent);"
+                        "$gridV2UseNearestSupportStop, $gridV2SupportBufferAtr, $gridV2MinimumStopPercent, $gridV2MaximumStopPercent, " &
+                        "$universeMinimumTrades24h, $gridV2MinimumSupportDistancePercent);"
 
                 command.Parameters.AddWithValue("$startedAt", UtcText(DateTime.UtcNow))
                 command.Parameters.AddWithValue("$status", "RUNNING")
@@ -223,6 +229,8 @@ Public NotInheritable Class SpotTradeBotRepository
                 AddRealParameter(command, "$gridV2SupportBufferAtr", Math.Max(0D, configuration.GridV2SupportBufferAtr))
                 AddRealParameter(command, "$gridV2MinimumStopPercent", Math.Max(0D, configuration.GridV2MinimumStopPercent))
                 AddRealParameter(command, "$gridV2MaximumStopPercent", Math.Max(configuration.GridV2MinimumStopPercent, configuration.GridV2MaximumStopPercent))
+                command.Parameters.AddWithValue("$universeMinimumTrades24h", Math.Max(0, configuration.UniverseMinimumTrades24h))
+                AddRealParameter(command, "$gridV2MinimumSupportDistancePercent", Math.Max(0D, configuration.GridV2MinimumSupportDistancePercent))
                 command.ExecuteNonQuery()
             End Using
 
@@ -461,7 +469,8 @@ Public NotInheritable Class SpotTradeBotRepository
                         "OpenPositions, LastAction, BollingerPeriod, BollingerStandardDeviations, BollingerCandleMinutes, " &
                         "BreakEvenEnabled, BreakEvenTriggerPercent, BreakEvenOffsetPercent, TrailingStopEnabled, " &
                         "TrailingStopDistancePercent, PostExitCooldownMinutes, GridV2UseNearestSupportStop, " &
-                        "GridV2SupportBufferAtr, GridV2MinimumStopPercent, GridV2MaximumStopPercent " &
+                        "GridV2SupportBufferAtr, GridV2MinimumStopPercent, GridV2MaximumStopPercent, " &
+                        "UniverseMinimumTrades24h, GridV2MinimumSupportDistancePercent " &
                     "FROM SpotBotRuns ORDER BY Id DESC LIMIT 1;"
 
                 Using reader = command.ExecuteReader()
@@ -500,7 +509,9 @@ Public NotInheritable Class SpotTradeBotRepository
                           .GridV2UseNearestSupportStop = If(reader.IsDBNull(28), True, reader.GetInt32(28) <> 0),
                           .GridV2SupportBufferAtr = If(reader.IsDBNull(29), 1D, Math.Max(0D, ReadDecimal(reader, 29))),
                           .GridV2MinimumStopPercent = If(reader.IsDBNull(30), 1.2D, Math.Max(0D, ReadDecimal(reader, 30))),
-                          .GridV2MaximumStopPercent = If(reader.IsDBNull(31), 3D, Math.Max(0D, ReadDecimal(reader, 31)))
+                          .GridV2MaximumStopPercent = If(reader.IsDBNull(31), 3D, Math.Max(0D, ReadDecimal(reader, 31))),
+                          .UniverseMinimumTrades24h = If(reader.IsDBNull(32), 1000, Math.Max(0, reader.GetInt32(32))),
+                          .GridV2MinimumSupportDistancePercent = If(reader.IsDBNull(33), 0.5D, Math.Max(0D, ReadDecimal(reader, 33)))
                     }
 
                     If Not reader.IsDBNull(2) Then

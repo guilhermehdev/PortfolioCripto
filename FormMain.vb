@@ -103,6 +103,7 @@ Public Class FormMain
     Private _botUniverseMode As ComboBox
     Private _botUniverseMaxAssets As NumericUpDown
     Private _botUniverseMinVolume As NumericUpDown
+    Private _botUniverseMinTrades As NumericUpDown
     Private _botUniverseButton As Button
     Private ReadOnly _spotBotUniverseSymbols As New List(Of String)()
     Private _botSimulationSummary As Label
@@ -787,7 +788,9 @@ Public Class FormMain
             "Mínimo de confirmações",
             "Pontuação ponderada"
         })
-        _botCombination.SelectedIndex = 0
+        _botCombination.SelectedIndex = If(_spotTradeBot.HasRestoredState,
+                                          CInt(_spotTradeBot.Configuration.CombinationMode),
+                                          CInt(SpotBotCombinationMode.MinimumConfirmations))
         editor.Controls.Add(_botCombination)
 
         AddBotLabel(editor, "Confirmações", 808, 3, 78)
@@ -795,7 +798,7 @@ Public Class FormMain
             .Name = "nudSpotBotConfirmations",
             .Minimum = 1,
             .Maximum = 5,
-            .Value = 1,
+            .Value = 2,
             .BackColor = Color.FromArgb(64, 64, 64),
             .ForeColor = Color.White,
             .Location = New Point(808, 24),
@@ -955,7 +958,7 @@ Public Class FormMain
         End If
 
         AddBotLabel(editor, "Cooldown pós-saída (min)", 6, 136, 160)
-        _botPostExitCooldown = CreateBotNumeric(5D, 0D, 1440D, 0, 6, 155, 82)
+        _botPostExitCooldown = CreateBotNumeric(15D, 0D, 1440D, 0, 6, 155, 82)
         If _spotTradeBot.HasRestoredState Then
             _botPostExitCooldown.Value = Math.Min(
                 _botPostExitCooldown.Maximum,
@@ -965,6 +968,13 @@ Public Class FormMain
         ToolTip1.SetToolTip(
             _botPostExitCooldown,
             "Tempo mínimo antes de permitir uma nova entrada no mesmo ativo após uma saída. Stops, alvos e fechamento manual não são atrasados.")
+
+        AddBotLabel(editor, "Negócios 24h min.", 175, 136, 130)
+        _botUniverseMinTrades = CreateBotNumeric(universeSettings.MinimumTrades24h, 0D, 10000000D, 0, 175, 155, 90)
+        editor.Controls.Add(_botUniverseMinTrades)
+        ToolTip1.SetToolTip(
+            _botUniverseMinTrades,
+            "Filtro de liquidez: quantidade mínima de negócios do par nas últimas 24 horas.")
 
         _botLog = New RichTextBox With {
             .Name = "rtbSpotBotLog",
@@ -1775,10 +1785,13 @@ Public Class FormMain
         Try
             Dim symbols = Await B.BINANCE_GetTopSpotSymbolsByVolumeAsync(
                 CInt(_botUniverseMaxAssets.Value),
-                _botUniverseMinVolume.Value)
+                _botUniverseMinVolume.Value,
+                CInt(_botUniverseMinTrades.Value))
             _spotBotUniverseSymbols.Clear()
             _spotBotUniverseSymbols.AddRange(symbols)
-            AppendSpotBotLog($"Universo Top volume atualizado: {symbols.Count} ativo(s).", Color.LightGray)
+            AppendSpotBotLog(
+                $"Universo Top volume/liquidez atualizado: {symbols.Count} ativo(s).",
+                Color.LightGray)
             If _spotTradeBot.IsRunning Then Await StartBinanceWebSocket()
         Catch ex As Exception
             AppendSpotBotLog("Erro carregando o universo Top volume: " & ex.Message, Color.IndianRed)
@@ -1819,13 +1832,21 @@ Public Class FormMain
                       SpotBotUniverseMode.Manual)
         Dim maxAssets = If(_botUniverseMaxAssets Is Nothing, 20, CInt(_botUniverseMaxAssets.Value))
         Dim minimumVolume = If(_botUniverseMinVolume Is Nothing, 1000000D, _botUniverseMinVolume.Value)
+        Dim minimumTrades = If(_botUniverseMinTrades Is Nothing, 1000, CInt(_botUniverseMinTrades.Value))
         Dim symbols As New List(Of String)()
 
         If mode = SpotBotUniverseMode.TopVolume Then
-            symbols = Await B.BINANCE_GetTopSpotSymbolsByVolumeAsync(maxAssets, minimumVolume)
+            symbols = Await B.BINANCE_GetTopSpotSymbolsByVolumeAsync(maxAssets, minimumVolume, minimumTrades)
         Else
             symbols = PortfolioRepository.GetSpotBotManualUniverseSymbols()
             If symbols.Count = 0 Then symbols = GetManualSpotBotUniverseCandidates()
+            If symbols.Count > 0 Then
+                symbols = Await B.BINANCE_GetTopSpotSymbolsByVolumeAsync(
+                    Math.Max(maxAssets, symbols.Count),
+                    minimumVolume,
+                    minimumTrades,
+                    symbols)
+            End If
         End If
 
         symbols = symbols.
@@ -1838,12 +1859,14 @@ Public Class FormMain
         PortfolioRepository.SaveSpotBotUniverseSettings(New SpotBotUniverseSettings With {
             .Mode = mode,
             .MaxAssets = maxAssets,
-            .MinimumQuoteVolume = minimumVolume
+            .MinimumQuoteVolume = minimumVolume,
+            .MinimumTrades24h = minimumTrades
         })
 
         _spotTradeBot.Configuration.UniverseMode = mode
         _spotTradeBot.Configuration.UniverseMaxAssets = maxAssets
         _spotTradeBot.Configuration.UniverseMinimumQuoteVolume = minimumVolume
+        _spotTradeBot.Configuration.UniverseMinimumTrades24h = minimumTrades
         _spotTradeBot.Configuration.ManualUniverseSymbols.Clear()
         For Each symbol In symbols
             _spotTradeBot.Configuration.ManualUniverseSymbols.Add(symbol)
@@ -2128,7 +2151,7 @@ Public Class FormMain
         _spotTradeBot.Configuration.BreakEvenOffsetPercent = 0.1D
         _spotTradeBot.Configuration.TrailingStopEnabled = _botTrailingEnabled IsNot Nothing AndAlso _botTrailingEnabled.Checked
         _spotTradeBot.Configuration.TrailingStopDistancePercent = If(_botTrailingDistance Is Nothing, 1D, _botTrailingDistance.Value)
-        _spotTradeBot.Configuration.PostExitCooldownMinutes = If(_botPostExitCooldown Is Nothing, 5D, _botPostExitCooldown.Value)
+        _spotTradeBot.Configuration.PostExitCooldownMinutes = If(_botPostExitCooldown Is Nothing, 15D, _botPostExitCooldown.Value)
         _spotTradeBot.Configuration.SimulationOnly = True
 
         _spotTradeBot.Configuration.UniverseMode = If(_botUniverseMode.SelectedIndex = 1,
@@ -2136,6 +2159,7 @@ Public Class FormMain
                                                       SpotBotUniverseMode.Manual)
         _spotTradeBot.Configuration.UniverseMaxAssets = CInt(_botUniverseMaxAssets.Value)
         _spotTradeBot.Configuration.UniverseMinimumQuoteVolume = _botUniverseMinVolume.Value
+        _spotTradeBot.Configuration.UniverseMinimumTrades24h = If(_botUniverseMinTrades Is Nothing, 1000, CInt(_botUniverseMinTrades.Value))
     End Sub
 
     Private Async Sub SpotBotStart_Click(sender As Object, e As EventArgs)
@@ -2180,6 +2204,7 @@ Public Class FormMain
         _botUniverseMode.Enabled = False
         _botUniverseMaxAssets.Enabled = False
         _botUniverseMinVolume.Enabled = False
+        _botUniverseMinTrades.Enabled = False
         _botUniverseButton.Enabled = False
         _botTakeProfit.Enabled = False
         _botStopLoss.Enabled = False
@@ -2207,6 +2232,10 @@ Public Class FormMain
             $"Timeframe: {If(_spotTradeBot.Configuration.BollingerCandleMinutes = 240, "4 horas", "diário")}.",
             Color.LightGray)
         AppendSpotBotLog($"Universo: {universe.Count} ativo(s) ({If(_spotTradeBot.Configuration.UniverseMode = SpotBotUniverseMode.TopVolume, "Top volume", "Manual")}).", Color.LightGray)
+        AppendSpotBotLog(
+            $"Liquidez mínima: {_spotTradeBot.Configuration.UniverseMinimumQuoteVolume:0} USDT de volume e " &
+            $"{_spotTradeBot.Configuration.UniverseMinimumTrades24h:0} negócios em 24h.",
+            Color.LightGray)
         AppendSpotBotLog("Estratégias: " & String.Join(", ", _spotTradeBot.Configuration.EnabledStrategies), Color.LightGray)
         AppendSpotBotLog(
             $"Alocação: {_spotTradeBot.Configuration.SimulationAllocationPercent:0.##}% " &
@@ -2233,7 +2262,8 @@ Public Class FormMain
         End If
         If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) Then
             AppendSpotBotLog(
-                "Grid V2: EMA 9/21 em candles M5 libera a grade apenas em lateralização; SL no suporte local mais próximo com buffer e limite de 3%.",
+                $"Grid V2: EMA 9/21 em candles M5 libera a grade apenas em lateralização; " &
+                $"ignora suporte a menos de {_spotTradeBot.Configuration.GridV2MinimumSupportDistancePercent:0.##}% e usa SL estrutural com limite de 3%.",
                 Color.LightGray)
         End If
     End Sub
@@ -2245,6 +2275,7 @@ Public Class FormMain
         _botUniverseMode.Enabled = True
         _botUniverseMaxAssets.Enabled = True
         _botUniverseMinVolume.Enabled = True
+        _botUniverseMinTrades.Enabled = True
         _botUniverseButton.Enabled = True
         _botTakeProfit.Enabled = True
         _botStopLoss.Enabled = True
@@ -2339,6 +2370,8 @@ Public Class FormMain
         AppendSpotBotCsvPair(builder, "GridV2BufferSuporteATR", state.GridV2SupportBufferAtr)
         AppendSpotBotCsvPair(builder, "GridV2StopMinimoPercentual", state.GridV2MinimumStopPercent)
         AppendSpotBotCsvPair(builder, "GridV2StopMaximoPercentual", state.GridV2MaximumStopPercent)
+        AppendSpotBotCsvPair(builder, "GridV2DistanciaMinimaSuportePercentual", state.GridV2MinimumSupportDistancePercent)
+        AppendSpotBotCsvPair(builder, "Negocios24hMinimos", state.UniverseMinimumTrades24h)
         AppendSpotBotCsvPair(builder, "AlocacaoPercentual", state.AllocationPercent)
         AppendSpotBotCsvPair(builder, "Taxa", state.FeeRate)
         AppendSpotBotCsvPair(builder, "UltimaAcao", snapshot.LastAction)

@@ -210,6 +210,9 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property GridV2EmaMaxSlopePercent As Decimal = 0.5D
     Public Property GridV2UseNearestSupportStop As Boolean = True
     Public Property GridV2SupportBufferAtr As Decimal = 1D
+    ' Ignora entradas quando o suporte estrutural está praticamente no preço,
+    ' pois nesse caso o stop precisaria ser artificialmente apertado.
+    Public Property GridV2MinimumSupportDistancePercent As Decimal = 0.5D
 
     ' Parâmetros do pullback em zona de valor. A estratégia usa M5 para
     ' contexto, M2 para o retorno à zona e M1 para a confirmação da entrada.
@@ -228,6 +231,7 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property UniverseMode As SpotBotUniverseMode = SpotBotUniverseMode.Manual
     Public Property UniverseMaxAssets As Integer = 20
     Public Property UniverseMinimumQuoteVolume As Decimal = 1000000D
+    Public Property UniverseMinimumTrades24h As Integer = 1000
     Public Property ManualUniverseSymbols As HashSet(Of String) = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 End Class
 
@@ -235,6 +239,7 @@ Public NotInheritable Class SpotBotUniverseSettings
     Public Property Mode As SpotBotUniverseMode = SpotBotUniverseMode.Manual
     Public Property MaxAssets As Integer = 20
     Public Property MinimumQuoteVolume As Decimal = 1000000D
+    Public Property MinimumTrades24h As Integer = 1000
 End Class
 
 Public NotInheritable Class SpotBotSignalEventArgs
@@ -330,6 +335,8 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property GridV2SupportBufferAtr As Decimal = 1D
     Public Property GridV2MinimumStopPercent As Decimal = 1.2D
     Public Property GridV2MaximumStopPercent As Decimal = 3D
+    Public Property GridV2MinimumSupportDistancePercent As Decimal = 0.5D
+    Public Property UniverseMinimumTrades24h As Integer = 1000
 End Class
 
 Public NotInheritable Class SpotBotSimulationEventArgs

@@ -105,12 +105,14 @@ Public NotInheritable Class PortfolioRepository
                     "Mode INTEGER NOT NULL DEFAULT 0, " &
                     "MaxAssets INTEGER NOT NULL DEFAULT 20, " &
                     "MinimumQuoteVolume REAL NOT NULL DEFAULT 1000000, " &
+                    "MinimumTrades24h INTEGER NOT NULL DEFAULT 1000, " &
                     "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                     ");"
                 command.ExecuteNonQuery()
+                EnsureColumn(connection, "SpotBotUniverseSettings", "MinimumTrades24h", "INTEGER NOT NULL DEFAULT 1000")
                 command.CommandText =
-                    "INSERT OR IGNORE INTO SpotBotUniverseSettings(Id, Mode, MaxAssets, MinimumQuoteVolume) " &
-                    "VALUES(1, 0, 20, 1000000);"
+                    "INSERT OR IGNORE INTO SpotBotUniverseSettings(Id, Mode, MaxAssets, MinimumQuoteVolume, MinimumTrades24h) " &
+                    "VALUES(1, 0, 20, 1000000, 1000);"
                 command.ExecuteNonQuery()
             End Using
 
@@ -250,7 +252,7 @@ Public NotInheritable Class PortfolioRepository
             connection.Open()
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
-                    "SELECT Mode, MaxAssets, MinimumQuoteVolume " &
+                    "SELECT Mode, MaxAssets, MinimumQuoteVolume, MinimumTrades24h " &
                     "FROM SpotBotUniverseSettings WHERE Id = 1;"
                 Using reader = command.ExecuteReader()
                     If reader.Read() Then
@@ -261,6 +263,7 @@ Public NotInheritable Class PortfolioRepository
 
                         settings.MaxAssets = Math.Max(1, Math.Min(500, If(reader.IsDBNull(1), 20, reader.GetInt32(1))))
                         settings.MinimumQuoteVolume = Math.Max(0D, If(reader.IsDBNull(2), 1000000D, Convert.ToDecimal(reader.GetDouble(2), CultureInfo.InvariantCulture)))
+                        settings.MinimumTrades24h = Math.Max(0, If(reader.IsDBNull(3), 1000, reader.GetInt32(3)))
                     End If
                 End Using
             End Using
@@ -277,14 +280,16 @@ Public NotInheritable Class PortfolioRepository
             connection.Open()
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
-                    "INSERT INTO SpotBotUniverseSettings(Id, Mode, MaxAssets, MinimumQuoteVolume, UpdatedAt) " &
-                    "VALUES(1, $mode, $maxAssets, $minimumQuoteVolume, CURRENT_TIMESTAMP) " &
+                    "INSERT INTO SpotBotUniverseSettings(Id, Mode, MaxAssets, MinimumQuoteVolume, MinimumTrades24h, UpdatedAt) " &
+                    "VALUES(1, $mode, $maxAssets, $minimumQuoteVolume, $minimumTrades24h, CURRENT_TIMESTAMP) " &
                     "ON CONFLICT(Id) DO UPDATE SET Mode = excluded.Mode, MaxAssets = excluded.MaxAssets, " &
-                    "MinimumQuoteVolume = excluded.MinimumQuoteVolume, UpdatedAt = CURRENT_TIMESTAMP;"
+                    "MinimumQuoteVolume = excluded.MinimumQuoteVolume, MinimumTrades24h = excluded.MinimumTrades24h, " &
+                    "UpdatedAt = CURRENT_TIMESTAMP;"
                 command.Parameters.AddWithValue("$mode", CInt(settings.Mode))
                 command.Parameters.AddWithValue("$maxAssets", Math.Max(1, Math.Min(500, settings.MaxAssets)))
                 Dim volumeParameter = command.Parameters.Add("$minimumQuoteVolume", SqliteType.Real)
                 volumeParameter.Value = Convert.ToDouble(Math.Max(0D, settings.MinimumQuoteVolume), CultureInfo.InvariantCulture)
+                command.Parameters.AddWithValue("$minimumTrades24h", Math.Max(0, settings.MinimumTrades24h))
                 command.ExecuteNonQuery()
             End Using
         End Using
@@ -769,6 +774,33 @@ Public NotInheritable Class PortfolioRepository
                 command.ExecuteNonQuery()
             End Using
         End Using
+    End Sub
+
+    Private Shared Sub EnsureColumn(
+        connection As SqliteConnection,
+        tableName As String,
+        columnName As String,
+        definition As String)
+
+        Dim exists = False
+        Using command As SqliteCommand = connection.CreateCommand()
+            command.CommandText = $"PRAGMA table_info({tableName});"
+            Using reader = command.ExecuteReader()
+                While reader.Read()
+                    If String.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase) Then
+                        exists = True
+                        Exit While
+                    End If
+                End While
+            End Using
+        End Using
+
+        If Not exists Then
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {definition};"
+                command.ExecuteNonQuery()
+            End Using
+        End If
     End Sub
 
     Private Shared Sub AddRealParameter(
