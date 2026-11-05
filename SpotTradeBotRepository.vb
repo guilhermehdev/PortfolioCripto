@@ -61,6 +61,18 @@ Public NotInheritable Class SpotTradeBotRepository
                          "GridV2MaximumStopPercent REAL NOT NULL DEFAULT 3, " &
                         "UniverseMinimumTrades24h INTEGER NOT NULL DEFAULT 1000, " &
                         "GridV2MinimumSupportDistancePercent REAL NOT NULL DEFAULT 0.5, " &
+                         "GridV2MaxExposurePercent REAL NOT NULL DEFAULT 30, " &
+                         "GridV2RequireRejection INTEGER NOT NULL DEFAULT 1, " &
+                         "GridV2RiskPerTradePercent REAL NOT NULL DEFAULT 0.5, " &
+                         "GridV2ReserveQuotePercent REAL NOT NULL DEFAULT 20, " &
+                         "GridV2MaxLevels INTEGER NOT NULL DEFAULT 5, " &
+                         "BitcoinFlushProtectionEnabled INTEGER NOT NULL DEFAULT 1, " &
+                         "BitcoinFlushLookbackMinutes INTEGER NOT NULL DEFAULT 5, " &
+                         "BitcoinFlushDropPercent REAL NOT NULL DEFAULT 2, " &
+                         "BitcoinFlushCandleDropPercent REAL NOT NULL DEFAULT 1.5, " &
+                         "BitcoinFlushVolumeMultiplier REAL NOT NULL DEFAULT 1.8, " &
+                         "BitcoinFlushVolumeLookback INTEGER NOT NULL DEFAULT 20, " &
+                         "BitcoinFlushPauseMinutes REAL NOT NULL DEFAULT 30, " &
                         "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                         ");"
                     command.ExecuteNonQuery()
@@ -81,6 +93,18 @@ Public NotInheritable Class SpotTradeBotRepository
                 EnsureColumn(connection, "SpotBotRuns", "GridV2MaximumStopPercent", "REAL NOT NULL DEFAULT 3")
                 EnsureColumn(connection, "SpotBotRuns", "UniverseMinimumTrades24h", "INTEGER NOT NULL DEFAULT 1000")
                 EnsureColumn(connection, "SpotBotRuns", "GridV2MinimumSupportDistancePercent", "REAL NOT NULL DEFAULT 0.5")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2MaxExposurePercent", "REAL NOT NULL DEFAULT 30")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2RequireRejection", "INTEGER NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2RiskPerTradePercent", "REAL NOT NULL DEFAULT 0.5")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2ReserveQuotePercent", "REAL NOT NULL DEFAULT 20")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2MaxLevels", "INTEGER NOT NULL DEFAULT 5")
+                EnsureColumn(connection, "SpotBotRuns", "BitcoinFlushProtectionEnabled", "INTEGER NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "BitcoinFlushLookbackMinutes", "INTEGER NOT NULL DEFAULT 5")
+                EnsureColumn(connection, "SpotBotRuns", "BitcoinFlushDropPercent", "REAL NOT NULL DEFAULT 2")
+                EnsureColumn(connection, "SpotBotRuns", "BitcoinFlushCandleDropPercent", "REAL NOT NULL DEFAULT 1.5")
+                EnsureColumn(connection, "SpotBotRuns", "BitcoinFlushVolumeMultiplier", "REAL NOT NULL DEFAULT 1.8")
+                EnsureColumn(connection, "SpotBotRuns", "BitcoinFlushVolumeLookback", "INTEGER NOT NULL DEFAULT 20")
+                EnsureColumn(connection, "SpotBotRuns", "BitcoinFlushPauseMinutes", "REAL NOT NULL DEFAULT 30")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -158,6 +182,11 @@ Public NotInheritable Class SpotTradeBotRepository
                 EnsureColumn(connection, "SpotBotOpenPositions", "Strategy", "TEXT NOT NULL DEFAULT ''")
                 EnsureColumn(connection, "SpotBotOpenPositions", "SupportPrice", "REAL NOT NULL DEFAULT 0")
                 EnsureColumn(connection, "SpotBotOpenPositions", "InitialStopPrice", "REAL NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotOpenPositions", "GridLevelCount", "INTEGER NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotOpenPositions", "GridAnchorPrice", "REAL NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotOpenPositions", "LastGridEntryPrice", "REAL NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotOpenPositions", "GridSpacingPercent", "REAL NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotOpenPositions", "GridManaged", "INTEGER NOT NULL DEFAULT 0")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -197,14 +226,22 @@ Public NotInheritable Class SpotTradeBotRepository
                         "BreakEvenEnabled, BreakEvenTriggerPercent, BreakEvenOffsetPercent, " &
                         "TrailingStopEnabled, TrailingStopDistancePercent, PostExitCooldownMinutes, " &
                         "GridV2UseNearestSupportStop, GridV2SupportBufferAtr, GridV2MinimumStopPercent, GridV2MaximumStopPercent, " &
-                        "UniverseMinimumTrades24h, GridV2MinimumSupportDistancePercent) " &
+                        "UniverseMinimumTrades24h, GridV2MinimumSupportDistancePercent, GridV2MaxExposurePercent, " &
+                        "GridV2RequireRejection, GridV2RiskPerTradePercent, GridV2ReserveQuotePercent, GridV2MaxLevels, " &
+                        "BitcoinFlushProtectionEnabled, BitcoinFlushLookbackMinutes, BitcoinFlushDropPercent, " &
+                        "BitcoinFlushCandleDropPercent, BitcoinFlushVolumeMultiplier, BitcoinFlushVolumeLookback, " &
+                        "BitcoinFlushPauseMinutes) " &
                     "VALUES ($startedAt, $status, $enabledStrategies, $combinationMode, $requiredConfirmations, " &
                         "$startingQuote, $allocationPercent, $feeRate, $equity, $quoteBalance, " &
                         "$bollingerPeriod, $bollingerStandardDeviations, $bollingerCandleMinutes, " &
                         "$breakEvenEnabled, $breakEvenTriggerPercent, $breakEvenOffsetPercent, " &
                         "$trailingStopEnabled, $trailingStopDistancePercent, $postExitCooldownMinutes, " &
                         "$gridV2UseNearestSupportStop, $gridV2SupportBufferAtr, $gridV2MinimumStopPercent, $gridV2MaximumStopPercent, " &
-                        "$universeMinimumTrades24h, $gridV2MinimumSupportDistancePercent);"
+                        "$universeMinimumTrades24h, $gridV2MinimumSupportDistancePercent, $gridV2MaxExposurePercent, " &
+                        "$gridV2RequireRejection, $gridV2RiskPerTradePercent, $gridV2ReserveQuotePercent, $gridV2MaxLevels, " &
+                        "$bitcoinFlushProtectionEnabled, $bitcoinFlushLookbackMinutes, $bitcoinFlushDropPercent, " &
+                        "$bitcoinFlushCandleDropPercent, $bitcoinFlushVolumeMultiplier, $bitcoinFlushVolumeLookback, " &
+                        "$bitcoinFlushPauseMinutes);"
 
                 command.Parameters.AddWithValue("$startedAt", UtcText(DateTime.UtcNow))
                 command.Parameters.AddWithValue("$status", "RUNNING")
@@ -231,6 +268,18 @@ Public NotInheritable Class SpotTradeBotRepository
                 AddRealParameter(command, "$gridV2MaximumStopPercent", Math.Max(configuration.GridV2MinimumStopPercent, configuration.GridV2MaximumStopPercent))
                 command.Parameters.AddWithValue("$universeMinimumTrades24h", Math.Max(0, configuration.UniverseMinimumTrades24h))
                 AddRealParameter(command, "$gridV2MinimumSupportDistancePercent", Math.Max(0D, configuration.GridV2MinimumSupportDistancePercent))
+                AddRealParameter(command, "$gridV2MaxExposurePercent", Math.Min(100D, Math.Max(0D, configuration.GridV2MaxExposurePercent)))
+                command.Parameters.AddWithValue("$gridV2RequireRejection", If(configuration.GridV2RequireRejection, 1, 0))
+                AddRealParameter(command, "$gridV2RiskPerTradePercent", Math.Min(100D, Math.Max(0D, configuration.GridV2RiskPerTradePercent)))
+                AddRealParameter(command, "$gridV2ReserveQuotePercent", Math.Min(95D, Math.Max(0D, configuration.GridV2ReserveQuotePercent)))
+                command.Parameters.AddWithValue("$gridV2MaxLevels", Math.Max(1, configuration.GridV2MaxLevels))
+                command.Parameters.AddWithValue("$bitcoinFlushProtectionEnabled", If(configuration.BitcoinFlushProtectionEnabled, 1, 0))
+                command.Parameters.AddWithValue("$bitcoinFlushLookbackMinutes", Math.Max(2, configuration.BitcoinFlushLookbackMinutes))
+                AddRealParameter(command, "$bitcoinFlushDropPercent", Math.Max(0.1D, configuration.BitcoinFlushDropPercent))
+                AddRealParameter(command, "$bitcoinFlushCandleDropPercent", Math.Max(0.1D, configuration.BitcoinFlushCandleDropPercent))
+                AddRealParameter(command, "$bitcoinFlushVolumeMultiplier", Math.Max(1.1D, configuration.BitcoinFlushVolumeMultiplier))
+                command.Parameters.AddWithValue("$bitcoinFlushVolumeLookback", Math.Max(5, configuration.BitcoinFlushVolumeLookback))
+                AddRealParameter(command, "$bitcoinFlushPauseMinutes", Math.Max(1D, configuration.BitcoinFlushPauseMinutes))
                 command.ExecuteNonQuery()
             End Using
 
@@ -240,6 +289,48 @@ Public NotInheritable Class SpotTradeBotRepository
             End Using
         End Using
     End Function
+
+    Public Shared Sub UpdateGridConfiguration(runId As Long, configuration As SpotBotConfiguration)
+        If runId <= 0 OrElse configuration Is Nothing Then Return
+        Initialize()
+
+        Using connection As New SqliteConnection(GetConnectionString())
+            connection.Open()
+            Using command As SqliteCommand = connection.CreateCommand()
+                command.CommandText =
+                    "UPDATE SpotBotRuns SET AllocationPercent = $allocationPercent, " &
+                    "GridV2MaxExposurePercent = $gridV2MaxExposurePercent, " &
+                    "GridV2RequireRejection = $gridV2RequireRejection, " &
+                    "GridV2RiskPerTradePercent = $gridV2RiskPerTradePercent, " &
+                    "GridV2ReserveQuotePercent = $gridV2ReserveQuotePercent, " &
+                    "GridV2MaxLevels = $gridV2MaxLevels, " &
+                    "BitcoinFlushProtectionEnabled = $bitcoinFlushProtectionEnabled, " &
+                    "BitcoinFlushLookbackMinutes = $bitcoinFlushLookbackMinutes, " &
+                    "BitcoinFlushDropPercent = $bitcoinFlushDropPercent, " &
+                    "BitcoinFlushCandleDropPercent = $bitcoinFlushCandleDropPercent, " &
+                    "BitcoinFlushVolumeMultiplier = $bitcoinFlushVolumeMultiplier, " &
+                    "BitcoinFlushVolumeLookback = $bitcoinFlushVolumeLookback, " &
+                    "BitcoinFlushPauseMinutes = $bitcoinFlushPauseMinutes, " &
+                    "UpdatedAt = CURRENT_TIMESTAMP " &
+                    "WHERE Id = $runId;"
+                AddRealParameter(command, "$allocationPercent", Math.Min(100D, Math.Max(0D, configuration.SimulationAllocationPercent)))
+                AddRealParameter(command, "$gridV2MaxExposurePercent", Math.Min(100D, Math.Max(0D, configuration.GridV2MaxExposurePercent)))
+                command.Parameters.AddWithValue("$gridV2RequireRejection", If(configuration.GridV2RequireRejection, 1, 0))
+                AddRealParameter(command, "$gridV2RiskPerTradePercent", Math.Min(100D, Math.Max(0D, configuration.GridV2RiskPerTradePercent)))
+                AddRealParameter(command, "$gridV2ReserveQuotePercent", Math.Min(95D, Math.Max(0D, configuration.GridV2ReserveQuotePercent)))
+                command.Parameters.AddWithValue("$gridV2MaxLevels", Math.Max(1, configuration.GridV2MaxLevels))
+                command.Parameters.AddWithValue("$bitcoinFlushProtectionEnabled", If(configuration.BitcoinFlushProtectionEnabled, 1, 0))
+                command.Parameters.AddWithValue("$bitcoinFlushLookbackMinutes", Math.Max(2, configuration.BitcoinFlushLookbackMinutes))
+                AddRealParameter(command, "$bitcoinFlushDropPercent", Math.Max(0.1D, configuration.BitcoinFlushDropPercent))
+                AddRealParameter(command, "$bitcoinFlushCandleDropPercent", Math.Max(0.1D, configuration.BitcoinFlushCandleDropPercent))
+                AddRealParameter(command, "$bitcoinFlushVolumeMultiplier", Math.Max(1.1D, configuration.BitcoinFlushVolumeMultiplier))
+                command.Parameters.AddWithValue("$bitcoinFlushVolumeLookback", Math.Max(5, configuration.BitcoinFlushVolumeLookback))
+                AddRealParameter(command, "$bitcoinFlushPauseMinutes", Math.Max(1D, configuration.BitcoinFlushPauseMinutes))
+                command.Parameters.AddWithValue("$runId", runId)
+                command.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
 
     Public Shared Sub SaveCandle(
         runId As Long,
@@ -323,8 +414,8 @@ Public NotInheritable Class SpotTradeBotRepository
                             insertCommand.Transaction = transaction
                             insertCommand.CommandText =
                                 "INSERT INTO SpotBotOpenPositions(" &
-                                "RunId, Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, SupportPrice, InitialStopPrice, StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc) " &
-                                "VALUES($runId, $symbol, $side, $strategy, $quantity, $entryPrice, $currentPrice, $costBasis, $supportPrice, $initialStopPrice, $stopPrice, $takeProfitPrice, $peakPrice, $openedAtUtc);"
+                                "RunId, Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, SupportPrice, InitialStopPrice, StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc, GridLevelCount, GridAnchorPrice, LastGridEntryPrice, GridSpacingPercent, GridManaged) " &
+                                "VALUES($runId, $symbol, $side, $strategy, $quantity, $entryPrice, $currentPrice, $costBasis, $supportPrice, $initialStopPrice, $stopPrice, $takeProfitPrice, $peakPrice, $openedAtUtc, $gridLevelCount, $gridAnchorPrice, $lastGridEntryPrice, $gridSpacingPercent, $gridManaged);"
                             insertCommand.Parameters.AddWithValue("$runId", runId)
                             insertCommand.Parameters.AddWithValue("$symbol", position.Symbol.Trim().ToUpperInvariant())
                             insertCommand.Parameters.AddWithValue("$side", If(String.IsNullOrWhiteSpace(position.Side), "LONG", position.Side.Trim().ToUpperInvariant()))
@@ -339,6 +430,11 @@ Public NotInheritable Class SpotTradeBotRepository
                             AddRealParameter(insertCommand, "$takeProfitPrice", position.TakeProfitPrice)
                             AddRealParameter(insertCommand, "$peakPrice", Math.Max(position.HighestPrice, position.CurrentPrice))
                             insertCommand.Parameters.AddWithValue("$openedAtUtc", UtcText(position.OpenedAtUtc))
+                            insertCommand.Parameters.AddWithValue("$gridLevelCount", Math.Max(0, position.GridLevelCount))
+                            AddRealParameter(insertCommand, "$gridAnchorPrice", Math.Max(0D, position.GridAnchorPrice))
+                            AddRealParameter(insertCommand, "$lastGridEntryPrice", Math.Max(0D, position.LastGridEntryPrice))
+                            AddRealParameter(insertCommand, "$gridSpacingPercent", Math.Max(0D, position.GridSpacingPercent))
+                            insertCommand.Parameters.AddWithValue("$gridManaged", If(position.GridManaged, 1, 0))
                             insertCommand.ExecuteNonQuery()
                         End Using
                     Next
@@ -442,7 +538,8 @@ Public NotInheritable Class SpotTradeBotRepository
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
                     "SELECT Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, SupportPrice, InitialStopPrice, " &
-                    "StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc " &
+                    "StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc, GridLevelCount, GridAnchorPrice, " &
+                    "LastGridEntryPrice, GridSpacingPercent, GridManaged " &
                     "FROM SpotBotOpenPositions WHERE RunId = $runId ORDER BY Symbol;"
                 command.Parameters.AddWithValue("$runId", runId)
                 Using reader = command.ExecuteReader()
@@ -470,7 +567,11 @@ Public NotInheritable Class SpotTradeBotRepository
                         "BreakEvenEnabled, BreakEvenTriggerPercent, BreakEvenOffsetPercent, TrailingStopEnabled, " &
                         "TrailingStopDistancePercent, PostExitCooldownMinutes, GridV2UseNearestSupportStop, " &
                         "GridV2SupportBufferAtr, GridV2MinimumStopPercent, GridV2MaximumStopPercent, " &
-                        "UniverseMinimumTrades24h, GridV2MinimumSupportDistancePercent " &
+                        "UniverseMinimumTrades24h, GridV2MinimumSupportDistancePercent, GridV2MaxExposurePercent, " &
+                        "GridV2RequireRejection, GridV2RiskPerTradePercent, GridV2ReserveQuotePercent, GridV2MaxLevels, " &
+                        "BitcoinFlushProtectionEnabled, BitcoinFlushLookbackMinutes, BitcoinFlushDropPercent, " &
+                        "BitcoinFlushCandleDropPercent, BitcoinFlushVolumeMultiplier, BitcoinFlushVolumeLookback, " &
+                        "BitcoinFlushPauseMinutes " &
                     "FROM SpotBotRuns ORDER BY Id DESC LIMIT 1;"
 
                 Using reader = command.ExecuteReader()
@@ -511,7 +612,19 @@ Public NotInheritable Class SpotTradeBotRepository
                           .GridV2MinimumStopPercent = If(reader.IsDBNull(30), 1.2D, Math.Max(0D, ReadDecimal(reader, 30))),
                           .GridV2MaximumStopPercent = If(reader.IsDBNull(31), 3D, Math.Max(0D, ReadDecimal(reader, 31))),
                           .UniverseMinimumTrades24h = If(reader.IsDBNull(32), 1000, Math.Max(0, reader.GetInt32(32))),
-                          .GridV2MinimumSupportDistancePercent = If(reader.IsDBNull(33), 0.5D, Math.Max(0D, ReadDecimal(reader, 33)))
+                          .GridV2MinimumSupportDistancePercent = If(reader.IsDBNull(33), 0.5D, Math.Max(0D, ReadDecimal(reader, 33))),
+                          .GridV2MaxExposurePercent = If(reader.IsDBNull(34), 30D, Math.Min(100D, Math.Max(0D, ReadDecimal(reader, 34)))),
+                          .GridV2RequireRejection = If(reader.IsDBNull(35), True, reader.GetInt32(35) <> 0),
+                          .GridV2RiskPerTradePercent = If(reader.IsDBNull(36), 0.5D, Math.Min(100D, Math.Max(0D, ReadDecimal(reader, 36)))),
+                          .GridV2ReserveQuotePercent = If(reader.IsDBNull(37), 20D, Math.Min(95D, Math.Max(0D, ReadDecimal(reader, 37)))),
+                          .GridV2MaxLevels = If(reader.IsDBNull(38), 5, Math.Max(1, reader.GetInt32(38))),
+                          .BitcoinFlushProtectionEnabled = If(reader.IsDBNull(39), True, reader.GetInt32(39) <> 0),
+                          .BitcoinFlushLookbackMinutes = If(reader.IsDBNull(40), 5, Math.Max(2, reader.GetInt32(40))),
+                          .BitcoinFlushDropPercent = If(reader.IsDBNull(41), 2D, Math.Max(0.1D, ReadDecimal(reader, 41))),
+                          .BitcoinFlushCandleDropPercent = If(reader.IsDBNull(42), 1.5D, Math.Max(0.1D, ReadDecimal(reader, 42))),
+                          .BitcoinFlushVolumeMultiplier = If(reader.IsDBNull(43), 1.8D, Math.Max(1.1D, ReadDecimal(reader, 43))),
+                          .BitcoinFlushVolumeLookback = If(reader.IsDBNull(44), 20, Math.Max(5, reader.GetInt32(44))),
+                          .BitcoinFlushPauseMinutes = If(reader.IsDBNull(45), 30D, Math.Max(1D, ReadDecimal(reader, 45)))
                     }
 
                     If Not reader.IsDBNull(2) Then
@@ -527,7 +640,8 @@ Public NotInheritable Class SpotTradeBotRepository
 
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
-                        "SELECT Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, SupportPrice, InitialStopPrice, StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc " &
+                        "SELECT Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, SupportPrice, InitialStopPrice, StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc, " &
+                        "GridLevelCount, GridAnchorPrice, LastGridEntryPrice, GridSpacingPercent, GridManaged " &
                     "FROM SpotBotOpenPositions WHERE RunId = $runId ORDER BY Symbol;"
                 command.Parameters.AddWithValue("$runId", state.RunId)
 
@@ -543,13 +657,24 @@ Public NotInheritable Class SpotTradeBotRepository
                         Dim stopPrice = ReadDecimal(reader, 9)
                         Dim takeProfitPrice = ReadDecimal(reader, 10)
                         Dim peakPrice = ReadDecimal(reader, 11)
+                        Dim gridLevelCount = If(reader.IsDBNull(13), 0, Math.Max(0, reader.GetInt32(13)))
+                        Dim gridAnchorPrice = ReadDecimal(reader, 14)
+                        Dim lastGridEntryPrice = ReadDecimal(reader, 15)
+                        Dim gridSpacingPercent = ReadDecimal(reader, 16)
+                        Dim gridManaged = If(reader.IsDBNull(17), False, reader.GetInt32(17) <> 0)
+                        Dim strategyText = If(reader.IsDBNull(2), String.Empty, reader.GetString(2))
+                        If Not gridManaged AndAlso strategyText.IndexOf("Grid", StringComparison.OrdinalIgnoreCase) >= 0 Then
+                            ' Compatibilidade com posições gravadas antes da
+                            ' coluna explícita GridManaged.
+                            gridManaged = True
+                        End If
                         Dim notional = quantity * currentPrice
                         Dim unrealizedPnl = notional - costBasis
 
                         state.Positions.Add(New SpotBotOpenPosition With {
                             .Symbol = reader.GetString(0),
                             .Side = If(reader.IsDBNull(1), "LONG", reader.GetString(1)),
-                            .Strategy = If(reader.IsDBNull(2), String.Empty, reader.GetString(2)),
+                            .Strategy = strategyText,
                             .Quantity = quantity,
                             .EntryPrice = entryPrice,
                             .CurrentPrice = currentPrice,
@@ -562,6 +687,11 @@ Public NotInheritable Class SpotTradeBotRepository
                             .Notional = notional,
                             .UnrealizedPnl = unrealizedPnl,
                             .RoiPercent = If(costBasis = 0D, 0D, unrealizedPnl / costBasis * 100D),
+                            .GridManaged = gridManaged,
+                            .GridLevelCount = gridLevelCount,
+                            .GridAnchorPrice = gridAnchorPrice,
+                            .LastGridEntryPrice = lastGridEntryPrice,
+                            .GridSpacingPercent = gridSpacingPercent,
                             .OpenedAtUtc = openedAt
                         })
                     End While

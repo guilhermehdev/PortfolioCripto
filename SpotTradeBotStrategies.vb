@@ -1172,7 +1172,23 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
         Dim buyLevel = reference * (1D - spacingPercent / 100D)
         Dim sellLevel = reference * (1D + spacingPercent / 100D)
 
-        If latest <= buyLevel Then
+        ' A entrada não deve ser disparada apenas porque um tick atravessou o
+        ' nível. Com a confirmação habilitada, o candle fechado precisa tocar
+        ' o nível, fechar acima dele e ser seguido pelo rompimento do seu
+        ' fechamento. Isso reduz compras no meio de um rompimento de baixa.
+        Dim lastClosed = If(window.Count >= 2, window(window.Count - 2), Nothing)
+        Dim buyTriggered As Boolean
+        If configuration.GridV2RequireRejection Then
+            buyTriggered = lastClosed IsNot Nothing AndAlso
+                           lastClosed.Low <= buyLevel AndAlso
+                           lastClosed.Close > buyLevel AndAlso
+                           lastClosed.IsBullish AndAlso
+                           latest >= lastClosed.Close
+        Else
+            buyTriggered = latest <= buyLevel
+        End If
+
+        If buyTriggered Then
             Dim supportPrice = lowest
             If configuration.GridV2UseNearestSupportStop Then
                 Dim nearestSupport = FindNearestSupportBelow(regimeWindow, latest)
@@ -1208,7 +1224,8 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
                 .StopPrice = stopPrice,
                 .SupportPrice = supportPrice,
                 .GridManaged = True,
-                .Reason = $"grade v2 em regime lateral: compra {buyLevel:F8}, espaçamento {spacingPercent:0.##}%, suporte {supportPrice:F8}, SL {stopDistancePercent:0.##}%"
+                .GridSpacingPercent = spacingPercent,
+                .Reason = $"grade v2 em regime lateral: compra após rejeição de {buyLevel:F8}, espaçamento {spacingPercent:0.##}%, suporte {supportPrice:F8}, SL {stopDistancePercent:0.##}%"
             }
         End If
 
@@ -1220,6 +1237,7 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
                 .ObservedValue = spacingPercent,
                 .EntryPrice = latest,
                 .GridManaged = True,
+                .GridSpacingPercent = spacingPercent,
                 .Reason = $"grade v2 em regime lateral: venda {sellLevel:F8}, espaçamento {spacingPercent:0.##}%"
             }
         End If

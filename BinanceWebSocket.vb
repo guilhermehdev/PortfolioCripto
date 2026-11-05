@@ -362,6 +362,8 @@ Public Class BinanceWebSocket
     End Sub
 
     Private Shared Function NormalizeKlineInterval(value As String) As String
+        If String.Equals(value?.Trim(), "1m", StringComparison.OrdinalIgnoreCase) Then Return "1m"
+        If String.Equals(value?.Trim(), "5m", StringComparison.OrdinalIgnoreCase) Then Return "5m"
         If String.Equals(value?.Trim(), "1d", StringComparison.OrdinalIgnoreCase) Then Return "1d"
         If String.Equals(value?.Trim(), "4h", StringComparison.OrdinalIgnoreCase) Then Return "4h"
         Return String.Empty

@@ -103,6 +103,7 @@ Public NotInheritable Class SpotBotStrategySignal
     Public Property TakeProfitPrice As Decimal
     Public Property SupportPrice As Decimal
     Public Property GridManaged As Boolean
+    Public Property GridSpacingPercent As Decimal
 End Class
 
 Public NotInheritable Class SpotBotSignal
@@ -121,6 +122,7 @@ Public NotInheritable Class SpotBotSignal
     Public Property StrategySignals As New List(Of SpotBotStrategySignal)
     Public Property SimulationOnly As Boolean = True
     Public Property GridManaged As Boolean
+    Public Property GridSpacingPercent As Decimal
 End Class
 
 Public NotInheritable Class SpotBotConfiguration
@@ -198,7 +200,7 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property GridV2MaxSlopePercent As Decimal = 2D
     Public Property GridV2MaxLevels As Integer = 5
     Public Property GridV2LevelAllocationPercent As Decimal = 10D
-    Public Property GridV2MaxExposurePercent As Decimal = 50D
+    Public Property GridV2MaxExposurePercent As Decimal = 30D
     Public Property GridV2BreakoutAtrMultiplier As Decimal = 0.5D
     Public Property GridV2MinimumStopPercent As Decimal = 1.2D
     Public Property GridV2StopVolatilityMultiplier As Decimal = 1.5D
@@ -213,6 +215,22 @@ Public NotInheritable Class SpotBotConfiguration
     ' Ignora entradas quando o suporte estrutural está praticamente no preço,
     ' pois nesse caso o stop precisaria ser artificialmente apertado.
     Public Property GridV2MinimumSupportDistancePercent As Decimal = 0.5D
+    ' A grade só entra depois que o candle toca o nível e confirma rejeição.
+    Public Property GridV2RequireRejection As Boolean = True
+    ' Risco máximo estimado por nível, calculado contra o stop estrutural.
+    Public Property GridV2RiskPerTradePercent As Decimal = 0.5D
+    ' Reserva de caixa que não pode ser consumida pela grade.
+    Public Property GridV2ReserveQuotePercent As Decimal = 20D
+
+    ' Proteção macro contra flush do BTC. A detecção usa candles de 1 minuto,
+    ' queda acumulada, candle vermelho e expansão de volume.
+    Public Property BitcoinFlushProtectionEnabled As Boolean = True
+    Public Property BitcoinFlushLookbackMinutes As Integer = 5
+    Public Property BitcoinFlushDropPercent As Decimal = 2D
+    Public Property BitcoinFlushCandleDropPercent As Decimal = 1.5D
+    Public Property BitcoinFlushVolumeMultiplier As Decimal = 1.8D
+    Public Property BitcoinFlushVolumeLookback As Integer = 20
+    Public Property BitcoinFlushPauseMinutes As Decimal = 30D
 
     ' Parâmetros do pullback em zona de valor. A estratégia usa M5 para
     ' contexto, M2 para o retorno à zona e M1 para a confirmação da entrada.
@@ -250,6 +268,25 @@ Public NotInheritable Class SpotBotSignalEventArgs
     End Sub
 
     Public ReadOnly Property Signal As SpotBotSignal
+End Class
+
+Public NotInheritable Class SpotBotWarmupSummary
+    Public Property RequestedSymbols As Integer
+    Public Property LoadedSymbols As Integer
+    Public Property TotalCandles As Integer
+    Public Property Intervals As New List(Of String)()
+    Public Property FailedSymbols As New List(Of String)()
+End Class
+
+Public NotInheritable Class SpotBotBitcoinFlushStatus
+    Public Property IsPaused As Boolean
+    Public Property NewFlushDetected As Boolean
+    Public Property CurrentPrice As Decimal
+    Public Property DropPercent As Decimal
+    Public Property CandleDropPercent As Decimal
+    Public Property VolumeRatio As Decimal
+    Public Property PauseUntilUtc As DateTime
+    Public Property Reason As String = String.Empty
 End Class
 
 Public NotInheritable Class SpotBotSimulationSnapshot
@@ -308,7 +345,11 @@ Public NotInheritable Class SpotBotOpenPosition
     Public Property StopPrice As Decimal
     Public Property TakeProfitPrice As Decimal
     Public Property HighestPrice As Decimal
+    Public Property GridManaged As Boolean
     Public Property GridLevelCount As Integer
+    Public Property GridAnchorPrice As Decimal
+    Public Property LastGridEntryPrice As Decimal
+    Public Property GridSpacingPercent As Decimal
     Public Property OpenedAtUtc As DateTime
 End Class
 
@@ -336,6 +377,18 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property GridV2MinimumStopPercent As Decimal = 1.2D
     Public Property GridV2MaximumStopPercent As Decimal = 3D
     Public Property GridV2MinimumSupportDistancePercent As Decimal = 0.5D
+    Public Property GridV2MaxExposurePercent As Decimal = 30D
+    Public Property GridV2RequireRejection As Boolean = True
+    Public Property GridV2RiskPerTradePercent As Decimal = 0.5D
+    Public Property GridV2ReserveQuotePercent As Decimal = 20D
+    Public Property GridV2MaxLevels As Integer = 5
+    Public Property BitcoinFlushProtectionEnabled As Boolean = True
+    Public Property BitcoinFlushLookbackMinutes As Integer = 5
+    Public Property BitcoinFlushDropPercent As Decimal = 2D
+    Public Property BitcoinFlushCandleDropPercent As Decimal = 1.5D
+    Public Property BitcoinFlushVolumeMultiplier As Decimal = 1.8D
+    Public Property BitcoinFlushVolumeLookback As Integer = 20
+    Public Property BitcoinFlushPauseMinutes As Decimal = 30D
     Public Property UniverseMinimumTrades24h As Integer = 1000
 End Class
 

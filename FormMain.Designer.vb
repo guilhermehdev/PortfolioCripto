@@ -87,8 +87,8 @@ Partial Class FormMain
         SimbolosToolStripMenuItem = New ToolStripMenuItem()
         CustodiaToolStripMenuItem = New ToolStripMenuItem()
         OpçõesToolStripMenuItem = New ToolStripMenuItem()
-        IntervaloToolStripMenuItem = New ToolStripMenuItem()
         APIToolStripMenuItem = New ToolStripMenuItem()
+        IntervaloToolStripMenuItem = New ToolStripMenuItem()
         FecharToolStripMenuItem = New ToolStripMenuItem()
         MenuStrip1 = New MenuStrip()
         pbBRL = New PictureBox()
@@ -829,21 +829,21 @@ Partial Class FormMain
         OpçõesToolStripMenuItem.Size = New Size(96, 20)
         OpçõesToolStripMenuItem.Text = "Configurações"
         ' 
-        ' IntervaloToolStripMenuItem
-        ' 
-        IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
-        IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
-        IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
-        IntervaloToolStripMenuItem.Size = New Size(180, 22)
-        IntervaloToolStripMenuItem.Text = "Intervalo"
-        ' 
         ' APIToolStripMenuItem
         ' 
         APIToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
         APIToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
         APIToolStripMenuItem.Name = "APIToolStripMenuItem"
-        APIToolStripMenuItem.Size = New Size(180, 22)
+        APIToolStripMenuItem.Size = New Size(120, 22)
         APIToolStripMenuItem.Text = "API"
+        ' 
+        ' IntervaloToolStripMenuItem
+        ' 
+        IntervaloToolStripMenuItem.BackColor = Color.FromArgb(CByte(31), CByte(33), CByte(32))
+        IntervaloToolStripMenuItem.ForeColor = SystemColors.ButtonHighlight
+        IntervaloToolStripMenuItem.Name = "IntervaloToolStripMenuItem"
+        IntervaloToolStripMenuItem.Size = New Size(120, 22)
+        IntervaloToolStripMenuItem.Text = "Intervalo"
         ' 
         ' FecharToolStripMenuItem
         ' 
@@ -1038,7 +1038,6 @@ Partial Class FormMain
         Controls.Add(PanelOrdens)
         Controls.Add(btOrdensSpot)
         Controls.Add(btVisaoGeral)
-        Controls.Add(lbLoadFromMarket)
         Controls.Add(btFuturos)
         Controls.Add(dgFuturos)
         Controls.Add(dgPortfolio)
@@ -1047,6 +1046,7 @@ Partial Class FormMain
         Controls.Add(Panel1)
         Controls.Add(MenuStrip1)
         Controls.Add(Panel2)
+        Controls.Add(lbLoadFromMarket)
         Font = New Font("Segoe UI", 9F)
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
         MainMenuStrip = MenuStrip1

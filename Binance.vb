@@ -576,7 +576,7 @@ Public Class Binance
             normalizedSymbol &= "USDT"
         End If
 
-        Dim normalizedInterval = If(String.Equals(interval?.Trim(), "1d", StringComparison.OrdinalIgnoreCase), "1d", "4h")
+        Dim normalizedInterval = NormalizeSpotKlineInterval(interval)
         Dim requestedLimit = Math.Max(30, Math.Min(1000, limit))
 
         Using client As New HttpClient()
@@ -617,6 +617,17 @@ Public Class Binance
             Where(Function(item) item.IsClosed AndAlso item.Low > 0D AndAlso item.Close > 0D).
             OrderBy(Function(item) item.StartUtc).
             ToList()
+    End Function
+
+    Private Shared Function NormalizeSpotKlineInterval(interval As String) As String
+        Select Case If(interval, String.Empty).Trim().ToLowerInvariant()
+            Case "1m", "5m", "4h", "1d"
+                Return interval.Trim().ToLowerInvariant()
+            Case Else
+                ' O DCA utiliza 4h/1d. O TradeBot também usa 1m/5m
+                ' para aquecer RSI, Grid e o filtro de tendência.
+                Return "4h"
+        End Select
     End Function
 
     Public Async Function BINANCE_GetTopSpotSymbolsByVolumeAsync(

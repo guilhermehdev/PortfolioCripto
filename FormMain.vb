@@ -104,6 +104,15 @@ Public Class FormMain
     Private _botUniverseMaxAssets As NumericUpDown
     Private _botUniverseMinVolume As NumericUpDown
     Private _botUniverseMinTrades As NumericUpDown
+    Private _botGridRiskPercent As NumericUpDown
+    Private _botGridReservePercent As NumericUpDown
+    Private _botGridMaxExposurePercent As NumericUpDown
+    Private _botGridMaxLevels As NumericUpDown
+    Private _botGridRequireRejection As CheckBox
+    Private _botBtcFlushEnabled As CheckBox
+    Private _botBtcFlushDropPercent As NumericUpDown
+    Private _botBtcFlushPauseMinutes As NumericUpDown
+    Private _botBtcFlushVolumeMultiplier As NumericUpDown
     Private _botUniverseButton As Button
     Private ReadOnly _spotBotUniverseSymbols As New List(Of String)()
     Private _botSimulationSummary As Label
@@ -976,6 +985,134 @@ Public Class FormMain
             _botUniverseMinTrades,
             "Filtro de liquidez: quantidade mínima de negócios do par nas últimas 24 horas.")
 
+        AddBotLabel(editor, "Grid risco/nível (%)", 280, 136, 125)
+        _botGridRiskPercent = CreateBotNumeric(
+            _spotTradeBot.Configuration.GridV2RiskPerTradePercent,
+            0D,
+            100D,
+            2,
+            280,
+            155,
+            72)
+        editor.Controls.Add(_botGridRiskPercent)
+
+        AddBotLabel(editor, "Reserva (%)", 360, 136, 70)
+        _botGridReservePercent = CreateBotNumeric(
+            _spotTradeBot.Configuration.GridV2ReserveQuotePercent,
+            0D,
+            95D,
+            2,
+            360,
+            155,
+            65)
+        editor.Controls.Add(_botGridReservePercent)
+
+        AddBotLabel(editor, "Exposição máx. (%)", 433, 136, 112)
+        _botGridMaxExposurePercent = CreateBotNumeric(
+            _spotTradeBot.Configuration.GridV2MaxExposurePercent,
+            0D,
+            100D,
+            2,
+            433,
+            155,
+            78)
+        editor.Controls.Add(_botGridMaxExposurePercent)
+
+        AddBotLabel(editor, "Níveis", 519, 136, 52)
+        _botGridMaxLevels = CreateBotNumeric(
+            _spotTradeBot.Configuration.GridV2MaxLevels,
+            1D,
+            20D,
+            0,
+            519,
+            155,
+            58)
+        editor.Controls.Add(_botGridMaxLevels)
+
+        _botGridRequireRejection = New CheckBox With {
+            .Text = "Confirmar rejeição",
+            .AutoSize = False,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .Location = New Point(585, 155),
+            .Size = New Size(135, 23),
+            .Checked = _spotTradeBot.Configuration.GridV2RequireRejection,
+            .Cursor = Cursors.Hand
+        }
+        editor.Controls.Add(_botGridRequireRejection)
+        ToolTip1.SetToolTip(
+            _botGridRequireRejection,
+            "Exige toque do suporte, fechamento acima do nível e confirmação antes da compra.")
+        ToolTip1.SetToolTip(
+            _botGridRiskPercent,
+            "Risco máximo estimado de cada nível, calculado pela distância até o stop.")
+        ToolTip1.SetToolTip(
+            _botGridReservePercent,
+            "Percentual do saldo inicial reservado e nunca usado pela grade.")
+        ToolTip1.SetToolTip(
+            _botGridMaxExposurePercent,
+            "Exposição máxima acumulada por ativo, em relação ao saldo inicial.")
+        ToolTip1.SetToolTip(
+            _botGridMaxLevels,
+            "Quantidade máxima de entradas acumuladas no mesmo ativo.")
+
+        AddBotLabel(editor, "Flush BTC (%)", 730, 136, 92)
+        _botBtcFlushDropPercent = CreateBotNumeric(
+            _spotTradeBot.Configuration.BitcoinFlushDropPercent,
+            0.1D,
+            20D,
+            2,
+            730,
+            155,
+            72)
+        editor.Controls.Add(_botBtcFlushDropPercent)
+
+        AddBotLabel(editor, "Pausa (min)", 810, 136, 78)
+        _botBtcFlushPauseMinutes = CreateBotNumeric(
+            _spotTradeBot.Configuration.BitcoinFlushPauseMinutes,
+            1D,
+            1440D,
+            0,
+            810,
+            155,
+            72)
+        editor.Controls.Add(_botBtcFlushPauseMinutes)
+
+        _botBtcFlushEnabled = New CheckBox With {
+            .Text = "Proteger no flush BTC",
+            .AutoSize = False,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .Location = New Point(890, 155),
+            .Size = New Size(155, 23),
+            .Checked = _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled,
+            .Cursor = Cursors.Hand
+        }
+        editor.Controls.Add(_botBtcFlushEnabled)
+
+        AddBotLabel(editor, "Vol. x", 1050, 136, 55)
+        _botBtcFlushVolumeMultiplier = CreateBotNumeric(
+            _spotTradeBot.Configuration.BitcoinFlushVolumeMultiplier,
+            1.1D,
+            20D,
+            2,
+            1050,
+            155,
+            65)
+        editor.Controls.Add(_botBtcFlushVolumeMultiplier)
+        ToolTip1.SetToolTip(
+            _botBtcFlushEnabled,
+            "Pausa novas entradas quando a queda do BTC é confirmada por volume anormal.")
+        ToolTip1.SetToolTip(
+            _botBtcFlushDropPercent,
+            "Queda acumulada do BTC no período de 5 candles de 1 minuto.")
+        ToolTip1.SetToolTip(
+            _botBtcFlushPauseMinutes,
+            "Tempo da pausa de novas entradas após um flush confirmado.")
+        ToolTip1.SetToolTip(
+            _botBtcFlushVolumeMultiplier,
+            "Volume do candle atual em relação à média dos candles anteriores.")
+
         _botLog = New RichTextBox With {
             .Name = "rtbSpotBotLog",
             .Dock = DockStyle.Bottom,
@@ -1355,6 +1492,14 @@ Public Class FormMain
         End If
 
         Return Await B.BINANCE_GetSpotKlinesAsync(plan?.Symbol, interval, limit)
+    End Function
+
+    Private Async Function LoadSpotBotHistoricalCandlesAsync(
+        symbol As String,
+        interval As String,
+        limit As Integer) As Task(Of List(Of DcaCandle))
+
+        Return Await B.BINANCE_GetSpotKlinesAsync(symbol, interval, limit)
     End Function
 
     Private Async Sub DcaExchange_SelectedIndexChanged(sender As Object, e As EventArgs)
@@ -2143,6 +2288,15 @@ Public Class FormMain
         End If
         _spotTradeBot.Configuration.SimulationAllocationPercent = _botAllocation.Value
         _spotTradeBot.Configuration.GridV2LevelAllocationPercent = _botAllocation.Value
+        _spotTradeBot.Configuration.GridV2RiskPerTradePercent = _botGridRiskPercent.Value
+        _spotTradeBot.Configuration.GridV2ReserveQuotePercent = _botGridReservePercent.Value
+        _spotTradeBot.Configuration.GridV2MaxExposurePercent = _botGridMaxExposurePercent.Value
+        _spotTradeBot.Configuration.GridV2MaxLevels = CInt(_botGridMaxLevels.Value)
+        _spotTradeBot.Configuration.GridV2RequireRejection = _botGridRequireRejection.Checked
+        _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled = _botBtcFlushEnabled.Checked
+        _spotTradeBot.Configuration.BitcoinFlushDropPercent = _botBtcFlushDropPercent.Value
+        _spotTradeBot.Configuration.BitcoinFlushPauseMinutes = _botBtcFlushPauseMinutes.Value
+        _spotTradeBot.Configuration.BitcoinFlushVolumeMultiplier = _botBtcFlushVolumeMultiplier.Value
         _spotTradeBot.Configuration.SimulationFeeRate = _botFee.Value / 100D
         _spotTradeBot.Configuration.TakeProfitPercent = _botTakeProfit.Value
         _spotTradeBot.Configuration.StopLossPercent = _botStopLoss.Value
@@ -2199,6 +2353,29 @@ Public Class FormMain
         If Not resumePreviousSimulation Then
             _spotTradeBot.ResetHistory()
         End If
+
+        Try
+            AppendSpotBotLog(
+                "Carregando candles históricos antes de conectar o WebSocket...",
+                Color.Gold)
+            Dim warmup = Await _spotTradeBot.WarmupHistoricalDataAsync(
+                universe,
+                AddressOf LoadSpotBotHistoricalCandlesAsync)
+            AppendSpotBotLog(
+                $"Histórico carregado: {warmup.LoadedSymbols}/{warmup.RequestedSymbols} ativo(s), " &
+                $"{warmup.TotalCandles} candle(s), intervalos {String.Join(", ", warmup.Intervals)}.",
+                Color.LightGreen)
+            If warmup.FailedSymbols.Count > 0 Then
+                AppendSpotBotLog(
+                    "Ativos sem histórico: " & String.Join(", ", warmup.FailedSymbols.Take(10)) &
+                    If(warmup.FailedSymbols.Count > 10, "...", String.Empty),
+                    Color.Gold)
+            End If
+        Catch ex As Exception
+            AppendSpotBotLog("Erro carregando histórico do TradeBot: " & ex.Message, Color.IndianRed)
+            Return
+        End Try
+
         UpdateSpotBotPositionsGrid(_spotTradeBot.GetOpenPositions())
         _spotTradeBot.Start()
         _botUniverseMode.Enabled = False
@@ -2213,6 +2390,15 @@ Public Class FormMain
         _botTrailingEnabled.Enabled = False
         _botTrailingDistance.Enabled = False
         _botPostExitCooldown.Enabled = False
+        _botGridRiskPercent.Enabled = False
+        _botGridReservePercent.Enabled = False
+        _botGridMaxExposurePercent.Enabled = False
+        _botGridMaxLevels.Enabled = False
+        _botGridRequireRejection.Enabled = False
+        _botBtcFlushDropPercent.Enabled = False
+        _botBtcFlushPauseMinutes.Enabled = False
+        _botBtcFlushEnabled.Enabled = False
+        _botBtcFlushVolumeMultiplier.Enabled = False
         Await StartBinanceWebSocket()
         _botStart.Enabled = False
         _botStop.Enabled = True
@@ -2250,6 +2436,13 @@ Public Class FormMain
         AppendSpotBotLog(
             $"Cooldown pós-saída: {_spotTradeBot.Configuration.PostExitCooldownMinutes:0.##} minuto(s) por ativo.",
             Color.LightGray)
+        AppendSpotBotLog(
+            $"Proteção flush BTC: {If(_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled, "ativa", "desligada")}; " &
+            $"queda {_spotTradeBot.Configuration.BitcoinFlushDropPercent:0.##}% em " &
+            $"{_spotTradeBot.Configuration.BitcoinFlushLookbackMinutes}m, volume mínimo " &
+            $"{_spotTradeBot.Configuration.BitcoinFlushVolumeMultiplier:0.##}x, pausa " &
+            $"{_spotTradeBot.Configuration.BitcoinFlushPauseMinutes:0} min. Stops continuam ativos.",
+            Color.LightGray)
         If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.WavePullback) Then
             AppendSpotBotLog(
                 "Pullback EMA34: SL e TP estruturais do sinal; os percentuais globais não bloqueiam a inicialização.",
@@ -2263,6 +2456,11 @@ Public Class FormMain
         If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) Then
             AppendSpotBotLog(
                 $"Grid V2: EMA 9/21 em candles M5 libera a grade apenas em lateralização; " &
+                $"confirma rejeição: {If(_spotTradeBot.Configuration.GridV2RequireRejection, "sim", "não")}; " &
+                $"risco/nível {_spotTradeBot.Configuration.GridV2RiskPerTradePercent:0.##}%, " &
+                $"reserva {_spotTradeBot.Configuration.GridV2ReserveQuotePercent:0.##}%, " &
+                $"exposição máxima {_spotTradeBot.Configuration.GridV2MaxExposurePercent:0.##}% e " &
+                $"até {_spotTradeBot.Configuration.GridV2MaxLevels} níveis; " &
                 $"ignora suporte a menos de {_spotTradeBot.Configuration.GridV2MinimumSupportDistancePercent:0.##}% e usa SL estrutural com limite de 3%.",
                 Color.LightGray)
         End If
@@ -2284,6 +2482,15 @@ Public Class FormMain
         _botTrailingEnabled.Enabled = True
         _botTrailingDistance.Enabled = True
         _botPostExitCooldown.Enabled = True
+        _botGridRiskPercent.Enabled = True
+        _botGridReservePercent.Enabled = True
+        _botGridMaxExposurePercent.Enabled = True
+        _botGridMaxLevels.Enabled = True
+        _botGridRequireRejection.Enabled = True
+        _botBtcFlushDropPercent.Enabled = True
+        _botBtcFlushPauseMinutes.Enabled = True
+        _botBtcFlushEnabled.Enabled = True
+        _botBtcFlushVolumeMultiplier.Enabled = True
         AppendSpotBotLog("Bot Spot parado.", Color.IndianRed)
     End Sub
 
@@ -2371,6 +2578,15 @@ Public Class FormMain
         AppendSpotBotCsvPair(builder, "GridV2StopMinimoPercentual", state.GridV2MinimumStopPercent)
         AppendSpotBotCsvPair(builder, "GridV2StopMaximoPercentual", state.GridV2MaximumStopPercent)
         AppendSpotBotCsvPair(builder, "GridV2DistanciaMinimaSuportePercentual", state.GridV2MinimumSupportDistancePercent)
+        AppendSpotBotCsvPair(builder, "GridV2ExposicaoMaximaPercentual", state.GridV2MaxExposurePercent)
+        AppendSpotBotCsvPair(builder, "GridV2ConfirmarRejeicao", state.GridV2RequireRejection)
+        AppendSpotBotCsvPair(builder, "GridV2RiscoPorNivelPercentual", state.GridV2RiskPerTradePercent)
+        AppendSpotBotCsvPair(builder, "GridV2ReservaPercentual", state.GridV2ReserveQuotePercent)
+        AppendSpotBotCsvPair(builder, "GridV2NiveisMaximos", state.GridV2MaxLevels)
+        AppendSpotBotCsvPair(builder, "ProtecaoFlushBTC", state.BitcoinFlushProtectionEnabled)
+        AppendSpotBotCsvPair(builder, "FlushBTCQuedaPercentual", state.BitcoinFlushDropPercent)
+        AppendSpotBotCsvPair(builder, "FlushBTCPausaMinutos", state.BitcoinFlushPauseMinutes)
+        AppendSpotBotCsvPair(builder, "FlushBTCVolumeMultiplicador", state.BitcoinFlushVolumeMultiplier)
         AppendSpotBotCsvPair(builder, "Negocios24hMinimos", state.UniverseMinimumTrades24h)
         AppendSpotBotCsvPair(builder, "AlocacaoPercentual", state.AllocationPercent)
         AppendSpotBotCsvPair(builder, "Taxa", state.FeeRate)
@@ -3390,7 +3606,14 @@ Public Class FormMain
 
             End If
 
-            Await _binanceWs.StartAsync(symbols, _spotDca.GetRequiredCandleIntervals("BINANCE"))
+            Dim candleIntervals = _spotDca.GetRequiredCandleIntervals("BINANCE").ToList()
+            If _spotTradeBot.IsRunning AndAlso
+               _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled AndAlso
+               Not candleIntervals.Contains("1m", StringComparer.OrdinalIgnoreCase) Then
+                candleIntervals.Add("1m")
+            End If
+
+            Await _binanceWs.StartAsync(symbols, candleIntervals.Distinct(StringComparer.OrdinalIgnoreCase))
 
         Catch ex As Exception
 
@@ -3917,6 +4140,27 @@ Public Class FormMain
             closePrice,
             volume,
             isClosed)
+
+        If String.Equals(symbol, "BTC", StringComparison.OrdinalIgnoreCase) Then
+            Dim protection = _spotTradeBot.ProcessBitcoinCandle(
+                interval,
+                candleStartUtc,
+                openPrice,
+                highPrice,
+                lowPrice,
+                closePrice,
+                volume,
+                isClosed)
+            If protection IsNot Nothing AndAlso protection.NewFlushDetected AndAlso
+               Me.IsHandleCreated Then
+                Dim protectionMessage = protection.Reason
+                Me.BeginInvoke(
+                    New Action(
+                        Sub()
+                            AppendSpotBotLog(protectionMessage, Color.OrangeRed)
+                        End Sub))
+            End If
+        End If
     End Sub
 
     Private Sub ProcessSpotBotPrice(symbol As String, price As Decimal, Optional quoteVolume24h As Decimal = 0D)
