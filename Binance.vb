@@ -380,6 +380,25 @@ Public Class Binance
         Return True
     End Function
 
+    Public Async Function BINANCE_GetSpotOrderAsync(
+        symbol As String,
+        orderId As Long) As Task(Of String)
+
+        If String.IsNullOrWhiteSpace(symbol) Then
+            Throw New ArgumentException("O símbolo da ordem é obrigatório.", NameOf(symbol))
+        End If
+        If orderId <= 0 Then
+            Throw New ArgumentException("O identificador da ordem é inválido.", NameOf(orderId))
+        End If
+
+        Dim query = String.Join("&", {
+            "symbol=" & Uri.EscapeDataString(symbol.Trim().ToUpperInvariant()),
+            "orderId=" & orderId.ToString(CultureInfo.InvariantCulture),
+            "recvWindow=60000"
+        })
+        Return Await QuerySignedAsync("/api/v3/order", query)
+    End Function
+
     Public Async Function BINANCE_CreateSpotOrderAsync(
         symbol As String,
         side As String,

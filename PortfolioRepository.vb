@@ -680,6 +680,142 @@ Public NotInheritable Class PortfolioRepository
         End Using
     End Function
 
+    ''' <summary>
+    ''' Aplica uma execução Spot ao lote ativo da moeda/exchange e recalcula o
+    ''' preço médio ponderado. Compras aumentam quantidade e custo; vendas
+    ''' reduzem somente a quantidade, preservando o custo médio remanescente.
+    ''' </summary>
+    Public Shared Function ApplySpotOrderFill(
+        symbol As String,
+        wallet As String,
+        side As String,
+        filledQuantity As Decimal,
+        executionPrice As Decimal,
+        Optional lastPrice As Decimal = 0D) As Boolean
+
+        Initialize()
+
+        Dim normalizedSymbol = If(symbol, String.Empty).Trim().ToUpperInvariant()
+        Dim normalizedWallet = If(wallet, String.Empty).Trim().ToUpperInvariant()
+        Dim normalizedSide = If(side, String.Empty).Trim().ToUpperInvariant()
+
+        If String.IsNullOrWhiteSpace(normalizedSymbol) OrElse
+           String.IsNullOrWhiteSpace(normalizedWallet) OrElse
+           (normalizedSide <> "BUY" AndAlso normalizedSide <> "SELL") OrElse
+           filledQuantity <= 0D OrElse executionPrice <= 0D Then
+            Return False
+        End If
+
+        Using connection As New SqliteConnection(ConnectionString)
+            connection.Open()
+            Using transaction = connection.BeginTransaction()
+                Try
+                    Dim firstId As Long = 0
+                    Dim existingQuantity As Decimal = 0D
+                    Dim existingCost As Decimal = 0D
+                    Dim existingLastPrice As Decimal = 0D
+                    Dim otherIds As New List(Of Long)()
+
+                    Using selectCommand As SqliteCommand = connection.CreateCommand()
+                        selectCommand.Transaction = transaction
+                        selectCommand.CommandText =
+                            "SELECT Id, InitialPrice, Quantity, LastPrice " &
+                            "FROM PortfolioItems " &
+                            "WHERE UPPER(Symbol) = $symbol AND UPPER(Wallet) = $wallet " &
+                            "ORDER BY Id;"
+                        selectCommand.Parameters.AddWithValue("$symbol", normalizedSymbol)
+                        selectCommand.Parameters.AddWithValue("$wallet", normalizedWallet)
+
+                        Using reader = selectCommand.ExecuteReader()
+                            While reader.Read()
+                                Dim itemId = Convert.ToInt64(reader.GetValue(0), CultureInfo.InvariantCulture)
+                                Dim itemPrice = Convert.ToDecimal(reader.GetValue(1), CultureInfo.InvariantCulture)
+                                Dim itemQuantity = Math.Max(0D, Convert.ToDecimal(reader.GetValue(2), CultureInfo.InvariantCulture))
+
+                                If firstId = 0 Then
+                                    firstId = itemId
+                                    existingLastPrice = If(reader.IsDBNull(3), 0D, Convert.ToDecimal(reader.GetValue(3), CultureInfo.InvariantCulture))
+                                Else
+                                    otherIds.Add(itemId)
+                                End If
+
+                                existingQuantity += itemQuantity
+                                existingCost += itemQuantity * Math.Max(0D, itemPrice)
+                            End While
+                        End Using
+                    End Using
+
+                    If firstId = 0 Then
+                        If normalizedSide <> "BUY" Then
+                            transaction.Commit()
+                            Return False
+                        End If
+
+                        Using insertCommand As SqliteCommand = connection.CreateCommand()
+                            insertCommand.Transaction = transaction
+                            insertCommand.CommandText =
+                                "INSERT INTO PortfolioItems " &
+                                "(Cripto, Symbol, InitialPrice, Quantity, Data, Wallet, LastPrice) " &
+                                "VALUES($cripto, $symbol, $initialPrice, $quantity, $data, $wallet, $lastPrice);"
+                            insertCommand.Parameters.AddWithValue("$cripto", normalizedSymbol)
+                            insertCommand.Parameters.AddWithValue("$symbol", normalizedSymbol)
+                            AddRealParameter(insertCommand, "$initialPrice", Convert.ToDouble(executionPrice, CultureInfo.InvariantCulture))
+                            AddRealParameter(insertCommand, "$quantity", Convert.ToDouble(filledQuantity, CultureInfo.InvariantCulture))
+                            insertCommand.Parameters.AddWithValue("$data", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
+                            insertCommand.Parameters.AddWithValue("$wallet", normalizedWallet)
+                            AddRealParameter(insertCommand, "$lastPrice", Convert.ToDouble(If(lastPrice > 0D, lastPrice, executionPrice), CultureInfo.InvariantCulture))
+                            insertCommand.ExecuteNonQuery()
+                        End Using
+                    Else
+                        Dim newQuantity As Decimal
+                        Dim newAverage As Decimal
+
+                        If normalizedSide = "BUY" Then
+                            newQuantity = existingQuantity + filledQuantity
+                            newAverage = If(newQuantity <= 0D,
+                                           0D,
+                                           (existingCost + filledQuantity * executionPrice) / newQuantity)
+                        Else
+                            newQuantity = Math.Max(0D, existingQuantity - filledQuantity)
+                            newAverage = If(existingQuantity <= 0D, 0D, existingCost / existingQuantity)
+                            If newQuantity <= 0.0000000001D Then newAverage = 0D
+                        End If
+
+                        Using updateCommand As SqliteCommand = connection.CreateCommand()
+                            updateCommand.Transaction = transaction
+                            updateCommand.CommandText =
+                                "UPDATE PortfolioItems SET InitialPrice = $initialPrice, Quantity = $quantity, " &
+                                "LastPrice = $lastPrice, UpdatedAt = CURRENT_TIMESTAMP WHERE Id = $id;"
+                            AddRealParameter(updateCommand, "$initialPrice", Convert.ToDouble(newAverage, CultureInfo.InvariantCulture))
+                            AddRealParameter(updateCommand, "$quantity", Convert.ToDouble(newQuantity, CultureInfo.InvariantCulture))
+                            AddRealParameter(updateCommand, "$lastPrice", Convert.ToDouble(If(lastPrice > 0D, lastPrice, existingLastPrice), CultureInfo.InvariantCulture))
+                            updateCommand.Parameters.AddWithValue("$id", firstId)
+                            updateCommand.ExecuteNonQuery()
+                        End Using
+
+                        ' Registros antigos do mesmo ativo/exchange permanecem
+                        ' no histórico, mas deixam de duplicar a posição ativa.
+                        For Each otherId In otherIds
+                            Using clearCommand As SqliteCommand = connection.CreateCommand()
+                                clearCommand.Transaction = transaction
+                                clearCommand.CommandText =
+                                    "UPDATE PortfolioItems SET Quantity = 0, UpdatedAt = CURRENT_TIMESTAMP WHERE Id = $id;"
+                                clearCommand.Parameters.AddWithValue("$id", otherId)
+                                clearCommand.ExecuteNonQuery()
+                            End Using
+                        Next
+                    End If
+
+                    transaction.Commit()
+                    Return True
+                Catch
+                    transaction.Rollback()
+                    Throw
+                End Try
+            End Using
+        End Using
+    End Function
+
     Public Shared Sub UpdatePortfolioItem(
         id As Long,
         cripto As String,

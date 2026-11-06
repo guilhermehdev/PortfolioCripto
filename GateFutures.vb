@@ -194,13 +194,13 @@ Public Class GateFutures
         price As Decimal) As Task(Of BinanceFuturesOrder)
         Dim contract = ToContract(symbol)
         Dim multiplier = Await GetContractMultiplierAsync(contract)
-        Dim sizeContracts = Math.Round(quantity / Math.Max(multiplier, 0.00000001D), 8, MidpointRounding.AwayFromZero)
+        Dim sizeContracts As Long = ToGateContractSize(quantity, multiplier)
         If String.Equals(positionSide, "SHORT", StringComparison.OrdinalIgnoreCase) Then sizeContracts = -Math.Abs(sizeContracts) Else sizeContracts = Math.Abs(sizeContracts)
 
         Dim isMarket = String.Equals(orderType, "MARKET", StringComparison.OrdinalIgnoreCase)
         Dim body As New JObject From {
             {"contract", contract},
-            {"size", sizeContracts.ToString("0.########", CultureInfo.InvariantCulture)},
+            {"size", sizeContracts},
             {"price", If(isMarket, "0", price.ToString("0.########", CultureInfo.InvariantCulture))},
             {"tif", If(isMarket, "ioc", "gtc")}
         }
@@ -221,12 +221,12 @@ Public Class GateFutures
         limitPrice As Decimal) As Task(Of BinanceFuturesOrder)
         Dim contract = ToContract(symbol)
         Dim multiplier = Await GetContractMultiplierAsync(contract)
-        Dim sizeContracts = Math.Round(quantity / Math.Max(multiplier, 0.00000001D), 8, MidpointRounding.AwayFromZero)
+        Dim sizeContracts As Long = ToGateContractSize(quantity, multiplier)
         If String.Equals(positionSide, "SHORT", StringComparison.OrdinalIgnoreCase) Then sizeContracts = Math.Abs(sizeContracts) Else sizeContracts = -Math.Abs(sizeContracts)
 
         Dim body As New JObject From {
             {"contract", contract},
-            {"size", sizeContracts.ToString("0.########", CultureInfo.InvariantCulture)},
+            {"size", sizeContracts},
             {"price", limitPrice.ToString("0.########", CultureInfo.InvariantCulture)},
             {"tif", "gtc"},
             {"reduce_only", True}
@@ -243,7 +243,7 @@ Public Class GateFutures
         triggerPrice As Decimal) As Task(Of Long)
         Dim contract = ToContract(symbol)
         Dim multiplier = Await GetContractMultiplierAsync(contract)
-        Dim sizeContracts = Math.Round(quantity / Math.Max(multiplier, 0.00000001D), 8, MidpointRounding.AwayFromZero)
+        Dim sizeContracts As Long = ToGateContractSize(quantity, multiplier)
         Dim isShort = String.Equals(positionSide, "SHORT", StringComparison.OrdinalIgnoreCase)
         If isShort Then sizeContracts = -Math.Abs(sizeContracts) Else sizeContracts = Math.Abs(sizeContracts)
         Dim isTakeProfit = protectionType.Contains("TAKE", StringComparison.OrdinalIgnoreCase) OrElse protectionType.Contains("TP", StringComparison.OrdinalIgnoreCase)
@@ -253,9 +253,10 @@ Public Class GateFutures
         Dim body As New JObject From {
             {"initial", New JObject From {
                 {"contract", contract},
-                {"size", sizeContracts.ToString("0.########", CultureInfo.InvariantCulture)},
+                {"size", sizeContracts},
                 {"price", "0"},
-                {"tif", "ioc"}
+                {"tif", "ioc"},
+                {"reduce_only", True}
             }},
             {"trigger", New JObject From {
                 {"strategy_type", 0},
@@ -263,8 +264,7 @@ Public Class GateFutures
                 {"price", triggerPrice.ToString("0.########", CultureInfo.InvariantCulture)},
                 {"rule", rule},
                 {"expiration", 0}
-            }},
-            {"order_type", If(isShort, "close-short-order", "close-long-order")}
+            }}
         }
         Dim raw = Await SendSignedAsync(HttpMethod.Post, "/futures/usdt/price_orders", String.Empty, body.ToString(Newtonsoft.Json.Formatting.None))
         Return ReadLong(JObject.Parse(raw), "id", "id_string")
@@ -274,6 +274,28 @@ Public Class GateFutures
         If algoId <= 0 Then Return False
         Await SendSignedAsync(HttpMethod.Delete, $"/futures/usdt/price_orders/{algoId.ToString(CultureInfo.InvariantCulture)}", String.Empty, String.Empty)
         Return True
+    End Function
+
+    Private Shared Function ToGateContractSize(quantity As Decimal, multiplier As Decimal) As Long
+        If quantity <= 0D Then
+            Throw New ArgumentException("A quantidade Futures deve ser maior que zero.", NameOf(quantity))
+        End If
+
+        Dim safeMultiplier = Math.Max(multiplier, 0.00000001D)
+        Dim roundedContracts = Decimal.Round(
+            quantity / safeMultiplier,
+            0,
+            MidpointRounding.AwayFromZero)
+
+        If roundedContracts <= 0D Then
+            Throw New ArgumentException("A quantidade informada é menor que um contrato da Gate.", NameOf(quantity))
+        End If
+
+        If roundedContracts > Long.MaxValue Then
+            Throw New ArgumentOutOfRangeException(NameOf(quantity), "A quantidade excede o limite de contratos da Gate.")
+        End If
+
+        Return Decimal.ToInt64(roundedContracts)
     End Function
 
     Private Async Function GetContractMultiplierAsync(contract As String) As Task(Of Decimal)

@@ -35,6 +35,8 @@ Public Class FormMain
     Private _spotEntryUsd As Decimal = 0D
     Private _spotCashUsd As Decimal = 0D
     Private _spotCashLoadedFromAccount As Boolean = False
+    Private _spotOrderCashUsd As Decimal = 0D
+    Private _spotOrderCashExchange As String = String.Empty
     Private _spotCoinEntryUsd As Decimal = 0D
     Private _grossInvestmentUsd As Decimal = 0D
     Private _grossInvestmentBrl As Decimal = 0D
@@ -74,6 +76,7 @@ Public Class FormMain
     Private _futuresOrderPriceKey As String = String.Empty
     Private _spotOrderInputUpdating As Boolean = False
     Private _spotOrderInputMode As String = "Quantity"
+    Private ReadOnly _spotOrderAppliedQuantities As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _futuresLeverageBySymbol As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
     Private _portfolioGridDefaultHeight As Integer
     Private _futuresGridDefaultHeight As Integer
@@ -433,6 +436,7 @@ Public Class FormMain
         }
         _cbSpotOrderExchange.Items.AddRange(New Object() {"BINANCE", "GATE.IO"})
         _cbSpotOrderExchange.SelectedIndex = 0
+        AddHandler _cbSpotOrderExchange.SelectedIndexChanged, AddressOf SpotOrderExchangeChanged
         editor.Controls.Add(_cbSpotOrderExchange)
 
         AddSpotOrderEditorLabel(editor, "Lado", 390, 1, 62)
@@ -3157,6 +3161,7 @@ Public Class FormMain
             AddHandler _binanceFuturesUserWs.DataUpdated, AddressOf BinanceFuturesUserDataUpdated
             AddHandler _binanceFuturesUserWs.ConnectionStateChanged, AddressOf BinanceFuturesWs_ConnectionStateChanged
             AddHandler _binanceSpotUserWs.DataUpdated, AddressOf BinanceSpotUserDataUpdated
+            AddHandler _binanceSpotUserWs.ExecutionReportReceived, AddressOf BinanceSpotExecutionReportReceived
             AddHandler _binanceSpotUserWs.ConnectionStateChanged, AddressOf BinanceSpotWs_ConnectionStateChanged
 
             Await B.SyncBinanceTime()
@@ -5363,7 +5368,7 @@ Public Class FormMain
                                    Await _gateSpot.GATE_CreateSpotOrderAsync(tradingSymbol, "SELL", "LIMIT", quantity, limitPrice),
                                    Await B.BINANCE_CreateSpotOrderAsync(tradingSymbol, "SELL", "LIMIT", quantity, limitPrice))
             row.Cells("SpotExitPrice").Value = String.Empty
-            Await RefreshSpotPortfolioAfterFilledOrderAsync(orderResponse)
+            Await RefreshSpotPortfolioAfterFilledOrderAsync(orderResponse, wallet, limitPrice)
             Await LoadSpotOrdersAsync()
             MessageBox.Show($"Ordem de fechamento enviada para {wallet}.", "Fechar posição", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
@@ -6848,12 +6853,14 @@ Public Class FormMain
             Return
         End If
 
-        _lbSpotOrderCash.Text = Cjson.USDformat(_spotCashUsd)
+        _lbSpotOrderCash.Text = Cjson.USDformat(_spotOrderCashUsd)
         _lbSpotOrderCash.ForeColor = Color.Gold
     End Sub
 
     Public Sub ApplySpotCashFromPopup(cashUsd As Decimal)
         _spotCashUsd = Math.Max(0D, cashUsd)
+        _spotOrderCashUsd = _spotCashUsd
+        _spotOrderCashExchange = If(_cbSpotOrderExchange?.Text.Trim().ToUpperInvariant(), String.Empty)
         _spotCashLoadedFromAccount = True
         UpdateSpotOrderCashLabel()
 
@@ -6864,15 +6871,22 @@ Public Class FormMain
 
     Private Async Function RefreshSpotOrderCashAsync() As Task
         Dim cashUsd As Decimal = 0D
+        Dim selectedCashUsd As Decimal = 0D
+        Dim selectedExchange = If(_cbSpotOrderExchange?.Text.Trim().ToUpperInvariant(), "BINANCE")
         Dim accountLoaded = False
 
         If Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceAPIKey) AndAlso
            Not String.IsNullOrWhiteSpace(ExchangeCredentials.BinanceSecretKey) Then
             Try
                 Dim assets = Await B.BINANCE_GetSpotAssetsFull()
+                Dim binanceCashUsd As Decimal = 0D
                 For Each asset In assets
-                    If Cjson.stablecoins.Contains(asset.Key) Then cashUsd += asset.Value
+                    If Cjson.stablecoins.Contains(asset.Key) Then binanceCashUsd += asset.Value
                 Next
+                cashUsd += binanceCashUsd
+                If String.Equals(selectedExchange, "BINANCE", StringComparison.OrdinalIgnoreCase) Then
+                    selectedCashUsd = binanceCashUsd
+                End If
                 accountLoaded = True
             Catch ex As Exception
                 Debug.WriteLine("Erro ao carregar Caixa Spot Binance: " & ex.Message)
@@ -6883,18 +6897,30 @@ Public Class FormMain
            Not String.IsNullOrWhiteSpace(ExchangeCredentials.GateSecretKey) Then
             Try
                 Dim gateAssets = Await _gateSpot.GATE_GetAllSpotAssets()
+                Dim gateCashUsd As Decimal = 0D
                 For Each asset In gateAssets
-                    If Cjson.stablecoins.Contains(asset.Key) Then cashUsd += asset.Value
+                    If Cjson.stablecoins.Contains(asset.Key) Then gateCashUsd += asset.Value
                 Next
+                cashUsd += gateCashUsd
+                If String.Equals(selectedExchange, "GATE.IO", StringComparison.OrdinalIgnoreCase) Then
+                    selectedCashUsd = gateCashUsd
+                End If
                 accountLoaded = True
             Catch ex As Exception
                 Debug.WriteLine("Erro ao carregar Caixa Spot Gate: " & ex.Message)
             End Try
         End If
 
-        If Not accountLoaded Then Return
+        If Not accountLoaded Then
+            _spotOrderCashUsd = 0D
+            _spotOrderCashExchange = selectedExchange
+            UpdateSpotOrderCashLabel()
+            Return
+        End If
 
         _spotCashUsd = cashUsd
+        _spotOrderCashUsd = selectedCashUsd
+        _spotOrderCashExchange = selectedExchange
         _spotCashLoadedFromAccount = True
         UpdateSpotOrderCashLabel()
 
@@ -6905,6 +6931,13 @@ Public Class FormMain
             UpdateRealtimeOverview(force:=True)
         End If
     End Function
+
+    Private Async Sub SpotOrderExchangeChanged(sender As Object, e As EventArgs)
+        UpdateSpotOrderCurrentPrice()
+        Await EnsureSpotOrderSymbolWebSocketAsync()
+        UpdateSpotOrderCurrentPrice()
+        Await RefreshSpotOrderCashAsync()
+    End Sub
 
     Private Sub SpotOrderSymbolTextChanged(sender As Object, e As EventArgs)
         UpdateSpotOrderCurrentPrice()
@@ -7116,7 +7149,11 @@ Public Class FormMain
             Else
                 orderResponse = Await B.BINANCE_CreateSpotOrderAsync(symbol, side, orderType, quantity, price)
             End If
-            Await RefreshSpotPortfolioAfterFilledOrderAsync(orderResponse)
+            Dim filledPriceFallback = price
+            If filledPriceFallback <= 0D Then
+                TryReadFuturesDecimal(_txtSpotOrderCurrentPrice.Text, filledPriceFallback)
+            End If
+            Await RefreshSpotPortfolioAfterFilledOrderAsync(orderResponse, exchange, filledPriceFallback)
             Await LoadSpotOrdersAsync()
             MessageBox.Show($"Ordem enviada para {exchange}.", "Ordem Spot", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
@@ -7138,20 +7175,50 @@ Public Class FormMain
         Try
             Dim response = JObject.Parse(orderResponse)
             Dim status = response("status")?.ToString().Trim().ToUpperInvariant()
-            Return status = "FILLED" OrElse status = "PARTIALLY_FILLED"
+            Return status = "FILLED" OrElse
+                   status = "PARTIALLY_FILLED" OrElse
+                   status = "CLOSED"
         Catch
             Return False
         End Try
     End Function
 
-    Private Async Function RefreshSpotPortfolioAfterFilledOrderAsync(orderResponse As String) As Task
-        If Not IsSpotOrderFilled(orderResponse) OrElse IsDisposed OrElse Disposing Then
+    Private Async Function RefreshSpotPortfolioAfterFilledOrderAsync(
+        orderResponse As String,
+        exchange As String,
+        Optional fallbackPrice As Decimal = 0D) As Task
+        If IsDisposed OrElse Disposing Then
             Return
         End If
 
-        ' Uma ordem LIMIT ainda em NEW não altera a posição. Para FILLED e
-        ' PARTIALLY_FILLED, atualize o saldo e os valores da Visão Geral logo
-        ' após a confirmação da Binance, sem esperar o próximo timer.
+        Dim filledResponse = Await WaitForSpotOrderFillAsync(orderResponse, exchange)
+
+        Dim symbol As String = String.Empty
+        Dim side As String = String.Empty
+        Dim filledQuantity As Decimal = 0D
+        Dim executionPrice As Decimal = 0D
+        If TryReadSpotOrderFill(
+                filledResponse,
+                exchange,
+                symbol,
+                side,
+                filledQuantity,
+                executionPrice,
+                fallbackPrice) Then
+            Dim quantityToApply = ConsumeSpotOrderQuantity(filledResponse, exchange, filledQuantity)
+            If quantityToApply > 0D Then
+                PortfolioRepository.ApplySpotOrderFill(
+                    symbol,
+                    exchange,
+                    side,
+                    quantityToApply,
+                    executionPrice,
+                    executionPrice)
+            End If
+        End If
+
+        ' Mesmo quando a ordem continua pendente, atualize o grid para refletir
+        ' imediatamente qualquer fill confirmado durante a consulta.
         For attempt As Integer = 1 To 3
             While _marketRefreshRunning AndAlso attempt < 3
                 Await Task.Delay(250)
@@ -7166,6 +7233,215 @@ Public Class FormMain
             End If
         Next
     End Function
+
+    Private Async Function WaitForSpotOrderFillAsync(
+        orderResponse As String,
+        exchange As String) As Task(Of String)
+
+        If IsSpotOrderFilled(orderResponse) Then Return orderResponse
+        If String.IsNullOrWhiteSpace(orderResponse) Then Return orderResponse
+
+        Try
+            Dim initial = JObject.Parse(orderResponse)
+            Dim orderIdText = ReadSpotOrderText(initial, "orderId", "order_id", "i", "id")
+            Dim orderId As Long
+            If Not Long.TryParse(orderIdText, NumberStyles.Integer, CultureInfo.InvariantCulture, orderId) OrElse orderId <= 0 Then
+                Return orderResponse
+            End If
+
+            Dim symbol = GetSpotBaseAsset(ReadSpotOrderText(initial, "symbol", "s", "currency_pair").Replace("_", String.Empty))
+            If String.IsNullOrWhiteSpace(symbol) Then Return orderResponse
+
+            For attempt As Integer = 1 To 4
+                Await Task.Delay(250 * attempt)
+                Dim latest As String
+                If String.Equals(exchange?.Trim(), "GATE.IO", StringComparison.OrdinalIgnoreCase) Then
+                    latest = Await _gateSpot.GATE_GetSpotOrderAsync(symbol, orderId)
+                Else
+                    latest = Await B.BINANCE_GetSpotOrderAsync(ToSpotUsdtSymbol(symbol), orderId)
+                End If
+
+                If IsSpotOrderFilled(latest) Then Return latest
+            Next
+        Catch ex As Exception
+            Debug.WriteLine("Erro consultando preenchimento da ordem Spot: " & ex.Message)
+        End Try
+
+        Return orderResponse
+    End Function
+
+    Private Shared Function TryReadSpotOrderFill(
+        orderResponse As String,
+        exchange As String,
+        ByRef symbol As String,
+        ByRef side As String,
+        ByRef filledQuantity As Decimal,
+        ByRef executionPrice As Decimal,
+        Optional fallbackPrice As Decimal = 0D) As Boolean
+
+        symbol = String.Empty
+        side = String.Empty
+        filledQuantity = 0D
+        executionPrice = 0D
+
+        If String.IsNullOrWhiteSpace(orderResponse) Then Return False
+
+        Try
+            Dim response = JObject.Parse(orderResponse)
+            Dim isExecutionReport =
+                String.Equals(ReadSpotOrderText(response, "e"), "executionReport", StringComparison.OrdinalIgnoreCase)
+            Dim status = ReadSpotOrderText(response, "status", "X").ToUpperInvariant()
+            If status <> "FILLED" AndAlso status <> "PARTIALLY_FILLED" AndAlso status <> "CLOSED" Then
+                Return False
+            End If
+
+            Dim rawSymbol = ReadSpotOrderText(response, "symbol", "s", "currency_pair").Replace("_", String.Empty)
+            symbol = GetSpotBaseAsset(rawSymbol)
+            side = ReadSpotOrderText(response, "side", "S").ToUpperInvariant()
+            If String.IsNullOrWhiteSpace(symbol) OrElse
+               (side <> "BUY" AndAlso side <> "SELL") Then
+                Return False
+            End If
+
+            If isExecutionReport Then
+                ' O User Data Stream envia a quantidade do último fill em l.
+                ' Usamos esse delta para não contabilizar duas vezes o acumulado z.
+                filledQuantity = ReadSpotOrderDecimal(response, "l", "lastExecutedQty")
+                executionPrice = ReadSpotOrderDecimal(response, "L", "lastExecutedPrice")
+            Else
+                filledQuantity = ReadSpotOrderDecimal(response, "executedQty", "filledQty", "filled_amount")
+                If filledQuantity <= 0D Then
+                    Dim amount = ReadSpotOrderDecimal(response, "amount", "origQty")
+                    Dim remaining = ReadSpotOrderDecimal(response, "left", "remaining")
+                    If amount > 0D Then filledQuantity = Math.Max(0D, amount - remaining)
+                End If
+            End If
+
+            If filledQuantity <= 0D Then Return False
+
+            Dim quoteAmount = ReadSpotOrderDecimal(
+                response,
+                "cummulativeQuoteQty",
+                "cumulativeQuoteQty",
+                "Z",
+                "filled_total")
+            If Not isExecutionReport AndAlso quoteAmount > 0D Then
+                executionPrice = quoteAmount / filledQuantity
+            ElseIf executionPrice <= 0D Then
+                executionPrice = ReadSpotOrderDecimal(
+                    response,
+                    "price",
+                    "avg_deal_price",
+                    "avgPrice",
+                    "average_price",
+                    "filled_average_price")
+            End If
+
+            If executionPrice <= 0D Then executionPrice = Math.Max(0D, fallbackPrice)
+            Return executionPrice > 0D
+        Catch ex As Exception
+            Debug.WriteLine("Erro lendo execução da ordem Spot: " & ex.Message)
+            Return False
+        End Try
+    End Function
+
+    Private Shared Function ReadSpotOrderText(response As JObject, ParamArray names() As String) As String
+        If response Is Nothing OrElse names Is Nothing Then Return String.Empty
+        For Each fieldName As String In names
+            Dim token As JToken = response.Item(fieldName)
+            If token IsNot Nothing AndAlso token.Type <> JTokenType.Null Then
+                Return token.ToString().Trim()
+            End If
+        Next
+        Return String.Empty
+    End Function
+
+    Private Shared Function ReadSpotOrderDecimal(response As JObject, ParamArray names() As String) As Decimal
+        Dim value As Decimal
+        Dim textValue = ReadSpotOrderText(response, names)
+        If Decimal.TryParse(textValue, NumberStyles.Float, CultureInfo.InvariantCulture, value) Then
+            Return value
+        End If
+        Return 0D
+    End Function
+
+    Private Function ConsumeSpotOrderQuantity(
+        orderResponse As String,
+        exchange As String,
+        cumulativeQuantity As Decimal) As Decimal
+
+        If cumulativeQuantity <= 0D Then Return 0D
+
+        Try
+            Dim response = JObject.Parse(orderResponse)
+            Dim orderId = ReadSpotOrderText(response, "orderId", "order_id", "i", "id")
+            If String.IsNullOrWhiteSpace(orderId) Then Return cumulativeQuantity
+
+            Dim key = exchange.Trim().ToUpperInvariant() & "|" & orderId
+            SyncLock _spotOrderAppliedQuantities
+                Dim previousQuantity = 0D
+                _spotOrderAppliedQuantities.TryGetValue(key, previousQuantity)
+                Dim delta = Math.Max(0D, cumulativeQuantity - previousQuantity)
+                _spotOrderAppliedQuantities(key) = Math.Max(previousQuantity, cumulativeQuantity)
+                Return delta
+            End SyncLock
+        Catch ex As Exception
+            Debug.WriteLine("Erro controlando execução duplicada Spot: " & ex.Message)
+            Return cumulativeQuantity
+        End Try
+    End Function
+
+    Private Sub BinanceSpotExecutionReportReceived(json As String)
+        If String.IsNullOrWhiteSpace(json) Then Return
+
+        Try
+            Dim response = JObject.Parse(json)
+            Dim executionType = ReadSpotOrderText(response, "x").ToUpperInvariant()
+            If executionType <> "TRADE" Then Return
+
+            Dim status = ReadSpotOrderText(response, "X", "status").ToUpperInvariant()
+            If status <> "FILLED" AndAlso status <> "PARTIALLY_FILLED" Then Return
+
+            Dim symbol = GetSpotBaseAsset(ReadSpotOrderText(response, "s", "symbol"))
+            Dim side = ReadSpotOrderText(response, "S", "side").ToUpperInvariant()
+            Dim lastQuantity = ReadSpotOrderDecimal(response, "l", "lastExecutedQty")
+            Dim lastPrice = ReadSpotOrderDecimal(response, "L", "lastExecutedPrice")
+            Dim cumulativeQuantity = ReadSpotOrderDecimal(response, "z", "executedQty")
+            If String.IsNullOrWhiteSpace(symbol) OrElse
+               (side <> "BUY" AndAlso side <> "SELL") OrElse
+               lastQuantity <= 0D OrElse lastPrice <= 0D Then
+                Return
+            End If
+
+            Dim orderId = ReadSpotOrderText(response, "i", "orderId")
+            Dim quantityToApply = lastQuantity
+            If Not String.IsNullOrWhiteSpace(orderId) Then
+                Dim key = "BINANCE|" & orderId
+                SyncLock _spotOrderAppliedQuantities
+                    Dim previousQuantity = 0D
+                    _spotOrderAppliedQuantities.TryGetValue(key, previousQuantity)
+                    If cumulativeQuantity > 0D Then
+                        quantityToApply = Math.Max(0D, cumulativeQuantity - previousQuantity)
+                        _spotOrderAppliedQuantities(key) = Math.Max(previousQuantity, cumulativeQuantity)
+                    Else
+                        _spotOrderAppliedQuantities(key) = previousQuantity + lastQuantity
+                    End If
+                End SyncLock
+            End If
+
+            If quantityToApply > 0D Then
+                PortfolioRepository.ApplySpotOrderFill(
+                    symbol,
+                    "BINANCE",
+                    side,
+                    quantityToApply,
+                    lastPrice,
+                    lastPrice)
+            End If
+        Catch ex As Exception
+            Debug.WriteLine("Erro aplicando execução Spot da Binance: " & ex.Message)
+        End Try
+    End Sub
 
     Private Sub ConfigureSpotOrdersGrid()
         If _dgOrdensSpot Is Nothing Then

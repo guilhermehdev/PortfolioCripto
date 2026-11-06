@@ -245,6 +245,18 @@ Public Class Gateio
         Return True
     End Function
 
+    Public Async Function GATE_GetSpotOrderAsync(symbol As String, orderId As Long) As Task(Of String)
+        If String.IsNullOrWhiteSpace(symbol) Then Throw New ArgumentException("O símbolo da ordem é obrigatório.", NameOf(symbol))
+        If orderId <= 0 Then Throw New ArgumentException("O identificador da ordem é inválido.", NameOf(orderId))
+
+        Dim query = "currency_pair=" & Uri.EscapeDataString(ToGatePair(symbol))
+        Return Await SendSignedSpotAsync(
+            "GET",
+            "/api/v4/spot/orders/" & orderId.ToString(CultureInfo.InvariantCulture),
+            query,
+            String.Empty)
+    End Function
+
     Public Async Function GATE_GetSpotKlinesAsync(
         symbol As String,
         interval As String,

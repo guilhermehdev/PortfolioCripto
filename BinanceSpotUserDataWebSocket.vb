@@ -20,6 +20,7 @@ Public Class BinanceSpotUserDataWebSocket
     Private _listenKey As String = String.Empty
 
     Public Event DataUpdated()
+    Public Event ExecutionReportReceived(json As String)
     Public Event ConnectionStateChanged(connected As Boolean, message As String)
 
     Public Async Function StartAsync() As Task
@@ -164,7 +165,10 @@ Public Class BinanceSpotUserDataWebSocket
                 End If
 
                 Select Case eventName
-                    Case "outboundAccountPosition", "balanceUpdate", "executionReport", "externalLockUpdate"
+                    Case "executionReport"
+                        RaiseEvent ExecutionReportReceived(json)
+                        RaiseEvent DataUpdated()
+                    Case "outboundAccountPosition", "balanceUpdate", "externalLockUpdate"
                         RaiseEvent DataUpdated()
                 End Select
             End Using
