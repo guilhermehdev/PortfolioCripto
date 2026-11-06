@@ -12,6 +12,62 @@ Public NotInheritable Class PortfolioMarketService
     Private Sub New()
     End Sub
 
+    ''' <summary>
+    ''' Calcula o preço médio ponderado dos lotes ativos por símbolo e wallet.
+    ''' O cálculo é feito durante o refresh para que o dgPortfolio não dependa
+    ''' de uma única linha antiga do PortfolioItems.
+    ''' </summary>
+    Private Shared Function BuildWeightedAveragePrices(
+        portfolio As DataTable) As Dictionary(Of String, Decimal)
+
+        Dim totalQuantities As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+        Dim totalCosts As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+
+        If portfolio Is Nothing Then
+            Return New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+        End If
+
+        For Each row As DataRow In portfolio.Rows
+            Dim symbol = If(row.IsNull("Symbol"), String.Empty, row("Symbol").ToString()).Trim().ToUpperInvariant()
+            Dim wallet = If(row.IsNull("Wallet"), String.Empty, row("Wallet").ToString()).Trim().ToUpperInvariant()
+            If String.IsNullOrWhiteSpace(symbol) OrElse String.IsNullOrWhiteSpace(wallet) Then
+                Continue For
+            End If
+
+            Dim quantity = If(
+                row.IsNull("Quantity"),
+                0D,
+                Convert.ToDecimal(row("Quantity"), CultureInfo.InvariantCulture))
+            Dim initialPrice = If(
+                row.IsNull("InitialPrice"),
+                0D,
+                Convert.ToDecimal(row("InitialPrice"), CultureInfo.InvariantCulture))
+
+            If quantity <= 0D OrElse initialPrice <= 0D Then
+                Continue For
+            End If
+
+            Dim key = symbol & "|" & wallet
+            If Not totalQuantities.ContainsKey(key) Then
+                totalQuantities(key) = 0D
+                totalCosts(key) = 0D
+            End If
+
+            totalQuantities(key) += quantity
+            totalCosts(key) += quantity * initialPrice
+        Next
+
+        Dim averages As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+        For Each item In totalQuantities
+            Dim totalQuantity = item.Value
+            If totalQuantity > 0D AndAlso totalCosts.ContainsKey(item.Key) Then
+                averages(item.Key) = totalCosts(item.Key) / totalQuantity
+            End If
+        Next
+
+        Return averages
+    End Function
+
     Public Shared Async Function LoadAsync(
         datagrid As DataGridView,
         Optional currencyColumn As String = "USD") As Task(Of Boolean)
@@ -83,6 +139,8 @@ Public NotInheritable Class PortfolioMarketService
             If originalDT.Rows.Count = 0 Then
                 Throw New Exception("Nenhum ativo encontrado no SQLite.")
             End If
+
+            Dim weightedAveragePrices = BuildWeightedAveragePrices(originalDT)
 
             allSymbols =
                 originalDT.AsEnumerable().
@@ -326,6 +384,12 @@ Public NotInheritable Class PortfolioMarketService
                     Convert.ToDecimal(
                         row("InitialPrice"),
                         CultureInfo.InvariantCulture)
+
+                Dim averageKey = symbol & "|" & wallet.ToUpperInvariant()
+                Dim calculatedAverage As Decimal
+                If weightedAveragePrices.TryGetValue(averageKey, calculatedAverage) Then
+                    initialPrice = calculatedAverage
+                End If
 
                 Dim initialValueUSD As Decimal = quantity * initialPrice
                 Dim initialValueBRL As Decimal = initialValueUSD * usdBrl
