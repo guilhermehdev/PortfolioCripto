@@ -1323,6 +1323,7 @@ Public Class FormMain
             .SelectionForeColor = Color.White
         }
         _dgSpotBotPositions.Columns.Add(closeBotPositionColumn)
+        AddHandler _dgSpotBotPositions.CellClick, AddressOf SpotBotPositions_CellClick
         AddHandler _dgSpotBotPositions.CellContentClick, AddressOf SpotBotPositions_CellContentClick
         AddHandler _dgSpotBotPositions.CellMouseEnter, AddressOf SpotBotPositions_CellMouseEnter
         AddHandler _dgSpotBotPositions.CellMouseLeave, AddressOf SpotBotPositions_CellMouseLeave
@@ -2157,6 +2158,29 @@ Public Class FormMain
         })
     End Sub
 
+    Private Sub SpotBotPositions_CellClick(sender As Object, e As DataGridViewCellEventArgs)
+        If _dgSpotBotPositions Is Nothing OrElse
+           e.RowIndex < 0 OrElse
+           e.ColumnIndex < 0 OrElse
+           Not String.Equals(_dgSpotBotPositions.Columns(e.ColumnIndex).Name, "Symbol", StringComparison.OrdinalIgnoreCase) Then
+            Return
+        End If
+
+        Dim symbol = _dgSpotBotPositions.Rows(e.RowIndex).Cells("Symbol").Value?.ToString().Trim().ToUpperInvariant()
+        If String.IsNullOrWhiteSpace(symbol) Then Return
+
+        Try
+            Dim chartForm As New FormBrowser(symbol)
+            chartForm.Show(Me)
+        Catch ex As Exception
+            MessageBox.Show(
+                "Não foi possível abrir o gráfico de " & symbol & ": " & ex.Message,
+                "Gráfico do TradeBot",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error)
+        End Try
+    End Sub
+
     Private Sub SpotBotPositions_CellContentClick(sender As Object, e As DataGridViewCellEventArgs)
         If _dgSpotBotPositions Is Nothing OrElse
            e.RowIndex < 0 OrElse
@@ -2190,7 +2214,8 @@ Public Class FormMain
     Private Sub SpotBotPositions_CellMouseEnter(sender As Object, e As DataGridViewCellEventArgs)
         If _dgSpotBotPositions Is Nothing OrElse e.ColumnIndex < 0 Then Return
         _dgSpotBotPositions.Cursor = If(
-            String.Equals(_dgSpotBotPositions.Columns(e.ColumnIndex).Name, "ClosePosition", StringComparison.OrdinalIgnoreCase),
+            String.Equals(_dgSpotBotPositions.Columns(e.ColumnIndex).Name, "ClosePosition", StringComparison.OrdinalIgnoreCase) OrElse
+            String.Equals(_dgSpotBotPositions.Columns(e.ColumnIndex).Name, "Symbol", StringComparison.OrdinalIgnoreCase),
             Cursors.Hand,
             Cursors.Default)
     End Sub
