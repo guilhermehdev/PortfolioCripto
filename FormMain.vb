@@ -5288,6 +5288,8 @@ Public Class FormMain
         ' ==========================================
             Case "marketcap"
                 e.Value = valor.ToString("C2", CultureInfo.GetCultureInfo("en-US"))
+                e.CellStyle.ForeColor = Color.WhiteSmoke
+                e.CellStyle.SelectionForeColor = Color.WhiteSmoke
                 e.FormattingApplied = True
         ' ==========================================
         ' QUANTIA ATUAL USD

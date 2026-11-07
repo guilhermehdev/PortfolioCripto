@@ -502,6 +502,9 @@ Public Class JSON
                 datagrid.Columns(9).Width = 150
                 With datagrid.Columns(9).DefaultCellStyle
                     .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .SelectionBackColor = Color.Black
+                    .SelectionForeColor = Color.WhiteSmoke
                     .Font = New Font(fontname, fontsize, FontStyle.Bold)
                     .Alignment = DataGridViewContentAlignment.MiddleLeft
                     .Format = "C2"
@@ -865,6 +868,9 @@ Public Class JSON
                 datagrid.Columns(9).Width = 150
                 With datagrid.Columns(9).DefaultCellStyle
                     .BackColor = Color.Black
+                    .ForeColor = Color.WhiteSmoke
+                    .SelectionBackColor = Color.Black
+                    .SelectionForeColor = Color.WhiteSmoke
                     .Font = New Font(fontname, fontsize, FontStyle.Bold)
                     .Alignment = DataGridViewContentAlignment.MiddleLeft
                     .Format = "C2"
