@@ -718,6 +718,87 @@ Public NotInheritable Class SpotBotValueZonePullbackStrategy
     End Function
 End Class
 
+''' <summary>
+''' Pullback defensivo para um dia de queda leve do BTC. O regime não compra
+''' a queda do mercado: ele só libera a confirmação de zona de valor quando
+''' o BTC recua moderadamente e o ativo mantém tendência própria de alta.
+''' </summary>
+Public NotInheritable Class SpotBotBtcMildDeclinePullbackStrategy
+    Implements ISpotBotBitcoinContextStrategy
+
+    Private ReadOnly _valueZone As New SpotBotValueZonePullbackStrategy()
+
+    Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
+        Get
+            Return SpotBotStrategyKind.BtcMildDeclinePullback
+        End Get
+    End Property
+
+    Public Function Evaluate(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
+
+        Return HoldSignal("BTC leve queda: aguardando contexto diário e pullback M5/M2/M1")
+    End Function
+
+    Public Function EvaluateWithBitcoinContext(
+        symbol As String,
+        m1Candles As IReadOnlyList(Of SpotBotPricePoint),
+        m2Candles As IReadOnlyList(Of SpotBotPricePoint),
+        m5Candles As IReadOnlyList(Of SpotBotPricePoint),
+        bitcoinDailyCandles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotBitcoinContextStrategy.EvaluateWithBitcoinContext
+
+        If bitcoinDailyCandles Is Nothing OrElse bitcoinDailyCandles.Count < 2 Then
+            Return HoldSignal("BTC leve queda: histórico diário do BTC insuficiente")
+        End If
+
+        Dim previous = bitcoinDailyCandles(bitcoinDailyCandles.Count - 2)
+        Dim current = bitcoinDailyCandles(bitcoinDailyCandles.Count - 1)
+        If previous Is Nothing OrElse current Is Nothing OrElse
+           previous.Close <= 0D OrElse current.Close <= 0D Then
+            Return HoldSignal("BTC leve queda: fechamento diário do BTC inválido")
+        End If
+
+        Dim dropPercent = Math.Max(0D, (previous.Close - current.Close) / previous.Close * 100D)
+        Dim minimumDrop = Math.Max(0.1D, configuration.BtcMildDeclineMinimumPercent)
+        Dim maximumDrop = Math.Max(minimumDrop, configuration.BtcMildDeclineMaximumPercent)
+        If current.Close >= previous.Close OrElse dropPercent < minimumDrop OrElse dropPercent > maximumDrop Then
+            Return HoldSignal(
+                $"BTC leve queda: variação diária {dropPercent:0.##}% fora da faixa {minimumDrop:0.##}%–{maximumDrop:0.##}%")
+        End If
+
+        Dim pullback = _valueZone.EvaluateMultiTimeframe(
+            symbol,
+            m1Candles,
+            m2Candles,
+            m5Candles,
+            configuration)
+        If pullback Is Nothing Then
+            Return HoldSignal("BTC leve queda: pullback sem sinal")
+        End If
+
+        pullback.Strategy = Kind
+        If pullback.Direction = SpotBotSignalDirection.Buy Then
+            pullback.Confidence = Math.Min(1D, Math.Max(0D, pullback.Confidence))
+            pullback.Reason =
+                $"BTC leve queda {dropPercent:0.##}%: força relativa + {pullback.Reason}"
+        ElseIf String.IsNullOrWhiteSpace(pullback.Reason) Then
+            pullback.Reason = $"BTC leve queda {dropPercent:0.##}%: aguardando pullback defensivo"
+        End If
+
+        Return pullback
+    End Function
+
+    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
+        Return New SpotBotStrategySignal With {
+            .Strategy = SpotBotStrategyKind.BtcMildDeclinePullback,
+            .Direction = SpotBotSignalDirection.Hold,
+            .Reason = reason}
+    End Function
+End Class
+
 Public NotInheritable Class SpotBotGridStrategy
     Implements ISpotBotStrategy
 
@@ -1154,7 +1235,7 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
             Math.Min(configuration.GridV2SpacingMaximumPercent, volatilityPercent * 2.5D))
         spacingPercent = Math.Max(0.01D, spacingPercent)
 
-        Dim minimumStopPercent = Math.Max(0D, configuration.GridV2MinimumStopPercent)
+        Dim minimumStopPercent = Math.Max(1.5D, configuration.GridV2MinimumStopPercent)
         Dim stopVolatilityMultiplier = Math.Max(0D, configuration.GridV2StopVolatilityMultiplier)
         Dim dynamicStopPercent = Math.Max(minimumStopPercent, volatilityPercent * stopVolatilityMultiplier)
         Dim maximumStopPercent = Math.Max(minimumStopPercent, configuration.GridV2MaximumStopPercent)

@@ -29,6 +29,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="SpotTradeBotEditor.Designer.vb">
+      <DesignTime>True</DesignTime>
+      <DependentUpon>SpotTradeBotEditor.vb</DependentUpon>
+    </Compile>
     <Compile Update="My Project\Application.Designer.vb">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>

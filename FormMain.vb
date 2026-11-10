@@ -86,8 +86,9 @@ Public Class FormMain
     Private _credentialsMenuItem As ToolStripMenuItem
     Private ReadOnly _spotTradeBot As New SpotTradeBotEngine()
     Private ReadOnly _spotDca As New SpotDcaEngine()
+    Private _tradeBotButton As Button
     Private _panelSpotBot As Panel
-    Private _panelSpotBotEditor As Panel
+    Private _panelSpotBotEditor As UserControl
     Private _panelDca As Panel
     Private _botLog As RichTextBox
     Private _dgSpotBotPositions As DataGridView
@@ -104,6 +105,15 @@ Public Class FormMain
     Private _botBreakEvenTrigger As NumericUpDown
     Private _botTrailingEnabled As CheckBox
     Private _botTrailingDistance As NumericUpDown
+    Private _botRiskBrakeEnabled As CheckBox
+    Private _botRiskSessionLoss As NumericUpDown
+    Private _botRiskProfitLockEnabled As CheckBox
+    Private _botRiskProfitTrigger As NumericUpDown
+    Private _botRiskGiveback As NumericUpDown
+    Private _botRiskMaxLosses As NumericUpDown
+    Private _botRiskPauseMinutes As NumericUpDown
+    Private _botRiskClosePositions As CheckBox
+    Private _botRiskUseUnrealized As CheckBox
     Private _botPostExitCooldown As NumericUpDown
     Private _botUniverseMode As ComboBox
     Private _botUniverseMaxAssets As NumericUpDown
@@ -114,6 +124,7 @@ Public Class FormMain
     Private _botGridMaxExposurePercent As NumericUpDown
     Private _botGridMaxLevels As NumericUpDown
     Private _botGridRequireRejection As CheckBox
+    Private _botBtcMildDecline As CheckBox
     Private _botBtcFlushEnabled As CheckBox
     Private _botBtcFlushDropPercent As NumericUpDown
     Private _botBtcFlushPauseMinutes As NumericUpDown
@@ -128,7 +139,6 @@ Public Class FormMain
     Private _botStart As Button
     Private _botStop As Button
     Private _botExport As Button
-    Private _btTradeBot As Button
     Private _btDca As Button
     Private ReadOnly _botStrategyChecks As New Dictionary(Of SpotBotStrategyKind, CheckBox)()
     Private _lastBotSummaryUpdateUtc As DateTime
@@ -270,6 +280,10 @@ Public Class FormMain
         End If
     End Function
     Private Sub Form1_LoadAsync(sender As Object, e As EventArgs) Handles MyBase.Load
+        If System.ComponentModel.LicenseManager.UsageMode = System.ComponentModel.LicenseUsageMode.Designtime Then
+            Return
+        End If
+
         ConfigureCredentialsMenu()
         ConfigureSpotOrdersPanel()
         ConfigureFuturesOrdersPanel()
@@ -804,19 +818,14 @@ Public Class FormMain
             Return
         End If
 
-        _panelSpotBot = New Panel With {
-            .Name = "PanelSpotBot",
-            .BackColor = Color.FromArgb(30, 30, 30),
-            .Padding = New Padding(14, 0, 14, 0),
-            .Visible = False
-        }
-
-        Dim editor As New Panel With {
-            .Dock = DockStyle.Top,
-            .Height = 210,
-            .BackColor = Color.FromArgb(30, 30, 30)
-        }
-        _panelSpotBotEditor = editor
+        ' O painel e os controles agora são mantidos pelo Designer do FormMain.
+        ' O editor dinâmico antigo permanece apenas como código legado abaixo
+        ' deste método, mas não é mais instanciado nem adicionado à tela.
+        _panelSpotBot = PanelTradeBot
+        _panelSpotBot.Name = "PanelTradeBot"
+        _panelSpotBot.BackColor = Color.FromArgb(30, 30, 30)
+        _panelSpotBot.Visible = False
+        _panelSpotBotEditor = Nothing
 
         Dim universeSettings As SpotBotUniverseSettings
         Try
@@ -825,6 +834,19 @@ Public Class FormMain
             universeSettings = New SpotBotUniverseSettings()
             Debug.WriteLine("Erro carregando configurações do universo do Tradebot: " & ex.Message)
         End Try
+
+        ConfigureSpotBotManualReferences(universeSettings)
+        ConfigureSpotBotManualPositionsGrid()
+        ConfigureSpotBotManualActions()
+        AddHandler _spotTradeBot.SignalGenerated, AddressOf SpotTradeBot_SignalGenerated
+        AddHandler _spotTradeBot.SimulationUpdated, AddressOf SpotTradeBot_SimulationUpdated
+        UpdateSpotBotUniverseButtonText()
+        Return
+
+        ' Código legado da montagem dinâmica. Mantido fora da compilação para
+        ' preservar o histórico sem voltar a criar controles em tempo de execução.
+#If False Then
+        GoTo BuildSpotBotGrid
 
         AddBotLabel(editor, "Estratégia base", 6, 3, 150)
         _botBollingerMode = New ComboBox With {
@@ -1239,6 +1261,111 @@ Public Class FormMain
             _botBtcDailyEnabled,
             "Usa o candle diário em formação para detectar queda e oscilação fortes do BTC.")
 
+        ' O editor antigo era uma lista única de controles criados em tempo de
+        ' execução. Reorganizamos essa lista em páginas nomeadas para que o
+        ' usuário consiga ajustar cada grupo sem sobrepor o grid/log.
+        Dim existingEditorControls = editor.Controls.Cast(Of Control)().ToList()
+        Dim settingsTabs As New TabControl With {
+            .Name = "tcSpotBotSettings",
+            .Dock = DockStyle.Fill,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .Alignment = TabAlignment.Top,
+            .HotTrack = True}
+        Dim strategyPage As New TabPage("Estratégias e execução") With {
+            .Name = "tpSpotBotStrategies",
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .AutoScroll = True}
+        Dim riskPage As New TabPage("Freio de perdas") With {
+            .Name = "tpSpotBotRiskBrake",
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .AutoScroll = True}
+        For Each child In existingEditorControls
+            editor.Controls.Remove(child)
+            child.Top += 22
+            strategyPage.Controls.Add(child)
+        Next
+
+        AddBotLabel(riskPage, "Ativar freio", 10, 14, 100)
+        _botRiskBrakeEnabled = New CheckBox With {
+            .Name = "chkSpotBotRiskBrakeEnabled",
+            .Text = "Proteção geral",
+            .AutoSize = True,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .Location = New Point(10, 35),
+            .Checked = _spotTradeBot.Configuration.RiskBrakeEnabled,
+            .Cursor = Cursors.Hand}
+        riskPage.Controls.Add(_botRiskBrakeEnabled)
+
+        AddBotLabel(riskPage, "Perda máx. da sessão (%)", 155, 14, 150)
+        _botRiskSessionLoss = CreateBotNumeric(_spotTradeBot.Configuration.RiskBrakeSessionLossPercent, 0D, 100D, 2, 155, 35, 90)
+        riskPage.Controls.Add(_botRiskSessionLoss)
+
+        AddBotLabel(riskPage, "Trava de lucro", 265, 14, 120)
+        _botRiskProfitLockEnabled = New CheckBox With {
+            .Name = "chkSpotBotRiskProfitLock",
+            .Text = "Ativa",
+            .AutoSize = True,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .Location = New Point(265, 35),
+            .Checked = _spotTradeBot.Configuration.RiskBrakeProfitLockEnabled,
+            .Cursor = Cursors.Hand}
+        riskPage.Controls.Add(_botRiskProfitLockEnabled)
+
+        AddBotLabel(riskPage, "Armar em ganho (%)", 345, 14, 130)
+        _botRiskProfitTrigger = CreateBotNumeric(_spotTradeBot.Configuration.RiskBrakeProfitLockTriggerPercent, 0D, 100D, 2, 345, 35, 90)
+        riskPage.Controls.Add(_botRiskProfitTrigger)
+
+        AddBotLabel(riskPage, "Devolver do pico (%)", 455, 14, 135)
+        _botRiskGiveback = CreateBotNumeric(_spotTradeBot.Configuration.RiskBrakeProfitGivebackPercent, 0D, 100D, 0, 455, 35, 90)
+        riskPage.Controls.Add(_botRiskGiveback)
+
+        AddBotLabel(riskPage, "Máx. perdas seguidas", 10, 80, 140)
+        _botRiskMaxLosses = CreateBotNumeric(_spotTradeBot.Configuration.RiskBrakeMaxConsecutiveLosses, 0D, 100D, 0, 10, 101, 90)
+        riskPage.Controls.Add(_botRiskMaxLosses)
+
+        AddBotLabel(riskPage, "Pausa após sequência (min)", 120, 80, 180)
+        _botRiskPauseMinutes = CreateBotNumeric(_spotTradeBot.Configuration.RiskBrakePauseMinutes, 1D, 10080D, 0, 120, 101, 100)
+        riskPage.Controls.Add(_botRiskPauseMinutes)
+
+        _botRiskClosePositions = New CheckBox With {
+            .Name = "chkSpotBotRiskClosePositions",
+            .Text = "Fechar posições no limite",
+            .AutoSize = True,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .Location = New Point(245, 104),
+            .Checked = _spotTradeBot.Configuration.RiskBrakeClosePositionsOnHardStop,
+            .Cursor = Cursors.Hand}
+        riskPage.Controls.Add(_botRiskClosePositions)
+
+        _botRiskUseUnrealized = New CheckBox With {
+            .Name = "chkSpotBotRiskUseUnrealized",
+            .Text = "Considerar P/L aberto",
+            .AutoSize = True,
+            .BackColor = Color.FromArgb(30, 30, 30),
+            .ForeColor = Color.White,
+            .Location = New Point(470, 104),
+            .Checked = _spotTradeBot.Configuration.RiskBrakeUseUnrealizedPnl,
+            .Cursor = Cursors.Hand}
+        riskPage.Controls.Add(_botRiskUseUnrealized)
+
+        ToolTip1.SetToolTip(_botRiskSessionLoss, "Limite de perda em relação ao patrimônio no início da simulação.")
+        ToolTip1.SetToolTip(_botRiskProfitTrigger, "A trava arma quando o patrimônio atingir este ganho.")
+        ToolTip1.SetToolTip(_botRiskGiveback, "Percentual do ganho máximo que pode ser devolvido antes do freio.")
+        ToolTip1.SetToolTip(_botRiskMaxLosses, "Zero desativa o freio por sequência de perdas.")
+        ToolTip1.SetToolTip(_botRiskClosePositions, "No limite duro, encerra as posições simuladas no preço atual.")
+        ToolTip1.SetToolTip(_botRiskUseUnrealized, "Usa o patrimônio marcado a mercado, incluindo P/L aberto.")
+
+        settingsTabs.TabPages.Add(strategyPage)
+        settingsTabs.TabPages.Add(riskPage)
+        editor.Controls.Add(settingsTabs)
+
+BuildSpotBotGrid:
         _botLog = New RichTextBox With {
             .Name = "rtbSpotBotLog",
             .Dock = DockStyle.Bottom,
@@ -1346,7 +1473,7 @@ Public Class FormMain
         _panelSpotBot.Controls.Add(editor)
         Controls.Add(_panelSpotBot)
 
-        _btTradeBot = New Button With {
+        _tradeBotButton = New Button With {
             .Name = "btTradeBot",
             .Text = "Tradebot",
             .BackColor = Color.FromArgb(20, 20, 20),
@@ -1356,16 +1483,17 @@ Public Class FormMain
             .Location = New Point(280, 432),
             .Size = New Size(85, 23)
         }
-        _btTradeBot.FlatAppearance.BorderSize = 0
-        _btTradeBot.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
-        _btTradeBot.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
-        AddHandler _btTradeBot.Click, AddressOf btTradeBot_Click
-        Controls.Add(_btTradeBot)
+        _tradeBotButton.FlatAppearance.BorderSize = 0
+        _tradeBotButton.FlatAppearance.MouseOverBackColor = Color.RoyalBlue
+        _tradeBotButton.FlatAppearance.MouseDownBackColor = Color.DodgerBlue
+
+        Controls.Add(_tradeBotButton)
         ArrangeSpotBotButton()
 
         AddHandler _spotTradeBot.SignalGenerated, AddressOf SpotTradeBot_SignalGenerated
         AddHandler _spotTradeBot.SimulationUpdated, AddressOf SpotTradeBot_SimulationUpdated
         UpdateSpotBotUniverseButtonText()
+#End If
     End Sub
 
     Private Sub ConfigureDcaPanel()
@@ -1803,7 +1931,7 @@ Public Class FormMain
         btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
-        _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
+        _tradeBotButton.BackColor = Color.FromArgb(20, 20, 20)
         _btDca.BackColor = Color.SteelBlue
         DcaExchange_SelectedIndexChanged(Nothing, EventArgs.Empty)
         UpdateDcaGrid()
@@ -2005,13 +2133,13 @@ Public Class FormMain
         btVisaoGeral.BringToFront()
         btOrdensSpot.BringToFront()
         btOrdensFuturo.BringToFront()
-        _btTradeBot.BringToFront()
+        _tradeBotButton.BringToFront()
         _btDca.BringToFront()
     End Sub
 
     Private Sub ArrangeDcaButton()
-        If _btDca Is Nothing OrElse _btTradeBot Is Nothing Then Return
-        _btDca.Location = New Point(_btTradeBot.Right, _btTradeBot.Top)
+        If _btDca Is Nothing OrElse _tradeBotButton Is Nothing Then Return
+        _btDca.Location = New Point(_tradeBotButton.Right, _tradeBotButton.Top)
     End Sub
 
     Private Sub SpotBotUniverseModeChanged(sender As Object, e As EventArgs)
@@ -2227,7 +2355,7 @@ Public Class FormMain
     End Sub
 
     Private Sub AddBotStrategyCheckBox(
-        editor As Panel,
+        editor As Control,
         kind As SpotBotStrategyKind,
         text As String,
         left As Integer,
@@ -2251,7 +2379,7 @@ Public Class FormMain
     End Sub
 
     Private Function GetBollingerModeIndex() As Integer
-        If _spotTradeBot.HasRestoredState AndAlso
+        If Not _spotTradeBot.HasRestoredConfiguration OrElse
            Not _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BaseOriginalProtected) Then
             Return 1
         End If
@@ -2260,7 +2388,7 @@ Public Class FormMain
     End Function
 
     Private Function GetBollingerTimeframeIndex() As Integer
-        Return If(_spotTradeBot.HasRestoredState AndAlso _spotTradeBot.Configuration.BollingerCandleMinutes = 240, 0, 1)
+        Return If(_spotTradeBot.HasRestoredConfiguration AndAlso _spotTradeBot.Configuration.BollingerCandleMinutes = 240, 0, 1)
     End Function
 
     Private Sub SpotBotBollingerModeChanged(sender As Object, e As EventArgs)
@@ -2296,7 +2424,338 @@ Public Class FormMain
         _spotTradeBot.Configuration.BollingerStandardDeviations = 3D
     End Sub
 
-    Private Shared Sub AddBotLabel(editor As Panel, text As String, left As Integer, top As Integer, width As Integer)
+    Private Sub ConfigureSpotBotManualReferences(universeSettings As SpotBotUniverseSettings)
+        _botBollingerMode = cbSpotBotBollingerMode
+        _botCombination = cbSpotBotCombination
+        _botBollingerTimeframe = cbSpotBotBollingerTimeframe
+        _botConfirmations = nudSpotBotConfirmations
+        _botUniverseMode = cbSpotBotUniverseMode
+        _botUniverseButton = btSpotBotUniverse
+        _botStartingQuote = nudSpotBotStartingQuote
+        _botAllocation = nudSpotBotAllocation
+        _botFee = nudSpotBotFee
+        _botTakeProfit = nudSpotBotTakeProfit
+        _botStopLoss = nudSpotBotStopLoss
+        _botUniverseMaxAssets = nudSpotBotMaxAssets
+        _botUniverseMinVolume = nudSpotBotMinVolume
+        _botBreakEvenEnabled = chkSpotBotBreakEven
+        _botBreakEvenTrigger = NumericUpDown2
+        _botTrailingEnabled = chkSpotBotTrailing
+        _botTrailingDistance = NumericUpDown1
+        _botPostExitCooldown = nudSpotBotPostExitCooldown
+        _botUniverseMinTrades = nudSpotBotMinTrades
+        _botGridRiskPercent = nudSpotBotGridRisk
+        _botGridReservePercent = nudSpotBotGridReserve
+        _botGridMaxExposurePercent = nudSpotBotGridExposure
+        _botGridMaxLevels = nudSpotBotGridLevels
+        _botGridRequireRejection = chkSpotBotGridRejection
+        _botBtcFlushDropPercent = nudSpotBotBtcFlushDrop
+        _botBtcFlushPauseMinutes = nudSpotBotBtcFlushPause
+        _botBtcFlushEnabled = chkSpotBotBtcFlush
+        _botBtcFlushVolumeMultiplier = nudSpotBotBtcFlushVolume
+        _botBtcDailyDropPercent = nudSpotBotBtcDailyDrop
+        _botBtcDailyDrawdownPercent = nudSpotBotBtcDailyDrawdown
+        _botBtcDailyEnabled = chkSpotBotBtcDaily
+        _botRiskBrakeEnabled = chkSpotBotRiskBrakeEnabled
+        _botRiskSessionLoss = nudSpotBotRiskSessionLoss
+        _botRiskProfitLockEnabled = chkSpotBotRiskProfitLock
+        _botRiskProfitTrigger = nudSpotBotRiskProfitTrigger
+        _botRiskGiveback = nudSpotBotRiskGiveback
+        _botRiskMaxLosses = nudSpotBotRiskMaxLosses
+        _botRiskPauseMinutes = nudSpotBotRiskPause
+        _botRiskClosePositions = chkSpotBotRiskClosePositions
+        _botRiskUseUnrealized = chkSpotBotRiskUseUnrealized
+        _botStart = btSpotBotStart
+        _botStop = btSpotBotStop
+        _botExport = btSpotBotExport
+        _botTrades = btSpotBotTrades
+        _botSimulationSummary = lbSpotBotSimulationSummary
+        _botLog = rtbSpotBotLog
+        _dgSpotBotPositions = dgSpotBotPositionsControl
+
+        _botStrategyChecks.Clear()
+        _botStrategyChecks(SpotBotStrategyKind.WavePullback) = chkSpotBotWavePullback
+        _botStrategyChecks(SpotBotStrategyKind.BreakoutRetest) = chkSpotBotBreakoutRetest
+        _botStrategyChecks(SpotBotStrategyKind.MomentumVolume) = chkSpotBotMomentumVolume
+        _botStrategyChecks(SpotBotStrategyKind.GridAdaptive) = chkSpotBotGridAdaptive
+        _botStrategyChecks(SpotBotStrategyKind.ValueZonePullback) = chkSpotBotValueZonePullback
+        _botStrategyChecks(SpotBotStrategyKind.BtcMildDeclinePullback) = chkSpotBotBtcMildDecline
+
+        If _botBollingerMode.Items.Count = 0 Then
+            _botBollingerMode.Items.AddRange(New Object() {"Base Original Protegida", "Desativada"})
+        End If
+        If _botCombination.Items.Count = 0 Then
+            _botCombination.Items.AddRange(New Object() {"Qualquer estratégia", "Todas as estratégias", "Mínimo de confirmações", "Pontuação ponderada"})
+        End If
+        If _botBollingerTimeframe.Items.Count = 0 Then
+            _botBollingerTimeframe.Items.AddRange(New Object() {"4 horas", "Diário"})
+        End If
+        If _botUniverseMode.Items.Count = 0 Then
+            _botUniverseMode.Items.AddRange(New Object() {"Manual", "Top volume"})
+        End If
+
+        _botBollingerMode.DropDownStyle = ComboBoxStyle.DropDownList
+        _botCombination.DropDownStyle = ComboBoxStyle.DropDownList
+        _botBollingerTimeframe.DropDownStyle = ComboBoxStyle.DropDownList
+        _botUniverseMode.DropDownStyle = ComboBoxStyle.DropDownList
+        _botBollingerMode.SelectedIndex = Math.Max(0, Math.Min(_botBollingerMode.Items.Count - 1, GetBollingerModeIndex()))
+        _botCombination.SelectedIndex = Math.Max(0, Math.Min(_botCombination.Items.Count - 1,
+            If(_spotTradeBot.HasRestoredConfiguration,
+               CInt(_spotTradeBot.Configuration.CombinationMode),
+               CInt(SpotBotCombinationMode.MinimumConfirmations))))
+        _botConfirmations.Value = Math.Min(
+            _botConfirmations.Maximum,
+            Math.Max(_botConfirmations.Minimum,
+                     If(_spotTradeBot.HasRestoredConfiguration, _spotTradeBot.Configuration.RequiredConfirmations, 2D)))
+        _botBollingerTimeframe.SelectedIndex = Math.Max(0, Math.Min(_botBollingerTimeframe.Items.Count - 1, GetBollingerTimeframeIndex()))
+        _botUniverseMode.SelectedIndex = If(universeSettings.Mode = SpotBotUniverseMode.TopVolume, 1, 0)
+        _botUniverseMaxAssets.Value = ClampNumeric(_botUniverseMaxAssets, universeSettings.MaxAssets)
+        _botUniverseMinVolume.Value = ClampNumeric(_botUniverseMinVolume, universeSettings.MinimumQuoteVolume)
+        _botUniverseMinTrades.Value = ClampNumeric(_botUniverseMinTrades, universeSettings.MinimumTrades24h)
+
+        If _spotTradeBot.HasRestoredConfiguration Then
+            Dim restoredSnapshot = _spotTradeBot.GetSimulationSnapshot()
+            _botStartingQuote.Value = ClampNumeric(_botStartingQuote, restoredSnapshot.StartingQuote)
+            _botAllocation.Value = ClampNumeric(_botAllocation, _spotTradeBot.Configuration.SimulationAllocationPercent)
+            _botFee.Value = ClampNumeric(_botFee, _spotTradeBot.Configuration.SimulationFeeRate * 100D)
+            _botTakeProfit.Value = ClampNumeric(_botTakeProfit, _spotTradeBot.Configuration.TakeProfitPercent)
+            _botStopLoss.Value = ClampNumeric(_botStopLoss, _spotTradeBot.Configuration.StopLossPercent)
+            _botBreakEvenEnabled.Checked = _spotTradeBot.Configuration.BreakEvenEnabled
+            _botBreakEvenTrigger.Value = ClampNumeric(_botBreakEvenTrigger, _spotTradeBot.Configuration.BreakEvenTriggerPercent)
+            _botTrailingEnabled.Checked = _spotTradeBot.Configuration.TrailingStopEnabled
+            _botTrailingDistance.Value = ClampNumeric(_botTrailingDistance, _spotTradeBot.Configuration.TrailingStopDistancePercent)
+            _botPostExitCooldown.Value = ClampNumeric(_botPostExitCooldown, _spotTradeBot.Configuration.PostExitCooldownMinutes)
+            _botGridRiskPercent.Value = ClampNumeric(_botGridRiskPercent, _spotTradeBot.Configuration.GridV2RiskPerTradePercent)
+            _botGridReservePercent.Value = ClampNumeric(_botGridReservePercent, _spotTradeBot.Configuration.GridV2ReserveQuotePercent)
+            _botGridMaxExposurePercent.Value = ClampNumeric(_botGridMaxExposurePercent, _spotTradeBot.Configuration.GridV2MaxExposurePercent)
+            _botGridMaxLevels.Value = ClampNumeric(_botGridMaxLevels, _spotTradeBot.Configuration.GridV2MaxLevels)
+            _botGridRequireRejection.Checked = _spotTradeBot.Configuration.GridV2RequireRejection
+            _botBtcFlushDropPercent.Value = ClampNumeric(_botBtcFlushDropPercent, _spotTradeBot.Configuration.BitcoinFlushDropPercent)
+            _botBtcFlushPauseMinutes.Value = ClampNumeric(_botBtcFlushPauseMinutes, _spotTradeBot.Configuration.BitcoinFlushPauseMinutes)
+            _botBtcFlushEnabled.Checked = _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled
+            _botBtcFlushVolumeMultiplier.Value = ClampNumeric(_botBtcFlushVolumeMultiplier, _spotTradeBot.Configuration.BitcoinFlushVolumeMultiplier)
+            _botBtcDailyDropPercent.Value = ClampNumeric(_botBtcDailyDropPercent, _spotTradeBot.Configuration.BitcoinDailyDropPercent)
+            _botBtcDailyDrawdownPercent.Value = ClampNumeric(_botBtcDailyDrawdownPercent, _spotTradeBot.Configuration.BitcoinDailyDrawdownPercent)
+            _botBtcDailyEnabled.Checked = _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled
+            _botRiskBrakeEnabled.Checked = _spotTradeBot.Configuration.RiskBrakeEnabled
+            _botRiskSessionLoss.Value = ClampNumeric(_botRiskSessionLoss, _spotTradeBot.Configuration.RiskBrakeSessionLossPercent)
+            _botRiskProfitLockEnabled.Checked = _spotTradeBot.Configuration.RiskBrakeProfitLockEnabled
+            _botRiskProfitTrigger.Value = ClampNumeric(_botRiskProfitTrigger, _spotTradeBot.Configuration.RiskBrakeProfitLockTriggerPercent)
+            _botRiskGiveback.Value = ClampNumeric(_botRiskGiveback, _spotTradeBot.Configuration.RiskBrakeProfitGivebackPercent)
+            _botRiskMaxLosses.Value = ClampNumeric(_botRiskMaxLosses, _spotTradeBot.Configuration.RiskBrakeMaxConsecutiveLosses)
+            _botRiskPauseMinutes.Value = ClampNumeric(_botRiskPauseMinutes, _spotTradeBot.Configuration.RiskBrakePauseMinutes)
+            _botRiskClosePositions.Checked = _spotTradeBot.Configuration.RiskBrakeClosePositionsOnHardStop
+            _botRiskUseUnrealized.Checked = _spotTradeBot.Configuration.RiskBrakeUseUnrealizedPnl
+            For Each strategyCheck In _botStrategyChecks
+                strategyCheck.Value.Checked =
+                    _spotTradeBot.Configuration.EnabledStrategies.Contains(strategyCheck.Key) OrElse
+                    (strategyCheck.Key = SpotBotStrategyKind.GridAdaptive AndAlso
+                     _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridRegime))
+            Next
+        End If
+
+        AddHandler _botBollingerMode.SelectedIndexChanged, AddressOf SpotBotBollingerModeChanged
+        AddHandler _botUniverseMode.SelectedIndexChanged, AddressOf SpotBotUniverseModeChanged
+        AddHandler _botUniverseButton.Click, AddressOf SpotBotUniverseButton_Click
+        AddHandler _botStart.Click, AddressOf SpotBotStart_Click
+        AddHandler _botStop.Click, AddressOf SpotBotStop_Click
+        AddHandler _botExport.Click, AddressOf SpotBotExport_Click
+        AddHandler _botTrades.Click, AddressOf SpotBotTrades_Click
+        UpdateSpotBotBollingerTimeframeAvailability()
+    End Sub
+
+    Private Shared Function ClampNumeric(control As NumericUpDown, value As Decimal) As Decimal
+        If control Is Nothing Then Return value
+        Return Math.Min(control.Maximum, Math.Max(control.Minimum, value))
+    End Function
+
+    Private Sub ConfigureSpotBotManualActions()
+        _tradeBotButton = btTradebot
+        _tradeBotButton.Cursor = Cursors.Hand
+        _botStart.Enabled = Not _spotTradeBot.IsRunning
+        _botStop.Enabled = _spotTradeBot.IsRunning
+        _botExport.Enabled = True
+        _botTrades.Enabled = True
+        _botUniverseButton.Text = If(_botUniverseMode.SelectedIndex = 0, "Selecionar...", "Atualizar")
+        _botSimulationSummary.Text = "Simulação: aguardando início"
+        _botLog.ReadOnly = True
+        _botLog.DetectUrls = False
+        _botLog.ScrollBars = RichTextBoxScrollBars.Vertical
+        _botLog.Visible = True
+        _dgSpotBotPositions.Visible = True
+    End Sub
+
+    Private Sub ConfigureSpotBotManualPositionsGrid()
+        If _dgSpotBotPositions Is Nothing Then Return
+
+        RemoveHandler _dgSpotBotPositions.CellClick, AddressOf SpotBotPositions_CellClick
+        RemoveHandler _dgSpotBotPositions.CellContentClick, AddressOf SpotBotPositions_CellContentClick
+        RemoveHandler _dgSpotBotPositions.CellMouseEnter, AddressOf SpotBotPositions_CellMouseEnter
+        RemoveHandler _dgSpotBotPositions.CellMouseLeave, AddressOf SpotBotPositions_CellMouseLeave
+        _dgSpotBotPositions.Columns.Clear()
+        _dgSpotBotPositions.AutoGenerateColumns = False
+        _dgSpotBotPositions.Visible = True
+
+        AddSpotBotPositionColumn("Symbol", "Cripto")
+        AddSpotBotPositionColumn("Strategy", "Estratégia")
+        AddSpotBotPositionColumn("Side", "Lado")
+        AddSpotBotPositionColumn("Quantity", "Qtd")
+        AddSpotBotPositionColumn("Notional", "Notional")
+        AddSpotBotPositionColumn("EntryPrice", "Entrada")
+        AddSpotBotPositionColumn("CurrentPrice", "Preço atual")
+        AddSpotBotPositionColumn("StopPrice", "SL")
+        AddSpotBotPositionColumn("UnrealizedPnl", "PnL")
+        AddSpotBotPositionColumn("RoiPercent", "ROI %")
+        AddSpotBotPositionColumn("GridLevelCount", "Níveis")
+
+        Dim closeColumn As New DataGridViewButtonColumn With {
+            .Name = "ClosePosition",
+            .HeaderText = "Ação",
+            .Text = "Fechar",
+            .UseColumnTextForButtonValue = True,
+            .SortMode = DataGridViewColumnSortMode.NotSortable,
+            .AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            .Width = 72,
+            .FlatStyle = FlatStyle.Flat
+        }
+        closeColumn.DefaultCellStyle = New DataGridViewCellStyle With {
+            .Alignment = DataGridViewContentAlignment.MiddleCenter,
+            .BackColor = Color.IndianRed,
+            .ForeColor = Color.White,
+            .SelectionBackColor = Color.IndianRed,
+            .SelectionForeColor = Color.White
+        }
+        _dgSpotBotPositions.Columns.Add(closeColumn)
+        AddHandler _dgSpotBotPositions.CellClick, AddressOf SpotBotPositions_CellClick
+        AddHandler _dgSpotBotPositions.CellContentClick, AddressOf SpotBotPositions_CellContentClick
+        AddHandler _dgSpotBotPositions.CellMouseEnter, AddressOf SpotBotPositions_CellMouseEnter
+        AddHandler _dgSpotBotPositions.CellMouseLeave, AddressOf SpotBotPositions_CellMouseLeave
+    End Sub
+
+    Private Sub ConfigureSpotBotEditorReferences(
+        editor As SpotTradeBotEditor,
+        universeSettings As SpotBotUniverseSettings)
+
+        If editor Is Nothing Then Return
+
+        _botBollingerMode = editor.cbSpotBotBollingerMode
+        _botCombination = editor.cbSpotBotCombination
+        _botBollingerTimeframe = editor.cbSpotBotBollingerTimeframe
+        _botConfirmations = editor.nudSpotBotConfirmations
+        _botUniverseMode = editor.cbSpotBotUniverseMode
+        _botUniverseButton = editor.btSpotBotUniverse
+        _botStartingQuote = editor.nudSpotBotStartingQuote
+        _botAllocation = editor.nudSpotBotAllocation
+        _botFee = editor.nudSpotBotFee
+        _botTakeProfit = editor.nudSpotBotTakeProfit
+        _botStopLoss = editor.nudSpotBotStopLoss
+        _botUniverseMaxAssets = editor.nudSpotBotMaxAssets
+        _botUniverseMinVolume = editor.nudSpotBotMinVolume
+        _botBreakEvenEnabled = editor.chkSpotBotBreakEven
+        _botBreakEvenTrigger = editor.nudSpotBotBreakEvenTrigger
+        _botTrailingEnabled = editor.chkSpotBotTrailing
+        _botTrailingDistance = editor.nudSpotBotTrailingDistance
+        _botPostExitCooldown = editor.nudSpotBotPostExitCooldown
+        _botUniverseMinTrades = editor.nudSpotBotMinTrades
+        _botGridRiskPercent = editor.nudSpotBotGridRisk
+        _botGridReservePercent = editor.nudSpotBotGridReserve
+        _botGridMaxExposurePercent = editor.nudSpotBotGridExposure
+        _botGridMaxLevels = editor.nudSpotBotGridLevels
+        _botGridRequireRejection = editor.chkSpotBotGridRejection
+        _botBtcFlushDropPercent = editor.nudSpotBotBtcFlushDrop
+        _botBtcFlushPauseMinutes = editor.nudSpotBotBtcFlushPause
+        _botBtcFlushEnabled = editor.chkSpotBotBtcFlush
+        _botBtcFlushVolumeMultiplier = editor.nudSpotBotBtcFlushVolume
+        _botBtcDailyDropPercent = editor.nudSpotBotBtcDailyDrop
+        _botBtcDailyDrawdownPercent = editor.nudSpotBotBtcDailyDrawdown
+        _botBtcDailyEnabled = editor.chkSpotBotBtcDaily
+        _botRiskBrakeEnabled = editor.chkSpotBotRiskBrakeEnabled
+        _botRiskSessionLoss = editor.nudSpotBotRiskSessionLoss
+        _botRiskProfitLockEnabled = editor.chkSpotBotRiskProfitLock
+        _botRiskProfitTrigger = editor.nudSpotBotRiskProfitTrigger
+        _botRiskGiveback = editor.nudSpotBotRiskGiveback
+        _botRiskMaxLosses = editor.nudSpotBotRiskMaxLosses
+        _botRiskPauseMinutes = editor.nudSpotBotRiskPause
+        _botRiskClosePositions = editor.chkSpotBotRiskClosePositions
+        _botRiskUseUnrealized = editor.chkSpotBotRiskUseUnrealized
+        _botStart = editor.btSpotBotStart
+        _botStop = editor.btSpotBotStop
+        _botExport = editor.btSpotBotExport
+        _botTrades = editor.btSpotBotTrades
+
+        _botStrategyChecks.Clear()
+        _botStrategyChecks(SpotBotStrategyKind.WavePullback) = editor.chkSpotBotWavePullback
+        _botStrategyChecks(SpotBotStrategyKind.BreakoutRetest) = editor.chkSpotBotBreakoutRetest
+        _botStrategyChecks(SpotBotStrategyKind.MomentumVolume) = editor.chkSpotBotMomentumVolume
+        _botStrategyChecks(SpotBotStrategyKind.GridAdaptive) = editor.chkSpotBotGridAdaptive
+        _botStrategyChecks(SpotBotStrategyKind.ValueZonePullback) = editor.chkSpotBotValueZonePullback
+        _botStrategyChecks(SpotBotStrategyKind.BtcMildDeclinePullback) = editor.chkSpotBotBtcMildDecline
+
+        _botBollingerMode.SelectedIndex = GetBollingerModeIndex()
+        _botCombination.SelectedIndex = If(
+            _spotTradeBot.HasRestoredState,
+            CInt(_spotTradeBot.Configuration.CombinationMode),
+            CInt(SpotBotCombinationMode.MinimumConfirmations))
+        _botConfirmations.Value = If(
+            _spotTradeBot.HasRestoredState,
+            Math.Min(_botConfirmations.Maximum, Math.Max(_botConfirmations.Minimum, _spotTradeBot.Configuration.RequiredConfirmations)),
+            2D)
+        _botBollingerTimeframe.SelectedIndex = GetBollingerTimeframeIndex()
+        _botUniverseMode.SelectedIndex = If(universeSettings.Mode = SpotBotUniverseMode.TopVolume, 1, 0)
+        _botUniverseMaxAssets.Value = Math.Min(_botUniverseMaxAssets.Maximum, Math.Max(_botUniverseMaxAssets.Minimum, universeSettings.MaxAssets))
+        _botUniverseMinVolume.Value = Math.Min(_botUniverseMinVolume.Maximum, Math.Max(_botUniverseMinVolume.Minimum, universeSettings.MinimumQuoteVolume))
+        _botUniverseMinTrades.Value = Math.Min(_botUniverseMinTrades.Maximum, Math.Max(_botUniverseMinTrades.Minimum, universeSettings.MinimumTrades24h))
+
+        If _spotTradeBot.HasRestoredState Then
+            Dim restoredSnapshot = _spotTradeBot.GetSimulationSnapshot()
+            _botStartingQuote.Value = Math.Min(_botStartingQuote.Maximum, Math.Max(_botStartingQuote.Minimum, restoredSnapshot.StartingQuote))
+            _botAllocation.Value = Math.Min(_botAllocation.Maximum, Math.Max(_botAllocation.Minimum, _spotTradeBot.Configuration.SimulationAllocationPercent))
+            _botFee.Value = Math.Min(_botFee.Maximum, Math.Max(_botFee.Minimum, _spotTradeBot.Configuration.SimulationFeeRate * 100D))
+            _botBreakEvenEnabled.Checked = _spotTradeBot.Configuration.BreakEvenEnabled
+            _botBreakEvenTrigger.Value = Math.Min(_botBreakEvenTrigger.Maximum, Math.Max(_botBreakEvenTrigger.Minimum, _spotTradeBot.Configuration.BreakEvenTriggerPercent))
+            _botTrailingEnabled.Checked = _spotTradeBot.Configuration.TrailingStopEnabled
+            _botTrailingDistance.Value = Math.Min(_botTrailingDistance.Maximum, Math.Max(_botTrailingDistance.Minimum, _spotTradeBot.Configuration.TrailingStopDistancePercent))
+            _botPostExitCooldown.Value = Math.Min(_botPostExitCooldown.Maximum, Math.Max(_botPostExitCooldown.Minimum, _spotTradeBot.Configuration.PostExitCooldownMinutes))
+            _botGridRiskPercent.Value = Math.Min(_botGridRiskPercent.Maximum, Math.Max(_botGridRiskPercent.Minimum, _spotTradeBot.Configuration.GridV2RiskPerTradePercent))
+            _botGridReservePercent.Value = Math.Min(_botGridReservePercent.Maximum, Math.Max(_botGridReservePercent.Minimum, _spotTradeBot.Configuration.GridV2ReserveQuotePercent))
+            _botGridMaxExposurePercent.Value = Math.Min(_botGridMaxExposurePercent.Maximum, Math.Max(_botGridMaxExposurePercent.Minimum, _spotTradeBot.Configuration.GridV2MaxExposurePercent))
+            _botGridMaxLevels.Value = Math.Min(_botGridMaxLevels.Maximum, Math.Max(_botGridMaxLevels.Minimum, _spotTradeBot.Configuration.GridV2MaxLevels))
+            _botGridRequireRejection.Checked = _spotTradeBot.Configuration.GridV2RequireRejection
+            _botBtcFlushDropPercent.Value = Math.Min(_botBtcFlushDropPercent.Maximum, Math.Max(_botBtcFlushDropPercent.Minimum, _spotTradeBot.Configuration.BitcoinFlushDropPercent))
+            _botBtcFlushPauseMinutes.Value = Math.Min(_botBtcFlushPauseMinutes.Maximum, Math.Max(_botBtcFlushPauseMinutes.Minimum, _spotTradeBot.Configuration.BitcoinFlushPauseMinutes))
+            _botBtcFlushEnabled.Checked = _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled
+            _botBtcFlushVolumeMultiplier.Value = Math.Min(_botBtcFlushVolumeMultiplier.Maximum, Math.Max(_botBtcFlushVolumeMultiplier.Minimum, _spotTradeBot.Configuration.BitcoinFlushVolumeMultiplier))
+            _botBtcDailyDropPercent.Value = Math.Min(_botBtcDailyDropPercent.Maximum, Math.Max(_botBtcDailyDropPercent.Minimum, _spotTradeBot.Configuration.BitcoinDailyDropPercent))
+            _botBtcDailyDrawdownPercent.Value = Math.Min(_botBtcDailyDrawdownPercent.Maximum, Math.Max(_botBtcDailyDrawdownPercent.Minimum, _spotTradeBot.Configuration.BitcoinDailyDrawdownPercent))
+            _botBtcDailyEnabled.Checked = _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled
+            _botRiskBrakeEnabled.Checked = _spotTradeBot.Configuration.RiskBrakeEnabled
+            _botRiskSessionLoss.Value = Math.Min(_botRiskSessionLoss.Maximum, Math.Max(_botRiskSessionLoss.Minimum, _spotTradeBot.Configuration.RiskBrakeSessionLossPercent))
+            _botRiskProfitLockEnabled.Checked = _spotTradeBot.Configuration.RiskBrakeProfitLockEnabled
+            _botRiskProfitTrigger.Value = Math.Min(_botRiskProfitTrigger.Maximum, Math.Max(_botRiskProfitTrigger.Minimum, _spotTradeBot.Configuration.RiskBrakeProfitLockTriggerPercent))
+            _botRiskGiveback.Value = Math.Min(_botRiskGiveback.Maximum, Math.Max(_botRiskGiveback.Minimum, _spotTradeBot.Configuration.RiskBrakeProfitGivebackPercent))
+            _botRiskMaxLosses.Value = Math.Min(_botRiskMaxLosses.Maximum, Math.Max(_botRiskMaxLosses.Minimum, _spotTradeBot.Configuration.RiskBrakeMaxConsecutiveLosses))
+            _botRiskPauseMinutes.Value = Math.Min(_botRiskPauseMinutes.Maximum, Math.Max(_botRiskPauseMinutes.Minimum, _spotTradeBot.Configuration.RiskBrakePauseMinutes))
+            _botRiskClosePositions.Checked = _spotTradeBot.Configuration.RiskBrakeClosePositionsOnHardStop
+            _botRiskUseUnrealized.Checked = _spotTradeBot.Configuration.RiskBrakeUseUnrealizedPnl
+            For Each strategyCheck In _botStrategyChecks
+                strategyCheck.Value.Checked =
+                    _spotTradeBot.Configuration.EnabledStrategies.Contains(strategyCheck.Key) OrElse
+                    (strategyCheck.Key = SpotBotStrategyKind.GridAdaptive AndAlso
+                     _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridRegime))
+            Next
+        End If
+
+        AddHandler _botBollingerMode.SelectedIndexChanged, AddressOf SpotBotBollingerModeChanged
+        AddHandler _botUniverseMode.SelectedIndexChanged, AddressOf SpotBotUniverseModeChanged
+        AddHandler _botUniverseButton.Click, AddressOf SpotBotUniverseButton_Click
+        AddHandler _botStart.Click, AddressOf SpotBotStart_Click
+        AddHandler _botStop.Click, AddressOf SpotBotStop_Click
+        AddHandler _botExport.Click, AddressOf SpotBotExport_Click
+        AddHandler _botTrades.Click, AddressOf SpotBotTrades_Click
+        UpdateSpotBotBollingerTimeframeAvailability()
+    End Sub
+
+    Private Shared Sub AddBotLabel(editor As Control, text As String, left As Integer, top As Integer, width As Integer)
         editor.Controls.Add(New Label With {
             .AutoSize = False,
             .Width = width,
@@ -2362,55 +2821,28 @@ Public Class FormMain
             Return
         End If
 
-        Dim panelTop = Math.Max(PanelGraphs.Top, _btTradeBot.Bottom + 2)
+        Dim panelTop = Math.Max(PanelGraphs.Top, _tradeBotButton.Bottom + 2)
         Dim panelBottom = PanelProfits.Top
         Dim panelHeight = Math.Max(150, panelBottom - panelTop)
         _panelSpotBot.Padding = New Padding(14, 0, 14, 0)
         _panelSpotBot.Location = New Point(0, panelTop)
         _panelSpotBot.Size = New Size(Me.ClientSize.Width, panelHeight)
-        ArrangeSpotBotLayout()
         _panelSpotBot.Visible = True
         _panelSpotBot.BringToFront()
 
         btVisaoGeral.BringToFront()
         btOrdensSpot.BringToFront()
         btOrdensFuturo.BringToFront()
-        _btTradeBot.BringToFront()
+        _tradeBotButton.BringToFront()
         If _btDca IsNot Nothing Then _btDca.BringToFront()
     End Sub
 
-    Private Sub ArrangeSpotBotLayout()
-        If _panelSpotBot Is Nothing OrElse
-           _panelSpotBotEditor Is Nothing OrElse
-           _botSimulationSummary Is Nothing OrElse
-           _dgSpotBotPositions Is Nothing OrElse
-           _botLog Is Nothing Then
-            Return
-        End If
-
-        Dim availableHeight = Math.Max(0, _panelSpotBot.ClientSize.Height)
-        Dim fixedTopHeight = _panelSpotBotEditor.Height + _botSimulationSummary.Height
-        Dim remainingHeight = Math.Max(0, availableHeight - fixedTopHeight)
-        Dim logHeight = Math.Min(40, remainingHeight)
-        Dim gridHeight = Math.Min(150, Math.Max(0, remainingHeight - logHeight))
-
-        ' O grid tem prioridade; o log encolhe quando o painel fica menor,
-        ' evitando que o RichTextBox cubra as posições.
-        If gridHeight < 60 AndAlso remainingHeight >= 60 Then
-            gridHeight = Math.Min(60, remainingHeight)
-            logHeight = Math.Max(0, remainingHeight - gridHeight)
-        End If
-
-        _dgSpotBotPositions.Height = gridHeight
-        _botLog.Height = logHeight
-    End Sub
-
     Private Sub ArrangeSpotBotButton()
-        If _btTradeBot Is Nothing OrElse btOrdensFuturo Is Nothing Then
+        If _tradeBotButton Is Nothing OrElse btOrdensFuturo Is Nothing Then
             Return
         End If
 
-        _btTradeBot.Location = New Point(btOrdensFuturo.Right, btOrdensFuturo.Top)
+        _tradeBotButton.Location = New Point(btOrdensFuturo.Right, btOrdensFuturo.Top)
     End Sub
 
     Private Sub ApplySpotBotControls(Optional preserveRestoredStartingQuote As Boolean = False)
@@ -2459,6 +2891,15 @@ Public Class FormMain
         _spotTradeBot.Configuration.BreakEvenOffsetPercent = 0.1D
         _spotTradeBot.Configuration.TrailingStopEnabled = _botTrailingEnabled IsNot Nothing AndAlso _botTrailingEnabled.Checked
         _spotTradeBot.Configuration.TrailingStopDistancePercent = If(_botTrailingDistance Is Nothing, 1D, _botTrailingDistance.Value)
+        _spotTradeBot.Configuration.RiskBrakeEnabled = _botRiskBrakeEnabled Is Nothing OrElse _botRiskBrakeEnabled.Checked
+        _spotTradeBot.Configuration.RiskBrakeSessionLossPercent = If(_botRiskSessionLoss Is Nothing, 2D, _botRiskSessionLoss.Value)
+        _spotTradeBot.Configuration.RiskBrakeProfitLockEnabled = _botRiskProfitLockEnabled Is Nothing OrElse _botRiskProfitLockEnabled.Checked
+        _spotTradeBot.Configuration.RiskBrakeProfitLockTriggerPercent = If(_botRiskProfitTrigger Is Nothing, 1D, _botRiskProfitTrigger.Value)
+        _spotTradeBot.Configuration.RiskBrakeProfitGivebackPercent = If(_botRiskGiveback Is Nothing, 50D, _botRiskGiveback.Value)
+        _spotTradeBot.Configuration.RiskBrakeMaxConsecutiveLosses = If(_botRiskMaxLosses Is Nothing, 3, CInt(_botRiskMaxLosses.Value))
+        _spotTradeBot.Configuration.RiskBrakePauseMinutes = If(_botRiskPauseMinutes Is Nothing, 60D, _botRiskPauseMinutes.Value)
+        _spotTradeBot.Configuration.RiskBrakeClosePositionsOnHardStop = _botRiskClosePositions Is Nothing OrElse _botRiskClosePositions.Checked
+        _spotTradeBot.Configuration.RiskBrakeUseUnrealizedPnl = _botRiskUseUnrealized Is Nothing OrElse _botRiskUseUnrealized.Checked
         _spotTradeBot.Configuration.PostExitCooldownMinutes = If(_botPostExitCooldown Is Nothing, 15D, _botPostExitCooldown.Value)
         _spotTradeBot.Configuration.SimulationOnly = True
 
@@ -2543,6 +2984,15 @@ Public Class FormMain
         _botBreakEvenTrigger.Enabled = False
         _botTrailingEnabled.Enabled = False
         _botTrailingDistance.Enabled = False
+        _botRiskBrakeEnabled.Enabled = False
+        _botRiskSessionLoss.Enabled = False
+        _botRiskProfitLockEnabled.Enabled = False
+        _botRiskProfitTrigger.Enabled = False
+        _botRiskGiveback.Enabled = False
+        _botRiskMaxLosses.Enabled = False
+        _botRiskPauseMinutes.Enabled = False
+        _botRiskClosePositions.Enabled = False
+        _botRiskUseUnrealized.Enabled = False
         _botPostExitCooldown.Enabled = False
         _botGridRiskPercent.Enabled = False
         _botGridReservePercent.Enabled = False
@@ -2606,6 +3056,13 @@ Public Class FormMain
             $"{_spotTradeBot.Configuration.BitcoinDailyDrawdownPercent:0.##}%. " &
             "A pausa bloqueia novas entradas e mantém stops ativos.",
             Color.LightGray)
+        AppendSpotBotLog(
+            $"Freio de perdas: {If(_spotTradeBot.Configuration.RiskBrakeEnabled, "ativo", "desligado")}; " &
+            $"limite {_spotTradeBot.Configuration.RiskBrakeSessionLossPercent:0.##}%; " &
+            $"trava +{_spotTradeBot.Configuration.RiskBrakeProfitLockTriggerPercent:0.##}% / " &
+            $"devolução {_spotTradeBot.Configuration.RiskBrakeProfitGivebackPercent:0.##}%; " &
+            $"até {_spotTradeBot.Configuration.RiskBrakeMaxConsecutiveLosses} perdas seguidas.",
+            Color.Gold)
         If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.WavePullback) Then
             AppendSpotBotLog(
                 "Pullback EMA34: SL e TP estruturais do sinal; os percentuais globais não bloqueiam a inicialização.",
@@ -2616,6 +3073,14 @@ Public Class FormMain
                 "Pullback zona de valor: M5 filtra tendência, M2 espera retorno à EMA 9/20 e M1 confirma a retomada; Spot opera somente comprado.",
                 Color.LightGray)
         End If
+        If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) Then
+            AppendSpotBotLog(
+                $"BTC Leve Queda — Pullback Defensivo: queda diária entre " &
+                $"{_spotTradeBot.Configuration.BtcMildDeclineMinimumPercent:0.##}% e " &
+                $"{_spotTradeBot.Configuration.BtcMildDeclineMaximumPercent:0.##}%; " &
+                "o ativo precisa manter força relativa e confirmar o pullback M5/M2/M1.",
+                Color.Gold)
+        End If
         If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) Then
             AppendSpotBotLog(
                 $"Grid V2: EMA 9/21 em candles M5 libera a grade apenas em lateralização; " &
@@ -2624,7 +3089,9 @@ Public Class FormMain
                 $"reserva {_spotTradeBot.Configuration.GridV2ReserveQuotePercent:0.##}%, " &
                 $"exposição máxima {_spotTradeBot.Configuration.GridV2MaxExposurePercent:0.##}% e " &
                 $"até {_spotTradeBot.Configuration.GridV2MaxLevels} níveis; " &
-                $"ignora suporte a menos de {_spotTradeBot.Configuration.GridV2MinimumSupportDistancePercent:0.##}% e usa SL estrutural com limite de 3%.",
+                $"ignora suporte a menos de {_spotTradeBot.Configuration.GridV2MinimumSupportDistancePercent:0.##}%, confirma o SL em {Math.Max(1, _spotTradeBot.Configuration.GridV2StopConfirmationCandles)} candles de 1 min " &
+                $"(emergência em {_spotTradeBot.Configuration.GridV2StopEmergencyBufferPercent:0.##}%), usa SL estrutural com mínimo de {_spotTradeBot.Configuration.GridV2MinimumStopPercent:0.##}% e limite de 3%, " &
+                "e bloqueia o ativo após 2 stops até a recuperação confirmada.",
                 Color.LightGray)
         End If
     End Sub
@@ -2644,6 +3111,15 @@ Public Class FormMain
         _botBreakEvenTrigger.Enabled = True
         _botTrailingEnabled.Enabled = True
         _botTrailingDistance.Enabled = True
+        _botRiskBrakeEnabled.Enabled = True
+        _botRiskSessionLoss.Enabled = True
+        _botRiskProfitLockEnabled.Enabled = True
+        _botRiskProfitTrigger.Enabled = True
+        _botRiskGiveback.Enabled = True
+        _botRiskMaxLosses.Enabled = True
+        _botRiskPauseMinutes.Enabled = True
+        _botRiskClosePositions.Enabled = True
+        _botRiskUseUnrealized.Enabled = True
         _botPostExitCooldown.Enabled = True
         _botGridRiskPercent.Enabled = True
         _botGridReservePercent.Enabled = True
@@ -2767,6 +3243,24 @@ Public Class FormMain
         AppendSpotBotCsvPair(builder, "BreakEvenOffsetPercentual", state.BreakEvenOffsetPercent)
         AppendSpotBotCsvPair(builder, "TrailingAtivo", state.TrailingStopEnabled)
         AppendSpotBotCsvPair(builder, "TrailingDistanciaPercentual", state.TrailingStopDistancePercent)
+        AppendSpotBotCsvPair(builder, "FreioPerdasAtivo", state.RiskBrakeEnabled)
+        AppendSpotBotCsvPair(builder, "FreioPerdaSessaoPercentual", state.RiskBrakeSessionLossPercent)
+        AppendSpotBotCsvPair(builder, "FreioTravaLucroAtiva", state.RiskBrakeProfitLockEnabled)
+        AppendSpotBotCsvPair(builder, "FreioGatilhoLucroPercentual", state.RiskBrakeProfitLockTriggerPercent)
+        AppendSpotBotCsvPair(builder, "FreioDevolucaoPicoPercentual", state.RiskBrakeProfitGivebackPercent)
+        AppendSpotBotCsvPair(builder, "FreioMaxPerdasSeguidas", state.RiskBrakeMaxConsecutiveLosses)
+        AppendSpotBotCsvPair(builder, "FreioPausaMinutos", state.RiskBrakePauseMinutes)
+        AppendSpotBotCsvPair(builder, "FreioFecharPosicoes", state.RiskBrakeClosePositionsOnHardStop)
+        AppendSpotBotCsvPair(builder, "FreioConsideraPnlAberto", state.RiskBrakeUseUnrealizedPnl)
+        AppendSpotBotCsvPair(builder, "FreioEstadoAtual", snapshot.RiskBrakeState)
+        AppendSpotBotCsvPair(builder, "FreioPicoPatrimonio", snapshot.RiskBrakePeakEquity)
+        AppendSpotBotCsvPair(builder, "FreioPerdasSeguidasAtual", snapshot.RiskBrakeConsecutiveLosses)
+        AppendSpotBotCsvPair(builder, "FreioMotivo", snapshot.RiskBrakeReason)
+        AppendSpotBotCsvPair(builder, "FreioEntradasBloqueadas", snapshot.RiskBrakeBlockedEntries)
+        AppendSpotBotCsvPair(builder, "FreioPnLEvitadoEstimadoUSDT", snapshot.RiskBrakeEstimatedAvoidedPnl)
+        AppendSpotBotCsvPair(builder, "FreioPausas", snapshot.RiskBrakePauseCount)
+        AppendSpotBotCsvPair(builder, "FreioUltimoInicioPausaUTC", snapshot.RiskBrakeLastPauseStartedUtc)
+        AppendSpotBotCsvPair(builder, "FreioUltimoFimPausaUTC", snapshot.RiskBrakeLastPauseEndedUtc)
         AppendSpotBotCsvPair(builder, "CooldownPosSaidaMinutos", state.PostExitCooldownMinutes)
         AppendSpotBotCsvPair(builder, "GridV2SuporteMaisProximo", state.GridV2UseNearestSupportStop)
         AppendSpotBotCsvPair(builder, "GridV2BufferSuporteATR", state.GridV2SupportBufferAtr)
@@ -2964,10 +3458,12 @@ Public Class FormMain
            (e.Snapshot.LastAction.StartsWith("TP ", StringComparison.OrdinalIgnoreCase) OrElse
             e.Snapshot.LastAction.StartsWith("SL ", StringComparison.OrdinalIgnoreCase) OrElse
             e.Snapshot.LastAction.StartsWith("BE ", StringComparison.OrdinalIgnoreCase) OrElse
-            e.Snapshot.LastAction.StartsWith("TRAIL ", StringComparison.OrdinalIgnoreCase)) Then
+            e.Snapshot.LastAction.StartsWith("TRAIL ", StringComparison.OrdinalIgnoreCase) OrElse
+            e.Snapshot.LastAction.StartsWith("FREIO", StringComparison.OrdinalIgnoreCase)) Then
             AppendSpotBotLog(
                 e.Snapshot.LastAction,
-                If(e.Snapshot.LastAction.StartsWith("SL ", StringComparison.OrdinalIgnoreCase),
+                If(e.Snapshot.LastAction.StartsWith("SL ", StringComparison.OrdinalIgnoreCase) OrElse
+                   e.Snapshot.LastAction.StartsWith("FREIO", StringComparison.OrdinalIgnoreCase),
                    Color.IndianRed,
                    Color.Gold))
         End If
@@ -2986,8 +3482,26 @@ Public Class FormMain
             $"aberto {snapshot.UnrealizedPnl:+0.00;-0.00;0.00}) | " &
             $"Trades: {snapshot.CompletedTrades} | " &
             $"Acerto: {snapshot.WinRatePercent:0.0}% | " &
-            $"Abertas: {snapshot.OpenPositions}"
+            $"Abertas: {snapshot.OpenPositions} | " &
+            $"Freio: {GetRiskBrakeDisplayText(snapshot)} | " &
+            $"Bloq.: {snapshot.RiskBrakeBlockedEntries} | " &
+            $"Evitado est.: {snapshot.RiskBrakeEstimatedAvoidedPnl:+0.00;-0.00;0.00} USDT | " &
+            $"Pausas: {snapshot.RiskBrakePauseCount}"
     End Sub
+
+    Private Shared Function GetRiskBrakeDisplayText(snapshot As SpotBotSimulationSnapshot) As String
+        If snapshot Is Nothing Then Return "-"
+        Select Case snapshot.RiskBrakeState
+            Case SpotBotRiskBrakeState.HardStop
+                Return "LIMITE"
+            Case SpotBotRiskBrakeState.Paused
+                Return $"PAUSA ({snapshot.RiskBrakeConsecutiveLosses})"
+            Case SpotBotRiskBrakeState.ProfitLockArmed
+                Return "TRAVA ARMADA"
+            Case Else
+                Return "normal"
+        End Select
+    End Function
 
     Private Sub UpdateSpotBotPositionsGrid(positions As IReadOnlyList(Of SpotBotOpenPosition))
         If _dgSpotBotPositions Is Nothing Then Return
@@ -3795,7 +4309,8 @@ Public Class FormMain
 
             If _spotTradeBot.IsRunning AndAlso
                (_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled OrElse
-                _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled) Then
+                _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled OrElse
+                _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback)) Then
                 symbols.Add("BTC")
             End If
 
@@ -3819,6 +4334,11 @@ Public Class FormMain
             End If
             If _spotTradeBot.IsRunning AndAlso
                _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled AndAlso
+               Not candleIntervals.Contains("1d", StringComparer.OrdinalIgnoreCase) Then
+                candleIntervals.Add("1d")
+            End If
+            If _spotTradeBot.IsRunning AndAlso
+               _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) AndAlso
                Not candleIntervals.Contains("1d", StringComparer.OrdinalIgnoreCase) Then
                 candleIntervals.Add("1d")
             End If
@@ -8283,9 +8803,9 @@ Public Class FormMain
         End If
 
         Dim row = dgFuturos.Rows(e.RowIndex)
-        Dim symbol = row.Cells("Symbol").Value?.ToString().Trim().ToUpperInvariant()
+        Dim symbol = row.Cells("Symbol").Value?.ToString.Trim.ToUpperInvariant
         Dim exchange = GetRowFuturesExchange(row)
-        Dim positionSide = row.Cells("PositionSide").Value?.ToString().Trim().ToUpperInvariant()
+        Dim positionSide = row.Cells("PositionSide").Value?.ToString.Trim.ToUpperInvariant
         Dim quantity As Decimal
         Dim limitPrice As Decimal
 
@@ -8324,6 +8844,7 @@ Public Class FormMain
             End If
             row.Cells("FuturesExitPrice").Value = String.Empty
             Await LoadFuturesPositionsAsync()
+
             If PanelFuturos.Visible Then
                 Await LoadFuturesOrdersAsync()
             End If
@@ -8380,7 +8901,7 @@ Public Class FormMain
                 e.CellStyle.SelectionForeColor = symbolColor
                 e.FormattingApplied = True
             Case "Exchange"
-                Dim exchange = NormalizeFuturesExchange(e.Value?.ToString())
+                Dim exchange = NormalizeFuturesExchange(e.Value?.ToString)
                 Dim exchangeColor = If(exchange = "GATE", Color.DeepSkyBlue, Color.Gold)
                 e.CellStyle.ForeColor = exchangeColor
                 e.CellStyle.SelectionForeColor = exchangeColor
@@ -8445,9 +8966,9 @@ Public Class FormMain
     End Sub
     Private Async Sub dgFuturos_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgFuturos.CellClick
         If e.RowIndex < 0 OrElse e.ColumnIndex < 0 OrElse
-           (Not String.Equals(dgFuturos.Columns(e.ColumnIndex).Name, "Symbol", StringComparison.OrdinalIgnoreCase) AndAlso
+           Not String.Equals(dgFuturos.Columns(e.ColumnIndex).Name, "Symbol", StringComparison.OrdinalIgnoreCase) AndAlso
             Not String.Equals(dgFuturos.Columns(e.ColumnIndex).Name, "TakeProfit", StringComparison.OrdinalIgnoreCase) AndAlso
-            Not String.Equals(dgFuturos.Columns(e.ColumnIndex).Name, "StopLoss", StringComparison.OrdinalIgnoreCase)) Then
+            Not String.Equals(dgFuturos.Columns(e.ColumnIndex).Name, "StopLoss", StringComparison.OrdinalIgnoreCase) Then
             Return
         End If
 
@@ -8459,7 +8980,7 @@ Public Class FormMain
             Return
         End If
 
-        Dim symbol = dgFuturos.Rows(e.RowIndex).Cells("Symbol").Value?.ToString().Trim()
+        Dim symbol = dgFuturos.Rows(e.RowIndex).Cells("Symbol").Value?.ToString.Trim
         If String.IsNullOrWhiteSpace(symbol) Then Return
 
         If symbol.EndsWith("USDT", StringComparison.OrdinalIgnoreCase) Then
@@ -8618,7 +9139,7 @@ Public Class FormMain
         ArrangeFuturesOrdersPanel(False)
         btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
-        _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
+        btTradebot.BackColor = Color.FromArgb(20, 20, 20)
         If _btDca IsNot Nothing Then _btDca.BackColor = Color.FromArgb(20, 20, 20)
         btVisaoGeral.BackColor = Color.SteelBlue
     End Sub
@@ -8633,7 +9154,7 @@ Public Class FormMain
         btOrdensSpot.BackColor = Color.SteelBlue
         btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
-        _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
+        btTradebot.BackColor = Color.FromArgb(20, 20, 20)
         If _btDca IsNot Nothing Then _btDca.BackColor = Color.FromArgb(20, 20, 20)
         Await LoadSpotOrdersAsync()
     End Sub
@@ -8647,15 +9168,24 @@ Public Class FormMain
         btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.SteelBlue
-        _btTradeBot.BackColor = Color.FromArgb(20, 20, 20)
+        btTradebot.BackColor = Color.FromArgb(20, 20, 20)
         If _btDca IsNot Nothing Then _btDca.BackColor = Color.FromArgb(20, 20, 20)
         Await LoadFuturesOrdersAsync()
     End Sub
 
-    Private Sub btTradeBot_Click(sender As Object, e As EventArgs)
+    Private Sub SimbolosToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SimbolosToolStripMenuItem.Click
+        FormSymbols.Show()
+    End Sub
+
+    Private Sub CustodiaToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CustodiaToolStripMenuItem.Click
+        FormWalletExchange.Show()
+    End Sub
+
+    Private Sub btTradebot_Click_1(sender As Object, e As EventArgs) Handles btTradebot.Click
         PanelGraphs.Visible = False
         PanelOrdens.Visible = False
         PanelFuturos.Visible = False
+        PanelTradeBot.Visible = True
         ArrangeOrdersPanel(False)
         ArrangeFuturesOrdersPanel(False)
         ArrangeDcaPanel(False)
@@ -8667,17 +9197,16 @@ Public Class FormMain
         btVisaoGeral.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensSpot.BackColor = Color.FromArgb(20, 20, 20)
         btOrdensFuturo.BackColor = Color.FromArgb(20, 20, 20)
-        _btTradeBot.BackColor = Color.SteelBlue
+        btTradebot.BackColor = Color.SteelBlue
         If _btDca IsNot Nothing Then _btDca.BackColor = Color.FromArgb(20, 20, 20)
     End Sub
 
-    Private Sub SimbolosToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SimbolosToolStripMenuItem.Click
-        FormSymbols.Show()
+    Private Sub chkSpotBotBtcFlush_CheckedChanged(sender As Object, e As EventArgs) Handles chkSpotBotBtcFlush.CheckedChanged
+        If chkSpotBotBtcFlush.Checked Then
+            nudSpotBotBtcFlushPause.Enabled = True
+        Else
+            nudSpotBotBtcFlushPause.Enabled = False
+        End If
     End Sub
-
-    Private Sub CustodiaToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles CustodiaToolStripMenuItem.Click
-        FormWalletExchange.Show()
-    End Sub
-
 
 End Class

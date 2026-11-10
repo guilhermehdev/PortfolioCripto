@@ -21,6 +21,9 @@ Public NotInheritable Class SpotTradeBotEngine
     Private ReadOnly _lastSignals As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _lastExits As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _gridRecoveryEntryPrices As New Dictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _gridConsecutiveStops As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _gridBlockedUntilUtc As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _riskBrakeBlockedCandidates As New Dictionary(Of String, RiskBrakeBlockedEntryObservation)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _simulationPositions As New Dictionary(Of String, SimulationPosition)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _configuration As New SpotBotConfiguration()
     Private _simulationQuoteBalance As Decimal
@@ -32,8 +35,28 @@ Public NotInheritable Class SpotTradeBotEngine
     Private _running As Boolean
     Private _activeRunId As Long
     Private _restoredStatePending As Boolean
+    Private _restoredConfigurationLoaded As Boolean
     Private _bitcoinFlushPausedUntilUtc As DateTime
     Private _bitcoinDailyLastPauseUtc As DateTime
+    Private _riskBrakeState As SpotBotRiskBrakeState = SpotBotRiskBrakeState.Normal
+    Private _riskBrakeSessionStartEquity As Decimal
+    Private _riskBrakePeakEquity As Decimal
+    Private _riskBrakeConsecutiveLosses As Integer
+    Private _riskBrakePauseUntilUtc As DateTime
+    Private _riskBrakeReason As String = String.Empty
+    Private _riskBrakeBlockedEntries As Integer
+    Private _riskBrakeEstimatedAvoidedPnl As Decimal
+    Private _riskBrakePauseCount As Integer
+    Private _riskBrakeLastPauseStartedUtc As DateTime
+    Private _riskBrakeLastPauseEndedUtc As DateTime
+
+    Private NotInheritable Class RiskBrakeBlockedEntryObservation
+        Public Property Symbol As String = String.Empty
+        Public Property EntryPrice As Decimal
+        Public Property Quantity As Decimal
+        Public Property LowestObservedPrice As Decimal
+        Public Property FirstObservedAtUtc As DateTime
+    End Class
 
     Public Event SignalGenerated As EventHandler(Of SpotBotSignalEventArgs)
     Public Event SimulationUpdated As EventHandler(Of SpotBotSimulationEventArgs)
@@ -58,6 +81,7 @@ Public NotInheritable Class SpotTradeBotEngine
         RegisterStrategy(New SpotBotGridRegimeStrategy())
         RegisterStrategy(New SpotBotGridAdaptiveStrategy())
         RegisterStrategy(New SpotBotValueZonePullbackStrategy())
+        RegisterStrategy(New SpotBotBtcMildDeclinePullbackStrategy())
 
         Dim persistedState As SpotBotPersistedSimulationState = Nothing
         Try
@@ -100,6 +124,14 @@ Public NotInheritable Class SpotTradeBotEngine
         Get
             SyncLock _sync
                 Return _restoredStatePending AndAlso _simulationPositions.Count > 0
+            End SyncLock
+        End Get
+    End Property
+
+    Public ReadOnly Property HasRestoredConfiguration As Boolean
+        Get
+            SyncLock _sync
+                Return _restoredConfigurationLoaded
             End SyncLock
         End Get
     End Property
@@ -166,6 +198,7 @@ Public NotInheritable Class SpotTradeBotEngine
                     "RUNNING")
                 SpotTradeBotRepository.UpdateGridConfiguration(runId, configurationSnapshot)
                 SpotTradeBotRepository.SaveOpenPositions(runId, GetOpenPositions())
+                SpotTradeBotRepository.SaveGridGuards(runId, GetGridGuardStates())
             End If
         Catch ex As Exception
             Debug.WriteLine("Erro iniciando persistência da simulação: " & ex.Message)
@@ -179,6 +212,7 @@ Public NotInheritable Class SpotTradeBotEngine
         SyncLock _sync
             _running = False
             runId = _activeRunId
+            FinalizeRiskBrakeBlockedEntriesLocked(DateTime.UtcNow, _configuration)
             snapshot = BuildSimulationSnapshotLocked(_configuration)
             _activeRunId = 0
             _restoredStatePending = False
@@ -188,6 +222,7 @@ Public NotInheritable Class SpotTradeBotEngine
 
         Try
             SpotTradeBotRepository.SaveOpenPositions(runId, GetOpenPositions())
+            SpotTradeBotRepository.SaveGridGuards(runId, GetGridGuardStates())
             SpotTradeBotRepository.UpdateRun(runId, snapshot, "STOPPED", DateTime.UtcNow)
         Catch ex As Exception
             Debug.WriteLine("Erro salvando resultado da simulação: " & ex.Message)
@@ -213,6 +248,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 _lastSignals.Clear()
                 _lastExits.Clear()
                 _gridRecoveryEntryPrices.Clear()
+                _gridConsecutiveStops.Clear()
+                _gridBlockedUntilUtc.Clear()
                 _bitcoinFlushPausedUntilUtc = DateTime.MinValue
                 _bitcoinDailyLastPauseUtc = DateTime.MinValue
                 ResetSimulationLocked()
@@ -246,6 +283,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 Next
                 _lastExits.Remove(normalized)
                 _gridRecoveryEntryPrices.Remove(normalized)
+                _gridConsecutiveStops.Remove(normalized)
+                _gridBlockedUntilUtc.Remove(normalized)
 
                 If Not _running Then
                     _activeRunId = 0
@@ -281,7 +320,9 @@ Public NotInheritable Class SpotTradeBotEngine
             configurationSnapshot = CopyConfiguration(_configuration)
         End SyncLock
 
-        If configurationSnapshot.BitcoinFlushProtectionEnabled AndAlso
+        If (configurationSnapshot.BitcoinFlushProtectionEnabled OrElse
+            configurationSnapshot.BitcoinDailyProtectionEnabled OrElse
+            configurationSnapshot.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback)) AndAlso
            Not requestedSymbols.Contains("BTC", StringComparer.OrdinalIgnoreCase) Then
             requestedSymbols.Add("BTC")
         End If
@@ -351,7 +392,8 @@ Public NotInheritable Class SpotTradeBotEngine
                              enabled.Contains(SpotBotStrategyKind.Breakout) OrElse
                              enabled.Contains(SpotBotStrategyKind.MomentumVolume) OrElse
                              enabled.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
-                             enabled.Contains(SpotBotStrategyKind.ValueZonePullback)
+                             enabled.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
+                             enabled.Contains(SpotBotStrategyKind.BtcMildDeclinePullback)
 
         If needsOneMinute Then
             Dim oneMinuteLimit = Math.Max(
@@ -362,12 +404,14 @@ Public NotInheritable Class SpotTradeBotEngine
             AddWarmupRequirement(result, "1m", oneMinuteLimit)
         End If
 
-        If configuration.BitcoinDailyProtectionEnabled Then
+        If configuration.BitcoinDailyProtectionEnabled OrElse
+           enabled.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) Then
             AddWarmupRequirement(result, "1d", 30)
         End If
 
         If enabled.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
-           enabled.Contains(SpotBotStrategyKind.ValueZonePullback) Then
+           enabled.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
+           enabled.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) Then
             Dim fiveMinuteLimit = Math.Max(
                 60,
                 Math.Max(
@@ -454,7 +498,8 @@ Public NotInheritable Class SpotTradeBotEngine
                     .Low = points.Last().Close,
                     .Close = points.Last().Close}
 
-                If configuration.EnabledStrategies.Contains(SpotBotStrategyKind.ValueZonePullback) Then
+                If configuration.EnabledStrategies.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
+                   configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) Then
                     Dim twoMinutePoints = AggregateCandlePoints(points, 2)
                     ReplaceHistoryLocked(_valueZoneM2CandleHistory, symbol, twoMinutePoints, configuration.MaximumPriceHistory)
                     _valueZoneM2CurrentCandles(symbol) = CreateCandleState(
@@ -464,7 +509,8 @@ Public NotInheritable Class SpotTradeBotEngine
 
             Case "1d"
                 If String.Equals(symbol, "BTC", StringComparison.OrdinalIgnoreCase) AndAlso
-                   configuration.BitcoinDailyProtectionEnabled Then
+                   (configuration.BitcoinDailyProtectionEnabled OrElse
+                    configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback)) Then
                     _bitcoinDailyCandleHistory.Clear()
                     Dim dailyHistoryLimit = Math.Max(30, Math.Min(365, configuration.MaximumPriceHistory))
                     _bitcoinDailyCandleHistory.AddRange(
@@ -733,9 +779,13 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim status As New SpotBotBitcoinFlushStatus With {
             .CurrentPrice = closePrice}
 
-        If Not _running OrElse Not _configuration.BitcoinDailyProtectionEnabled Then
+        If Not _running Then
             Return status
         End If
+
+        Dim trackDailyContext = _configuration.BitcoinDailyProtectionEnabled OrElse
+                                _configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback)
+        If Not trackDailyContext Then Return status
 
         Dim candleTimestamp = If(
             candleStartUtc.Kind = DateTimeKind.Unspecified,
@@ -762,6 +812,11 @@ Public NotInheritable Class SpotTradeBotEngine
                 0,
                 _bitcoinDailyCandleHistory.Count - dailyHistoryLimit)
         End If
+
+        ' O regime BTC Leve Queda pode consumir o histórico diário mesmo
+        ' quando a proteção diária estiver desligada; nesse caso não deve
+        ' acionar pausa global, apenas alimentar o filtro da estratégia.
+        If Not _configuration.BitcoinDailyProtectionEnabled Then Return status
 
         Dim nowUtc = DateTime.UtcNow
         status.IsPaused = _bitcoinFlushPausedUntilUtc > nowUtc
@@ -856,6 +911,7 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim wavePriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim valueZoneM2PriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim valueZoneM5PriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
+        Dim bitcoinDailyPriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim rsiClosedCandle As SpotBotPricePoint = Nothing
         Dim bollingerClosedCandle As SpotBotPricePoint = Nothing
         Dim waveClosedCandle As SpotBotPricePoint = Nothing
@@ -872,6 +928,8 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim configurationSnapshot As SpotBotConfiguration
         Dim activeRunId As Long
         Dim bitcoinFlushPaused As Boolean
+        Dim riskBrakeBlocked As Boolean
+        Dim riskBrakeCandidate As SpotBotSignal = Nothing
 
         SyncLock _sync
             If Not _running Then Return Nothing
@@ -888,9 +946,15 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
 
             enabledStrategies = _configuration.EnabledStrategies.ToList()
+            Dim gridPositionForStops As SimulationPosition = Nothing
+            Dim hasGridPositionForStops = _simulationPositions.TryGetValue(normalizedSymbol, gridPositionForStops) AndAlso
+                                          gridPositionForStops IsNot Nothing AndAlso
+                                          gridPositionForStops.GridManaged
             If enabledStrategies.Contains(SpotBotStrategyKind.Rsi) OrElse
                enabledStrategies.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
-               enabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) Then
+               enabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) OrElse
+               enabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
+               hasGridPositionForStops Then
                 rsiHistory = GetOrCreateRsiCandleHistory(normalizedSymbol)
                 valueZoneM1CandleClosed = UpdateRsiCandle(normalizedSymbol, observedAt, price, rsiHistory, rsiClosedCandle)
                 candleClosed = valueZoneM1CandleClosed
@@ -926,6 +990,7 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
 
             If enabledStrategies.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
+               enabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) OrElse
                enabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) Then
                 valueZoneM2History = GetOrCreateValueZoneCandleHistory(normalizedSymbol, 2)
                 valueZoneM5History = GetOrCreateValueZoneCandleHistory(normalizedSymbol, 5)
@@ -951,6 +1016,15 @@ Public NotInheritable Class SpotTradeBotEngine
             closedCandle = If(rsiClosedCandle, If(bollingerClosedCandle, waveClosedCandle))
 
             configurationSnapshot = CopyConfiguration(_configuration)
+            bitcoinDailyPriceSnapshot = _bitcoinDailyCandleHistory.ToArray()
+            Dim markedPosition As SimulationPosition = Nothing
+            If _simulationPositions.TryGetValue(normalizedSymbol, markedPosition) AndAlso markedPosition IsNot Nothing Then
+                markedPosition.LastPrice = price
+                markedPosition.HighestPrice = Math.Max(markedPosition.HighestPrice, price)
+            End If
+            UpdateRiskBrakeBlockedCandidatePriceLocked(normalizedSymbol, price)
+            UpdateRiskBrakeStateLocked(observedAt, configurationSnapshot)
+            riskBrakeBlocked = IsRiskBrakeEntryBlockedLocked(observedAt)
             activeRunId = _activeRunId
             bitcoinFlushPaused = _configuration.BitcoinFlushProtectionEnabled AndAlso
                                  _bitcoinFlushPausedUntilUtc > observedAt
@@ -1008,6 +1082,17 @@ Public NotInheritable Class SpotTradeBotEngine
                     Else
                         strategySignal = strategy.Evaluate(normalizedSymbol, strategyPrices, configurationSnapshot)
                     End If
+                ElseIf kind = SpotBotStrategyKind.BtcMildDeclinePullback Then
+                    If Not valueZoneM1CandleClosed Then Continue For
+                    Dim bitcoinContextStrategy = TryCast(strategy, ISpotBotBitcoinContextStrategy)
+                    If bitcoinContextStrategy Is Nothing Then Continue For
+                    strategySignal = bitcoinContextStrategy.EvaluateWithBitcoinContext(
+                        normalizedSymbol,
+                        rsiPriceSnapshot,
+                        valueZoneM2PriceSnapshot,
+                        valueZoneM5PriceSnapshot,
+                        bitcoinDailyPriceSnapshot,
+                        configurationSnapshot)
                 ElseIf kind = SpotBotStrategyKind.ValueZonePullback Then
                     If Not valueZoneM1CandleClosed Then Continue For
                     Dim multiTimeframeStrategy = TryCast(strategy, ISpotBotMultiTimeframeStrategy)
@@ -1038,18 +1123,43 @@ Public NotInheritable Class SpotTradeBotEngine
 
         Dim signal As SpotBotSignal = Nothing
         If Not bitcoinFlushPaused Then
-            signal = CombineSignals(normalizedSymbol, price, observedAt, strategySignals, configurationSnapshot)
+            Dim combinedSignal = CombineSignals(normalizedSymbol, price, observedAt, strategySignals, configurationSnapshot)
+            If riskBrakeBlocked Then
+                riskBrakeCandidate = combinedSignal
+            Else
+                signal = combinedSignal
+            End If
         End If
         Dim acceptedSignal As SpotBotSignal = Nothing
+
+        If riskBrakeBlocked AndAlso
+           riskBrakeCandidate IsNot Nothing AndAlso
+           riskBrakeCandidate.Direction = SpotBotSignalDirection.Buy Then
+            SyncLock _sync
+                RegisterRiskBrakeBlockedEntryLocked(
+                    normalizedSymbol,
+                    price,
+                    observedAt,
+                    riskBrakeCandidate,
+                    configurationSnapshot)
+            End SyncLock
+        End If
 
         If signal IsNot Nothing AndAlso signal.Direction <> SpotBotSignalDirection.Hold Then
             Dim cooldownKey = $"{normalizedSymbol}|{signal.Direction}"
             Dim cooldownBlocked = False
 
             SyncLock _sync
+                If signal.Direction = SpotBotSignalDirection.Buy AndAlso
+                   IsRiskBrakeEntryBlockedLocked(observedAt) Then
+                    cooldownBlocked = True
+                End If
+
                 Dim previousSignalAt As DateTime
-                cooldownBlocked = _lastSignals.TryGetValue(cooldownKey, previousSignalAt) AndAlso
+                cooldownBlocked = cooldownBlocked OrElse
+                                  (_lastSignals.TryGetValue(cooldownKey, previousSignalAt) AndAlso
                                   observedAt - previousSignalAt < configurationSnapshot.Cooldown
+                                  )
 
                 If Not cooldownBlocked AndAlso signal.Direction = SpotBotSignalDirection.Buy Then
                     Dim lastExitAt As DateTime
@@ -1062,8 +1172,20 @@ Public NotInheritable Class SpotTradeBotEngine
                 End If
 
                 If Not cooldownBlocked AndAlso signal.Direction = SpotBotSignalDirection.Buy AndAlso signal.GridManaged Then
+                    Dim blockedUntilUtc As DateTime
+                    If _gridBlockedUntilUtc.TryGetValue(normalizedSymbol, blockedUntilUtc) Then
+                        If observedAt < blockedUntilUtc Then
+                            cooldownBlocked = True
+                            Dim consecutiveStops = 0
+                            _gridConsecutiveStops.TryGetValue(normalizedSymbol, consecutiveStops)
+                            Debug.WriteLine($"[GRID V2] Reentrada bloqueada em {normalizedSymbol}: {consecutiveStops} stops consecutivos; bloqueio até {blockedUntilUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}.")
+                        Else
+                            _gridBlockedUntilUtc.Remove(normalizedSymbol)
+                        End If
+                    End If
+
                     Dim recoveryEntryPrice As Decimal
-                    If _gridRecoveryEntryPrices.TryGetValue(normalizedSymbol, recoveryEntryPrice) Then
+                    If Not cooldownBlocked AndAlso _gridRecoveryEntryPrices.TryGetValue(normalizedSymbol, recoveryEntryPrice) Then
                         If IsGridRecoveryConfirmed(price, rsiPriceSnapshot, recoveryEntryPrice) Then
                             _gridRecoveryEntryPrices.Remove(normalizedSymbol)
                         Else
@@ -1123,7 +1245,7 @@ Public NotInheritable Class SpotTradeBotEngine
             End SyncLock
         End If
 
-        Dim completedTrade As SpotBotSimulationTrade = Nothing
+        Dim completedTrades As New List(Of SpotBotSimulationTrade)()
         Dim automaticExit As Boolean
         Dim stopAdjusted As Boolean
         Dim simulationSnapshot = ApplySimulation(
@@ -1132,9 +1254,10 @@ Public NotInheritable Class SpotTradeBotEngine
             observedAt,
             acceptedSignal,
             configurationSnapshot,
-            completedTrade,
+            completedTrades,
             automaticExit,
-            stopAdjusted)
+            stopAdjusted,
+            rsiPriceSnapshot)
         RaiseEvent SimulationUpdated(Me, New SpotBotSimulationEventArgs(simulationSnapshot))
 
         If activeRunId > 0 Then
@@ -1147,13 +1270,16 @@ Public NotInheritable Class SpotTradeBotEngine
                         closedCandle.Price)
                 End If
 
-                If completedTrade IsNot Nothing Then
-                    SpotTradeBotRepository.SaveTrade(activeRunId, completedTrade)
-                End If
+                For Each completedTrade In completedTrades
+                    If completedTrade IsNot Nothing Then
+                        SpotTradeBotRepository.SaveTrade(activeRunId, completedTrade)
+                    End If
+                Next
 
-                If candleClosed OrElse completedTrade IsNot Nothing OrElse acceptedSignal IsNot Nothing OrElse stopAdjusted Then
+                If candleClosed OrElse completedTrades.Count > 0 OrElse acceptedSignal IsNot Nothing OrElse stopAdjusted Then
                     SpotTradeBotRepository.UpdateRun(activeRunId, simulationSnapshot, "RUNNING")
                     SpotTradeBotRepository.SaveOpenPositions(activeRunId, GetOpenPositions())
+                    SpotTradeBotRepository.SaveGridGuards(activeRunId, GetGridGuardStates())
                 End If
             Catch ex As Exception
                 Debug.WriteLine("Erro salvando dados da simulação: " & ex.Message)
@@ -1221,17 +1347,28 @@ Public NotInheritable Class SpotTradeBotEngine
         timestampUtc As DateTime,
         signal As SpotBotSignal,
         configuration As SpotBotConfiguration,
-        ByRef completedTrade As SpotBotSimulationTrade,
+        completedTrades As List(Of SpotBotSimulationTrade),
         ByRef automaticExit As Boolean,
-        ByRef stopAdjusted As Boolean) As SpotBotSimulationSnapshot
+        ByRef stopAdjusted As Boolean,
+        gridClosedCandles As IReadOnlyList(Of SpotBotPricePoint)) As SpotBotSimulationSnapshot
 
         SyncLock _sync
             automaticExit = False
             stopAdjusted = False
+            If completedTrades Is Nothing Then completedTrades = New List(Of SpotBotSimulationTrade)()
             Dim position As SimulationPosition = Nothing
             If _simulationPositions.TryGetValue(symbol, position) Then
                 position.LastPrice = price
                 position.HighestPrice = Math.Max(position.HighestPrice, price)
+            End If
+
+            UpdateRiskBrakeStateLocked(timestampUtc, configuration)
+            If _riskBrakeState = SpotBotRiskBrakeState.HardStop AndAlso
+               configuration.RiskBrakeClosePositionsOnHardStop AndAlso
+               _simulationPositions.Count > 0 Then
+                CloseAllSimulationPositionsLocked(price, timestampUtc, configuration, completedTrades)
+                automaticExit = True
+                Return BuildSimulationSnapshotLocked(configuration)
             End If
 
             If position IsNot Nothing AndAlso position.EntryPrice > 0D Then
@@ -1251,12 +1388,21 @@ Public NotInheritable Class SpotTradeBotEngine
                         position,
                         configuration,
                         "TP",
-                        completedTrade)
+                        completedTrades)
                     automaticExit = True
                     Return BuildSimulationSnapshotLocked(configuration)
                 End If
 
-                If stopLossReached OrElse
+                Dim stopConfirmed = Not position.GridManaged OrElse
+                                    Not configuration.GridV2StopConfirmationEnabled OrElse
+                                    IsGridStopConfirmed(
+                                        price,
+                                        position.StopPrice,
+                                        configuration,
+                                        gridClosedCandles,
+                                        position.EntryTimestampUtc)
+
+                If (stopLossReached AndAlso stopConfirmed) OrElse
                    (Not position.GridManaged AndAlso position.StopPrice <= 0D AndAlso stopLossPercent > 0D AndAlso variationPercent <= -stopLossPercent) Then
                     CloseSimulationPosition(
                         symbol,
@@ -1265,7 +1411,7 @@ Public NotInheritable Class SpotTradeBotEngine
                         position,
                         configuration,
                         "SL",
-                        completedTrade)
+                        completedTrades)
                     automaticExit = True
                     Return BuildSimulationSnapshotLocked(configuration)
                 End If
@@ -1363,9 +1509,9 @@ Public NotInheritable Class SpotTradeBotEngine
                     Case SpotBotSignalDirection.Sell
                         If position IsNot Nothing Then
                             If signal.GridManaged AndAlso position.GridManaged AndAlso position.GridLevelCount > 1 Then
-                                CloseSimulationPositionPartially(symbol, price, timestampUtc, position, configuration, completedTrade)
+                                CloseSimulationPositionPartially(symbol, price, timestampUtc, position, configuration, completedTrades)
                             Else
-                                CloseSimulationPosition(symbol, price, timestampUtc, position, configuration, "VENDA", completedTrade)
+                                CloseSimulationPosition(symbol, price, timestampUtc, position, configuration, "VENDA", completedTrades)
                             End If
                         Else
                             _simulationLastAction = $"VENDA ignorada {symbol}: sem posição aberta"
@@ -1375,6 +1521,36 @@ Public NotInheritable Class SpotTradeBotEngine
 
             Return BuildSimulationSnapshotLocked(configuration)
         End SyncLock
+    End Function
+
+    Private Shared Function IsGridStopConfirmed(
+        currentPrice As Decimal,
+        stopPrice As Decimal,
+        configuration As SpotBotConfiguration,
+        closedCandles As IReadOnlyList(Of SpotBotPricePoint),
+        entryTimestampUtc As DateTime) As Boolean
+
+        If currentPrice <= 0D OrElse stopPrice <= 0D Then Return False
+
+        Dim emergencyBufferPercent = Math.Max(0D, configuration.GridV2StopEmergencyBufferPercent)
+        If emergencyBufferPercent > 0D AndAlso
+           currentPrice <= stopPrice * (1D - emergencyBufferPercent / 100D) Then
+            Return True
+        End If
+
+        Dim requiredCandles = Math.Max(1, configuration.GridV2StopConfirmationCandles)
+        If closedCandles Is Nothing OrElse closedCandles.Count < requiredCandles Then Return False
+
+        For index = closedCandles.Count - requiredCandles To closedCandles.Count - 1
+            Dim candle = closedCandles(index)
+            If candle Is Nothing OrElse
+               (entryTimestampUtc <> DateTime.MinValue AndAlso candle.TimestampUtc < entryTimestampUtc) OrElse
+               candle.Close > stopPrice Then
+                Return False
+            End If
+        Next
+
+        Return True
     End Function
 
     Private Function CalculateGridNotionalLocked(
@@ -1450,6 +1626,242 @@ Public NotInheritable Class SpotTradeBotEngine
         Return changed
     End Function
 
+    Private Function CurrentRiskBrakeEquityLocked(configuration As SpotBotConfiguration) As Decimal
+        Dim openValue = 0D
+        For Each position In _simulationPositions.Values
+            If position Is Nothing Then Continue For
+            If configuration.RiskBrakeUseUnrealizedPnl Then
+                openValue += Math.Max(0D, position.Quantity * position.LastPrice)
+            Else
+                openValue += Math.Max(0D, position.CostBasis)
+            End If
+        Next
+
+        Return Math.Max(0D, _simulationQuoteBalance + openValue)
+    End Function
+
+    Private Sub UpdateRiskBrakeStateLocked(
+        timestampUtc As DateTime,
+        configuration As SpotBotConfiguration)
+
+        If configuration Is Nothing OrElse Not configuration.RiskBrakeEnabled Then
+            _riskBrakeState = SpotBotRiskBrakeState.Normal
+            _riskBrakeReason = String.Empty
+            Return
+        End If
+
+        Dim equity = CurrentRiskBrakeEquityLocked(configuration)
+        If _riskBrakeSessionStartEquity <= 0D Then
+            _riskBrakeSessionStartEquity = Math.Max(0D, configuration.SimulationStartingQuote)
+        End If
+        If _riskBrakePeakEquity <= 0D Then _riskBrakePeakEquity = _riskBrakeSessionStartEquity
+        _riskBrakePeakEquity = Math.Max(_riskBrakePeakEquity, equity)
+
+        If _riskBrakeState = SpotBotRiskBrakeState.Paused AndAlso
+           _riskBrakePauseUntilUtc > DateTime.MinValue AndAlso
+           timestampUtc >= _riskBrakePauseUntilUtc Then
+            FinalizeRiskBrakeBlockedEntriesLocked(timestampUtc, configuration)
+            _riskBrakeState = If(
+                configuration.RiskBrakeProfitLockEnabled AndAlso
+                _riskBrakePeakEquity >= _riskBrakeSessionStartEquity *
+                    (1D + Math.Max(0D, configuration.RiskBrakeProfitLockTriggerPercent) / 100D),
+                SpotBotRiskBrakeState.ProfitLockArmed,
+                SpotBotRiskBrakeState.Normal)
+            _riskBrakeLastPauseEndedUtc = timestampUtc
+            _riskBrakePauseUntilUtc = DateTime.MinValue
+            _riskBrakeReason = "Pausa por sequência encerrada; novas entradas liberadas."
+            _simulationLastAction = "FREIO: pausa encerrada"
+        End If
+
+        If _riskBrakeState = SpotBotRiskBrakeState.HardStop Then Return
+
+        Dim sessionLossPercent = Math.Max(0D, configuration.RiskBrakeSessionLossPercent)
+        If sessionLossPercent > 0D AndAlso
+           _riskBrakeSessionStartEquity > 0D AndAlso
+           equity <= _riskBrakeSessionStartEquity * (1D - sessionLossPercent / 100D) Then
+            _riskBrakeState = SpotBotRiskBrakeState.HardStop
+            FinalizeRiskBrakeBlockedEntriesLocked(timestampUtc, configuration)
+            _riskBrakeReason = $"limite de perda da sessão atingido ({sessionLossPercent:0.##}%)."
+            _simulationLastAction = "FREIO: " & _riskBrakeReason
+            Return
+        End If
+
+        If configuration.RiskBrakeProfitLockEnabled AndAlso
+           _riskBrakeSessionStartEquity > 0D Then
+            Dim triggerPercent = Math.Max(0D, configuration.RiskBrakeProfitLockTriggerPercent)
+            Dim peakGainPercent = (_riskBrakePeakEquity - _riskBrakeSessionStartEquity) /
+                                  _riskBrakeSessionStartEquity * 100D
+            If peakGainPercent >= triggerPercent AndAlso _riskBrakePeakEquity > _riskBrakeSessionStartEquity Then
+                If _riskBrakeState = SpotBotRiskBrakeState.Normal Then
+                    _riskBrakeState = SpotBotRiskBrakeState.ProfitLockArmed
+                    _riskBrakeReason = $"trava de lucro armada em +{peakGainPercent:0.##}%."
+                    _simulationLastAction = "FREIO: " & _riskBrakeReason
+                End If
+
+                Dim givebackPercent = Math.Min(100D, Math.Max(0D, configuration.RiskBrakeProfitGivebackPercent))
+                Dim lockedFloor = _riskBrakeSessionStartEquity +
+                                  (_riskBrakePeakEquity - _riskBrakeSessionStartEquity) *
+                                  (1D - givebackPercent / 100D)
+                If equity <= lockedFloor Then
+                    _riskBrakeState = SpotBotRiskBrakeState.HardStop
+                    FinalizeRiskBrakeBlockedEntriesLocked(timestampUtc, configuration)
+                    _riskBrakeReason = $"trava de lucro acionada após devolver {givebackPercent:0.##}% do ganho máximo."
+                    _simulationLastAction = "FREIO: " & _riskBrakeReason
+                End If
+            End If
+        End If
+    End Sub
+
+    Private Sub UpdateRiskBrakeBlockedCandidatePriceLocked(symbol As String, price As Decimal)
+        If String.IsNullOrWhiteSpace(symbol) OrElse price <= 0D Then Return
+
+        Dim candidate As RiskBrakeBlockedEntryObservation = Nothing
+        If _riskBrakeBlockedCandidates.TryGetValue(symbol, candidate) AndAlso candidate IsNot Nothing Then
+            If candidate.LowestObservedPrice <= 0D Then
+                candidate.LowestObservedPrice = price
+            Else
+                candidate.LowestObservedPrice = Math.Min(candidate.LowestObservedPrice, price)
+            End If
+        End If
+    End Sub
+
+    Private Sub RegisterRiskBrakeBlockedEntryLocked(
+        symbol As String,
+        price As Decimal,
+        timestampUtc As DateTime,
+        signal As SpotBotSignal,
+        configuration As SpotBotConfiguration)
+
+        If String.IsNullOrWhiteSpace(symbol) OrElse
+           price <= 0D OrElse
+           signal Is Nothing OrElse
+           signal.Direction <> SpotBotSignalDirection.Buy OrElse
+           configuration Is Nothing OrElse
+           Not IsRiskBrakeEntryBlockedLocked(timestampUtc) Then
+            Return
+        End If
+
+        Dim executionPrice = If(signal.EntryPrice > 0D, signal.EntryPrice, price)
+        If executionPrice <= 0D Then Return
+
+        Dim feeRate = Math.Max(0D, configuration.SimulationFeeRate)
+        Dim notional As Decimal
+        If signal.GridManaged Then
+            notional = CalculateGridNotionalLocked(executionPrice, signal.StopPrice, configuration, Nothing)
+        Else
+            Dim allocationPercent = Math.Min(100D, Math.Max(0D, configuration.SimulationAllocationPercent))
+            Dim requestedNotional = _simulationQuoteBalance * allocationPercent / 100D
+            notional = Math.Min(requestedNotional, _simulationQuoteBalance / (1D + feeRate))
+        End If
+
+        If notional <= 0D Then Return
+
+        Dim candidate As RiskBrakeBlockedEntryObservation = Nothing
+        If _riskBrakeBlockedCandidates.TryGetValue(symbol, candidate) AndAlso candidate IsNot Nothing Then
+            UpdateRiskBrakeBlockedCandidatePriceLocked(symbol, price)
+            Return
+        End If
+
+        _riskBrakeBlockedCandidates(symbol) = New RiskBrakeBlockedEntryObservation With {
+            .Symbol = symbol,
+            .EntryPrice = executionPrice,
+            .Quantity = notional / executionPrice,
+            .LowestObservedPrice = Math.Min(executionPrice, price),
+            .FirstObservedAtUtc = timestampUtc
+        }
+        _riskBrakeBlockedEntries += 1
+    End Sub
+
+    Private Sub FinalizeRiskBrakeBlockedEntriesLocked(
+        timestampUtc As DateTime,
+        configuration As SpotBotConfiguration)
+
+        If _riskBrakeBlockedCandidates.Count = 0 Then Return
+
+        Dim feeRate = Math.Max(0D, If(configuration Is Nothing, 0D, configuration.SimulationFeeRate))
+        For Each candidate In _riskBrakeBlockedCandidates.Values
+            If candidate Is Nothing OrElse candidate.Quantity <= 0D OrElse candidate.EntryPrice <= 0D Then Continue For
+
+            ' Estimativa conservadora: entrada no primeiro sinal bloqueado e saída
+            ' no menor preço observado durante a pausa, descontando as duas taxas.
+            Dim lowestPrice = If(candidate.LowestObservedPrice > 0D, candidate.LowestObservedPrice, candidate.EntryPrice)
+            Dim grossAvoidedLoss = Math.Max(0D, candidate.EntryPrice - lowestPrice) * candidate.Quantity
+            Dim roundTripFees = (candidate.EntryPrice * candidate.Quantity + lowestPrice * candidate.Quantity) * feeRate
+            _riskBrakeEstimatedAvoidedPnl += Math.Max(0D, grossAvoidedLoss - roundTripFees)
+        Next
+
+        _riskBrakeBlockedCandidates.Clear()
+    End Sub
+
+    Private Function CurrentRiskBrakeBlockedCandidatesEstimateLocked(
+        configuration As SpotBotConfiguration) As Decimal
+
+        If _riskBrakeBlockedCandidates.Count = 0 Then Return 0D
+
+        Dim feeRate = Math.Max(0D, If(configuration Is Nothing, 0D, configuration.SimulationFeeRate))
+        Dim estimate = 0D
+        For Each candidate In _riskBrakeBlockedCandidates.Values
+            If candidate Is Nothing OrElse candidate.Quantity <= 0D OrElse candidate.EntryPrice <= 0D Then Continue For
+
+            Dim lowestPrice = If(candidate.LowestObservedPrice > 0D, candidate.LowestObservedPrice, candidate.EntryPrice)
+            Dim grossAvoidedLoss = Math.Max(0D, candidate.EntryPrice - lowestPrice) * candidate.Quantity
+            Dim roundTripFees = (candidate.EntryPrice * candidate.Quantity + lowestPrice * candidate.Quantity) * feeRate
+            estimate += Math.Max(0D, grossAvoidedLoss - roundTripFees)
+        Next
+
+        Return estimate
+    End Function
+
+    Private Function IsRiskBrakeEntryBlockedLocked(timestampUtc As DateTime) As Boolean
+        If _riskBrakeState = SpotBotRiskBrakeState.HardStop Then Return True
+        If _riskBrakeState <> SpotBotRiskBrakeState.Paused Then Return False
+        Return _riskBrakePauseUntilUtc <= DateTime.MinValue OrElse timestampUtc < _riskBrakePauseUntilUtc
+    End Function
+
+    Private Sub RegisterClosedTradeForRiskBrakeLocked(
+        tradePnl As Decimal,
+        timestampUtc As DateTime,
+        configuration As SpotBotConfiguration)
+
+        If configuration Is Nothing OrElse Not configuration.RiskBrakeEnabled OrElse
+           _riskBrakeState = SpotBotRiskBrakeState.HardStop Then Return
+
+        If tradePnl < 0D Then
+            _riskBrakeConsecutiveLosses += 1
+        ElseIf tradePnl > 0D Then
+            _riskBrakeConsecutiveLosses = 0
+        End If
+
+        Dim maximumLosses = Math.Max(0, configuration.RiskBrakeMaxConsecutiveLosses)
+        If maximumLosses > 0 AndAlso
+           _riskBrakeConsecutiveLosses >= maximumLosses AndAlso
+           _riskBrakeState <> SpotBotRiskBrakeState.Paused Then
+            _riskBrakeState = SpotBotRiskBrakeState.Paused
+            _riskBrakePauseUntilUtc = timestampUtc.AddMinutes(CDbl(Math.Max(1D, configuration.RiskBrakePauseMinutes)))
+            _riskBrakePauseCount += 1
+            _riskBrakeLastPauseStartedUtc = timestampUtc
+            _riskBrakeReason = $"sequência de {_riskBrakeConsecutiveLosses} perdas; pausa até {_riskBrakePauseUntilUtc.ToLocalTime():HH:mm:ss}."
+            _simulationLastAction = "FREIO: " & _riskBrakeReason
+        End If
+    End Sub
+
+    Private Sub CloseAllSimulationPositionsLocked(
+        price As Decimal,
+        timestampUtc As DateTime,
+        configuration As SpotBotConfiguration,
+        completedTrades As List(Of SpotBotSimulationTrade))
+
+        Dim symbols = _simulationPositions.Keys.ToList()
+        For Each symbol In symbols
+            Dim position As SimulationPosition = Nothing
+            If Not _simulationPositions.TryGetValue(symbol, position) OrElse position Is Nothing Then Continue For
+            Dim closePrice = If(position.LastPrice > 0D, position.LastPrice, price)
+            CloseSimulationPosition(symbol, closePrice, timestampUtc, position, configuration, "FREIO", completedTrades)
+        Next
+
+        _simulationLastAction = "FREIO: posições encerradas; novas entradas bloqueadas."
+    End Sub
+
     Private Sub CloseSimulationPosition(
         symbol As String,
         price As Decimal,
@@ -1457,7 +1869,7 @@ Public NotInheritable Class SpotTradeBotEngine
         position As SimulationPosition,
         configuration As SpotBotConfiguration,
         exitReason As String,
-        ByRef completedTrade As SpotBotSimulationTrade)
+        completedTrades As List(Of SpotBotSimulationTrade))
 
         Dim feeRate = Math.Max(0D, configuration.SimulationFeeRate)
         Dim gross = position.Quantity * price
@@ -1465,7 +1877,7 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim net = gross - fee
         Dim tradePnl = net - position.CostBasis
 
-        completedTrade = New SpotBotSimulationTrade With {
+        Dim completedTrade = New SpotBotSimulationTrade With {
             .Symbol = symbol,
             .Strategy = If(position.Strategy, String.Empty),
             .ExitReason = If(exitReason, String.Empty),
@@ -1500,12 +1912,27 @@ Public NotInheritable Class SpotTradeBotEngine
                                "SL",
                                If(exitReason.Equals("MANUAL", StringComparison.OrdinalIgnoreCase), "MANUAL", "VENDA")))
         _simulationLastAction = $"{actionText} simulado {symbol}: P/L {tradePnl:+0.00;-0.00;0.00} USDT"
+        If completedTrades IsNot Nothing Then completedTrades.Add(completedTrade)
+        RegisterClosedTradeForRiskBrakeLocked(tradePnl, timestampUtc, configuration)
 
         If position.GridManaged AndAlso
            exitReason.Equals("SL", StringComparison.OrdinalIgnoreCase) Then
             _gridRecoveryEntryPrices(symbol) = position.EntryPrice
-        Else
+            Dim consecutiveStops = 0
+            _gridConsecutiveStops.TryGetValue(symbol, consecutiveStops)
+            consecutiveStops += 1
+            _gridConsecutiveStops(symbol) = consecutiveStops
+
+            If consecutiveStops >= 2 Then
+                Dim pauseMinutes = Math.Max(1D, configuration.RiskBrakePauseMinutes)
+                _gridBlockedUntilUtc(symbol) = timestampUtc.AddMinutes(CDbl(pauseMinutes))
+                _simulationLastAction = $"GRID V2: {symbol} bloqueado após {consecutiveStops} stops por {pauseMinutes:0.#} min; aguardando recuperação."
+                Debug.WriteLine($"[GRID V2] {symbol}: bloqueio temporário após {consecutiveStops} stops consecutivos até {_gridBlockedUntilUtc(symbol).ToLocalTime():yyyy-MM-dd HH:mm:ss}.")
+            End If
+        ElseIf position.GridManaged Then
             _gridRecoveryEntryPrices.Remove(symbol)
+            _gridConsecutiveStops.Remove(symbol)
+            _gridBlockedUntilUtc.Remove(symbol)
         End If
     End Sub
 
@@ -1515,7 +1942,7 @@ Public NotInheritable Class SpotTradeBotEngine
         timestampUtc As DateTime,
         position As SimulationPosition,
         configuration As SpotBotConfiguration,
-        ByRef completedTrade As SpotBotSimulationTrade)
+        completedTrades As List(Of SpotBotSimulationTrade))
 
         If position Is Nothing OrElse position.Quantity <= 0D Then Return
 
@@ -1529,7 +1956,7 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim net = gross - fee
         Dim tradePnl = net - costBasis
 
-        completedTrade = New SpotBotSimulationTrade With {
+        Dim completedTrade = New SpotBotSimulationTrade With {
             .Symbol = symbol,
             .Strategy = If(position.Strategy, String.Empty),
             .ExitReason = "VENDA_PARCIAL",
@@ -1564,26 +1991,47 @@ Public NotInheritable Class SpotTradeBotEngine
         End If
 
         _simulationLastAction = $"VENDA parcial grid {symbol}: P/L {tradePnl:+0.00;-0.00;0.00} USDT"
+        If completedTrades IsNot Nothing Then completedTrades.Add(completedTrade)
+        RegisterClosedTradeForRiskBrakeLocked(tradePnl, timestampUtc, configuration)
+        If position.GridManaged Then
+            _gridRecoveryEntryPrices.Remove(symbol)
+            _gridConsecutiveStops.Remove(symbol)
+            _gridBlockedUntilUtc.Remove(symbol)
+        End If
     End Sub
 
     Private Sub ResetSimulationLocked()
         _simulationPositions.Clear()
         _lastExits.Clear()
         _gridRecoveryEntryPrices.Clear()
+        _gridConsecutiveStops.Clear()
+        _gridBlockedUntilUtc.Clear()
+        _riskBrakeBlockedCandidates.Clear()
         _simulationQuoteBalance = Math.Max(0D, _configuration.SimulationStartingQuote)
         _simulationRealizedPnl = 0D
         _simulationCompletedTrades = 0
         _simulationWinningTrades = 0
         _simulationLosingTrades = 0
         _simulationLastAction = "Carteira virtual reiniciada"
+        _riskBrakeState = SpotBotRiskBrakeState.Normal
+        _riskBrakeSessionStartEquity = _simulationQuoteBalance
+        _riskBrakePeakEquity = _simulationQuoteBalance
+        _riskBrakeConsecutiveLosses = 0
+        _riskBrakePauseUntilUtc = DateTime.MinValue
+        _riskBrakeReason = String.Empty
+        _riskBrakeBlockedEntries = 0
+        _riskBrakeEstimatedAvoidedPnl = 0D
+        _riskBrakePauseCount = 0
+        _riskBrakeLastPauseStartedUtc = DateTime.MinValue
+        _riskBrakeLastPauseEndedUtc = DateTime.MinValue
     End Sub
 
     Private Sub RestoreSimulationLocked(state As SpotBotPersistedSimulationState)
-        If state Is Nothing OrElse state.Snapshot Is Nothing OrElse state.Positions Is Nothing OrElse
-           state.Positions.Count = 0 Then
+        If state Is Nothing OrElse state.Snapshot Is Nothing Then
             Return
         End If
 
+        _restoredConfigurationLoaded = True
         _configuration.SimulationStartingQuote = Math.Max(0D, state.Snapshot.StartingQuote)
         _configuration.EnabledStrategies.Clear()
         For Each strategy In state.EnabledStrategies
@@ -1591,6 +2039,8 @@ Public NotInheritable Class SpotTradeBotEngine
         Next
         _configuration.CombinationMode = state.CombinationMode
         _configuration.RequiredConfirmations = Math.Max(1, state.RequiredConfirmations)
+        _configuration.TakeProfitPercent = Math.Max(0D, state.TakeProfitPercent)
+        _configuration.StopLossPercent = Math.Max(0D, state.StopLossPercent)
         _configuration.BollingerPeriod = Math.Max(2, state.BollingerPeriod)
         _configuration.BollingerStandardDeviations = Math.Max(0.1D, state.BollingerStandardDeviations)
         _configuration.BollingerCandleMinutes = If(state.BollingerCandleMinutes = 240, 240, 1440)
@@ -1601,12 +2051,21 @@ Public NotInheritable Class SpotTradeBotEngine
         _configuration.BreakEvenOffsetPercent = Math.Max(0D, state.BreakEvenOffsetPercent)
         _configuration.TrailingStopEnabled = state.TrailingStopEnabled
         _configuration.TrailingStopDistancePercent = Math.Max(0.01D, state.TrailingStopDistancePercent)
+        _configuration.RiskBrakeEnabled = state.RiskBrakeEnabled
+        _configuration.RiskBrakeSessionLossPercent = Math.Max(0D, state.RiskBrakeSessionLossPercent)
+        _configuration.RiskBrakeProfitLockEnabled = state.RiskBrakeProfitLockEnabled
+        _configuration.RiskBrakeProfitLockTriggerPercent = Math.Max(0D, state.RiskBrakeProfitLockTriggerPercent)
+        _configuration.RiskBrakeProfitGivebackPercent = Math.Min(100D, Math.Max(0D, state.RiskBrakeProfitGivebackPercent))
+        _configuration.RiskBrakeMaxConsecutiveLosses = Math.Max(0, state.RiskBrakeMaxConsecutiveLosses)
+        _configuration.RiskBrakePauseMinutes = Math.Max(1D, state.RiskBrakePauseMinutes)
+        _configuration.RiskBrakeClosePositionsOnHardStop = state.RiskBrakeClosePositionsOnHardStop
+        _configuration.RiskBrakeUseUnrealizedPnl = state.RiskBrakeUseUnrealizedPnl
         _configuration.PostExitCooldownMinutes = Math.Max(0D, state.PostExitCooldownMinutes)
         _configuration.GridV2UseNearestSupportStop = state.GridV2UseNearestSupportStop
         _configuration.GridV2SupportBufferAtr = Math.Max(0D, state.GridV2SupportBufferAtr)
-        _configuration.GridV2MinimumStopPercent = Math.Max(0D, state.GridV2MinimumStopPercent)
+        _configuration.GridV2MinimumStopPercent = Math.Max(1.5D, state.GridV2MinimumStopPercent)
         _configuration.GridV2MaximumStopPercent = Math.Max(_configuration.GridV2MinimumStopPercent, state.GridV2MaximumStopPercent)
-        _configuration.GridV2MinimumSupportDistancePercent = Math.Max(0D, state.GridV2MinimumSupportDistancePercent)
+        _configuration.GridV2MinimumSupportDistancePercent = Math.Max(0.8D, state.GridV2MinimumSupportDistancePercent)
         _configuration.GridV2MaxExposurePercent = Math.Min(100D, Math.Max(0D, state.GridV2MaxExposurePercent))
         _configuration.GridV2RequireRejection = state.GridV2RequireRejection
         _configuration.GridV2RiskPerTradePercent = Math.Min(100D, Math.Max(0D, state.GridV2RiskPerTradePercent))
@@ -1630,7 +2089,46 @@ Public NotInheritable Class SpotTradeBotEngine
         _simulationLastAction = If(String.IsNullOrWhiteSpace(state.Snapshot.LastAction),
                                     "Simulação restaurada",
                                     state.Snapshot.LastAction)
+        _riskBrakeState = state.Snapshot.RiskBrakeState
+        _riskBrakeSessionStartEquity = Math.Max(0D, state.Snapshot.StartingQuote)
+        _riskBrakePeakEquity = Math.Max(
+            _riskBrakeSessionStartEquity,
+            If(state.Snapshot.RiskBrakePeakEquity > 0D, state.Snapshot.RiskBrakePeakEquity, state.Snapshot.Equity))
+        _riskBrakeConsecutiveLosses = Math.Max(0, state.Snapshot.RiskBrakeConsecutiveLosses)
+        _riskBrakePauseUntilUtc = state.Snapshot.RiskBrakePauseUntilUtc
+        _riskBrakeReason = If(state.Snapshot.RiskBrakeReason, String.Empty)
+        _riskBrakeBlockedEntries = Math.Max(0, state.Snapshot.RiskBrakeBlockedEntries)
+        _riskBrakeEstimatedAvoidedPnl = Math.Max(0D, state.Snapshot.RiskBrakeEstimatedAvoidedPnl)
+        _riskBrakePauseCount = Math.Max(0, state.Snapshot.RiskBrakePauseCount)
+        _riskBrakeLastPauseStartedUtc = state.Snapshot.RiskBrakeLastPauseStartedUtc
+        _riskBrakeLastPauseEndedUtc = state.Snapshot.RiskBrakeLastPauseEndedUtc
+        _riskBrakeBlockedCandidates.Clear()
         _simulationPositions.Clear()
+        _gridRecoveryEntryPrices.Clear()
+        _gridConsecutiveStops.Clear()
+        _gridBlockedUntilUtc.Clear()
+
+        If state.GridGuards IsNot Nothing Then
+            For Each guard In state.GridGuards
+                If guard Is Nothing OrElse String.IsNullOrWhiteSpace(guard.Symbol) Then Continue For
+                Dim symbol = NormalizeSymbol(guard.Symbol)
+                If guard.RecoveryEntryPrice > 0D Then
+                    _gridRecoveryEntryPrices(symbol) = guard.RecoveryEntryPrice
+                End If
+                If guard.ConsecutiveStops > 0 Then
+                    _gridConsecutiveStops(symbol) = guard.ConsecutiveStops
+                End If
+                If guard.BlockedUntilUtc > DateTime.MinValue Then
+                    _gridBlockedUntilUtc(symbol) = guard.BlockedUntilUtc.ToUniversalTime()
+                End If
+            Next
+        End If
+
+        If state.Positions Is Nothing OrElse state.Positions.Count = 0 Then
+            _activeRunId = state.RunId
+            _restoredStatePending = True
+            Return
+        End If
 
         For Each persistedPosition In state.Positions
             If persistedPosition Is Nothing OrElse String.IsNullOrWhiteSpace(persistedPosition.Symbol) OrElse
@@ -1674,7 +2172,8 @@ Public NotInheritable Class SpotTradeBotEngine
         Next
 
         If _simulationPositions.Count = 0 Then
-            ResetSimulationLocked()
+            _activeRunId = state.RunId
+            _restoredStatePending = True
             Return
         End If
 
@@ -1682,9 +2181,48 @@ Public NotInheritable Class SpotTradeBotEngine
         _restoredStatePending = True
     End Sub
 
+    Private Function GetGridGuardStates() As IReadOnlyList(Of SpotBotGridGuardState)
+        SyncLock _sync
+            Dim symbols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each symbol In _gridRecoveryEntryPrices.Keys
+                symbols.Add(symbol)
+            Next
+            For Each symbol In _gridConsecutiveStops.Keys
+                symbols.Add(symbol)
+            Next
+            For Each symbol In _gridBlockedUntilUtc.Keys
+                symbols.Add(symbol)
+            Next
+
+            Dim guards As New List(Of SpotBotGridGuardState)()
+            For Each symbol In symbols.OrderBy(Function(item) item, StringComparer.OrdinalIgnoreCase)
+                Dim consecutiveStops = 0
+                _gridConsecutiveStops.TryGetValue(symbol, consecutiveStops)
+                Dim recoveryEntryPrice = 0D
+                _gridRecoveryEntryPrices.TryGetValue(symbol, recoveryEntryPrice)
+                Dim blockedUntilUtc = DateTime.MinValue
+                _gridBlockedUntilUtc.TryGetValue(symbol, blockedUntilUtc)
+
+                If consecutiveStops <= 0 AndAlso recoveryEntryPrice <= 0D AndAlso blockedUntilUtc = DateTime.MinValue Then
+                    Continue For
+                End If
+
+                guards.Add(New SpotBotGridGuardState With {
+                    .Symbol = symbol,
+                    .ConsecutiveStops = Math.Max(0, consecutiveStops),
+                    .RecoveryEntryPrice = Math.Max(0D, recoveryEntryPrice),
+                    .BlockedUntilUtc = If(blockedUntilUtc = DateTime.MinValue, DateTime.MinValue, blockedUntilUtc.ToUniversalTime())
+                })
+            Next
+            Return guards
+        End SyncLock
+    End Function
+
     Private Function BuildSimulationSnapshotLocked(configuration As SpotBotConfiguration) As SpotBotSimulationSnapshot
         Dim openValue = 0D
         Dim unrealizedPnl = 0D
+        Dim estimatedAvoidedPnl = _riskBrakeEstimatedAvoidedPnl +
+                                  CurrentRiskBrakeBlockedCandidatesEstimateLocked(configuration)
 
         For Each position In _simulationPositions.Values
             openValue += position.Quantity * position.LastPrice
@@ -1704,7 +2242,17 @@ Public NotInheritable Class SpotTradeBotEngine
             .WinningTrades = _simulationWinningTrades,
             .LosingTrades = _simulationLosingTrades,
             .OpenPositions = _simulationPositions.Count,
-            .LastAction = _simulationLastAction
+            .LastAction = _simulationLastAction,
+            .RiskBrakeState = _riskBrakeState,
+            .RiskBrakePeakEquity = _riskBrakePeakEquity,
+            .RiskBrakeConsecutiveLosses = _riskBrakeConsecutiveLosses,
+            .RiskBrakePauseUntilUtc = _riskBrakePauseUntilUtc,
+            .RiskBrakeReason = _riskBrakeReason,
+            .RiskBrakeBlockedEntries = _riskBrakeBlockedEntries,
+            .RiskBrakeEstimatedAvoidedPnl = estimatedAvoidedPnl,
+            .RiskBrakePauseCount = _riskBrakePauseCount,
+            .RiskBrakeLastPauseStartedUtc = _riskBrakeLastPauseStartedUtc,
+            .RiskBrakeLastPauseEndedUtc = _riskBrakeLastPauseEndedUtc
         }
     End Function
 
@@ -2030,7 +2578,7 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim normalizedSymbol = NormalizeSymbol(symbol)
         If String.IsNullOrWhiteSpace(normalizedSymbol) Then Return False
 
-        Dim completedTrade As SpotBotSimulationTrade = Nothing
+        Dim completedTrades As New List(Of SpotBotSimulationTrade)()
         Dim snapshot As SpotBotSimulationSnapshot = Nothing
         Dim runId As Long
         Dim closeAt = If(timestampUtc = DateTime.MinValue, DateTime.UtcNow, timestampUtc.ToUniversalTime())
@@ -2050,21 +2598,24 @@ Public NotInheritable Class SpotTradeBotEngine
                 position,
                 _configuration,
                 "MANUAL",
-                completedTrade)
+                completedTrades)
             snapshot = BuildSimulationSnapshotLocked(_configuration)
             runId = _activeRunId
         End SyncLock
 
-        If completedTrade Is Nothing Then Return False
+        If completedTrades.Count = 0 Then Return False
 
         If runId > 0 Then
             Try
-                SpotTradeBotRepository.SaveTrade(runId, completedTrade)
+                For Each completedTrade In completedTrades
+                    SpotTradeBotRepository.SaveTrade(runId, completedTrade)
+                Next
                 SpotTradeBotRepository.UpdateRun(
                     runId,
                     snapshot,
                     If(IsRunning, "RUNNING", "STOPPED"))
                 SpotTradeBotRepository.SaveOpenPositions(runId, GetOpenPositions())
+                SpotTradeBotRepository.SaveGridGuards(runId, GetGridGuardStates())
             Catch ex As Exception
                 Debug.WriteLine("Erro salvando fechamento manual da simulação: " & ex.Message)
             End Try
@@ -2269,6 +2820,9 @@ Public NotInheritable Class SpotTradeBotEngine
             .GridV2UseNearestSupportStop = source.GridV2UseNearestSupportStop,
             .GridV2SupportBufferAtr = source.GridV2SupportBufferAtr,
             .GridV2MinimumSupportDistancePercent = source.GridV2MinimumSupportDistancePercent,
+             .GridV2StopConfirmationEnabled = source.GridV2StopConfirmationEnabled,
+             .GridV2StopConfirmationCandles = Math.Max(1, source.GridV2StopConfirmationCandles),
+             .GridV2StopEmergencyBufferPercent = Math.Max(0D, source.GridV2StopEmergencyBufferPercent),
             .GridV2RequireRejection = source.GridV2RequireRejection,
             .GridV2RiskPerTradePercent = source.GridV2RiskPerTradePercent,
             .GridV2ReserveQuotePercent = source.GridV2ReserveQuotePercent,
@@ -2289,6 +2843,10 @@ Public NotInheritable Class SpotTradeBotEngine
             .ValueZoneMinimumRiskReward = source.ValueZoneMinimumRiskReward,
             .ValueZoneStructureLookback = source.ValueZoneStructureLookback,
             .ValueZoneRequireVwap = source.ValueZoneRequireVwap,
+            .BtcMildDeclineMinimumPercent = Math.Max(0.1D, source.BtcMildDeclineMinimumPercent),
+            .BtcMildDeclineMaximumPercent = Math.Max(
+                Math.Max(0.1D, source.BtcMildDeclineMinimumPercent),
+                source.BtcMildDeclineMaximumPercent),
             .MomentumVolumeLookback = source.MomentumVolumeLookback,
             .MomentumVolumeMultiplier = source.MomentumVolumeMultiplier,
             .MomentumEmaPeriod = source.MomentumEmaPeriod,
@@ -2303,6 +2861,16 @@ Public NotInheritable Class SpotTradeBotEngine
             .BreakEvenOffsetPercent = source.BreakEvenOffsetPercent,
             .TrailingStopEnabled = source.TrailingStopEnabled,
             .TrailingStopDistancePercent = source.TrailingStopDistancePercent,
+            .RiskBrakeEnabled = source.RiskBrakeEnabled,
+            .RiskBrakeSessionLossPercent = source.RiskBrakeSessionLossPercent,
+            .RiskBrakeProfitLockEnabled = source.RiskBrakeProfitLockEnabled,
+            .RiskBrakeProfitLockTriggerPercent = source.RiskBrakeProfitLockTriggerPercent,
+            .RiskBrakeProfitGivebackPercent = source.RiskBrakeProfitGivebackPercent,
+            .RiskBrakeMaxConsecutiveLosses = source.RiskBrakeMaxConsecutiveLosses,
+            .RiskBrakePauseMinutes = source.RiskBrakePauseMinutes,
+            .RiskBrakeCancelPendingEntries = source.RiskBrakeCancelPendingEntries,
+            .RiskBrakeClosePositionsOnHardStop = source.RiskBrakeClosePositionsOnHardStop,
+            .RiskBrakeUseUnrealizedPnl = source.RiskBrakeUseUnrealizedPnl,
             .PostExitCooldownMinutes = source.PostExitCooldownMinutes,
             .SimulationOnly = source.SimulationOnly,
             .UniverseMode = source.UniverseMode,
@@ -2372,6 +2940,8 @@ Public NotInheritable Class SpotTradeBotEngine
                 Return "BNF"
             Case SpotBotStrategyKind.ValueZonePullback
                 Return "Pullback zona de valor"
+            Case SpotBotStrategyKind.BtcMildDeclinePullback
+                Return "BTC leve queda - Pullback defensivo"
             Case Else
                 Return strategy.ToString()
         End Select
