@@ -30,7 +30,6 @@ Public Partial Class SpotTradeBotEditor
         chkSpotBotMomentumVolume = AddEditorCheck(tpStrategies, "chkSpotBotMomentumVolume", "Momentum volume", 404, 25, 110)
         chkSpotBotGridAdaptive = AddEditorCheck(tpStrategies, "chkSpotBotGridAdaptive", "Grid adaptativo v2", 520, 25, 125)
         chkSpotBotValueZonePullback = AddEditorCheck(tpStrategies, "chkSpotBotValueZonePullback", "Pullback zona de valor", 240, 59, 165)
-        chkSpotBotBtcMildDecline = AddEditorCheck(tpStrategies, "chkSpotBotBtcMildDecline", "BTC queda leve", 410, 59, 130)
 
         AddEditorLabel(tpStrategies, "Combinação", 650, 4, 100)
         cbSpotBotCombination = AddEditorCombo(tpStrategies, "cbSpotBotCombination", 650, 25, 150, New Object() {"Qualquer estratégia", "Todas as estratégias", "Mínimo de confirmações", "Pontuação ponderada"})

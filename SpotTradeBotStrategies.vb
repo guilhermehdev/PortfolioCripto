@@ -718,87 +718,6 @@ Public NotInheritable Class SpotBotValueZonePullbackStrategy
     End Function
 End Class
 
-''' <summary>
-''' Pullback defensivo para um dia de queda leve do BTC. O regime não compra
-''' a queda do mercado: ele só libera a confirmação de zona de valor quando
-''' o BTC recua moderadamente e o ativo mantém tendência própria de alta.
-''' </summary>
-Public NotInheritable Class SpotBotBtcMildDeclinePullbackStrategy
-    Implements ISpotBotBitcoinContextStrategy
-
-    Private ReadOnly _valueZone As New SpotBotValueZonePullbackStrategy()
-
-    Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
-        Get
-            Return SpotBotStrategyKind.BtcMildDeclinePullback
-        End Get
-    End Property
-
-    Public Function Evaluate(
-        symbol As String,
-        prices As IReadOnlyList(Of SpotBotPricePoint),
-        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
-
-        Return HoldSignal("BTC leve queda: aguardando contexto diário e pullback M5/M2/M1")
-    End Function
-
-    Public Function EvaluateWithBitcoinContext(
-        symbol As String,
-        m1Candles As IReadOnlyList(Of SpotBotPricePoint),
-        m2Candles As IReadOnlyList(Of SpotBotPricePoint),
-        m5Candles As IReadOnlyList(Of SpotBotPricePoint),
-        bitcoinDailyCandles As IReadOnlyList(Of SpotBotPricePoint),
-        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotBitcoinContextStrategy.EvaluateWithBitcoinContext
-
-        If bitcoinDailyCandles Is Nothing OrElse bitcoinDailyCandles.Count < 2 Then
-            Return HoldSignal("BTC leve queda: histórico diário do BTC insuficiente")
-        End If
-
-        Dim previous = bitcoinDailyCandles(bitcoinDailyCandles.Count - 2)
-        Dim current = bitcoinDailyCandles(bitcoinDailyCandles.Count - 1)
-        If previous Is Nothing OrElse current Is Nothing OrElse
-           previous.Close <= 0D OrElse current.Close <= 0D Then
-            Return HoldSignal("BTC leve queda: fechamento diário do BTC inválido")
-        End If
-
-        Dim dropPercent = Math.Max(0D, (previous.Close - current.Close) / previous.Close * 100D)
-        Dim minimumDrop = Math.Max(0.1D, configuration.BtcMildDeclineMinimumPercent)
-        Dim maximumDrop = Math.Max(minimumDrop, configuration.BtcMildDeclineMaximumPercent)
-        If current.Close >= previous.Close OrElse dropPercent < minimumDrop OrElse dropPercent > maximumDrop Then
-            Return HoldSignal(
-                $"BTC leve queda: variação diária {dropPercent:0.##}% fora da faixa {minimumDrop:0.##}%–{maximumDrop:0.##}%")
-        End If
-
-        Dim pullback = _valueZone.EvaluateMultiTimeframe(
-            symbol,
-            m1Candles,
-            m2Candles,
-            m5Candles,
-            configuration)
-        If pullback Is Nothing Then
-            Return HoldSignal("BTC leve queda: pullback sem sinal")
-        End If
-
-        pullback.Strategy = Kind
-        If pullback.Direction = SpotBotSignalDirection.Buy Then
-            pullback.Confidence = Math.Min(1D, Math.Max(0D, pullback.Confidence))
-            pullback.Reason =
-                $"BTC leve queda {dropPercent:0.##}%: força relativa + {pullback.Reason}"
-        ElseIf String.IsNullOrWhiteSpace(pullback.Reason) Then
-            pullback.Reason = $"BTC leve queda {dropPercent:0.##}%: aguardando pullback defensivo"
-        End If
-
-        Return pullback
-    End Function
-
-    Private Shared Function HoldSignal(reason As String) As SpotBotStrategySignal
-        Return New SpotBotStrategySignal With {
-            .Strategy = SpotBotStrategyKind.BtcMildDeclinePullback,
-            .Direction = SpotBotSignalDirection.Hold,
-            .Reason = reason}
-    End Function
-End Class
-
 Public NotInheritable Class SpotBotGridStrategy
     Implements ISpotBotStrategy
 
@@ -1157,11 +1076,15 @@ End Class
 ''' <summary>
 ''' Grade adaptativa v2. Mantém a lógica de reversão somente em regime lateral,
 ''' calcula o espaçamento pela volatilidade recente e pausa quando há expansão
-''' de faixa compatível com rompimento. O motor de simulação pode acumular até
-''' os níveis configurados para o mesmo ativo.
+''' de faixa compatível com rompimento. Opcionalmente, mantém a grade normal
+''' fora do regime BTC Leve Queda e, enquanto a queda leve estiver ativa,
+''' exige a confirmação adicional do pullback defensivo. O motor de simulação
+''' pode acumular até os níveis configurados para o mesmo ativo.
 ''' </summary>
 Public NotInheritable Class SpotBotGridAdaptiveStrategy
-    Implements ISpotBotTrendFilterStrategy
+    Implements ISpotBotBitcoinTrendFilterStrategy
+
+    Private ReadOnly _valueZonePullback As New SpotBotValueZonePullbackStrategy()
 
     Public ReadOnly Property Kind As SpotBotStrategyKind Implements ISpotBotStrategy.Kind
         Get
@@ -1174,7 +1097,7 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
         prices As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
 
-        Return EvaluateInternal(symbol, prices, Nothing, configuration)
+        Return EvaluateInternal(symbol, prices, Nothing, Nothing, Nothing, Nothing, configuration)
     End Function
 
     Public Function EvaluateWithTrend(
@@ -1183,14 +1106,35 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
         trendCandles As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotTrendFilterStrategy.EvaluateWithTrend
 
-        Return EvaluateInternal(symbol, prices, trendCandles, configuration)
+        Return EvaluateInternal(symbol, prices, trendCandles, Nothing, Nothing, Nothing, configuration)
+    End Function
+
+    Public Function EvaluateWithTrendAndBitcoinContext(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        pullbackM1Candles As IReadOnlyList(Of SpotBotPricePoint),
+        pullbackM2Candles As IReadOnlyList(Of SpotBotPricePoint),
+        bitcoinDailyCandles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotBitcoinTrendFilterStrategy.EvaluateWithTrendAndBitcoinContext
+
+        Return EvaluateInternal(symbol, prices, trendCandles, pullbackM1Candles, pullbackM2Candles, bitcoinDailyCandles, configuration)
     End Function
 
     Private Function EvaluateInternal(
         symbol As String,
         prices As IReadOnlyList(Of SpotBotPricePoint),
         trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        pullbackM1Candles As IReadOnlyList(Of SpotBotPricePoint),
+        pullbackM2Candles As IReadOnlyList(Of SpotBotPricePoint),
+        bitcoinDailyCandles As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal
+
+        Dim btcMildDeclineActive = False
+        If configuration.GridV2BtcMildDeclineEnabled Then
+            Dim btcReason As String = String.Empty
+            btcMildDeclineActive = IsBitcoinMildDecline(bitcoinDailyCandles, configuration, btcReason)
+        End If
 
         If configuration.GridV2EmaFilterEnabled AndAlso trendCandles IsNot Nothing Then
             Dim regimeReason As String = String.Empty
@@ -1269,6 +1213,25 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
             buyTriggered = latest <= buyLevel
         End If
 
+        Dim defensiveReason As String = String.Empty
+        If buyTriggered AndAlso btcMildDeclineActive Then
+            Dim defensiveSignal = _valueZonePullback.EvaluateMultiTimeframe(
+                symbol,
+                pullbackM1Candles,
+                pullbackM2Candles,
+                trendCandles,
+                configuration)
+            If defensiveSignal Is Nothing OrElse
+               defensiveSignal.Direction <> SpotBotSignalDirection.Buy Then
+                defensiveReason = If(
+                    defensiveSignal?.Reason,
+                    "pullback defensivo sem confirmação")
+                buyTriggered = False
+            Else
+                defensiveReason = defensiveSignal.Reason
+            End If
+        End If
+
         If buyTriggered Then
             Dim supportPrice = lowest
             If configuration.GridV2UseNearestSupportStop Then
@@ -1306,7 +1269,10 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
                 .SupportPrice = supportPrice,
                 .GridManaged = True,
                 .GridSpacingPercent = spacingPercent,
-                .Reason = $"grade v2 em regime lateral: compra após rejeição de {buyLevel:F8}, espaçamento {spacingPercent:0.##}%, suporte {supportPrice:F8}, SL {stopDistancePercent:0.##}%"
+                .Reason = If(
+                    btcMildDeclineActive,
+                    $"grade v2 + BTC queda leve: pullback defensivo confirmado; compra após rejeição de {buyLevel:F8}, espaçamento {spacingPercent:0.##}%, suporte {supportPrice:F8}, SL {stopDistancePercent:0.##}%",
+                    $"grade v2 em regime lateral: compra após rejeição de {buyLevel:F8}, espaçamento {spacingPercent:0.##}%, suporte {supportPrice:F8}, SL {stopDistancePercent:0.##}%")
             }
         End If
 
@@ -1323,7 +1289,42 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
             }
         End If
 
+        If btcMildDeclineActive AndAlso Not String.IsNullOrWhiteSpace(defensiveReason) Then
+            Return HoldSignal($"grade v2 defensiva ativa durante queda leve do BTC; {defensiveReason}")
+        End If
+
         Return HoldSignal($"grade v2 ativa; faixa {rangePercent:0.##}%, espaçamento {spacingPercent:0.##}%")
+    End Function
+
+    Private Shared Function IsBitcoinMildDecline(
+        candles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration,
+        ByRef reason As String) As Boolean
+
+        Dim minimumDrop = Math.Max(0.1D, configuration.GridV2BtcMildDeclineMinimumPercent)
+        Dim maximumDrop = Math.Max(minimumDrop, configuration.GridV2BtcMildDeclineMaximumPercent)
+        If candles Is Nothing OrElse candles.Count < 2 Then
+            reason = "grade v2 aguardando histórico diário do BTC para o regime de queda leve"
+            Return False
+        End If
+
+        Dim previous = candles(candles.Count - 2)
+        Dim current = candles(candles.Count - 1)
+        If previous Is Nothing OrElse current Is Nothing OrElse
+           previous.Close <= 0D OrElse current.Close <= 0D Then
+            reason = "grade v2 aguardando fechamento diário válido do BTC"
+            Return False
+        End If
+
+        Dim dropPercent = (previous.Close - current.Close) / previous.Close * 100D
+        If current.Close >= previous.Close OrElse
+           dropPercent < minimumDrop OrElse
+           dropPercent > maximumDrop Then
+            reason = $"grade v2 pausada: BTC fora da queda leve ({dropPercent:0.##}% esperado entre {minimumDrop:0.##}% e {maximumDrop:0.##}%)"
+            Return False
+        End If
+
+        Return True
     End Function
 
     Private Shared Function FindNearestSupportBelow(

@@ -40,6 +40,7 @@ Public NotInheritable Class SpotTradeBotEngine
     Private _bitcoinDailyLastPauseUtc As DateTime
     Private _riskBrakeState As SpotBotRiskBrakeState = SpotBotRiskBrakeState.Normal
     Private _riskBrakeSessionStartEquity As Decimal
+    Private _riskBrakeManualRealizedPnl As Decimal
     Private _riskBrakePeakEquity As Decimal
     Private _riskBrakeConsecutiveLosses As Integer
     Private _riskBrakePauseUntilUtc As DateTime
@@ -81,7 +82,6 @@ Public NotInheritable Class SpotTradeBotEngine
         RegisterStrategy(New SpotBotGridRegimeStrategy())
         RegisterStrategy(New SpotBotGridAdaptiveStrategy())
         RegisterStrategy(New SpotBotValueZonePullbackStrategy())
-        RegisterStrategy(New SpotBotBtcMildDeclinePullbackStrategy())
 
         Dim persistedState As SpotBotPersistedSimulationState = Nothing
         Try
@@ -146,10 +146,28 @@ Public NotInheritable Class SpotTradeBotEngine
 
     Public Sub SetStrategyEnabled(kind As SpotBotStrategyKind, enabled As Boolean)
         SyncLock _sync
+            If kind = SpotBotStrategyKind.BtcMildDeclinePullback Then
+                ' Compatibilidade com chamadas de versões anteriores: o regime
+                ' agora é uma opção interna do Grid V2, não um sinal separado.
+                _configuration.EnabledStrategies.Remove(kind)
+                If enabled Then
+                    _configuration.EnabledStrategies.Add(SpotBotStrategyKind.GridAdaptive)
+                End If
+                _configuration.GridV2BtcMildDeclineEnabled = enabled
+                Return
+            End If
+
             If enabled Then
                 _configuration.EnabledStrategies.Add(kind)
             Else
                 _configuration.EnabledStrategies.Remove(kind)
+            End If
+
+            If kind = SpotBotStrategyKind.GridAdaptive OrElse kind = SpotBotStrategyKind.GridRegime Then
+                ' O regime BTC Leve Queda é uma camada automática do Grid V2.
+                _configuration.GridV2BtcMildDeclineEnabled =
+                    _configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
+                    _configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridRegime)
             End If
         End SyncLock
     End Sub
@@ -159,12 +177,16 @@ Public NotInheritable Class SpotTradeBotEngine
             For Each kind In _strategies.Keys
                 _configuration.EnabledStrategies.Add(kind)
             Next
+            _configuration.GridV2BtcMildDeclineEnabled =
+                _configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
+                _configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridRegime)
         End SyncLock
     End Sub
 
     Public Sub DisableAllStrategies()
         SyncLock _sync
             _configuration.EnabledStrategies.Clear()
+            _configuration.GridV2BtcMildDeclineEnabled = False
         End SyncLock
     End Sub
 
@@ -322,7 +344,7 @@ Public NotInheritable Class SpotTradeBotEngine
 
         If (configurationSnapshot.BitcoinFlushProtectionEnabled OrElse
             configurationSnapshot.BitcoinDailyProtectionEnabled OrElse
-            configurationSnapshot.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback)) AndAlso
+            configurationSnapshot.GridV2BtcMildDeclineEnabled) AndAlso
            Not requestedSymbols.Contains("BTC", StringComparer.OrdinalIgnoreCase) Then
             requestedSymbols.Add("BTC")
         End If
@@ -392,8 +414,7 @@ Public NotInheritable Class SpotTradeBotEngine
                              enabled.Contains(SpotBotStrategyKind.Breakout) OrElse
                              enabled.Contains(SpotBotStrategyKind.MomentumVolume) OrElse
                              enabled.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
-                             enabled.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
-                             enabled.Contains(SpotBotStrategyKind.BtcMildDeclinePullback)
+                             enabled.Contains(SpotBotStrategyKind.ValueZonePullback)
 
         If needsOneMinute Then
             Dim oneMinuteLimit = Math.Max(
@@ -405,13 +426,12 @@ Public NotInheritable Class SpotTradeBotEngine
         End If
 
         If configuration.BitcoinDailyProtectionEnabled OrElse
-           enabled.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) Then
+           configuration.GridV2BtcMildDeclineEnabled Then
             AddWarmupRequirement(result, "1d", 30)
         End If
 
         If enabled.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
-           enabled.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
-           enabled.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) Then
+           enabled.Contains(SpotBotStrategyKind.ValueZonePullback) Then
             Dim fiveMinuteLimit = Math.Max(
                 60,
                 Math.Max(
@@ -499,7 +519,8 @@ Public NotInheritable Class SpotTradeBotEngine
                     .Close = points.Last().Close}
 
                 If configuration.EnabledStrategies.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
-                   configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) Then
+                   (configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) AndAlso
+                    configuration.GridV2BtcMildDeclineEnabled) Then
                     Dim twoMinutePoints = AggregateCandlePoints(points, 2)
                     ReplaceHistoryLocked(_valueZoneM2CandleHistory, symbol, twoMinutePoints, configuration.MaximumPriceHistory)
                     _valueZoneM2CurrentCandles(symbol) = CreateCandleState(
@@ -510,7 +531,7 @@ Public NotInheritable Class SpotTradeBotEngine
             Case "1d"
                 If String.Equals(symbol, "BTC", StringComparison.OrdinalIgnoreCase) AndAlso
                    (configuration.BitcoinDailyProtectionEnabled OrElse
-                    configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback)) Then
+                    configuration.GridV2BtcMildDeclineEnabled) Then
                     _bitcoinDailyCandleHistory.Clear()
                     Dim dailyHistoryLimit = Math.Max(30, Math.Min(365, configuration.MaximumPriceHistory))
                     _bitcoinDailyCandleHistory.AddRange(
@@ -784,7 +805,7 @@ Public NotInheritable Class SpotTradeBotEngine
         End If
 
         Dim trackDailyContext = _configuration.BitcoinDailyProtectionEnabled OrElse
-                                _configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback)
+                                _configuration.GridV2BtcMildDeclineEnabled
         If Not trackDailyContext Then Return status
 
         Dim candleTimestamp = If(
@@ -952,7 +973,6 @@ Public NotInheritable Class SpotTradeBotEngine
                                           gridPositionForStops.GridManaged
             If enabledStrategies.Contains(SpotBotStrategyKind.Rsi) OrElse
                enabledStrategies.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
-               enabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) OrElse
                enabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
                hasGridPositionForStops Then
                 rsiHistory = GetOrCreateRsiCandleHistory(normalizedSymbol)
@@ -990,7 +1010,6 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
 
             If enabledStrategies.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
-               enabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) OrElse
                enabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) Then
                 valueZoneM2History = GetOrCreateValueZoneCandleHistory(normalizedSymbol, 2)
                 valueZoneM5History = GetOrCreateValueZoneCandleHistory(normalizedSymbol, 5)
@@ -1074,25 +1093,34 @@ Public NotInheritable Class SpotTradeBotEngine
                 If kind = SpotBotStrategyKind.GridAdaptive Then
                     Dim trendFilterStrategy = TryCast(strategy, ISpotBotTrendFilterStrategy)
                     If trendFilterStrategy IsNot Nothing Then
-                        strategySignal = trendFilterStrategy.EvaluateWithTrend(
-                            normalizedSymbol,
-                            strategyPrices,
-                            valueZoneM5PriceSnapshot,
-                            configurationSnapshot)
+                        If configurationSnapshot.GridV2BtcMildDeclineEnabled Then
+                            Dim bitcoinTrendStrategy = TryCast(strategy, ISpotBotBitcoinTrendFilterStrategy)
+                            If bitcoinTrendStrategy IsNot Nothing Then
+                                strategySignal = bitcoinTrendStrategy.EvaluateWithTrendAndBitcoinContext(
+                                    normalizedSymbol,
+                                    strategyPrices,
+                                    valueZoneM5PriceSnapshot,
+                                    rsiPriceSnapshot,
+                                    valueZoneM2PriceSnapshot,
+                                    bitcoinDailyPriceSnapshot,
+                                    configurationSnapshot)
+                            Else
+                                strategySignal = trendFilterStrategy.EvaluateWithTrend(
+                                    normalizedSymbol,
+                                    strategyPrices,
+                                    valueZoneM5PriceSnapshot,
+                                    configurationSnapshot)
+                            End If
+                        Else
+                            strategySignal = trendFilterStrategy.EvaluateWithTrend(
+                                normalizedSymbol,
+                                strategyPrices,
+                                valueZoneM5PriceSnapshot,
+                                configurationSnapshot)
+                        End If
                     Else
                         strategySignal = strategy.Evaluate(normalizedSymbol, strategyPrices, configurationSnapshot)
                     End If
-                ElseIf kind = SpotBotStrategyKind.BtcMildDeclinePullback Then
-                    If Not valueZoneM1CandleClosed Then Continue For
-                    Dim bitcoinContextStrategy = TryCast(strategy, ISpotBotBitcoinContextStrategy)
-                    If bitcoinContextStrategy Is Nothing Then Continue For
-                    strategySignal = bitcoinContextStrategy.EvaluateWithBitcoinContext(
-                        normalizedSymbol,
-                        rsiPriceSnapshot,
-                        valueZoneM2PriceSnapshot,
-                        valueZoneM5PriceSnapshot,
-                        bitcoinDailyPriceSnapshot,
-                        configurationSnapshot)
                 ElseIf kind = SpotBotStrategyKind.ValueZonePullback Then
                     If Not valueZoneM1CandleClosed Then Continue For
                     Dim multiTimeframeStrategy = TryCast(strategy, ISpotBotMultiTimeframeStrategy)
@@ -1257,7 +1285,8 @@ Public NotInheritable Class SpotTradeBotEngine
             completedTrades,
             automaticExit,
             stopAdjusted,
-            rsiPriceSnapshot)
+            rsiPriceSnapshot,
+            valueZoneM5PriceSnapshot)
         RaiseEvent SimulationUpdated(Me, New SpotBotSimulationEventArgs(simulationSnapshot))
 
         If activeRunId > 0 Then
@@ -1350,7 +1379,8 @@ Public NotInheritable Class SpotTradeBotEngine
         completedTrades As List(Of SpotBotSimulationTrade),
         ByRef automaticExit As Boolean,
         ByRef stopAdjusted As Boolean,
-        gridClosedCandles As IReadOnlyList(Of SpotBotPricePoint)) As SpotBotSimulationSnapshot
+        gridClosedCandles As IReadOnlyList(Of SpotBotPricePoint),
+        gridTrendCandles As IReadOnlyList(Of SpotBotPricePoint)) As SpotBotSimulationSnapshot
 
         SyncLock _sync
             automaticExit = False
@@ -1374,46 +1404,87 @@ Public NotInheritable Class SpotTradeBotEngine
             If position IsNot Nothing AndAlso position.EntryPrice > 0D Then
                 stopAdjusted = UpdateDynamicStop(position, price, configuration)
                 Dim variationPercent = (price - position.EntryPrice) / position.EntryPrice * 100D
-                Dim takeProfitReached = position.TakeProfitPrice > 0D AndAlso price >= position.TakeProfitPrice
-                Dim stopLossReached = position.StopPrice > 0D AndAlso price <= position.StopPrice
                 Dim takeProfitPercent = Math.Max(0D, configuration.TakeProfitPercent)
                 Dim stopLossPercent = Math.Max(0D, configuration.StopLossPercent)
 
-                If takeProfitReached OrElse
-                   (Not position.GridManaged AndAlso position.TakeProfitPrice <= 0D AndAlso takeProfitPercent > 0D AndAlso variationPercent >= takeProfitPercent) Then
-                    CloseSimulationPosition(
-                        symbol,
-                        price,
-                        timestampUtc,
-                        position,
-                        configuration,
-                        "TP",
-                        completedTrades)
-                    automaticExit = True
-                    Return BuildSimulationSnapshotLocked(configuration)
-                End If
+                If Not position.GridManaged Then
+                    Dim takeProfitReached = position.TakeProfitPrice > 0D AndAlso price >= position.TakeProfitPrice
+                    If takeProfitReached OrElse
+                       (position.TakeProfitPrice <= 0D AndAlso takeProfitPercent > 0D AndAlso variationPercent >= takeProfitPercent) Then
+                        CloseSimulationPosition(symbol, price, timestampUtc, position, configuration, "TP", completedTrades, gridClosedCandles)
+                        automaticExit = True
+                        Return BuildSimulationSnapshotLocked(configuration)
+                    End If
 
-                Dim stopConfirmed = Not position.GridManaged OrElse
-                                    Not configuration.GridV2StopConfirmationEnabled OrElse
-                                    IsGridStopConfirmed(
-                                        price,
-                                        position.StopPrice,
-                                        configuration,
-                                        gridClosedCandles,
-                                        position.EntryTimestampUtc)
+                    Dim stopLossReached = position.StopPrice > 0D AndAlso price <= position.StopPrice
+                    If (stopLossReached OrElse
+                        (position.StopPrice <= 0D AndAlso stopLossPercent > 0D AndAlso variationPercent <= -stopLossPercent)) Then
+                        CloseSimulationPosition(symbol, price, timestampUtc, position, configuration, "SL", completedTrades, gridClosedCandles)
+                        automaticExit = True
+                        Return BuildSimulationSnapshotLocked(configuration)
+                    End If
+                Else
+                    EnsureGridLevelsLocked(position, configuration)
+                    If CloseReachedGridStopsLocked(
+                            symbol,
+                            price,
+                            timestampUtc,
+                            position,
+                            configuration,
+                            gridClosedCandles,
+                            completedTrades) > 0 Then
+                        automaticExit = True
+                        Return BuildSimulationSnapshotLocked(configuration)
+                    End If
 
-                If (stopLossReached AndAlso stopConfirmed) OrElse
-                   (Not position.GridManaged AndAlso position.StopPrice <= 0D AndAlso stopLossPercent > 0D AndAlso variationPercent <= -stopLossPercent) Then
-                    CloseSimulationPosition(
-                        symbol,
-                        price,
-                        timestampUtc,
-                        position,
-                        configuration,
-                        "SL",
-                        completedTrades)
-                    automaticExit = True
-                    Return BuildSimulationSnapshotLocked(configuration)
+                    If CloseReachedGridLevelsLocked(
+                            symbol,
+                            price,
+                            timestampUtc,
+                            position,
+                            configuration,
+                            completedTrades,
+                            gridClosedCandles) > 0 Then
+                        automaticExit = True
+                        Return BuildSimulationSnapshotLocked(configuration)
+                    End If
+
+                    Dim gridExitReason As String = Nothing
+                    Dim maximumHoldingMinutes = Math.Max(0, configuration.GridV2MaximumHoldingMinutes)
+                    Dim elapsed = If(position.EntryTimestampUtc = DateTime.MinValue,
+                                     TimeSpan.Zero,
+                                     timestampUtc - position.EntryTimestampUtc)
+                    If maximumHoldingMinutes > 0 AndAlso
+                       elapsed >= TimeSpan.FromMinutes(maximumHoldingMinutes) Then
+                        gridExitReason = "TEMPO"
+                    ElseIf maximumHoldingMinutes > 0 AndAlso
+                           elapsed >= TimeSpan.FromMinutes(maximumHoldingMinutes * 0.75R) AndAlso
+                           Not HasGridReductionBeenTaken(position, False) Then
+                        gridExitReason = "TEMPO_REDUCE"
+                    Else
+                        Dim regimeDeteriorated = configuration.GridV2RegimeExitEnabled AndAlso
+                                                 IsGridRegimeDeteriorated(gridTrendCandles, configuration)
+                        If regimeDeteriorated Then
+                            position.RegimeDeteriorationCount += 1
+                        Else
+                            position.RegimeDeteriorationCount = 0
+                        End If
+                        If regimeDeteriorated AndAlso position.RegimeDeteriorationCount >= 2 Then
+                            gridExitReason = If(HasGridReductionBeenTaken(position, True), "REGIME", "REGIME_REDUCE")
+                        End If
+                    End If
+
+                    If Not String.IsNullOrWhiteSpace(gridExitReason) Then
+                        If gridExitReason.EndsWith("_REDUCE", StringComparison.OrdinalIgnoreCase) Then
+                            If ReduceGridExposureLocked(symbol, price, timestampUtc, position, configuration, gridExitReason, completedTrades, gridClosedCandles) = 0 Then
+                                CloseSimulationPosition(symbol, price, timestampUtc, position, configuration, gridExitReason.Replace("_REDUCE", String.Empty), completedTrades, gridClosedCandles)
+                            End If
+                        Else
+                            CloseSimulationPosition(symbol, price, timestampUtc, position, configuration, gridExitReason, completedTrades, gridClosedCandles)
+                        End If
+                        automaticExit = True
+                        Return BuildSimulationSnapshotLocked(configuration)
+                    End If
                 End If
             End If
 
@@ -1424,7 +1495,8 @@ Public NotInheritable Class SpotTradeBotEngine
                             Dim feeRate = Math.Max(0D, configuration.SimulationFeeRate)
                             Dim isGridSignal = signal.GridManaged
                             Dim allocationPercent = Math.Min(100D, Math.Max(0D, configuration.SimulationAllocationPercent))
-                            Dim executionPrice = If(signal.EntryPrice > 0D, signal.EntryPrice, price)
+                            Dim marketEntryPrice = If(signal.EntryPrice > 0D, signal.EntryPrice, price)
+                            Dim executionPrice = ApplySimulationEntrySlippage(marketEntryPrice, configuration, gridClosedCandles)
                             Dim notional As Decimal
                             If isGridSignal Then
                                 notional = CalculateGridNotionalLocked(
@@ -1460,6 +1532,16 @@ Public NotInheritable Class SpotTradeBotEngine
                                                                0D),
                                     .EntryTimestampUtc = signal.TimestampUtc
                                 }
+                                If isGridSignal Then
+                                    position.GridLevels.Add(CreateGridLevel(
+                                        executionPrice,
+                                        notional / executionPrice,
+                                        notional + fee,
+                                        signal,
+                                        configuration,
+                                        position.EntryTimestampUtc))
+                                    position.TakeProfitPrice = position.GridLevels(0).TakeProfitPrice
+                                End If
                                 _simulationPositions(symbol) = position
                                 _simulationQuoteBalance -= notional + fee
                                 _simulationLastAction = $"COMPRA simulada {symbol}: {position.Quantity:0.########} @ {price:0.########}"
@@ -1467,7 +1549,8 @@ Public NotInheritable Class SpotTradeBotEngine
                         ElseIf signal.GridManaged AndAlso position.GridManaged AndAlso
                                position.GridLevelCount < Math.Max(1, configuration.GridV2MaxLevels) Then
                             Dim feeRate = Math.Max(0D, configuration.SimulationFeeRate)
-                            Dim executionPrice = If(signal.EntryPrice > 0D, signal.EntryPrice, price)
+                            Dim marketEntryPrice = If(signal.EntryPrice > 0D, signal.EntryPrice, price)
+                            Dim executionPrice = ApplySimulationEntrySlippage(marketEntryPrice, configuration, gridClosedCandles)
                             Dim notional = CalculateGridNotionalLocked(
                                 executionPrice,
                                 signal.StopPrice,
@@ -1499,6 +1582,15 @@ Public NotInheritable Class SpotTradeBotEngine
                                  If signal.GridSpacingPercent > 0D Then
                                      position.GridSpacingPercent = signal.GridSpacingPercent
                                  End If
+                                EnsureGridLevelsLocked(position, configuration)
+                                position.GridLevels.Add(CreateGridLevel(
+                                    executionPrice,
+                                    addedQuantity,
+                                    notional + fee,
+                                    signal,
+                                    configuration,
+                                    timestampUtc))
+                                RefreshGridAggregateLocked(position)
                                 _simulationQuoteBalance -= notional + fee
                                 _simulationLastAction = $"COMPRA grid nível {position.GridLevelCount} {symbol}: {addedQuantity:0.########} @ {price:0.########}"
                             End If
@@ -1508,10 +1600,20 @@ Public NotInheritable Class SpotTradeBotEngine
 
                     Case SpotBotSignalDirection.Sell
                         If position IsNot Nothing Then
-                            If signal.GridManaged AndAlso position.GridManaged AndAlso position.GridLevelCount > 1 Then
-                                CloseSimulationPositionPartially(symbol, price, timestampUtc, position, configuration, completedTrades)
+                            If signal.GridManaged AndAlso position.GridManaged Then
+                                EnsureGridLevelsLocked(position, configuration)
+                                If CloseReachedGridLevelsLocked(
+                                        symbol,
+                                        price,
+                                        timestampUtc,
+                                        position,
+                                        configuration,
+                                        completedTrades,
+                                        gridClosedCandles) = 0 Then
+                                    _simulationLastAction = $"VENDA grid aguardando alvo individual {symbol}"
+                                End If
                             Else
-                                CloseSimulationPosition(symbol, price, timestampUtc, position, configuration, "VENDA", completedTrades)
+                                CloseSimulationPosition(symbol, price, timestampUtc, position, configuration, "VENDA", completedTrades, gridClosedCandles)
                             End If
                         Else
                             _simulationLastAction = $"VENDA ignorada {symbol}: sem posição aberta"
@@ -1553,6 +1655,17 @@ Public NotInheritable Class SpotTradeBotEngine
         Return True
     End Function
 
+    Private Shared Function IsGridStopEmergencyTriggered(
+        currentPrice As Decimal,
+        stopPrice As Decimal,
+        configuration As SpotBotConfiguration) As Boolean
+
+        If currentPrice <= 0D OrElse stopPrice <= 0D OrElse configuration Is Nothing Then Return False
+        Dim emergencyBufferPercent = Math.Max(0D, configuration.GridV2StopEmergencyBufferPercent)
+        Return emergencyBufferPercent > 0D AndAlso
+               currentPrice <= stopPrice * (1D - emergencyBufferPercent / 100D)
+    End Function
+
     Private Function CalculateGridNotionalLocked(
         executionPrice As Decimal,
         stopPrice As Decimal,
@@ -1568,7 +1681,13 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim reservePercent = Math.Min(95D, Math.Max(0D, configuration.GridV2ReserveQuotePercent))
         Dim riskPercent = Math.Min(100D, Math.Max(0D, configuration.GridV2RiskPerTradePercent))
 
-        Dim levelLimit = startingQuote * levelAllocationPercent / 100D
+        Dim levelIndex = If(position Is Nothing, 1, Math.Max(1, position.GridLevelCount + 1))
+        Dim exposureMultiplier = 1D
+        If configuration.GridV2ProgressiveExposureEnabled Then
+            Dim reductionPercent = Math.Min(100D, Math.Max(0D, configuration.GridV2ProgressiveExposureReductionPercent))
+            exposureMultiplier = Math.Pow(1D - (CDbl(reductionPercent) / 100D), Math.Max(0, levelIndex - 1))
+        End If
+        Dim levelLimit = startingQuote * levelAllocationPercent / 100D * CDec(Math.Max(0D, exposureMultiplier))
         Dim maxExposure = startingQuote * maxExposurePercent / 100D
         Dim currentExposure = If(position Is Nothing, 0D, Math.Max(0D, position.CostBasis))
         Dim remainingExposure = Math.Max(0D, maxExposure - currentExposure)
@@ -1591,12 +1710,450 @@ Public NotInheritable Class SpotTradeBotEngine
             Math.Min(riskLimit, Math.Min(cashLimit, remainingExposure))))
     End Function
 
+    Private Shared Function CalculateSimulationSlippagePercent(
+        configuration As SpotBotConfiguration,
+        closedCandles As IReadOnlyList(Of SpotBotPricePoint)) As Decimal
+
+        Dim baseSlippage = Math.Min(5D, Math.Max(0D, If(configuration Is Nothing, 0D, configuration.SimulationSlippagePercent)))
+        If closedCandles Is Nothing OrElse closedCandles.Count < 3 Then Return baseSlippage
+
+        Dim rangeSum As Decimal = 0D
+        Dim validRanges As Integer = 0
+        For Each candle In closedCandles
+            If candle Is Nothing OrElse candle.Close <= 0D Then Continue For
+            rangeSum += Math.Max(0D, candle.High - candle.Low) / candle.Close * 100D
+            validRanges += 1
+        Next
+        If validRanges = 0 Then Return baseSlippage
+
+        ' Usa metade do range médio como proxy simples de impacto. O limite
+        ' evita que uma vela anormal transforme a simulação em um bloqueio.
+        Dim volatilitySlippage = (rangeSum / validRanges) * 0.5D
+        Return Math.Min(0.5D, Math.Max(baseSlippage, volatilitySlippage))
+    End Function
+
+    Private Shared Function ApplySimulationEntrySlippage(
+        price As Decimal,
+        configuration As SpotBotConfiguration,
+        Optional closedCandles As IReadOnlyList(Of SpotBotPricePoint) = Nothing) As Decimal
+        If price <= 0D Then Return 0D
+        Dim slippage = CalculateSimulationSlippagePercent(configuration, closedCandles)
+        Return price * (1D + slippage / 100D)
+    End Function
+
+    Private Shared Function ApplySimulationExitSlippage(
+        price As Decimal,
+        configuration As SpotBotConfiguration,
+        Optional closedCandles As IReadOnlyList(Of SpotBotPricePoint) = Nothing) As Decimal
+        If price <= 0D Then Return 0D
+        Dim slippage = CalculateSimulationSlippagePercent(configuration, closedCandles)
+        Return price * Math.Max(0D, 1D - slippage / 100D)
+    End Function
+
+    Private Shared Function CreateGridLevel(
+        entryPrice As Decimal,
+        quantity As Decimal,
+        costBasis As Decimal,
+        signal As SpotBotSignal,
+        configuration As SpotBotConfiguration,
+        openedAtUtc As DateTime) As SpotBotGridLevel
+
+        Dim spacingPercent = Math.Max(
+            0.01D,
+            If(signal Is Nothing OrElse signal.GridSpacingPercent <= 0D,
+               configuration.GridV2SpacingMinimumPercent,
+               signal.GridSpacingPercent))
+        Dim targetPrice = If(signal IsNot Nothing AndAlso signal.TakeProfitPrice > entryPrice,
+                             signal.TakeProfitPrice,
+                             entryPrice * (1D + spacingPercent / 100D))
+        Return New SpotBotGridLevel With {
+            .EntryPrice = entryPrice,
+            .Quantity = Math.Max(0D, quantity),
+            .CostBasis = Math.Max(0D, costBasis),
+            .TakeProfitPrice = Math.Max(0D, targetPrice),
+            .StopPrice = If(signal Is Nothing, 0D, Math.Max(0D, signal.StopPrice)),
+            .OpenedAtUtc = If(openedAtUtc = DateTime.MinValue, DateTime.UtcNow, openedAtUtc)
+        }
+    End Function
+
+    Private Sub EnsureGridLevelsLocked(position As SimulationPosition, configuration As SpotBotConfiguration)
+        If position Is Nothing OrElse Not position.GridManaged OrElse position.Quantity <= 0D Then Return
+        If position.GridLevels Is Nothing Then position.GridLevels = New List(Of SpotBotGridLevel)()
+        If position.GridLevels.Count > 0 Then Return
+
+        Dim syntheticSignal As New SpotBotSignal With {
+            .GridSpacingPercent = If(position.GridSpacingPercent > 0D,
+                                      position.GridSpacingPercent,
+                                      configuration.GridV2SpacingMinimumPercent),
+            .TakeProfitPrice = position.TakeProfitPrice,
+            .StopPrice = position.StopPrice
+        }
+        position.GridLevels.Add(CreateGridLevel(
+            position.EntryPrice,
+            position.Quantity,
+            position.CostBasis,
+            syntheticSignal,
+            configuration,
+            position.EntryTimestampUtc))
+        RefreshGridAggregateLocked(position)
+    End Sub
+
+    Private Shared Sub RefreshGridAggregateLocked(position As SimulationPosition)
+        If position Is Nothing OrElse position.GridLevels Is Nothing OrElse position.GridLevels.Count = 0 Then
+            If position IsNot Nothing Then position.GridLevelCount = 0
+            Return
+        End If
+
+        Dim totalQuantity = position.GridLevels.Sum(Function(level) Math.Max(0D, level.Quantity))
+        Dim totalCost = position.GridLevels.Sum(Function(level) Math.Max(0D, level.CostBasis))
+        If totalQuantity <= 0D Then
+            position.GridLevels.Clear()
+            position.GridLevelCount = 0
+            Return
+        End If
+
+        position.Quantity = totalQuantity
+        position.CostBasis = totalCost
+        position.EntryPrice = position.GridLevels.Sum(Function(level) level.EntryPrice * Math.Max(0D, level.Quantity)) / totalQuantity
+        position.GridLevelCount = position.GridLevels.Count
+        position.TakeProfitPrice = position.GridLevels.
+            Where(Function(level) level.TakeProfitPrice > 0D).
+            Select(Function(level) level.TakeProfitPrice).
+            DefaultIfEmpty(0D).
+            Min()
+        position.StopPrice = position.GridLevels.
+            Where(Function(level) level.StopPrice > 0D).
+            Select(Function(level) level.StopPrice).
+            DefaultIfEmpty(0D).
+            Min()
+        Dim lastLevel = position.GridLevels.OrderByDescending(Function(level) level.OpenedAtUtc).First()
+        position.LastGridEntryPrice = lastLevel.EntryPrice
+        position.EntryTimestampUtc = position.GridLevels.Min(Function(level) level.OpenedAtUtc)
+    End Sub
+
+    Private Function CloseReachedGridLevelsLocked(
+        symbol As String,
+        price As Decimal,
+        timestampUtc As DateTime,
+        position As SimulationPosition,
+        configuration As SpotBotConfiguration,
+        completedTrades As List(Of SpotBotSimulationTrade),
+        Optional closedCandles As IReadOnlyList(Of SpotBotPricePoint) = Nothing) As Integer
+
+        If position Is Nothing OrElse position.GridLevels Is Nothing OrElse price <= 0D Then Return 0
+        Dim reached = position.GridLevels.
+            Where(Function(level) level IsNot Nothing AndAlso level.Quantity > 0D AndAlso
+                                level.TakeProfitPrice > 0D AndAlso price >= level.TakeProfitPrice).
+            OrderBy(Function(level) level.TakeProfitPrice).
+            ToList()
+        Dim closedCount = 0
+        For Each level In reached
+            If position.GridLevels.Contains(level) Then
+                Dim quantityToClose = level.Quantity
+                If Not level.PartialTargetTaken Then
+                    Dim partialPercent = Math.Min(100D, Math.Max(1D, configuration.GridV2PartialExitPercent))
+                    quantityToClose = level.Quantity * partialPercent / 100D
+                    If partialPercent >= 100D Then quantityToClose = level.Quantity
+                End If
+                If quantityToClose > 0D Then
+                    CloseGridLevelQuantityLocked(
+                        symbol,
+                        price,
+                        timestampUtc,
+                        position,
+                        level,
+                        quantityToClose,
+                        configuration,
+                        "TP_NIVEL",
+                        completedTrades,
+                        closedCandles)
+                    closedCount += 1
+                End If
+
+                If position.GridLevels.Contains(level) AndAlso level.Quantity > 0D AndAlso
+                   Not level.PartialTargetTaken Then
+                    level.PartialTargetTaken = True
+                    level.TakeProfitPrice = 0D
+                    Dim breakEvenOffset = Math.Max(0D, configuration.BreakEvenOffsetPercent)
+                    Dim protectedStop = level.EntryPrice * (1D + breakEvenOffset / 100D)
+                    level.StopPrice = Math.Max(level.StopPrice, protectedStop)
+                    RefreshGridAggregateLocked(position)
+                    _simulationLastAction = $"TP parcial grid {symbol}: restante protegido em {level.StopPrice:0.########}"
+                End If
+            End If
+        Next
+        Return closedCount
+    End Function
+
+    Private Function CloseReachedGridStopsLocked(
+        symbol As String,
+        price As Decimal,
+        timestampUtc As DateTime,
+        position As SimulationPosition,
+        configuration As SpotBotConfiguration,
+        closedCandles As IReadOnlyList(Of SpotBotPricePoint),
+        completedTrades As List(Of SpotBotSimulationTrade)) As Integer
+
+        If position Is Nothing OrElse position.GridLevels Is Nothing OrElse price <= 0D Then Return 0
+        Dim reached = position.GridLevels.
+            Where(Function(level) level IsNot Nothing AndAlso level.Quantity > 0D AndAlso level.StopPrice > 0D AndAlso
+                                price <= level.StopPrice).
+            OrderBy(Function(level) level.StopPrice).
+            ToList()
+        Dim closedCount = 0
+        For Each level In reached
+            If Not position.GridLevels.Contains(level) Then Continue For
+            Dim emergency = IsGridStopEmergencyTriggered(price, level.StopPrice, configuration)
+            Dim confirmed = Not configuration.GridV2StopConfirmationEnabled OrElse
+                            IsGridStopConfirmed(price, level.StopPrice, configuration, closedCandles, level.OpenedAtUtc)
+            If emergency OrElse confirmed Then
+                Dim reason = If(emergency, "SL_EMERGENCY", "SL_CONFIRMED")
+                CloseGridLevelQuantityLocked(
+                    symbol,
+                    price,
+                    timestampUtc,
+                    position,
+                    level,
+                    level.Quantity,
+                    configuration,
+                    reason,
+                    completedTrades,
+                    closedCandles)
+                closedCount += 1
+            End If
+        Next
+        Return closedCount
+    End Function
+
+    Private Function ReduceGridExposureLocked(
+        symbol As String,
+        price As Decimal,
+        timestampUtc As DateTime,
+        position As SimulationPosition,
+        configuration As SpotBotConfiguration,
+        exitReason As String,
+        completedTrades As List(Of SpotBotSimulationTrade),
+        Optional closedCandles As IReadOnlyList(Of SpotBotPricePoint) = Nothing) As Integer
+
+        If position Is Nothing OrElse position.GridLevels Is Nothing OrElse position.Quantity <= 0D Then Return 0
+        Dim reductionPercent = If(exitReason.Equals("REGIME_REDUCE", StringComparison.OrdinalIgnoreCase),
+                                  configuration.GridV2RegimeReductionPercent,
+                                  configuration.GridV2TimeReductionPercent)
+        reductionPercent = Math.Min(100D, Math.Max(1D, reductionPercent))
+        Dim remainingToClose = position.Quantity * reductionPercent / 100D
+        Dim closedCount = 0
+        For Each level In position.GridLevels.OrderByDescending(Function(item) item.OpenedAtUtc).ToList()
+            If remainingToClose <= 0D OrElse Not position.GridLevels.Contains(level) Then Exit For
+            Dim quantityToClose = Math.Min(level.Quantity, remainingToClose)
+            If quantityToClose <= 0D Then Continue For
+            CloseGridLevelQuantityLocked(
+                symbol,
+                price,
+                timestampUtc,
+                position,
+                level,
+                quantityToClose,
+                configuration,
+                exitReason,
+                completedTrades,
+                closedCandles)
+            remainingToClose -= quantityToClose
+            closedCount += 1
+        Next
+
+        If position.GridLevels IsNot Nothing Then
+            For Each level In position.GridLevels
+                If exitReason.Equals("REGIME_REDUCE", StringComparison.OrdinalIgnoreCase) Then
+                    level.RegimeReductionTaken = True
+                Else
+                    level.TimeReductionTaken = True
+                End If
+            Next
+        End If
+        Return closedCount
+    End Function
+
+    Private Shared Function HasGridReductionBeenTaken(
+        position As SimulationPosition,
+        regimeReduction As Boolean) As Boolean
+
+        If position Is Nothing OrElse position.GridLevels Is Nothing OrElse position.GridLevels.Count = 0 Then Return False
+        If regimeReduction Then
+            Return position.GridLevels.All(Function(level) level.RegimeReductionTaken)
+        End If
+        Return position.GridLevels.All(Function(level) level.TimeReductionTaken)
+    End Function
+
+    Private Sub CloseGridLevelLocked(
+        symbol As String,
+        price As Decimal,
+        timestampUtc As DateTime,
+        position As SimulationPosition,
+        level As SpotBotGridLevel,
+        configuration As SpotBotConfiguration,
+        completedTrades As List(Of SpotBotSimulationTrade))
+
+        If level Is Nothing Then Return
+        CloseGridLevelQuantityLocked(symbol, price, timestampUtc, position, level, level.Quantity, configuration, "TP_NIVEL", completedTrades)
+    End Sub
+
+    Private Sub CloseGridLevelQuantityLocked(
+        symbol As String,
+        price As Decimal,
+        timestampUtc As DateTime,
+        position As SimulationPosition,
+        level As SpotBotGridLevel,
+        quantityToClose As Decimal,
+        configuration As SpotBotConfiguration,
+        exitReason As String,
+        completedTrades As List(Of SpotBotSimulationTrade),
+        Optional closedCandles As IReadOnlyList(Of SpotBotPricePoint) = Nothing)
+
+        If position Is Nothing OrElse level Is Nothing OrElse level.Quantity <= 0D Then Return
+        quantityToClose = Math.Min(level.Quantity, Math.Max(0D, quantityToClose))
+        If quantityToClose <= 0D Then Return
+        Dim proportion = If(level.Quantity <= 0D, 1D, quantityToClose / level.Quantity)
+        Dim costBasis = level.CostBasis * proportion
+        Dim exitPrice = ApplySimulationExitSlippage(price, configuration, closedCandles)
+        Dim feeRate = Math.Max(0D, configuration.SimulationFeeRate)
+        Dim gross = quantityToClose * exitPrice
+        Dim fee = gross * feeRate
+        Dim net = gross - fee
+        Dim tradePnl = net - costBasis
+        Dim completedTrade = New SpotBotSimulationTrade With {
+            .Symbol = symbol,
+            .Strategy = If(position.Strategy, "Grid V2"),
+            .ExitReason = If(exitReason, "TP_NIVEL"),
+            .Quantity = quantityToClose,
+            .EntryPrice = level.EntryPrice,
+            .ExitPrice = exitPrice,
+            .CostBasis = costBasis,
+            .GrossProceeds = gross,
+            .Fees = fee,
+            .Pnl = tradePnl,
+            .SupportPrice = position.SupportPrice,
+            .InitialStopPrice = position.InitialStopPrice,
+            .ExitStopPrice = level.StopPrice,
+            .OpenedAtUtc = level.OpenedAtUtc,
+            .ClosedAtUtc = timestampUtc
+        }
+
+        _simulationQuoteBalance += net
+        _simulationRealizedPnl += tradePnl
+        _simulationCompletedTrades += 1
+        If tradePnl > 0D Then
+            _simulationWinningTrades += 1
+        ElseIf tradePnl < 0D Then
+            _simulationLosingTrades += 1
+        End If
+        level.Quantity -= quantityToClose
+        level.CostBasis = Math.Max(0D, level.CostBasis - costBasis)
+        If level.Quantity <= 0.0000000001D Then
+            position.GridLevels.Remove(level)
+        End If
+        RefreshGridAggregateLocked(position)
+        If position.GridLevels Is Nothing OrElse position.GridLevels.Count = 0 Then
+            _simulationPositions.Remove(symbol)
+            _lastExits(symbol) = timestampUtc
+        End If
+        Dim actionText = If(exitReason.Equals("TP_NIVEL", StringComparison.OrdinalIgnoreCase),
+                            "TP nível",
+                            If(exitReason.Equals("SL_EMERGENCY", StringComparison.OrdinalIgnoreCase),
+                               "SL emergência",
+                               If(exitReason.Equals("SL_CONFIRMED", StringComparison.OrdinalIgnoreCase),
+                                  "SL confirmado",
+                                  If(exitReason.Equals("REGIME_REDUCE", StringComparison.OrdinalIgnoreCase),
+                                     "REGIME redução",
+                                     If(exitReason.Equals("TEMPO_REDUCE", StringComparison.OrdinalIgnoreCase), "TEMPO redução", exitReason)))))
+        _simulationLastAction = $"{actionText} simulado {symbol}: P/L {tradePnl:+0.00;-0.00;0.00} USDT"
+        If completedTrades IsNot Nothing Then completedTrades.Add(completedTrade)
+        RegisterClosedTradeForRiskBrakeLocked(tradePnl, timestampUtc, configuration, If(exitReason, "TP_NIVEL"))
+
+        If exitReason.Equals("SL_CONFIRMED", StringComparison.OrdinalIgnoreCase) OrElse
+           exitReason.Equals("SL_EMERGENCY", StringComparison.OrdinalIgnoreCase) Then
+            _gridRecoveryEntryPrices(symbol) = position.EntryPrice
+            Dim consecutiveStops = 0
+            _gridConsecutiveStops.TryGetValue(symbol, consecutiveStops)
+            consecutiveStops += 1
+            _gridConsecutiveStops(symbol) = consecutiveStops
+            If consecutiveStops >= 2 Then
+                Dim pauseMinutes = Math.Max(1D, configuration.RiskBrakePauseMinutes)
+                _gridBlockedUntilUtc(symbol) = timestampUtc.AddMinutes(CDbl(pauseMinutes))
+                _simulationLastAction = $"GRID V2: {symbol} bloqueado após {consecutiveStops} stops por {pauseMinutes:0.#} min; aguardando recuperação."
+            End If
+        End If
+    End Sub
+
+    Private Shared Function IsGridRegimeDeteriorated(
+        candles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As Boolean
+
+        If candles Is Nothing Then Return False
+
+        Dim fastPeriod = Math.Max(2, configuration.GridV2FastEmaPeriod)
+        Dim slowPeriod = Math.Max(fastPeriod + 1, configuration.GridV2SlowEmaPeriod)
+        If candles.Count < slowPeriod + 3 Then Return False
+
+        Dim latest = candles(candles.Count - 1).Close
+        If latest <= 0D Then Return False
+
+        Dim fast = CalculateGridEma(candles, fastPeriod)
+        Dim slow = CalculateGridEma(candles, slowPeriod)
+        Dim previousSlow = CalculateGridEma(candles.Take(candles.Count - 2).ToList(), slowPeriod)
+        If slow <= 0D OrElse previousSlow <= 0D Then Return False
+
+        Dim spreadPercent = Math.Abs(fast - slow) / latest * 100D
+        Dim slopePercent = Math.Abs(slow - previousSlow) / previousSlow * 100D
+        Return spreadPercent > Math.Max(0.01D, configuration.GridV2EmaMaxSpreadPercent) OrElse
+               slopePercent > Math.Max(0.01D, configuration.GridV2EmaMaxSlopePercent)
+    End Function
+
+    Private Shared Function CalculateGridEma(
+        candles As IReadOnlyList(Of SpotBotPricePoint),
+        period As Integer) As Decimal
+
+        If candles Is Nothing OrElse candles.Count = 0 Then Return 0D
+        Dim smoothing = 2D / (period + 1D)
+        Dim ema = candles(0).Close
+        For index = 1 To candles.Count - 1
+            ema = (candles(index).Close - ema) * smoothing + ema
+        Next
+        Return ema
+    End Function
+
     Private Function UpdateDynamicStop(
         position As SimulationPosition,
         price As Decimal,
         configuration As SpotBotConfiguration) As Boolean
 
         If position Is Nothing OrElse position.EntryPrice <= 0D OrElse price <= 0D Then Return False
+
+        If position.GridManaged Then
+            EnsureGridLevelsLocked(position, configuration)
+            Dim gridChanged = False
+            For Each level In position.GridLevels
+                If level Is Nothing OrElse level.Quantity <= 0D OrElse level.EntryPrice <= 0D Then Continue For
+                Dim gridTriggerPrice = level.EntryPrice * (1D + Math.Max(0D, configuration.BreakEvenTriggerPercent) / 100D)
+                If price < gridTriggerPrice Then Continue For
+
+                Dim candidateStop = level.StopPrice
+                If configuration.BreakEvenEnabled Then
+                    Dim offsetPercent = Math.Max(0D, configuration.BreakEvenOffsetPercent)
+                    candidateStop = Math.Max(candidateStop, level.EntryPrice * (1D + offsetPercent / 100D))
+                End If
+                If configuration.TrailingStopEnabled AndAlso position.HighestPrice > 0D Then
+                    Dim distancePercent = Math.Max(0.01D, configuration.TrailingStopDistancePercent)
+                    candidateStop = Math.Max(candidateStop, position.HighestPrice * (1D - distancePercent / 100D))
+                End If
+                If candidateStop > level.StopPrice Then
+                    level.StopPrice = candidateStop
+                    gridChanged = True
+                    _simulationLastAction = $"TRAIL {position.Symbol}: stop do nível ajustado para {candidateStop:0.########}"
+                End If
+            Next
+            If gridChanged Then RefreshGridAggregateLocked(position)
+            Return gridChanged
+        End If
 
         Dim triggerPercent = Math.Max(0D, configuration.BreakEvenTriggerPercent)
         Dim triggerPrice = position.EntryPrice * (1D + triggerPercent / 100D)
@@ -1637,7 +2194,10 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
         Next
 
-        Return Math.Max(0D, _simulationQuoteBalance + openValue)
+        ' O saldo real continua sendo exibido normalmente, mas o P/L de
+        ' fechamentos manuais é retirado desta métrica para não acionar o
+        ' freio de sessão/profit-lock.
+        Return Math.Max(0D, _simulationQuoteBalance + openValue - _riskBrakeManualRealizedPnl)
     End Function
 
     Private Sub UpdateRiskBrakeStateLocked(
@@ -1821,7 +2381,16 @@ Public NotInheritable Class SpotTradeBotEngine
     Private Sub RegisterClosedTradeForRiskBrakeLocked(
         tradePnl As Decimal,
         timestampUtc As DateTime,
-        configuration As SpotBotConfiguration)
+        configuration As SpotBotConfiguration,
+        exitReason As String)
+
+        ' Fechamentos solicitados pelo usuário não representam uma falha da
+        ' estratégia. Portanto, não entram na sequência de perdas/ganhos que
+        ' arma o freio; o contador permanece como estava.
+        If String.Equals(exitReason, "MANUAL", StringComparison.OrdinalIgnoreCase) Then
+            _riskBrakeManualRealizedPnl += tradePnl
+            Return
+        End If
 
         If configuration Is Nothing OrElse Not configuration.RiskBrakeEnabled OrElse
            _riskBrakeState = SpotBotRiskBrakeState.HardStop Then Return
@@ -1869,10 +2438,12 @@ Public NotInheritable Class SpotTradeBotEngine
         position As SimulationPosition,
         configuration As SpotBotConfiguration,
         exitReason As String,
-        completedTrades As List(Of SpotBotSimulationTrade))
+        completedTrades As List(Of SpotBotSimulationTrade),
+        Optional closedCandles As IReadOnlyList(Of SpotBotPricePoint) = Nothing)
 
         Dim feeRate = Math.Max(0D, configuration.SimulationFeeRate)
-        Dim gross = position.Quantity * price
+        Dim exitPrice = ApplySimulationExitSlippage(price, configuration, closedCandles)
+        Dim gross = position.Quantity * exitPrice
         Dim fee = gross * feeRate
         Dim net = gross - fee
         Dim tradePnl = net - position.CostBasis
@@ -1883,7 +2454,7 @@ Public NotInheritable Class SpotTradeBotEngine
             .ExitReason = If(exitReason, String.Empty),
             .Quantity = position.Quantity,
             .EntryPrice = position.EntryPrice,
-            .ExitPrice = price,
+            .ExitPrice = exitPrice,
             .CostBasis = position.CostBasis,
             .GrossProceeds = gross,
             .Fees = fee,
@@ -1908,15 +2479,23 @@ Public NotInheritable Class SpotTradeBotEngine
         _lastExits(symbol) = timestampUtc
         Dim actionText = If(exitReason.Equals("TP", StringComparison.OrdinalIgnoreCase),
                             "TP",
-                            If(exitReason.Equals("SL", StringComparison.OrdinalIgnoreCase),
-                               "SL",
-                               If(exitReason.Equals("MANUAL", StringComparison.OrdinalIgnoreCase), "MANUAL", "VENDA")))
+                            If(exitReason.Equals("SL", StringComparison.OrdinalIgnoreCase) OrElse
+                               exitReason.Equals("SL_CONFIRMED", StringComparison.OrdinalIgnoreCase) OrElse
+                               exitReason.Equals("SL_EMERGENCY", StringComparison.OrdinalIgnoreCase),
+                               If(exitReason.Equals("SL_EMERGENCY", StringComparison.OrdinalIgnoreCase), "SL emergência", "SL confirmado"),
+                               If(exitReason.Equals("MANUAL", StringComparison.OrdinalIgnoreCase),
+                                  "MANUAL",
+                                  If(exitReason.Equals("TEMPO", StringComparison.OrdinalIgnoreCase),
+                                     "TEMPO",
+                                     If(exitReason.Equals("REGIME", StringComparison.OrdinalIgnoreCase), "REGIME", "VENDA")))))
         _simulationLastAction = $"{actionText} simulado {symbol}: P/L {tradePnl:+0.00;-0.00;0.00} USDT"
         If completedTrades IsNot Nothing Then completedTrades.Add(completedTrade)
-        RegisterClosedTradeForRiskBrakeLocked(tradePnl, timestampUtc, configuration)
+        RegisterClosedTradeForRiskBrakeLocked(tradePnl, timestampUtc, configuration, exitReason)
 
         If position.GridManaged AndAlso
-           exitReason.Equals("SL", StringComparison.OrdinalIgnoreCase) Then
+           (exitReason.Equals("SL", StringComparison.OrdinalIgnoreCase) OrElse
+            exitReason.Equals("SL_CONFIRMED", StringComparison.OrdinalIgnoreCase) OrElse
+            exitReason.Equals("SL_EMERGENCY", StringComparison.OrdinalIgnoreCase)) Then
             _gridRecoveryEntryPrices(symbol) = position.EntryPrice
             Dim consecutiveStops = 0
             _gridConsecutiveStops.TryGetValue(symbol, consecutiveStops)
@@ -1992,7 +2571,7 @@ Public NotInheritable Class SpotTradeBotEngine
 
         _simulationLastAction = $"VENDA parcial grid {symbol}: P/L {tradePnl:+0.00;-0.00;0.00} USDT"
         If completedTrades IsNot Nothing Then completedTrades.Add(completedTrade)
-        RegisterClosedTradeForRiskBrakeLocked(tradePnl, timestampUtc, configuration)
+        RegisterClosedTradeForRiskBrakeLocked(tradePnl, timestampUtc, configuration, "VENDA_PARCIAL")
         If position.GridManaged Then
             _gridRecoveryEntryPrices.Remove(symbol)
             _gridConsecutiveStops.Remove(symbol)
@@ -2015,6 +2594,7 @@ Public NotInheritable Class SpotTradeBotEngine
         _simulationLastAction = "Carteira virtual reiniciada"
         _riskBrakeState = SpotBotRiskBrakeState.Normal
         _riskBrakeSessionStartEquity = _simulationQuoteBalance
+        _riskBrakeManualRealizedPnl = 0D
         _riskBrakePeakEquity = _simulationQuoteBalance
         _riskBrakeConsecutiveLosses = 0
         _riskBrakePauseUntilUtc = DateTime.MinValue
@@ -2037,6 +2617,10 @@ Public NotInheritable Class SpotTradeBotEngine
         For Each strategy In state.EnabledStrategies
             _configuration.EnabledStrategies.Add(strategy)
         Next
+        Dim legacyBtcMildDecline = _configuration.EnabledStrategies.Remove(SpotBotStrategyKind.BtcMildDeclinePullback)
+        If legacyBtcMildDecline Then
+            _configuration.EnabledStrategies.Add(SpotBotStrategyKind.GridAdaptive)
+        End If
         _configuration.CombinationMode = state.CombinationMode
         _configuration.RequiredConfirmations = Math.Max(1, state.RequiredConfirmations)
         _configuration.TakeProfitPercent = Math.Max(0D, state.TakeProfitPercent)
@@ -2046,6 +2630,7 @@ Public NotInheritable Class SpotTradeBotEngine
         _configuration.BollingerCandleMinutes = If(state.BollingerCandleMinutes = 240, 240, 1440)
         _configuration.SimulationAllocationPercent = Math.Max(0D, Math.Min(100D, state.AllocationPercent))
         _configuration.SimulationFeeRate = Math.Max(0D, state.FeeRate)
+        _configuration.SimulationSlippagePercent = Math.Min(5D, Math.Max(0D, state.SlippagePercent))
         _configuration.BreakEvenEnabled = state.BreakEvenEnabled
         _configuration.BreakEvenTriggerPercent = Math.Max(0D, state.BreakEvenTriggerPercent)
         _configuration.BreakEvenOffsetPercent = Math.Max(0D, state.BreakEvenOffsetPercent)
@@ -2071,6 +2656,18 @@ Public NotInheritable Class SpotTradeBotEngine
         _configuration.GridV2RiskPerTradePercent = Math.Min(100D, Math.Max(0D, state.GridV2RiskPerTradePercent))
         _configuration.GridV2ReserveQuotePercent = Math.Min(95D, Math.Max(0D, state.GridV2ReserveQuotePercent))
         _configuration.GridV2MaxLevels = Math.Max(1, state.GridV2MaxLevels)
+        _configuration.GridV2MaximumHoldingMinutes = Math.Max(0, state.GridV2MaximumHoldingMinutes)
+        _configuration.GridV2RegimeExitEnabled = state.GridV2RegimeExitEnabled
+        _configuration.GridV2ProgressiveExposureEnabled = state.GridV2ProgressiveExposureEnabled
+        _configuration.GridV2ProgressiveExposureReductionPercent = Math.Min(100D, Math.Max(0D, state.GridV2ProgressiveExposureReductionPercent))
+        _configuration.GridV2PartialExitPercent = Math.Min(100D, Math.Max(1D, state.GridV2PartialExitPercent))
+        _configuration.GridV2RegimeReductionPercent = Math.Min(100D, Math.Max(1D, state.GridV2RegimeReductionPercent))
+        _configuration.GridV2TimeReductionPercent = Math.Min(100D, Math.Max(1D, state.GridV2TimeReductionPercent))
+        _configuration.GridV2BtcMildDeclineEnabled = state.GridV2BtcMildDeclineEnabled OrElse legacyBtcMildDecline
+        _configuration.GridV2BtcMildDeclineMinimumPercent = Math.Max(0.1D, state.GridV2BtcMildDeclineMinimumPercent)
+        _configuration.GridV2BtcMildDeclineMaximumPercent = Math.Max(
+            _configuration.GridV2BtcMildDeclineMinimumPercent,
+            state.GridV2BtcMildDeclineMaximumPercent)
         _configuration.BitcoinFlushProtectionEnabled = state.BitcoinFlushProtectionEnabled
         _configuration.BitcoinFlushLookbackMinutes = Math.Max(2, state.BitcoinFlushLookbackMinutes)
         _configuration.BitcoinFlushDropPercent = Math.Max(0.1D, state.BitcoinFlushDropPercent)
@@ -2091,6 +2688,7 @@ Public NotInheritable Class SpotTradeBotEngine
                                     state.Snapshot.LastAction)
         _riskBrakeState = state.Snapshot.RiskBrakeState
         _riskBrakeSessionStartEquity = Math.Max(0D, state.Snapshot.StartingQuote)
+        _riskBrakeManualRealizedPnl = state.Snapshot.RiskBrakeManualRealizedPnl
         _riskBrakePeakEquity = Math.Max(
             _riskBrakeSessionStartEquity,
             If(state.Snapshot.RiskBrakePeakEquity > 0D, state.Snapshot.RiskBrakePeakEquity, state.Snapshot.Equity))
@@ -2136,7 +2734,7 @@ Public NotInheritable Class SpotTradeBotEngine
                 Continue For
             End If
 
-            _simulationPositions(NormalizeSymbol(persistedPosition.Symbol)) = New SimulationPosition With {
+            Dim restoredPosition = New SimulationPosition With {
                 .Symbol = NormalizeSymbol(persistedPosition.Symbol),
                 .Strategy = If(String.IsNullOrWhiteSpace(persistedPosition.Strategy),
                                If(state.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive), "Grid V2", "Desconhecida"),
@@ -2167,8 +2765,22 @@ Public NotInheritable Class SpotTradeBotEngine
                  .GridSpacingPercent = If(persistedPosition.GridSpacingPercent > 0D,
                                           persistedPosition.GridSpacingPercent,
                                           _configuration.GridV2SpacingMinimumPercent),
+                .GridLevels = If(persistedPosition.GridLevels Is Nothing,
+                                 New List(Of SpotBotGridLevel)(),
+                                 persistedPosition.GridLevels.Select(Function(level) New SpotBotGridLevel With {
+                                     .EntryPrice = level.EntryPrice,
+                                     .Quantity = level.Quantity,
+                                     .CostBasis = level.CostBasis,
+                                     .TakeProfitPrice = level.TakeProfitPrice,
+                                     .StopPrice = level.StopPrice,
+                                     .PartialTargetTaken = level.PartialTargetTaken,
+                                     .RegimeReductionTaken = level.RegimeReductionTaken,
+                                     .TimeReductionTaken = level.TimeReductionTaken,
+                                     .OpenedAtUtc = level.OpenedAtUtc}).ToList()),
                 .EntryTimestampUtc = persistedPosition.OpenedAtUtc
             }
+            _simulationPositions(NormalizeSymbol(persistedPosition.Symbol)) = restoredPosition
+            EnsureGridLevelsLocked(restoredPosition, _configuration)
         Next
 
         If _simulationPositions.Count = 0 Then
@@ -2244,6 +2856,7 @@ Public NotInheritable Class SpotTradeBotEngine
             .OpenPositions = _simulationPositions.Count,
             .LastAction = _simulationLastAction,
             .RiskBrakeState = _riskBrakeState,
+            .RiskBrakeManualRealizedPnl = _riskBrakeManualRealizedPnl,
             .RiskBrakePeakEquity = _riskBrakePeakEquity,
             .RiskBrakeConsecutiveLosses = _riskBrakeConsecutiveLosses,
             .RiskBrakePauseUntilUtc = _riskBrakePauseUntilUtc,
@@ -2652,6 +3265,18 @@ Public NotInheritable Class SpotTradeBotEngine
                                 .GridAnchorPrice = position.GridAnchorPrice,
                                 .LastGridEntryPrice = position.LastGridEntryPrice,
                                 .GridSpacingPercent = position.GridSpacingPercent,
+                               .GridLevels = If(position.GridLevels Is Nothing,
+                                                New List(Of SpotBotGridLevel)(),
+                                                position.GridLevels.Select(Function(level) New SpotBotGridLevel With {
+                                                    .EntryPrice = level.EntryPrice,
+                                                    .Quantity = level.Quantity,
+                                                    .CostBasis = level.CostBasis,
+                                                    .TakeProfitPrice = level.TakeProfitPrice,
+                                                    .StopPrice = level.StopPrice,
+                                                    .PartialTargetTaken = level.PartialTargetTaken,
+                                                    .RegimeReductionTaken = level.RegimeReductionTaken,
+                                                    .TimeReductionTaken = level.TimeReductionTaken,
+                                                    .OpenedAtUtc = level.OpenedAtUtc}).ToList()),
                                .OpenedAtUtc = position.EntryTimestampUtc
                            }
                        End Function).
@@ -2667,8 +3292,16 @@ Public NotInheritable Class SpotTradeBotEngine
         strategySignals As List(Of SpotBotStrategySignal),
         configuration As SpotBotConfiguration) As SpotBotSignal
 
-        Dim buySignals = strategySignals.Where(Function(item) item.Direction = SpotBotSignalDirection.Buy).ToList()
-        Dim sellSignals = strategySignals.Where(Function(item) item.Direction = SpotBotSignalDirection.Sell).ToList()
+        Dim gridIsActive = strategySignals.Any(Function(item) IsGridStrategySignal(item) AndAlso
+                                                          item.Direction <> SpotBotSignalDirection.Hold)
+        ' O Grid tem gestão própria de inventário e saídas por nível. Quando
+        ' gera um sinal, ele não deve ser invalidado por uma estratégia de
+        ' entrada diferente nem contar a mesma confirmação duas vezes.
+        Dim workingSignals = If(gridIsActive,
+                                strategySignals.Where(Function(item) IsGridStrategySignal(item)).ToList(),
+                                strategySignals)
+        Dim buySignals = workingSignals.Where(Function(item) item.Direction = SpotBotSignalDirection.Buy).ToList()
+        Dim sellSignals = workingSignals.Where(Function(item) item.Direction = SpotBotSignalDirection.Sell).ToList()
         Dim activeCount = strategySignals.Where(Function(item) item.Direction <> SpotBotSignalDirection.Hold).Count()
         Dim direction As SpotBotSignalDirection = SpotBotSignalDirection.Hold
         Dim selected As List(Of SpotBotStrategySignal) = Nothing
@@ -2685,12 +3318,12 @@ Public NotInheritable Class SpotTradeBotEngine
                 End If
 
             Case SpotBotCombinationMode.All
-                If strategySignals.Count > 0 AndAlso
-                   buySignals.Count = strategySignals.Count Then
+                If workingSignals.Count > 0 AndAlso
+                   buySignals.Count = workingSignals.Count Then
                     direction = SpotBotSignalDirection.Buy
                     selected = buySignals
-                ElseIf strategySignals.Count > 0 AndAlso
-                       sellSignals.Count = strategySignals.Count Then
+                ElseIf workingSignals.Count > 0 AndAlso
+                       sellSignals.Count = workingSignals.Count Then
                     direction = SpotBotSignalDirection.Sell
                     selected = sellSignals
                 End If
@@ -2769,6 +3402,14 @@ Public NotInheritable Class SpotTradeBotEngine
         }
     End Function
 
+    Private Shared Function IsGridStrategySignal(signal As SpotBotStrategySignal) As Boolean
+        If signal Is Nothing Then Return False
+        Return signal.GridManaged OrElse
+               signal.Strategy = SpotBotStrategyKind.Grid OrElse
+               signal.Strategy = SpotBotStrategyKind.GridRegime OrElse
+               signal.Strategy = SpotBotStrategyKind.GridAdaptive
+    End Function
+
     Private Shared Function CopyConfiguration(source As SpotBotConfiguration) As SpotBotConfiguration
         Dim copy As New SpotBotConfiguration With {
             .CombinationMode = source.CombinationMode,
@@ -2826,6 +3467,18 @@ Public NotInheritable Class SpotTradeBotEngine
             .GridV2RequireRejection = source.GridV2RequireRejection,
             .GridV2RiskPerTradePercent = source.GridV2RiskPerTradePercent,
             .GridV2ReserveQuotePercent = source.GridV2ReserveQuotePercent,
+            .GridV2MaximumHoldingMinutes = Math.Max(0, source.GridV2MaximumHoldingMinutes),
+            .GridV2RegimeExitEnabled = source.GridV2RegimeExitEnabled,
+            .GridV2ProgressiveExposureEnabled = source.GridV2ProgressiveExposureEnabled,
+            .GridV2ProgressiveExposureReductionPercent = Math.Min(100D, Math.Max(0D, source.GridV2ProgressiveExposureReductionPercent)),
+            .GridV2PartialExitPercent = Math.Min(100D, Math.Max(1D, source.GridV2PartialExitPercent)),
+            .GridV2RegimeReductionPercent = Math.Min(100D, Math.Max(1D, source.GridV2RegimeReductionPercent)),
+            .GridV2TimeReductionPercent = Math.Min(100D, Math.Max(1D, source.GridV2TimeReductionPercent)),
+            .GridV2BtcMildDeclineEnabled = source.GridV2BtcMildDeclineEnabled,
+            .GridV2BtcMildDeclineMinimumPercent = Math.Max(0.1D, source.GridV2BtcMildDeclineMinimumPercent),
+            .GridV2BtcMildDeclineMaximumPercent = Math.Max(
+                Math.Max(0.1D, source.GridV2BtcMildDeclineMinimumPercent),
+                source.GridV2BtcMildDeclineMaximumPercent),
             .BitcoinFlushProtectionEnabled = source.BitcoinFlushProtectionEnabled,
             .BitcoinFlushLookbackMinutes = source.BitcoinFlushLookbackMinutes,
             .BitcoinFlushDropPercent = source.BitcoinFlushDropPercent,
@@ -2843,10 +3496,6 @@ Public NotInheritable Class SpotTradeBotEngine
             .ValueZoneMinimumRiskReward = source.ValueZoneMinimumRiskReward,
             .ValueZoneStructureLookback = source.ValueZoneStructureLookback,
             .ValueZoneRequireVwap = source.ValueZoneRequireVwap,
-            .BtcMildDeclineMinimumPercent = Math.Max(0.1D, source.BtcMildDeclineMinimumPercent),
-            .BtcMildDeclineMaximumPercent = Math.Max(
-                Math.Max(0.1D, source.BtcMildDeclineMinimumPercent),
-                source.BtcMildDeclineMaximumPercent),
             .MomentumVolumeLookback = source.MomentumVolumeLookback,
             .MomentumVolumeMultiplier = source.MomentumVolumeMultiplier,
             .MomentumEmaPeriod = source.MomentumEmaPeriod,
@@ -2854,6 +3503,7 @@ Public NotInheritable Class SpotTradeBotEngine
             .SimulationStartingQuote = source.SimulationStartingQuote,
             .SimulationAllocationPercent = source.SimulationAllocationPercent,
             .SimulationFeeRate = source.SimulationFeeRate,
+            .SimulationSlippagePercent = Math.Min(5D, Math.Max(0D, source.SimulationSlippagePercent)),
             .TakeProfitPercent = source.TakeProfitPercent,
             .StopLossPercent = source.StopLossPercent,
             .BreakEvenEnabled = source.BreakEvenEnabled,
@@ -2941,7 +3591,7 @@ Public NotInheritable Class SpotTradeBotEngine
             Case SpotBotStrategyKind.ValueZonePullback
                 Return "Pullback zona de valor"
             Case SpotBotStrategyKind.BtcMildDeclinePullback
-                Return "BTC leve queda - Pullback defensivo"
+                Return "Grid V2 (BTC leve queda)"
             Case Else
                 Return strategy.ToString()
         End Select
@@ -2964,6 +3614,8 @@ Public NotInheritable Class SpotTradeBotEngine
         Public Property GridAnchorPrice As Decimal
         Public Property LastGridEntryPrice As Decimal
         Public Property GridSpacingPercent As Decimal
+        Public Property GridLevels As New List(Of SpotBotGridLevel)()
+        Public Property RegimeDeteriorationCount As Integer
         Public Property EntryTimestampUtc As DateTime
     End Class
 

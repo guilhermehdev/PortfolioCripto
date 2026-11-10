@@ -10,7 +10,6 @@ Partial Class SpotTradeBotEditor
     Public chkSpotBotMomentumVolume As CheckBox
     Public chkSpotBotGridAdaptive As CheckBox
     Public chkSpotBotValueZonePullback As CheckBox
-    Public chkSpotBotBtcMildDecline As CheckBox
     Public cbSpotBotCombination As ComboBox
     Public nudSpotBotConfirmations As NumericUpDown
     Public cbSpotBotBollingerTimeframe As ComboBox
@@ -118,7 +117,6 @@ Partial Class SpotTradeBotEditor
         chkSpotBotMomentumVolume = AddEditorCheck(tpStrategies, "chkSpotBotMomentumVolume", "Momentum volume", 404, 25, 110)
         chkSpotBotGridAdaptive = AddEditorCheck(tpStrategies, "chkSpotBotGridAdaptive", "Grid adaptativo v2", 520, 25, 125)
         chkSpotBotValueZonePullback = AddEditorCheck(tpStrategies, "chkSpotBotValueZonePullback", "Pullback zona de valor", 240, 59, 165)
-        chkSpotBotBtcMildDecline = AddEditorCheck(tpStrategies, "chkSpotBotBtcMildDecline", "BTC queda leve", 410, 59, 130)
         cbSpotBotCombination = AddEditorCombo(tpStrategies, "cbSpotBotCombination", 650, 25, 150, New Object() {"Qualquer estratégia", "Todas as estratégias", "Mínimo de confirmações", "Pontuação ponderada"})
         nudSpotBotConfirmations = AddEditorNumeric(tpStrategies, "nudSpotBotConfirmations", 2D, 1D, 5D, 0, 808, 25, 64)
         cbSpotBotBollingerTimeframe = AddEditorCombo(tpStrategies, "cbSpotBotBollingerTimeframe", 886, 25, 100, New Object() {"4 horas", "Diário"})

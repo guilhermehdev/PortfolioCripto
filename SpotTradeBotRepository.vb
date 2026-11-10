@@ -2,6 +2,7 @@ Imports Microsoft.Data.Sqlite
 Imports System.Data
 Imports System.Globalization
 Imports System.Linq
+Imports System.Text.Json
 
 Public NotInheritable Class SpotTradeBotRepository
 
@@ -97,6 +98,15 @@ Public NotInheritable Class SpotTradeBotRepository
                           "RiskBrakeLastPauseEndedUtc TEXT, " &
                          "TakeProfitPercent REAL NOT NULL DEFAULT 2, " &
                          "StopLossPercent REAL NOT NULL DEFAULT 1, " &
+                        "GridV2BtcMildDeclineEnabled INTEGER NOT NULL DEFAULT 0, " &
+                        "GridV2BtcMildDeclineMinimumPercent REAL NOT NULL DEFAULT 0.5, " &
+                        "GridV2BtcMildDeclineMaximumPercent REAL NOT NULL DEFAULT 2, " &
+                        "RiskBrakeManualRealizedPnl REAL NOT NULL DEFAULT 0, " &
+                        "GridV2MaximumHoldingMinutes INTEGER NOT NULL DEFAULT 240, " &
+                        "GridV2RegimeExitEnabled INTEGER NOT NULL DEFAULT 1, " &
+                        "GridV2ProgressiveExposureEnabled INTEGER NOT NULL DEFAULT 1, " &
+                        "GridV2ProgressiveExposureReductionPercent REAL NOT NULL DEFAULT 25, " &
+                        "SlippagePercent REAL NOT NULL DEFAULT 0.05, " &
                         "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                         ");"
                     command.ExecuteNonQuery()
@@ -143,6 +153,15 @@ Public NotInheritable Class SpotTradeBotRepository
                 EnsureColumn(connection, "SpotBotRuns", "RiskBrakeUseUnrealizedPnl", "INTEGER NOT NULL DEFAULT 1")
                 EnsureColumn(connection, "SpotBotRuns", "TakeProfitPercent", "REAL NOT NULL DEFAULT 2")
                 EnsureColumn(connection, "SpotBotRuns", "StopLossPercent", "REAL NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2BtcMildDeclineEnabled", "INTEGER NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2BtcMildDeclineMinimumPercent", "REAL NOT NULL DEFAULT 0.5")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2BtcMildDeclineMaximumPercent", "REAL NOT NULL DEFAULT 2")
+                EnsureColumn(connection, "SpotBotRuns", "RiskBrakeManualRealizedPnl", "REAL NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2MaximumHoldingMinutes", "INTEGER NOT NULL DEFAULT 240")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2RegimeExitEnabled", "INTEGER NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2ProgressiveExposureEnabled", "INTEGER NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2ProgressiveExposureReductionPercent", "REAL NOT NULL DEFAULT 25")
+                EnsureColumn(connection, "SpotBotRuns", "SlippagePercent", "REAL NOT NULL DEFAULT 0.05")
                 EnsureColumn(connection, "SpotBotRuns", "RiskBrakeState", "INTEGER NOT NULL DEFAULT 0")
                 EnsureColumn(connection, "SpotBotRuns", "RiskBrakePeakEquity", "REAL NOT NULL DEFAULT 0")
                 EnsureColumn(connection, "SpotBotRuns", "RiskBrakeConsecutiveLosses", "INTEGER NOT NULL DEFAULT 0")
@@ -235,6 +254,7 @@ Public NotInheritable Class SpotTradeBotRepository
                 EnsureColumn(connection, "SpotBotOpenPositions", "LastGridEntryPrice", "REAL NOT NULL DEFAULT 0")
                 EnsureColumn(connection, "SpotBotOpenPositions", "GridSpacingPercent", "REAL NOT NULL DEFAULT 0")
                 EnsureColumn(connection, "SpotBotOpenPositions", "GridManaged", "INTEGER NOT NULL DEFAULT 0")
+                EnsureColumn(connection, "SpotBotOpenPositions", "GridLevelsJson", "TEXT NOT NULL DEFAULT '[]'")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -301,7 +321,9 @@ Public NotInheritable Class SpotTradeBotRepository
                           "RiskBrakeConsecutiveLosses, RiskBrakePauseUntilUtc, RiskBrakeReason, " &
                           "RiskBrakeBlockedEntries, RiskBrakeEstimatedAvoidedPnl, RiskBrakePauseCount, " &
                           "RiskBrakeLastPauseStartedUtc, RiskBrakeLastPauseEndedUtc, " &
-                         "TakeProfitPercent, StopLossPercent) " &
+                         "TakeProfitPercent, StopLossPercent, GridV2BtcMildDeclineEnabled, " &
+                         "GridV2BtcMildDeclineMinimumPercent, GridV2BtcMildDeclineMaximumPercent, RiskBrakeManualRealizedPnl, " &
+                         "GridV2MaximumHoldingMinutes, GridV2RegimeExitEnabled, GridV2ProgressiveExposureEnabled, GridV2ProgressiveExposureReductionPercent, SlippagePercent) " &
                     "VALUES ($startedAt, $status, $enabledStrategies, $combinationMode, $requiredConfirmations, " &
                         "$startingQuote, $allocationPercent, $feeRate, $equity, $quoteBalance, " &
                         "$bollingerPeriod, $bollingerStandardDeviations, $bollingerCandleMinutes, " &
@@ -320,7 +342,9 @@ Public NotInheritable Class SpotTradeBotRepository
                           "$riskBrakeConsecutiveLosses, $riskBrakePauseUntilUtc, $riskBrakeReason, " &
                           "$riskBrakeBlockedEntries, $riskBrakeEstimatedAvoidedPnl, $riskBrakePauseCount, " &
                           "$riskBrakeLastPauseStartedUtc, $riskBrakeLastPauseEndedUtc, " &
-                         "$takeProfitPercent, $stopLossPercent);"
+                         "$takeProfitPercent, $stopLossPercent, $gridV2BtcMildDeclineEnabled, " &
+                         "$gridV2BtcMildDeclineMinimumPercent, $gridV2BtcMildDeclineMaximumPercent, $riskBrakeManualRealizedPnl, " &
+                         "$gridV2MaximumHoldingMinutes, $gridV2RegimeExitEnabled, $gridV2ProgressiveExposureEnabled, $gridV2ProgressiveExposureReductionPercent, $slippagePercent);"
 
                 command.Parameters.AddWithValue("$startedAt", UtcText(DateTime.UtcNow))
                 command.Parameters.AddWithValue("$status", "RUNNING")
@@ -383,6 +407,15 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.Parameters.AddWithValue("$riskBrakeLastPauseEndedUtc", DBNull.Value)
                 AddRealParameter(command, "$takeProfitPercent", Math.Max(0D, configuration.TakeProfitPercent))
                 AddRealParameter(command, "$stopLossPercent", Math.Max(0D, configuration.StopLossPercent))
+                command.Parameters.AddWithValue("$gridV2BtcMildDeclineEnabled", If(configuration.GridV2BtcMildDeclineEnabled, 1, 0))
+                AddRealParameter(command, "$gridV2BtcMildDeclineMinimumPercent", Math.Max(0.1D, configuration.GridV2BtcMildDeclineMinimumPercent))
+                AddRealParameter(command, "$gridV2BtcMildDeclineMaximumPercent", Math.Max(Math.Max(0.1D, configuration.GridV2BtcMildDeclineMinimumPercent), configuration.GridV2BtcMildDeclineMaximumPercent))
+                AddRealParameter(command, "$riskBrakeManualRealizedPnl", 0D)
+                command.Parameters.AddWithValue("$gridV2MaximumHoldingMinutes", Math.Max(0, configuration.GridV2MaximumHoldingMinutes))
+                command.Parameters.AddWithValue("$gridV2RegimeExitEnabled", If(configuration.GridV2RegimeExitEnabled, 1, 0))
+                command.Parameters.AddWithValue("$gridV2ProgressiveExposureEnabled", If(configuration.GridV2ProgressiveExposureEnabled, 1, 0))
+                AddRealParameter(command, "$gridV2ProgressiveExposureReductionPercent", Math.Min(100D, Math.Max(0D, configuration.GridV2ProgressiveExposureReductionPercent)))
+                AddRealParameter(command, "$slippagePercent", Math.Min(5D, Math.Max(0D, configuration.SimulationSlippagePercent)))
                 command.ExecuteNonQuery()
             End Using
 
@@ -428,6 +461,14 @@ Public NotInheritable Class SpotTradeBotRepository
                     "RiskBrakeUseUnrealizedPnl = $riskBrakeUseUnrealizedPnl, " &
                      "TakeProfitPercent = $takeProfitPercent, " &
                      "StopLossPercent = $stopLossPercent, " &
+                     "GridV2BtcMildDeclineEnabled = $gridV2BtcMildDeclineEnabled, " &
+                     "GridV2BtcMildDeclineMinimumPercent = $gridV2BtcMildDeclineMinimumPercent, " &
+                     "GridV2BtcMildDeclineMaximumPercent = $gridV2BtcMildDeclineMaximumPercent, " &
+                     "GridV2MaximumHoldingMinutes = $gridV2MaximumHoldingMinutes, " &
+                     "GridV2RegimeExitEnabled = $gridV2RegimeExitEnabled, " &
+                     "GridV2ProgressiveExposureEnabled = $gridV2ProgressiveExposureEnabled, " &
+                     "GridV2ProgressiveExposureReductionPercent = $gridV2ProgressiveExposureReductionPercent, " &
+                     "SlippagePercent = $slippagePercent, " &
                     "UpdatedAt = CURRENT_TIMESTAMP " &
                     "WHERE Id = $runId;"
                 AddRealParameter(command, "$allocationPercent", Math.Min(100D, Math.Max(0D, configuration.SimulationAllocationPercent)))
@@ -457,6 +498,14 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.Parameters.AddWithValue("$riskBrakeUseUnrealizedPnl", If(configuration.RiskBrakeUseUnrealizedPnl, 1, 0))
                 AddRealParameter(command, "$takeProfitPercent", Math.Max(0D, configuration.TakeProfitPercent))
                 AddRealParameter(command, "$stopLossPercent", Math.Max(0D, configuration.StopLossPercent))
+                command.Parameters.AddWithValue("$gridV2BtcMildDeclineEnabled", If(configuration.GridV2BtcMildDeclineEnabled, 1, 0))
+                AddRealParameter(command, "$gridV2BtcMildDeclineMinimumPercent", Math.Max(0.1D, configuration.GridV2BtcMildDeclineMinimumPercent))
+                AddRealParameter(command, "$gridV2BtcMildDeclineMaximumPercent", Math.Max(Math.Max(0.1D, configuration.GridV2BtcMildDeclineMinimumPercent), configuration.GridV2BtcMildDeclineMaximumPercent))
+                command.Parameters.AddWithValue("$gridV2MaximumHoldingMinutes", Math.Max(0, configuration.GridV2MaximumHoldingMinutes))
+                command.Parameters.AddWithValue("$gridV2RegimeExitEnabled", If(configuration.GridV2RegimeExitEnabled, 1, 0))
+                command.Parameters.AddWithValue("$gridV2ProgressiveExposureEnabled", If(configuration.GridV2ProgressiveExposureEnabled, 1, 0))
+                AddRealParameter(command, "$gridV2ProgressiveExposureReductionPercent", Math.Min(100D, Math.Max(0D, configuration.GridV2ProgressiveExposureReductionPercent)))
+                AddRealParameter(command, "$slippagePercent", Math.Min(5D, Math.Max(0D, configuration.SimulationSlippagePercent)))
                 command.Parameters.AddWithValue("$runId", runId)
                 command.ExecuteNonQuery()
             End Using
@@ -545,8 +594,8 @@ Public NotInheritable Class SpotTradeBotRepository
                             insertCommand.Transaction = transaction
                             insertCommand.CommandText =
                                 "INSERT INTO SpotBotOpenPositions(" &
-                                "RunId, Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, SupportPrice, InitialStopPrice, StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc, GridLevelCount, GridAnchorPrice, LastGridEntryPrice, GridSpacingPercent, GridManaged) " &
-                                "VALUES($runId, $symbol, $side, $strategy, $quantity, $entryPrice, $currentPrice, $costBasis, $supportPrice, $initialStopPrice, $stopPrice, $takeProfitPrice, $peakPrice, $openedAtUtc, $gridLevelCount, $gridAnchorPrice, $lastGridEntryPrice, $gridSpacingPercent, $gridManaged);"
+                                "RunId, Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, SupportPrice, InitialStopPrice, StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc, GridLevelCount, GridAnchorPrice, LastGridEntryPrice, GridSpacingPercent, GridManaged, GridLevelsJson) " &
+                                "VALUES($runId, $symbol, $side, $strategy, $quantity, $entryPrice, $currentPrice, $costBasis, $supportPrice, $initialStopPrice, $stopPrice, $takeProfitPrice, $peakPrice, $openedAtUtc, $gridLevelCount, $gridAnchorPrice, $lastGridEntryPrice, $gridSpacingPercent, $gridManaged, $gridLevelsJson);"
                             insertCommand.Parameters.AddWithValue("$runId", runId)
                             insertCommand.Parameters.AddWithValue("$symbol", position.Symbol.Trim().ToUpperInvariant())
                             insertCommand.Parameters.AddWithValue("$side", If(String.IsNullOrWhiteSpace(position.Side), "LONG", position.Side.Trim().ToUpperInvariant()))
@@ -566,6 +615,7 @@ Public NotInheritable Class SpotTradeBotRepository
                             AddRealParameter(insertCommand, "$lastGridEntryPrice", Math.Max(0D, position.LastGridEntryPrice))
                             AddRealParameter(insertCommand, "$gridSpacingPercent", Math.Max(0D, position.GridSpacingPercent))
                             insertCommand.Parameters.AddWithValue("$gridManaged", If(position.GridManaged, 1, 0))
+                            insertCommand.Parameters.AddWithValue("$gridLevelsJson", SerializeGridLevels(position.GridLevels))
                             insertCommand.ExecuteNonQuery()
                         End Using
                     Next
@@ -674,6 +724,7 @@ Public NotInheritable Class SpotTradeBotRepository
                      "RiskBrakeReason = $riskBrakeReason, RiskBrakeBlockedEntries = $riskBrakeBlockedEntries, " &
                      "RiskBrakeEstimatedAvoidedPnl = $riskBrakeEstimatedAvoidedPnl, RiskBrakePauseCount = $riskBrakePauseCount, " &
                      "RiskBrakeLastPauseStartedUtc = $riskBrakeLastPauseStartedUtc, RiskBrakeLastPauseEndedUtc = $riskBrakeLastPauseEndedUtc, " &
+                    "RiskBrakeManualRealizedPnl = $riskBrakeManualRealizedPnl, " &
                     "UpdatedAt = CURRENT_TIMESTAMP WHERE Id = $runId;"
                 command.Parameters.AddWithValue("$endedAt", If(endedAtUtc = DateTime.MinValue, CType(DBNull.Value, Object), UtcText(endedAtUtc)))
                 command.Parameters.AddWithValue("$status", If(status, String.Empty))
@@ -698,6 +749,7 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.Parameters.AddWithValue("$riskBrakePauseCount", Math.Max(0, snapshot.RiskBrakePauseCount))
                 command.Parameters.AddWithValue("$riskBrakeLastPauseStartedUtc", If(snapshot.RiskBrakeLastPauseStartedUtc = DateTime.MinValue, CType(DBNull.Value, Object), UtcText(snapshot.RiskBrakeLastPauseStartedUtc)))
                 command.Parameters.AddWithValue("$riskBrakeLastPauseEndedUtc", If(snapshot.RiskBrakeLastPauseEndedUtc = DateTime.MinValue, CType(DBNull.Value, Object), UtcText(snapshot.RiskBrakeLastPauseEndedUtc)))
+                AddRealParameter(command, "$riskBrakeManualRealizedPnl", snapshot.RiskBrakeManualRealizedPnl)
                 command.Parameters.AddWithValue("$runId", runId)
                 command.ExecuteNonQuery()
             End Using
@@ -759,7 +811,7 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.CommandText =
                     "SELECT Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, SupportPrice, InitialStopPrice, " &
                     "StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc, GridLevelCount, GridAnchorPrice, " &
-                    "LastGridEntryPrice, GridSpacingPercent, GridManaged " &
+                    "LastGridEntryPrice, GridSpacingPercent, GridManaged, GridLevelsJson " &
                     "FROM SpotBotOpenPositions WHERE RunId = $runId ORDER BY Symbol;"
                 command.Parameters.AddWithValue("$runId", runId)
                 Using reader = command.ExecuteReader()
@@ -799,7 +851,9 @@ Public NotInheritable Class SpotTradeBotRepository
                           "RiskBrakeConsecutiveLosses, RiskBrakePauseUntilUtc, RiskBrakeReason, " &
                           "RiskBrakeBlockedEntries, RiskBrakeEstimatedAvoidedPnl, RiskBrakePauseCount, " &
                           "RiskBrakeLastPauseStartedUtc, RiskBrakeLastPauseEndedUtc, " &
-                         "TakeProfitPercent, StopLossPercent " &
+                         "TakeProfitPercent, StopLossPercent, GridV2BtcMildDeclineEnabled, " &
+                         "GridV2BtcMildDeclineMinimumPercent, GridV2BtcMildDeclineMaximumPercent, RiskBrakeManualRealizedPnl, " &
+                         "GridV2MaximumHoldingMinutes, GridV2RegimeExitEnabled, GridV2ProgressiveExposureEnabled, GridV2ProgressiveExposureReductionPercent, SlippagePercent " &
                     "FROM SpotBotRuns ORDER BY Id DESC LIMIT 1;"
 
                 Using reader = command.ExecuteReader()
@@ -879,6 +933,15 @@ Public NotInheritable Class SpotTradeBotRepository
                     state.Snapshot.RiskBrakeLastPauseEndedUtc = If(reader.IsDBNull(67), DateTime.MinValue, ParseUtc(reader.GetString(67)))
                     state.TakeProfitPercent = If(reader.IsDBNull(68), 2D, Math.Max(0D, ReadDecimal(reader, 68)))
                     state.StopLossPercent = If(reader.IsDBNull(69), 1D, Math.Max(0D, ReadDecimal(reader, 69)))
+                    state.GridV2BtcMildDeclineEnabled = If(reader.IsDBNull(70), False, reader.GetInt32(70) <> 0)
+                    state.GridV2BtcMildDeclineMinimumPercent = If(reader.IsDBNull(71), 0.5D, Math.Max(0.1D, ReadDecimal(reader, 71)))
+                    state.GridV2BtcMildDeclineMaximumPercent = If(reader.IsDBNull(72), 2D, Math.Max(state.GridV2BtcMildDeclineMinimumPercent, ReadDecimal(reader, 72)))
+                    state.Snapshot.RiskBrakeManualRealizedPnl = If(reader.IsDBNull(73), 0D, ReadDecimal(reader, 73))
+                    state.GridV2MaximumHoldingMinutes = If(reader.IsDBNull(74), 240, Math.Max(0, reader.GetInt32(74)))
+                    state.GridV2RegimeExitEnabled = If(reader.IsDBNull(75), True, reader.GetInt32(75) <> 0)
+                    state.GridV2ProgressiveExposureEnabled = If(reader.IsDBNull(76), True, reader.GetInt32(76) <> 0)
+                    state.GridV2ProgressiveExposureReductionPercent = If(reader.IsDBNull(77), 25D, Math.Min(100D, Math.Max(0D, ReadDecimal(reader, 77))))
+                    state.SlippagePercent = If(reader.IsDBNull(78), 0.05D, Math.Min(5D, Math.Max(0D, ReadDecimal(reader, 78))))
 
                     If Not reader.IsDBNull(2) Then
                         For Each strategyText In reader.GetString(2).Split(","c, StringSplitOptions.RemoveEmptyEntries)
@@ -894,7 +957,7 @@ Public NotInheritable Class SpotTradeBotRepository
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
                         "SELECT Symbol, Side, Strategy, Quantity, EntryPrice, CurrentPrice, CostBasis, SupportPrice, InitialStopPrice, StopPrice, TakeProfitPrice, PeakPrice, OpenedAtUtc, " &
-                        "GridLevelCount, GridAnchorPrice, LastGridEntryPrice, GridSpacingPercent, GridManaged " &
+                        "GridLevelCount, GridAnchorPrice, LastGridEntryPrice, GridSpacingPercent, GridManaged, GridLevelsJson " &
                     "FROM SpotBotOpenPositions WHERE RunId = $runId ORDER BY Symbol;"
                 command.Parameters.AddWithValue("$runId", state.RunId)
 
@@ -915,6 +978,7 @@ Public NotInheritable Class SpotTradeBotRepository
                         Dim lastGridEntryPrice = ReadDecimal(reader, 15)
                         Dim gridSpacingPercent = ReadDecimal(reader, 16)
                         Dim gridManaged = If(reader.IsDBNull(17), False, reader.GetInt32(17) <> 0)
+                        Dim gridLevelsJson = If(reader.IsDBNull(18), "[]", reader.GetString(18))
                         Dim strategyText = If(reader.IsDBNull(2), String.Empty, reader.GetString(2))
                         If Not gridManaged AndAlso strategyText.IndexOf("Grid", StringComparison.OrdinalIgnoreCase) >= 0 Then
                             ' Compatibilidade com posições gravadas antes da
@@ -945,6 +1009,7 @@ Public NotInheritable Class SpotTradeBotRepository
                             .GridAnchorPrice = gridAnchorPrice,
                             .LastGridEntryPrice = lastGridEntryPrice,
                             .GridSpacingPercent = gridSpacingPercent,
+                            .GridLevels = DeserializeGridLevels(gridLevelsJson),
                             .OpenedAtUtc = openedAt
                         })
                     End While
@@ -997,6 +1062,23 @@ Public NotInheritable Class SpotTradeBotRepository
     Private Shared Function ReadDecimal(reader As SqliteDataReader, ordinal As Integer) As Decimal
         If reader.IsDBNull(ordinal) Then Return 0D
         Return Convert.ToDecimal(reader.GetValue(ordinal), CultureInfo.InvariantCulture)
+    End Function
+
+    Private Shared Function SerializeGridLevels(levels As IReadOnlyList(Of SpotBotGridLevel)) As String
+        Try
+            Return JsonSerializer.Serialize(If(levels, Array.Empty(Of SpotBotGridLevel)()))
+        Catch
+            Return "[]"
+        End Try
+    End Function
+
+    Private Shared Function DeserializeGridLevels(json As String) As List(Of SpotBotGridLevel)
+        If String.IsNullOrWhiteSpace(json) Then Return New List(Of SpotBotGridLevel)()
+        Try
+            Return JsonSerializer.Deserialize(Of List(Of SpotBotGridLevel))(json)
+        Catch
+            Return New List(Of SpotBotGridLevel)()
+        End Try
     End Function
 
     Private Shared Function ParseUtc(value As String) As DateTime

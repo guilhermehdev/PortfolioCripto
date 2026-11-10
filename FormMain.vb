@@ -124,7 +124,6 @@ Public Class FormMain
     Private _botGridMaxExposurePercent As NumericUpDown
     Private _botGridMaxLevels As NumericUpDown
     Private _botGridRequireRejection As CheckBox
-    Private _botBtcMildDecline As CheckBox
     Private _botBtcFlushEnabled As CheckBox
     Private _botBtcFlushDropPercent As NumericUpDown
     Private _botBtcFlushPauseMinutes As NumericUpDown
@@ -2479,7 +2478,6 @@ BuildSpotBotGrid:
         _botStrategyChecks(SpotBotStrategyKind.MomentumVolume) = chkSpotBotMomentumVolume
         _botStrategyChecks(SpotBotStrategyKind.GridAdaptive) = chkSpotBotGridAdaptive
         _botStrategyChecks(SpotBotStrategyKind.ValueZonePullback) = chkSpotBotValueZonePullback
-        _botStrategyChecks(SpotBotStrategyKind.BtcMildDeclinePullback) = chkSpotBotBtcMildDecline
 
         If _botBollingerMode.Items.Count = 0 Then
             _botBollingerMode.Items.AddRange(New Object() {"Base Original Protegida", "Desativada"})
@@ -2689,7 +2687,6 @@ BuildSpotBotGrid:
         _botStrategyChecks(SpotBotStrategyKind.MomentumVolume) = editor.chkSpotBotMomentumVolume
         _botStrategyChecks(SpotBotStrategyKind.GridAdaptive) = editor.chkSpotBotGridAdaptive
         _botStrategyChecks(SpotBotStrategyKind.ValueZonePullback) = editor.chkSpotBotValueZonePullback
-        _botStrategyChecks(SpotBotStrategyKind.BtcMildDeclinePullback) = editor.chkSpotBotBtcMildDecline
 
         _botBollingerMode.SelectedIndex = GetBollingerModeIndex()
         _botCombination.SelectedIndex = If(
@@ -2876,6 +2873,11 @@ BuildSpotBotGrid:
         _spotTradeBot.Configuration.GridV2MaxExposurePercent = _botGridMaxExposurePercent.Value
         _spotTradeBot.Configuration.GridV2MaxLevels = CInt(_botGridMaxLevels.Value)
         _spotTradeBot.Configuration.GridV2RequireRejection = _botGridRequireRejection.Checked
+        Dim gridEnabled = _botStrategyChecks.ContainsKey(SpotBotStrategyKind.GridAdaptive) AndAlso
+                          _botStrategyChecks(SpotBotStrategyKind.GridAdaptive).Checked
+        ' O regime de queda leve do BTC faz parte do Grid V2 e é ativado
+        ' automaticamente enquanto a estratégia Grid V2 estiver habilitada.
+        _spotTradeBot.Configuration.GridV2BtcMildDeclineEnabled = gridEnabled
         _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled = _botBtcFlushEnabled.Checked
         _spotTradeBot.Configuration.BitcoinFlushDropPercent = _botBtcFlushDropPercent.Value
         _spotTradeBot.Configuration.BitcoinFlushPauseMinutes = _botBtcFlushPauseMinutes.Value
@@ -3073,25 +3075,24 @@ BuildSpotBotGrid:
                 "Pullback zona de valor: M5 filtra tendência, M2 espera retorno à EMA 9/20 e M1 confirma a retomada; Spot opera somente comprado.",
                 Color.LightGray)
         End If
-        If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) Then
-            AppendSpotBotLog(
-                $"BTC Leve Queda — Pullback Defensivo: queda diária entre " &
-                $"{_spotTradeBot.Configuration.BtcMildDeclineMinimumPercent:0.##}% e " &
-                $"{_spotTradeBot.Configuration.BtcMildDeclineMaximumPercent:0.##}%; " &
-                "o ativo precisa manter força relativa e confirmar o pullback M5/M2/M1.",
-                Color.Gold)
-        End If
         If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) Then
             AppendSpotBotLog(
                 $"Grid V2: EMA 9/21 em candles M5 libera a grade apenas em lateralização; " &
+                $"custos simulados: taxa {_spotTradeBot.Configuration.SimulationFeeRate * 100D:0.###}% + slippage {_spotTradeBot.Configuration.SimulationSlippagePercent:0.###}%; " &
                 $"confirma rejeição: {If(_spotTradeBot.Configuration.GridV2RequireRejection, "sim", "não")}; " &
                 $"risco/nível {_spotTradeBot.Configuration.GridV2RiskPerTradePercent:0.##}%, " &
                 $"reserva {_spotTradeBot.Configuration.GridV2ReserveQuotePercent:0.##}%, " &
                 $"exposição máxima {_spotTradeBot.Configuration.GridV2MaxExposurePercent:0.##}% e " &
                 $"até {_spotTradeBot.Configuration.GridV2MaxLevels} níveis; " &
+                $"tempo máximo {_spotTradeBot.Configuration.GridV2MaximumHoldingMinutes} min, " &
+                $"saída por deterioração de regime: {If(_spotTradeBot.Configuration.GridV2RegimeExitEnabled, "sim", "não")}, " &
+                $"redução progressiva por nível: {If(_spotTradeBot.Configuration.GridV2ProgressiveExposureEnabled, _spotTradeBot.Configuration.GridV2ProgressiveExposureReductionPercent.ToString("0.##") & "%", "não")}; " &
                 $"ignora suporte a menos de {_spotTradeBot.Configuration.GridV2MinimumSupportDistancePercent:0.##}%, confirma o SL em {Math.Max(1, _spotTradeBot.Configuration.GridV2StopConfirmationCandles)} candles de 1 min " &
                 $"(emergência em {_spotTradeBot.Configuration.GridV2StopEmergencyBufferPercent:0.##}%), usa SL estrutural com mínimo de {_spotTradeBot.Configuration.GridV2MinimumStopPercent:0.##}% e limite de 3%, " &
-                "e bloqueia o ativo após 2 stops até a recuperação confirmada.",
+                "e bloqueia o ativo após 2 stops até a recuperação confirmada." &
+                If(_spotTradeBot.Configuration.GridV2BtcMildDeclineEnabled,
+                   $" Regime BTC Leve Queda ativo: queda diária entre {_spotTradeBot.Configuration.GridV2BtcMildDeclineMinimumPercent:0.##}% e {_spotTradeBot.Configuration.GridV2BtcMildDeclineMaximumPercent:0.##}%.",
+                   String.Empty),
                 Color.LightGray)
         End If
     End Sub
@@ -3272,6 +3273,13 @@ BuildSpotBotGrid:
         AppendSpotBotCsvPair(builder, "GridV2RiscoPorNivelPercentual", state.GridV2RiskPerTradePercent)
         AppendSpotBotCsvPair(builder, "GridV2ReservaPercentual", state.GridV2ReserveQuotePercent)
         AppendSpotBotCsvPair(builder, "GridV2NiveisMaximos", state.GridV2MaxLevels)
+        AppendSpotBotCsvPair(builder, "GridV2TempoMaximoPermanenciaMinutos", state.GridV2MaximumHoldingMinutes)
+        AppendSpotBotCsvPair(builder, "GridV2SaidaPorDeterioracaoRegime", state.GridV2RegimeExitEnabled)
+        AppendSpotBotCsvPair(builder, "GridV2ExposicaoProgressiva", state.GridV2ProgressiveExposureEnabled)
+        AppendSpotBotCsvPair(builder, "GridV2ReducaoExposicaoPorNivelPercentual", state.GridV2ProgressiveExposureReductionPercent)
+        AppendSpotBotCsvPair(builder, "GridV2RegimeBTCLeveQueda", state.GridV2BtcMildDeclineEnabled)
+        AppendSpotBotCsvPair(builder, "GridV2BTCLeveQuedaMinimaPercentual", state.GridV2BtcMildDeclineMinimumPercent)
+        AppendSpotBotCsvPair(builder, "GridV2BTCLeveQuedaMaximaPercentual", state.GridV2BtcMildDeclineMaximumPercent)
         AppendSpotBotCsvPair(builder, "ProtecaoFlushBTC", state.BitcoinFlushProtectionEnabled)
         AppendSpotBotCsvPair(builder, "FlushBTCQuedaPercentual", state.BitcoinFlushDropPercent)
         AppendSpotBotCsvPair(builder, "FlushBTCPausaMinutos", state.BitcoinFlushPauseMinutes)
@@ -3282,6 +3290,7 @@ BuildSpotBotGrid:
         AppendSpotBotCsvPair(builder, "Negocios24hMinimos", state.UniverseMinimumTrades24h)
         AppendSpotBotCsvPair(builder, "AlocacaoPercentual", state.AllocationPercent)
         AppendSpotBotCsvPair(builder, "Taxa", state.FeeRate)
+        AppendSpotBotCsvPair(builder, "SlippagePercentual", state.SlippagePercent)
         AppendSpotBotCsvPair(builder, "UltimaAcao", snapshot.LastAction)
         File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
     End Sub
@@ -4310,7 +4319,7 @@ BuildSpotBotGrid:
             If _spotTradeBot.IsRunning AndAlso
                (_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled OrElse
                 _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled OrElse
-                _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback)) Then
+                _spotTradeBot.Configuration.GridV2BtcMildDeclineEnabled) Then
                 symbols.Add("BTC")
             End If
 
@@ -4338,7 +4347,7 @@ BuildSpotBotGrid:
                 candleIntervals.Add("1d")
             End If
             If _spotTradeBot.IsRunning AndAlso
-               _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BtcMildDeclinePullback) AndAlso
+               _spotTradeBot.Configuration.GridV2BtcMildDeclineEnabled AndAlso
                Not candleIntervals.Contains("1d", StringComparer.OrdinalIgnoreCase) Then
                 candleIntervals.Add("1d")
             End If

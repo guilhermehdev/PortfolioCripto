@@ -31,7 +31,8 @@ Public Enum SpotBotStrategyKind
     GridAdaptive = 11
     ' Pullback de tendência na zona EMA/VWAP, adaptado do vídeo analisado.
     ValueZonePullback = 12
-    ' Pullback defensivo para dias de queda leve do BTC.
+    ' Valor legado de versões que exibiam o regime BTC como estratégia separada.
+    ' O regime agora é uma opção interna do Grid V2.
     BtcMildDeclinePullback = 13
 End Enum
 
@@ -190,6 +191,9 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property SimulationStartingQuote As Decimal = 1000D
     Public Property SimulationAllocationPercent As Decimal = 10D
     Public Property SimulationFeeRate As Decimal = 0.001D
+    ' Slippage adverso aplicado às execuções simuladas: compra paga acima da
+    ' cotação observada e venda recebe abaixo dela.
+    Public Property SimulationSlippagePercent As Decimal = 0.05D
     Public Property TakeProfitPercent As Decimal = 2D
     Public Property StopLossPercent As Decimal = 1D
     Public Property BreakEvenEnabled As Boolean = True
@@ -199,7 +203,8 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property TrailingStopDistancePercent As Decimal = 1D
 
     ' Freio de perdas da carteira virtual. O freio é uma camada externa às
-    ' estratégias: ele bloqueia novas entradas sem alterar os sinais.
+    ' estratégias: ele bloqueia novas entradas sem alterar os sinais. Fechamentos
+    ' manuais não entram na sequência de perdas que dispara o freio.
     Public Property RiskBrakeEnabled As Boolean = True
     Public Property RiskBrakeSessionLossPercent As Decimal = 2D
     Public Property RiskBrakeProfitLockEnabled As Boolean = True
@@ -223,6 +228,21 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property GridV2MaxLevels As Integer = 5
     Public Property GridV2LevelAllocationPercent As Decimal = 10D
     Public Property GridV2MaxExposurePercent As Decimal = 30D
+    ' Limite de inventário acumulado por ativo, em relação ao saldo inicial.
+    ' O cálculo usa GridV2MaxExposurePercent como teto por posição.
+    Public Property GridV2MaximumHoldingMinutes As Integer = 240
+    Public Property GridV2RegimeExitEnabled As Boolean = True
+    Public Property GridV2ProgressiveExposureEnabled As Boolean = True
+    Public Property GridV2ProgressiveExposureReductionPercent As Decimal = 25D
+    ' Saída híbrida: realiza parte no primeiro alvo e protege o restante.
+    Public Property GridV2PartialExitPercent As Decimal = 50D
+    Public Property GridV2RegimeReductionPercent As Decimal = 50D
+    Public Property GridV2TimeReductionPercent As Decimal = 50D
+    ' Quando ativo, o Grid V2 mantém a operação normal fora da queda leve do BTC
+    ' e exige o pullback defensivo adicional somente enquanto o regime estiver ativo.
+    Public Property GridV2BtcMildDeclineEnabled As Boolean = False
+    Public Property GridV2BtcMildDeclineMinimumPercent As Decimal = 0.5D
+    Public Property GridV2BtcMildDeclineMaximumPercent As Decimal = 2D
     Public Property GridV2BreakoutAtrMultiplier As Decimal = 0.5D
     Public Property GridV2MinimumStopPercent As Decimal = 1.5D
     Public Property GridV2StopVolatilityMultiplier As Decimal = 1.5D
@@ -241,7 +261,7 @@ Public NotInheritable Class SpotBotConfiguration
     ' confirmado por candles fechados de 1 minuto, mantendo uma saída de
     ' emergência para rompimentos rápidos.
     Public Property GridV2StopConfirmationEnabled As Boolean = True
-    Public Property GridV2StopConfirmationCandles As Integer = 2
+    Public Property GridV2StopConfirmationCandles As Integer = 1
     Public Property GridV2StopEmergencyBufferPercent As Decimal = 0.5D
     ' A grade só entra depois que o candle toca o nível e confirma rejeição.
     Public Property GridV2RequireRejection As Boolean = True
@@ -274,11 +294,6 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property ValueZoneMinimumRiskReward As Decimal = 1.5D
     Public Property ValueZoneStructureLookback As Integer = 20
     Public Property ValueZoneRequireVwap As Boolean = True
-
-    ' Regime defensivo: o BTC precisa estar em queda diária moderada, enquanto
-    ' o ativo operado mantém força relativa e confirma o pullback.
-    Public Property BtcMildDeclineMinimumPercent As Decimal = 0.5D
-    Public Property BtcMildDeclineMaximumPercent As Decimal = 2D
 
     ' O motor começa sempre em simulação. A execução real será conectada
     ' depois de validarmos os sinais e os limites de risco.
@@ -344,6 +359,8 @@ Public NotInheritable Class SpotBotSimulationSnapshot
     Public Property OpenPositions As Integer
     Public Property LastAction As String = String.Empty
     Public Property RiskBrakeState As SpotBotRiskBrakeState = SpotBotRiskBrakeState.Normal
+    ' P/L realizado manualmente é preservado fora dos gatilhos do freio.
+    Public Property RiskBrakeManualRealizedPnl As Decimal
     Public Property RiskBrakePeakEquity As Decimal
     Public Property RiskBrakeConsecutiveLosses As Integer
     Public Property RiskBrakePauseUntilUtc As DateTime
@@ -380,6 +397,18 @@ Public NotInheritable Class SpotBotSimulationTrade
     Public Property ClosedAtUtc As DateTime
 End Class
 
+Public NotInheritable Class SpotBotGridLevel
+    Public Property EntryPrice As Decimal
+    Public Property Quantity As Decimal
+    Public Property CostBasis As Decimal
+    Public Property TakeProfitPrice As Decimal
+    Public Property StopPrice As Decimal
+    Public Property PartialTargetTaken As Boolean
+    Public Property RegimeReductionTaken As Boolean
+    Public Property TimeReductionTaken As Boolean
+    Public Property OpenedAtUtc As DateTime
+End Class
+
 Public NotInheritable Class SpotBotOpenPosition
     Public Property Symbol As String = String.Empty
     Public Property Strategy As String = String.Empty
@@ -401,6 +430,7 @@ Public NotInheritable Class SpotBotOpenPosition
     Public Property GridAnchorPrice As Decimal
     Public Property LastGridEntryPrice As Decimal
     Public Property GridSpacingPercent As Decimal
+    Public Property GridLevels As New List(Of SpotBotGridLevel)()
     Public Property OpenedAtUtc As DateTime
 End Class
 
@@ -425,6 +455,7 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property BollingerCandleMinutes As Integer = 1440
     Public Property AllocationPercent As Decimal = 10D
     Public Property FeeRate As Decimal = 0.001D
+    Public Property SlippagePercent As Decimal = 0.05D
     Public Property TakeProfitPercent As Decimal = 2D
     Public Property StopLossPercent As Decimal = 1D
     Public Property BreakEvenEnabled As Boolean = True
@@ -448,13 +479,23 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property GridV2MaximumStopPercent As Decimal = 3D
     Public Property GridV2MinimumSupportDistancePercent As Decimal = 0.8D
     Public Property GridV2StopConfirmationEnabled As Boolean = True
-    Public Property GridV2StopConfirmationCandles As Integer = 2
+    Public Property GridV2StopConfirmationCandles As Integer = 1
     Public Property GridV2StopEmergencyBufferPercent As Decimal = 0.5D
     Public Property GridV2MaxExposurePercent As Decimal = 30D
     Public Property GridV2RequireRejection As Boolean = True
     Public Property GridV2RiskPerTradePercent As Decimal = 0.5D
     Public Property GridV2ReserveQuotePercent As Decimal = 20D
     Public Property GridV2MaxLevels As Integer = 5
+    Public Property GridV2MaximumHoldingMinutes As Integer = 240
+    Public Property GridV2RegimeExitEnabled As Boolean = True
+    Public Property GridV2ProgressiveExposureEnabled As Boolean = True
+    Public Property GridV2ProgressiveExposureReductionPercent As Decimal = 25D
+    Public Property GridV2PartialExitPercent As Decimal = 50D
+    Public Property GridV2RegimeReductionPercent As Decimal = 50D
+    Public Property GridV2TimeReductionPercent As Decimal = 50D
+    Public Property GridV2BtcMildDeclineEnabled As Boolean = False
+    Public Property GridV2BtcMildDeclineMinimumPercent As Decimal = 0.5D
+    Public Property GridV2BtcMildDeclineMaximumPercent As Decimal = 2D
     Public Property BitcoinFlushProtectionEnabled As Boolean = True
     Public Property BitcoinFlushLookbackMinutes As Integer = 5
     Public Property BitcoinFlushDropPercent As Decimal = 2D
@@ -513,22 +554,6 @@ Public Interface ISpotBotMultiTimeframeStrategy
 End Interface
 
 ''' <summary>
-''' Estratégia que usa candles do ativo e o contexto diário do BTC como filtro
-''' de regime. A série do BTC é fornecida pelo motor para evitar look-ahead.
-''' </summary>
-Public Interface ISpotBotBitcoinContextStrategy
-    Inherits ISpotBotStrategy
-
-    Function EvaluateWithBitcoinContext(
-        symbol As String,
-        m1Candles As IReadOnlyList(Of SpotBotPricePoint),
-        m2Candles As IReadOnlyList(Of SpotBotPricePoint),
-        m5Candles As IReadOnlyList(Of SpotBotPricePoint),
-        bitcoinDailyCandles As IReadOnlyList(Of SpotBotPricePoint),
-        configuration As SpotBotConfiguration) As SpotBotStrategySignal
-End Interface
-
-''' <summary>
 ''' Permite que estratégias que continuam avaliando ticks usem uma série de
 ''' candles fechados apenas como filtro de regime.
 ''' </summary>
@@ -539,5 +564,23 @@ Public Interface ISpotBotTrendFilterStrategy
         symbol As String,
         prices As IReadOnlyList(Of SpotBotPricePoint),
         trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        configuration As SpotBotConfiguration) As SpotBotStrategySignal
+End Interface
+
+''' <summary>
+''' Extensão do filtro de tendência que também recebe o contexto diário do BTC.
+''' Usada pelo Grid V2 para alternar o filtro defensivo durante a queda leve
+''' do BTC sem criar uma estratégia concorrente na combinação de sinais.
+''' </summary>
+Public Interface ISpotBotBitcoinTrendFilterStrategy
+    Inherits ISpotBotTrendFilterStrategy
+
+    Function EvaluateWithTrendAndBitcoinContext(
+        symbol As String,
+        prices As IReadOnlyList(Of SpotBotPricePoint),
+        trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        pullbackM1Candles As IReadOnlyList(Of SpotBotPricePoint),
+        pullbackM2Candles As IReadOnlyList(Of SpotBotPricePoint),
+        bitcoinDailyCandles As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal
 End Interface

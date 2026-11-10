@@ -185,7 +185,6 @@ Partial Class FormMain
         chkSpotBotTrailing = New CheckBox()
         GroupBox2 = New GroupBox()
         chkSpotBotValueZonePullback = New CheckBox()
-        chkSpotBotBtcMildDecline = New CheckBox()
         chkSpotBotGridAdaptive = New CheckBox()
         chkSpotBotMomentumVolume = New CheckBox()
         chkSpotBotBreakoutRetest = New CheckBox()
@@ -2135,7 +2134,6 @@ Partial Class FormMain
         ' GroupBox2
         ' 
         GroupBox2.Controls.Add(chkSpotBotValueZonePullback)
-        GroupBox2.Controls.Add(chkSpotBotBtcMildDecline)
         GroupBox2.Controls.Add(chkSpotBotGridAdaptive)
         GroupBox2.Controls.Add(chkSpotBotMomentumVolume)
         GroupBox2.Controls.Add(chkSpotBotBreakoutRetest)
@@ -2159,17 +2157,6 @@ Partial Class FormMain
         chkSpotBotValueZonePullback.TabIndex = 6
         chkSpotBotValueZonePullback.Text = "Pullback zona de valor"
         chkSpotBotValueZonePullback.UseVisualStyleBackColor = True
-        ' 
-        ' chkSpotBotBtcMildDecline
-        ' 
-        chkSpotBotBtcMildDecline.AutoSize = True
-        chkSpotBotBtcMildDecline.ForeColor = Color.Gold
-        chkSpotBotBtcMildDecline.Location = New Point(8, 150)
-        chkSpotBotBtcMildDecline.Name = "chkSpotBotBtcMildDecline"
-        chkSpotBotBtcMildDecline.Size = New Size(144, 19)
-        chkSpotBotBtcMildDecline.TabIndex = 7
-        chkSpotBotBtcMildDecline.Text = "BTC queda leve"
-        chkSpotBotBtcMildDecline.UseVisualStyleBackColor = True
         ' 
         ' chkSpotBotGridAdaptive
         ' 
@@ -2499,7 +2486,6 @@ Partial Class FormMain
     Friend WithEvents chkSpotBotBreakoutRetest As CheckBox
     Friend WithEvents chkSpotBotMomentumVolume As CheckBox
     Friend WithEvents chkSpotBotValueZonePullback As CheckBox
-    Friend WithEvents chkSpotBotBtcMildDecline As CheckBox
     Friend WithEvents GroupBox3 As GroupBox
     Friend WithEvents chkSpotBotTrailing As CheckBox
     Friend WithEvents NumericUpDown2 As NumericUpDown
