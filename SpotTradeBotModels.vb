@@ -261,7 +261,7 @@ Public NotInheritable Class SpotBotConfiguration
     ' confirmado por candles fechados de 1 minuto, mantendo uma saída de
     ' emergência para rompimentos rápidos.
     Public Property GridV2StopConfirmationEnabled As Boolean = True
-    Public Property GridV2StopConfirmationCandles As Integer = 1
+    Public Property GridV2StopConfirmationCandles As Integer = 2
     Public Property GridV2StopEmergencyBufferPercent As Decimal = 0.5D
     ' A grade só entra depois que o candle toca o nível e confirma rejeição.
     Public Property GridV2RequireRejection As Boolean = True
@@ -479,7 +479,7 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property GridV2MaximumStopPercent As Decimal = 3D
     Public Property GridV2MinimumSupportDistancePercent As Decimal = 0.8D
     Public Property GridV2StopConfirmationEnabled As Boolean = True
-    Public Property GridV2StopConfirmationCandles As Integer = 1
+    Public Property GridV2StopConfirmationCandles As Integer = 2
     Public Property GridV2StopEmergencyBufferPercent As Decimal = 0.5D
     Public Property GridV2MaxExposurePercent As Decimal = 30D
     Public Property GridV2RequireRejection As Boolean = True

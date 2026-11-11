@@ -3268,6 +3268,9 @@ BuildSpotBotGrid:
         AppendSpotBotCsvPair(builder, "GridV2StopMinimoPercentual", state.GridV2MinimumStopPercent)
         AppendSpotBotCsvPair(builder, "GridV2StopMaximoPercentual", state.GridV2MaximumStopPercent)
         AppendSpotBotCsvPair(builder, "GridV2DistanciaMinimaSuportePercentual", state.GridV2MinimumSupportDistancePercent)
+        AppendSpotBotCsvPair(builder, "GridV2ConfirmacaoSLAtiva", state.GridV2StopConfirmationEnabled)
+        AppendSpotBotCsvPair(builder, "GridV2ConfirmacaoSLCandles", state.GridV2StopConfirmationCandles)
+        AppendSpotBotCsvPair(builder, "GridV2BufferEmergenciaSLPercentual", state.GridV2StopEmergencyBufferPercent)
         AppendSpotBotCsvPair(builder, "GridV2ExposicaoMaximaPercentual", state.GridV2MaxExposurePercent)
         AppendSpotBotCsvPair(builder, "GridV2ConfirmarRejeicao", state.GridV2RequireRejection)
         AppendSpotBotCsvPair(builder, "GridV2RiscoPorNivelPercentual", state.GridV2RiskPerTradePercent)
@@ -3316,7 +3319,7 @@ BuildSpotBotGrid:
         Dim currentTrades = SpotTradeBotRepository.GetTrades(state.RunId)
         Dim currentStops = If(currentTrades Is Nothing,
                               0D,
-                              currentTrades.AsEnumerable().Count(Function(row) String.Equals(Convert.ToString(row("ExitReason"), CultureInfo.InvariantCulture), "SL", StringComparison.OrdinalIgnoreCase)))
+                              currentTrades.AsEnumerable().Count(Function(row) IsSpotBotStopExitReason(row("ExitReason"))))
         Dim currentFees = If(currentTrades Is Nothing,
                              0D,
                              currentTrades.AsEnumerable().Sum(Function(row) DecimalFromDataRow(row, "Fees")))
@@ -3339,7 +3342,7 @@ BuildSpotBotGrid:
             previousWinRate = If(previousTradesCount = 0D, 0D, previousWins * 100D / previousTradesCount)
             previousStops = If(previousTrades Is Nothing,
                                0D,
-                               previousTrades.AsEnumerable().Count(Function(row) String.Equals(Convert.ToString(row("ExitReason"), CultureInfo.InvariantCulture), "SL", StringComparison.OrdinalIgnoreCase)))
+                               previousTrades.AsEnumerable().Count(Function(row) IsSpotBotStopExitReason(row("ExitReason"))))
             previousFees = If(previousTrades Is Nothing,
                               0D,
                               previousTrades.AsEnumerable().Sum(Function(row) DecimalFromDataRow(row, "Fees")))
@@ -3354,6 +3357,12 @@ BuildSpotBotGrid:
 
         File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
     End Sub
+
+    Private Shared Function IsSpotBotStopExitReason(value As Object) As Boolean
+        Dim reason = Convert.ToString(value, CultureInfo.InvariantCulture)
+        Return String.Equals(reason, "SL", StringComparison.OrdinalIgnoreCase) OrElse
+               reason.StartsWith("SL_", StringComparison.OrdinalIgnoreCase)
+    End Function
 
     Private Shared Sub AppendSpotBotComparisonRow(builder As StringBuilder, name As String, currentValue As Object, previousValue As Object)
         Dim currentText = FormatSpotBotCsvValue(currentValue)
