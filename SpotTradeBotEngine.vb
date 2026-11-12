@@ -1402,7 +1402,7 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
 
             If position IsNot Nothing AndAlso position.EntryPrice > 0D Then
-                stopAdjusted = UpdateDynamicStop(position, price, configuration)
+                stopAdjusted = UpdateDynamicStop(position, price, configuration, gridClosedCandles)
                 Dim variationPercent = (price - position.EntryPrice) / position.EntryPrice * 100D
                 Dim takeProfitPercent = Math.Max(0D, configuration.TakeProfitPercent)
                 Dim stopLossPercent = Math.Max(0D, configuration.StopLossPercent)
@@ -2124,22 +2124,32 @@ Public NotInheritable Class SpotTradeBotEngine
     Private Function UpdateDynamicStop(
         position As SimulationPosition,
         price As Decimal,
-        configuration As SpotBotConfiguration) As Boolean
+        configuration As SpotBotConfiguration,
+        Optional closedCandles As IReadOnlyList(Of SpotBotPricePoint) = Nothing) As Boolean
 
         If position Is Nothing OrElse position.EntryPrice <= 0D OrElse price <= 0D Then Return False
+
+        Dim slippagePercent = CalculateSimulationSlippagePercent(configuration, closedCandles)
+        Dim feeRoundTripPercent = Math.Max(0.2D, Math.Max(0D, configuration.SimulationFeeRate) * 200D)
+        Dim executionCostPercent = feeRoundTripPercent + (slippagePercent * 2D)
+        Dim safetyOffsetPercent = Math.Max(0D, configuration.BreakEvenOffsetPercent)
+        Dim minimumProtectedProfitPercent = executionCostPercent + safetyOffsetPercent
 
         If position.GridManaged Then
             EnsureGridLevelsLocked(position, configuration)
             Dim gridChanged = False
             For Each level In position.GridLevels
                 If level Is Nothing OrElse level.Quantity <= 0D OrElse level.EntryPrice <= 0D Then Continue For
-                Dim gridTriggerPrice = level.EntryPrice * (1D + Math.Max(0D, configuration.BreakEvenTriggerPercent) / 100D)
+                Dim gridTriggerPercent = Math.Max(
+                    Math.Max(0D, configuration.BreakEvenTriggerPercent),
+                    minimumProtectedProfitPercent)
+                Dim gridTriggerPrice = level.EntryPrice * (1D + gridTriggerPercent / 100D)
                 If price < gridTriggerPrice Then Continue For
 
                 Dim candidateStop = level.StopPrice
-                If configuration.BreakEvenEnabled Then
-                    Dim offsetPercent = Math.Max(0D, configuration.BreakEvenOffsetPercent)
-                    candidateStop = Math.Max(candidateStop, level.EntryPrice * (1D + offsetPercent / 100D))
+                If configuration.BreakEvenEnabled OrElse configuration.TrailingStopEnabled Then
+                    Dim protectedStop = level.EntryPrice * (1D + minimumProtectedProfitPercent / 100D)
+                    candidateStop = Math.Max(candidateStop, protectedStop)
                 End If
                 If configuration.TrailingStopEnabled AndAlso position.HighestPrice > 0D Then
                     Dim distancePercent = Math.Max(0.01D, configuration.TrailingStopDistancePercent)
@@ -2155,14 +2165,15 @@ Public NotInheritable Class SpotTradeBotEngine
             Return gridChanged
         End If
 
-        Dim triggerPercent = Math.Max(0D, configuration.BreakEvenTriggerPercent)
+        Dim triggerPercent = Math.Max(
+            Math.Max(0D, configuration.BreakEvenTriggerPercent),
+            minimumProtectedProfitPercent)
         Dim triggerPrice = position.EntryPrice * (1D + triggerPercent / 100D)
         If price < triggerPrice Then Return False
 
         Dim changed = False
-        If configuration.BreakEvenEnabled Then
-            Dim offsetPercent = Math.Max(0D, configuration.BreakEvenOffsetPercent)
-            Dim breakEvenPrice = position.EntryPrice * (1D + offsetPercent / 100D)
+        If configuration.BreakEvenEnabled OrElse configuration.TrailingStopEnabled Then
+            Dim breakEvenPrice = position.EntryPrice * (1D + minimumProtectedProfitPercent / 100D)
             If breakEvenPrice > position.StopPrice Then
                 position.StopPrice = breakEvenPrice
                 _simulationLastAction = $"BE {position.Symbol}: stop ajustado para {breakEvenPrice:0.########}"
