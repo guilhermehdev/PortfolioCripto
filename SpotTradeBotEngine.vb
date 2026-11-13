@@ -123,10 +123,33 @@ Public NotInheritable Class SpotTradeBotEngine
     Public ReadOnly Property HasRestoredState As Boolean
         Get
             SyncLock _sync
-                Return _restoredStatePending AndAlso _simulationPositions.Count > 0
+                Return _restoredStatePending AndAlso
+                       (_simulationPositions.Count > 0 OrElse
+                        (_riskBrakeState = SpotBotRiskBrakeState.HardStop AndAlso _activeRunId > 0))
             End SyncLock
         End Get
     End Property
+
+    ''' <summary>
+    ''' Libera manualmente o Handbrake mantendo a carteira, o histórico e a run
+    ''' atuais. O patrimônio atual passa a ser a nova referência de proteção para
+    ''' evitar que a execução seja travada novamente no primeiro tick.
+    ''' </summary>
+    Public Sub ContinueAfterHandbrake()
+        SyncLock _sync
+            If _riskBrakeState <> SpotBotRiskBrakeState.HardStop Then Return
+
+            Dim equity = CurrentRiskBrakeEquityLocked(_configuration)
+            _riskBrakeState = SpotBotRiskBrakeState.Normal
+            _riskBrakeSessionStartEquity = Math.Max(0D, equity)
+            _riskBrakePeakEquity = _riskBrakeSessionStartEquity
+            _riskBrakeConsecutiveLosses = 0
+            _riskBrakePauseUntilUtc = DateTime.MinValue
+            _riskBrakeReason = "Handbrake liberado manualmente; proteção rearmada a partir do patrimônio atual."
+            _simulationLastAction = "HANDBRAKE: execução retomada manualmente."
+            _restoredStatePending = True
+        End SyncLock
+    End Sub
 
     Public ReadOnly Property HasRestoredConfiguration As Boolean
         Get
@@ -1325,8 +1348,13 @@ Public NotInheritable Class SpotTradeBotEngine
                     End If
                 Next
 
-                If candleClosed OrElse completedTrades.Count > 0 OrElse acceptedSignal IsNot Nothing OrElse stopAdjusted Then
-                    SpotTradeBotRepository.UpdateRun(activeRunId, simulationSnapshot, "RUNNING")
+                If candleClosed OrElse completedTrades.Count > 0 OrElse acceptedSignal IsNot Nothing OrElse stopAdjusted OrElse
+                   simulationSnapshot.RiskBrakeState = SpotBotRiskBrakeState.HardStop Then
+                    Dim runStatus = If(
+                        simulationSnapshot.RiskBrakeState = SpotBotRiskBrakeState.HardStop,
+                        "HANDBRAKE",
+                        If(IsRunning, "RUNNING", "PAUSED"))
+                    SpotTradeBotRepository.UpdateRun(activeRunId, simulationSnapshot, runStatus)
                     SpotTradeBotRepository.SaveOpenPositions(activeRunId, GetOpenPositions())
                     SpotTradeBotRepository.SaveGridGuards(activeRunId, GetGridGuardStates())
                 End If
@@ -2334,7 +2362,9 @@ Public NotInheritable Class SpotTradeBotEngine
             _riskBrakeState = SpotBotRiskBrakeState.HardStop
             FinalizeRiskBrakeBlockedEntriesLocked(timestampUtc, configuration)
             _riskBrakeReason = $"limite de perda da sessão atingido ({sessionLossPercent:0.##}%)."
-            _simulationLastAction = "FREIO: " & _riskBrakeReason
+            _simulationLastAction = "HANDBRAKE: " & _riskBrakeReason
+            _running = False
+            _restoredStatePending = True
             Return
         End If
 
@@ -2358,7 +2388,9 @@ Public NotInheritable Class SpotTradeBotEngine
                     _riskBrakeState = SpotBotRiskBrakeState.HardStop
                     FinalizeRiskBrakeBlockedEntriesLocked(timestampUtc, configuration)
                     _riskBrakeReason = $"trava de lucro acionada após devolver {givebackPercent:0.##}% do ganho máximo."
-                    _simulationLastAction = "FREIO: " & _riskBrakeReason
+                    _simulationLastAction = "HANDBRAKE: " & _riskBrakeReason
+                    _running = False
+                    _restoredStatePending = True
                 End If
             End If
         End If
@@ -2520,7 +2552,7 @@ Public NotInheritable Class SpotTradeBotEngine
             CloseSimulationPosition(symbol, closePrice, timestampUtc, position, configuration, "FREIO", completedTrades)
         Next
 
-        _simulationLastAction = "FREIO: posições encerradas; novas entradas bloqueadas."
+        _simulationLastAction = "HANDBRAKE: posições encerradas; execução pausada."
     End Sub
 
     Private Sub CloseSimulationPosition(

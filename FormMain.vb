@@ -1335,7 +1335,7 @@ Public Class FormMain
 
         _botRiskClosePositions = New CheckBox With {
             .Name = "chkSpotBotRiskClosePositions",
-            .Text = "Fechar posições no limite",
+            .Text = "Fechar posições no Handbrake",
             .AutoSize = True,
             .BackColor = Color.FromArgb(30, 30, 30),
             .ForeColor = Color.White,
@@ -1359,7 +1359,7 @@ Public Class FormMain
         ToolTip1.SetToolTip(_botRiskProfitTrigger, "A trava arma quando o patrimônio atingir este ganho.")
         ToolTip1.SetToolTip(_botRiskGiveback, "Percentual do ganho máximo que pode ser devolvido antes do freio.")
         ToolTip1.SetToolTip(_botRiskMaxLosses, "Zero desativa o freio por sequência de perdas.")
-        ToolTip1.SetToolTip(_botRiskClosePositions, "No limite duro, encerra as posições simuladas no preço atual.")
+        ToolTip1.SetToolTip(_botRiskClosePositions, "No Handbrake, encerra as posições simuladas no preço atual.")
         ToolTip1.SetToolTip(_botRiskUseUnrealized, "Usa o patrimônio marcado a mercado, incluindo P/L aberto.")
 
         settingsTabs.TabPages.Add(strategyPage)
@@ -2595,6 +2595,21 @@ BuildSpotBotGrid:
         _dgSpotBotPositions.Visible = True
     End Sub
 
+    Private Sub UpdateSpotBotRunButtons(snapshot As SpotBotSimulationSnapshot)
+        If _botStart Is Nothing OrElse _botStop Is Nothing Then Return
+
+        Dim handbrakePaused = snapshot IsNot Nothing AndAlso
+                              snapshot.RiskBrakeState = SpotBotRiskBrakeState.HardStop AndAlso
+                              Not _spotTradeBot.IsRunning
+        If handbrakePaused Then
+            _botStart.Enabled = True
+            _botStop.Enabled = False
+        Else
+            _botStart.Enabled = Not _spotTradeBot.IsRunning
+            _botStop.Enabled = _spotTradeBot.IsRunning
+        End If
+    End Sub
+
     Private Sub ConfigureSpotBotManualPositionsGrid()
         If _dgSpotBotPositions Is Nothing Then Return
 
@@ -2640,6 +2655,77 @@ BuildSpotBotGrid:
         AddHandler _dgSpotBotPositions.CellContentClick, AddressOf SpotBotPositions_CellContentClick
         AddHandler _dgSpotBotPositions.CellMouseEnter, AddressOf SpotBotPositions_CellMouseEnter
         AddHandler _dgSpotBotPositions.CellMouseLeave, AddressOf SpotBotPositions_CellMouseLeave
+        ConfigureSpotBotToolTips()
+    End Sub
+
+    Private Sub ConfigureSpotBotToolTips()
+        If ToolTip1 Is Nothing Then Return
+
+        ToolTip1.AutoPopDelay = 12000
+        ToolTip1.InitialDelay = 350
+        ToolTip1.ReshowDelay = 150
+        ToolTip1.ShowAlways = True
+
+        SetSpotBotToolTip(Label13, "Define como os sinais das estratégias ativas serão combinados para gerar uma entrada.")
+        SetSpotBotToolTip(Label14, "Quantidade mínima de estratégias que precisam confirmar o mesmo sinal.")
+        SetSpotBotToolTip(Label24, "Timeframe usado para formar os candles da estratégia Bollinger.")
+        SetSpotBotToolTip(Label21, "Fonte do universo de ativos: seleção manual ou ativos com maior volume.")
+        SetSpotBotToolTip(cbSpotBotBollingerMode, "Ativa ou desativa a Base Original Protegida, baseada na Bollinger 25/3.")
+        SetSpotBotToolTip(cbSpotBotCombination, "Regra usada para combinar os sinais das estratégias habilitadas.")
+        SetSpotBotToolTip(cbSpotBotBollingerTimeframe, "Período dos candles usados pela estratégia Bollinger.")
+        SetSpotBotToolTip(cbSpotBotUniverseMode, "Escolhe entre ativos definidos manualmente ou os ativos de maior volume.")
+        SetSpotBotToolTip(btSpotBotUniverse, "Abre a seleção de ativos do universo manual.")
+
+        SetSpotBotToolTip(Label17, "Saldo virtual inicial usado na simulação do tradebot.")
+        SetSpotBotToolTip(Label18, "Percentual do saldo destinado a cada entrada normal.")
+        SetSpotBotToolTip(Label33, "Taxa aplicada em cada execução simulada. O custo de ida e volta é calculado internamente.")
+        SetSpotBotToolTip(Label34, "Alvo percentual padrão para estratégias que não definem um alvo estrutural.")
+        SetSpotBotToolTip(Label35, "Perda percentual padrão para estratégias que não definem um stop estrutural.")
+        SetSpotBotToolTip(Label23, "Número máximo de ativos que podem participar do universo.")
+        SetSpotBotToolTip(Label22, "Volume mínimo negociado em 24 horas para aceitar um ativo.")
+        SetSpotBotToolTip(Label19, "Tempo de espera após uma saída antes de permitir nova entrada no mesmo ativo.")
+        SetSpotBotToolTip(Label20, "Quantidade mínima de negócios em 24 horas para filtrar ativos pouco líquidos.")
+        SetSpotBotToolTip(Label36, "Risco máximo estimado para cada nível do Grid V2 em relação ao saldo inicial.")
+        SetSpotBotToolTip(Label37, "Percentual do saldo reservado e que não pode ser consumido pelo Grid V2.")
+        SetSpotBotToolTip(Label38, "Exposição máxima acumulada por ativo dentro do Grid V2.")
+        SetSpotBotToolTip(Label39, "Quantidade máxima de níveis/lotes que o Grid V2 pode acumular por ativo.")
+        SetSpotBotToolTip(chkSpotBotGridRejection, "Exige toque no nível e confirmação de rejeição antes de abrir um novo lote do Grid V2.")
+
+        SetSpotBotToolTip(chkSpotBotBreakEven, "Move o stop para entrada mais custos quando o lucro mínimo for atingido.")
+        SetSpotBotToolTip(NumericUpDown2, "Gatilho mínimo do Break Even. O motor também respeita taxas, slippage e pequeno ganho.")
+        SetSpotBotToolTip(chkSpotBotTrailing, "Depois da proteção inicial, acompanha o maior preço alcançado e sobe o stop.")
+        SetSpotBotToolTip(NumericUpDown1, "Distância percentual entre o maior preço alcançado e o stop móvel.")
+        SetSpotBotToolTip(Label12, "Percentual relacionado ao gatilho do Break Even.")
+        SetSpotBotToolTip(Label25, "Percentual de distância usado pelo trailing stop.")
+
+        SetSpotBotToolTip(chkSpotBotBtcFlush, "Pausa ou protege novas entradas quando o BTC sofre uma queda rápida com volume anormal.")
+        SetSpotBotToolTip(Label26, "Queda acumulada do BTC usada para detectar um flush de curto prazo.")
+        SetSpotBotToolTip(Label27, "Tempo de pausa das novas entradas após a confirmação do flush do BTC.")
+        SetSpotBotToolTip(Label32, "Multiplicador de volume exigido para confirmar que a queda do BTC é anormal.")
+        SetSpotBotToolTip(Label31, "Unidade do multiplicador de volume usado na proteção de flush.")
+        SetSpotBotToolTip(chkSpotBotBtcDaily, "Usa a queda e a oscilação diária do BTC para bloquear entradas em uma deterioração forte.")
+        SetSpotBotToolTip(Label28, "Queda diária do BTC que ativa a proteção diária.")
+        SetSpotBotToolTip(Label29, "Oscilação máxima diária usada como limite de proteção do BTC.")
+        SetSpotBotToolTip(Label30, "Unidade percentual do limite de oscilação diária.")
+
+        SetSpotBotToolTip(GroupBox4, "Freio de perdas/circuit breaker: limita perdas da sessão, sequência de stops e devolução de lucro.")
+        SetSpotBotToolTip(Label40, "Percentual máximo de perda do patrimônio desde o início da sessão.")
+        SetSpotBotToolTip(Label41, "Ganho necessário para armar a trava de lucro.")
+        SetSpotBotToolTip(Label42, "Percentual do pico de lucro que pode ser devolvido antes de acionar o freio.")
+        SetSpotBotToolTip(Label43, "Quantidade de perdas consecutivas que inicia uma pausa.")
+        SetSpotBotToolTip(Label44, "Duração da pausa após atingir a sequência máxima de perdas.")
+        SetSpotBotToolTip(Label45, "Lucro líquido mínimo exigido antes de permitir novas entradas, quando o filtro está ativo.")
+        SetSpotBotToolTip(chkSpotBotRiskBrakeEnabled, "Liga ou desliga o freio de perdas da sessão.")
+        SetSpotBotToolTip(chkSpotBotRiskProfitLock, "Ativa a trava de lucro e a proteção contra devolução do pico.")
+        SetSpotBotToolTip(chkSpotBotRiskClosePositions, "Encerra posições simuladas quando o Handbrake é acionado.")
+        SetSpotBotToolTip(chkSpotBotRiskUseUnrealized, "Inclui o P/L aberto no cálculo do patrimônio usado pelo freio.")
+        SetSpotBotToolTip(chkSpotBotProfitGateEnabled, "Impede novas entradas quando o resultado líquido mínimo configurado ainda não foi alcançado.")
+    End Sub
+
+    Private Sub SetSpotBotToolTip(control As Control, text As String)
+        If control IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(text) Then
+            ToolTip1.SetToolTip(control, text)
+        End If
     End Sub
 
     Private Sub ConfigureSpotBotEditorReferences(
@@ -2931,7 +3017,7 @@ BuildSpotBotGrid:
         Dim resumePreviousSimulation = False
         If _spotTradeBot.HasRestoredState Then
             Dim answer = MessageBox.Show(
-                "Foi encontrada uma simulação anterior com posições abertas." & Environment.NewLine &
+                "Foi encontrada uma simulação anterior pausada ou com posições abertas." & Environment.NewLine &
                 "Sim = continuar essa simulação; Não = iniciar uma nova; Cancelar = voltar.",
                 "Tradebot",
                 MessageBoxButtons.YesNoCancel,
@@ -2986,6 +3072,10 @@ BuildSpotBotGrid:
             AppendSpotBotLog("Erro carregando histórico do TradeBot: " & ex.Message, Color.IndianRed)
             Return
         End Try
+
+        If resumePreviousSimulation Then
+            _spotTradeBot.ContinueAfterHandbrake()
+        End If
 
         UpdateSpotBotPositionsGrid(_spotTradeBot.GetOpenPositions())
         _spotTradeBot.Start()
@@ -3486,6 +3576,8 @@ BuildSpotBotGrid:
             UpdateSpotBotPositionsGrid(_spotTradeBot.GetOpenPositions())
         End If
 
+        UpdateSpotBotRunButtons(e.Snapshot)
+
         If _botSimulationSummary Is Nothing Then Return
 
         Dim nowUtc = DateTime.UtcNow
@@ -3503,11 +3595,13 @@ BuildSpotBotGrid:
             e.Snapshot.LastAction.StartsWith("BE ", StringComparison.OrdinalIgnoreCase) OrElse
             e.Snapshot.LastAction.StartsWith("TRAIL ", StringComparison.OrdinalIgnoreCase) OrElse
             e.Snapshot.LastAction.StartsWith("FREIO", StringComparison.OrdinalIgnoreCase) OrElse
+            e.Snapshot.LastAction.StartsWith("HANDBRAKE", StringComparison.OrdinalIgnoreCase) OrElse
             e.Snapshot.LastAction.StartsWith("FILTRO", StringComparison.OrdinalIgnoreCase)) Then
             AppendSpotBotLog(
                 e.Snapshot.LastAction,
                 If(e.Snapshot.LastAction.StartsWith("SL ", StringComparison.OrdinalIgnoreCase) OrElse
-                   e.Snapshot.LastAction.StartsWith("FREIO", StringComparison.OrdinalIgnoreCase),
+                   e.Snapshot.LastAction.StartsWith("FREIO", StringComparison.OrdinalIgnoreCase) OrElse
+                   e.Snapshot.LastAction.StartsWith("HANDBRAKE", StringComparison.OrdinalIgnoreCase),
                    Color.IndianRed,
                    Color.Gold))
         End If
@@ -3537,7 +3631,7 @@ BuildSpotBotGrid:
         If snapshot Is Nothing Then Return "-"
         Select Case snapshot.RiskBrakeState
             Case SpotBotRiskBrakeState.HardStop
-                Return "LIMITE"
+                Return "HANDBRAKE"
             Case SpotBotRiskBrakeState.Paused
                 Return $"PAUSA ({snapshot.RiskBrakeConsecutiveLosses})"
             Case SpotBotRiskBrakeState.ProfitLockArmed
