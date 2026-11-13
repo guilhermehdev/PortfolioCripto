@@ -115,6 +115,8 @@ Public Class FormMain
     Private _botRiskClosePositions As CheckBox
     Private _botRiskUseUnrealized As CheckBox
     Private _botPostExitCooldown As NumericUpDown
+    Private _botProfitGateEnabled As CheckBox
+    Private _botMinProfitBeforeEntry As NumericUpDown
     Private _botUniverseMode As ComboBox
     Private _botUniverseMaxAssets As NumericUpDown
     Private _botUniverseMinVolume As NumericUpDown
@@ -2464,6 +2466,14 @@ BuildSpotBotGrid:
         _botRiskPauseMinutes = nudSpotBotRiskPause
         _botRiskClosePositions = chkSpotBotRiskClosePositions
         _botRiskUseUnrealized = chkSpotBotRiskUseUnrealized
+        _botProfitGateEnabled = chkSpotBotProfitGateEnabled
+        _botMinProfitBeforeEntry = nudSpotBotMinProfitBeforeEntry
+        ToolTip1.SetToolTip(
+            _botProfitGateEnabled,
+            "Quando ativo, uma nova posição em outro ativo só é aceita se as posições abertas estiverem acima do lucro líquido mínimo.")
+        ToolTip1.SetToolTip(
+            _botMinProfitBeforeEntry,
+            "Lucro líquido estimado mínimo de cada posição aberta, já descontando taxa de saída e slippage.")
         _botStart = btSpotBotStart
         _botStop = btSpotBotStop
         _botExport = btSpotBotExport
@@ -2544,6 +2554,8 @@ BuildSpotBotGrid:
             _botRiskPauseMinutes.Value = ClampNumeric(_botRiskPauseMinutes, _spotTradeBot.Configuration.RiskBrakePauseMinutes)
             _botRiskClosePositions.Checked = _spotTradeBot.Configuration.RiskBrakeClosePositionsOnHardStop
             _botRiskUseUnrealized.Checked = _spotTradeBot.Configuration.RiskBrakeUseUnrealizedPnl
+            _botProfitGateEnabled.Checked = _spotTradeBot.Configuration.NewPositionProfitGateEnabled
+            _botMinProfitBeforeEntry.Value = ClampNumeric(_botMinProfitBeforeEntry, _spotTradeBot.Configuration.MinimumNetProfitBeforeNewPositionPercent)
             For Each strategyCheck In _botStrategyChecks
                 strategyCheck.Value.Checked =
                     _spotTradeBot.Configuration.EnabledStrategies.Contains(strategyCheck.Key) OrElse
@@ -2903,6 +2915,8 @@ BuildSpotBotGrid:
         _spotTradeBot.Configuration.RiskBrakeClosePositionsOnHardStop = _botRiskClosePositions Is Nothing OrElse _botRiskClosePositions.Checked
         _spotTradeBot.Configuration.RiskBrakeUseUnrealizedPnl = _botRiskUseUnrealized Is Nothing OrElse _botRiskUseUnrealized.Checked
         _spotTradeBot.Configuration.PostExitCooldownMinutes = If(_botPostExitCooldown Is Nothing, 15D, _botPostExitCooldown.Value)
+        _spotTradeBot.Configuration.NewPositionProfitGateEnabled = _botProfitGateEnabled Is Nothing OrElse _botProfitGateEnabled.Checked
+        _spotTradeBot.Configuration.MinimumNetProfitBeforeNewPositionPercent = If(_botMinProfitBeforeEntry Is Nothing, 0.5D, _botMinProfitBeforeEntry.Value)
         _spotTradeBot.Configuration.SimulationOnly = True
 
         _spotTradeBot.Configuration.UniverseMode = If(_botUniverseMode.SelectedIndex = 1,
@@ -2996,6 +3010,8 @@ BuildSpotBotGrid:
         _botRiskClosePositions.Enabled = False
         _botRiskUseUnrealized.Enabled = False
         _botPostExitCooldown.Enabled = False
+        _botProfitGateEnabled.Enabled = False
+        _botMinProfitBeforeEntry.Enabled = False
         _botGridRiskPercent.Enabled = False
         _botGridReservePercent.Enabled = False
         _botGridMaxExposurePercent.Enabled = False
@@ -3044,6 +3060,11 @@ BuildSpotBotGrid:
             Color.LightGray)
         AppendSpotBotLog(
             $"Cooldown pós-saída: {_spotTradeBot.Configuration.PostExitCooldownMinutes:0.##} minuto(s) por ativo.",
+            Color.LightGray)
+        AppendSpotBotLog(
+            $"Filtro de novas posições: {If(_spotTradeBot.Configuration.NewPositionProfitGateEnabled, "ativo", "desligado")}; " &
+            $"exige lucro líquido mínimo de +{_spotTradeBot.Configuration.MinimumNetProfitBeforeNewPositionPercent:0.##}% " &
+            "nas posições abertas; não bloqueia Grid/DCA do mesmo ativo nem saídas.",
             Color.LightGray)
         AppendSpotBotLog(
             $"Proteção flush BTC: {If(_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled, "ativa", "desligada")}; " &
@@ -3122,6 +3143,8 @@ BuildSpotBotGrid:
         _botRiskClosePositions.Enabled = True
         _botRiskUseUnrealized.Enabled = True
         _botPostExitCooldown.Enabled = True
+        _botProfitGateEnabled.Enabled = True
+        _botMinProfitBeforeEntry.Enabled = True
         _botGridRiskPercent.Enabled = True
         _botGridReservePercent.Enabled = True
         _botGridMaxExposurePercent.Enabled = True
@@ -3263,6 +3286,8 @@ BuildSpotBotGrid:
         AppendSpotBotCsvPair(builder, "FreioUltimoInicioPausaUTC", snapshot.RiskBrakeLastPauseStartedUtc)
         AppendSpotBotCsvPair(builder, "FreioUltimoFimPausaUTC", snapshot.RiskBrakeLastPauseEndedUtc)
         AppendSpotBotCsvPair(builder, "CooldownPosSaidaMinutos", state.PostExitCooldownMinutes)
+        AppendSpotBotCsvPair(builder, "FiltroLucroNovaPosicaoAtivo", state.NewPositionProfitGateEnabled)
+        AppendSpotBotCsvPair(builder, "LucroLiquidoMinimoNovaPosicaoPercentual", state.MinimumNetProfitBeforeNewPositionPercent)
         AppendSpotBotCsvPair(builder, "GridV2SuporteMaisProximo", state.GridV2UseNearestSupportStop)
         AppendSpotBotCsvPair(builder, "GridV2BufferSuporteATR", state.GridV2SupportBufferAtr)
         AppendSpotBotCsvPair(builder, "GridV2StopMinimoPercentual", state.GridV2MinimumStopPercent)
@@ -3477,7 +3502,8 @@ BuildSpotBotGrid:
             e.Snapshot.LastAction.StartsWith("SL ", StringComparison.OrdinalIgnoreCase) OrElse
             e.Snapshot.LastAction.StartsWith("BE ", StringComparison.OrdinalIgnoreCase) OrElse
             e.Snapshot.LastAction.StartsWith("TRAIL ", StringComparison.OrdinalIgnoreCase) OrElse
-            e.Snapshot.LastAction.StartsWith("FREIO", StringComparison.OrdinalIgnoreCase)) Then
+            e.Snapshot.LastAction.StartsWith("FREIO", StringComparison.OrdinalIgnoreCase) OrElse
+            e.Snapshot.LastAction.StartsWith("FILTRO", StringComparison.OrdinalIgnoreCase)) Then
             AppendSpotBotLog(
                 e.Snapshot.LastAction,
                 If(e.Snapshot.LastAction.StartsWith("SL ", StringComparison.OrdinalIgnoreCase) OrElse

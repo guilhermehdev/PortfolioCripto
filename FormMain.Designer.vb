@@ -116,6 +116,9 @@ Partial Class FormMain
         lbSpotBotSimulationSummary = New Label()
         rtbSpotBotLog = New RichTextBox()
         GroupBox4 = New GroupBox()
+        chkSpotBotProfitGateEnabled = New CheckBox()
+        nudSpotBotMinProfitBeforeEntry = New NumericUpDown()
+        Label45 = New Label()
         chkSpotBotRiskUseUnrealized = New CheckBox()
         chkSpotBotRiskClosePositions = New CheckBox()
         nudSpotBotRiskPause = New NumericUpDown()
@@ -211,6 +214,7 @@ Partial Class FormMain
         panelDebug.SuspendLayout()
         PanelTradeBot.SuspendLayout()
         GroupBox4.SuspendLayout()
+        CType(nudSpotBotMinProfitBeforeEntry, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotRiskPause, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotRiskMaxLosses, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotRiskGiveback, ComponentModel.ISupportInitialize).BeginInit()
@@ -1238,6 +1242,9 @@ Partial Class FormMain
         ' 
         ' GroupBox4
         ' 
+        GroupBox4.Controls.Add(chkSpotBotProfitGateEnabled)
+        GroupBox4.Controls.Add(nudSpotBotMinProfitBeforeEntry)
+        GroupBox4.Controls.Add(Label45)
         GroupBox4.Controls.Add(chkSpotBotRiskUseUnrealized)
         GroupBox4.Controls.Add(chkSpotBotRiskClosePositions)
         GroupBox4.Controls.Add(nudSpotBotRiskPause)
@@ -1259,6 +1266,41 @@ Partial Class FormMain
         GroupBox4.TabIndex = 39
         GroupBox4.TabStop = False
         GroupBox4.Text = "Circuit breaker"
+        ' 
+        ' chkSpotBotProfitGateEnabled
+        ' 
+        chkSpotBotProfitGateEnabled.AutoSize = True
+        chkSpotBotProfitGateEnabled.Checked = True
+        chkSpotBotProfitGateEnabled.CheckState = CheckState.Checked
+        chkSpotBotProfitGateEnabled.ForeColor = Color.Gold
+        chkSpotBotProfitGateEnabled.Location = New Point(19, 160)
+        chkSpotBotProfitGateEnabled.Name = "chkSpotBotProfitGateEnabled"
+        chkSpotBotProfitGateEnabled.Size = New Size(83, 19)
+        chkSpotBotProfitGateEnabled.TabIndex = 66
+        chkSpotBotProfitGateEnabled.Text = "Filtro lucro"
+        chkSpotBotProfitGateEnabled.UseVisualStyleBackColor = True
+        ' 
+        ' nudSpotBotMinProfitBeforeEntry
+        ' 
+        nudSpotBotMinProfitBeforeEntry.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        nudSpotBotMinProfitBeforeEntry.DecimalPlaces = 2
+        nudSpotBotMinProfitBeforeEntry.ForeColor = Color.Gold
+        nudSpotBotMinProfitBeforeEntry.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
+        nudSpotBotMinProfitBeforeEntry.Location = New Point(200, 159)
+        nudSpotBotMinProfitBeforeEntry.Name = "nudSpotBotMinProfitBeforeEntry"
+        nudSpotBotMinProfitBeforeEntry.Size = New Size(60, 23)
+        nudSpotBotMinProfitBeforeEntry.TabIndex = 65
+        nudSpotBotMinProfitBeforeEntry.Value = New Decimal(New Integer() {50, 0, 0, 131072})
+        ' 
+        ' Label45
+        ' 
+        Label45.AutoSize = True
+        Label45.ForeColor = Color.Cyan
+        Label45.Location = New Point(102, 164)
+        Label45.Name = "Label45"
+        Label45.Size = New Size(92, 15)
+        Label45.TabIndex = 64
+        Label45.Text = "Mín. líquido (%)"
         ' 
         ' chkSpotBotRiskUseUnrealized
         ' 
@@ -1322,7 +1364,7 @@ Partial Class FormMain
         Label43.ForeColor = Color.Cyan
         Label43.Location = New Point(222, 66)
         Label43.Name = "Label43"
-        Label43.Size = New Size(119, 15)
+        Label43.Size = New Size(120, 15)
         Label43.TabIndex = 58
         Label43.Text = "Máx. perdas seguidas"
         ' 
@@ -1376,7 +1418,7 @@ Partial Class FormMain
         chkSpotBotRiskProfitLock.ForeColor = Color.Gold
         chkSpotBotRiskProfitLock.Location = New Point(145, 133)
         chkSpotBotRiskProfitLock.Name = "chkSpotBotRiskProfitLock"
-        chkSpotBotRiskProfitLock.Size = New Size(100, 19)
+        chkSpotBotRiskProfitLock.Size = New Size(99, 19)
         chkSpotBotRiskProfitLock.TabIndex = 53
         chkSpotBotRiskProfitLock.Text = "Trava de lucro"
         chkSpotBotRiskProfitLock.UseVisualStyleBackColor = True
@@ -1399,7 +1441,7 @@ Partial Class FormMain
         Label40.ForeColor = Color.Cyan
         Label40.Location = New Point(19, 66)
         Label40.Name = "Label40"
-        Label40.Size = New Size(83, 15)
+        Label40.Size = New Size(84, 15)
         Label40.TabIndex = 51
         Label40.Text = "Perda máx.(%)"
         ' 
@@ -1622,7 +1664,7 @@ Partial Class FormMain
         Label38.ForeColor = Color.Cyan
         Label38.Location = New Point(447, 100)
         Label38.Name = "Label38"
-        Label38.Size = New Size(80, 15)
+        Label38.Size = New Size(81, 15)
         Label38.TabIndex = 49
         Label38.Text = "Exposição (%)"
         ' 
@@ -1756,7 +1798,7 @@ Partial Class FormMain
         Label23.ForeColor = Color.Cyan
         Label23.Location = New Point(184, 57)
         Label23.Name = "Label23"
-        Label23.Size = New Size(63, 15)
+        Label23.Size = New Size(64, 15)
         Label23.TabIndex = 14
         Label23.Text = "Máx ativos"
         ' 
@@ -1802,7 +1844,7 @@ Partial Class FormMain
         Label34.ForeColor = Color.Cyan
         Label34.Location = New Point(468, 57)
         Label34.Name = "Label34"
-        Label34.Size = New Size(42, 15)
+        Label34.Size = New Size(41, 15)
         Label34.TabIndex = 37
         Label34.Text = "TP (%)"
         ' 
@@ -2056,7 +2098,7 @@ Partial Class FormMain
         chkSpotBotBtcFlush.ForeColor = Color.Gold
         chkSpotBotBtcFlush.Location = New Point(6, 65)
         chkSpotBotBtcFlush.Name = "chkSpotBotBtcFlush"
-        chkSpotBotBtcFlush.Size = New Size(77, 19)
+        chkSpotBotBtcFlush.Size = New Size(76, 19)
         chkSpotBotBtcFlush.TabIndex = 20
         chkSpotBotBtcFlush.Text = "Flush BTC"
         chkSpotBotBtcFlush.UseVisualStyleBackColor = True
@@ -2126,7 +2168,7 @@ Partial Class FormMain
         chkSpotBotTrailing.ForeColor = Color.Gold
         chkSpotBotTrailing.Location = New Point(6, 41)
         chkSpotBotTrailing.Name = "chkSpotBotTrailing"
-        chkSpotBotTrailing.Size = New Size(48, 19)
+        chkSpotBotTrailing.Size = New Size(47, 19)
         chkSpotBotTrailing.TabIndex = 3
         chkSpotBotTrailing.Text = "Trail"
         chkSpotBotTrailing.UseVisualStyleBackColor = True
@@ -2344,6 +2386,7 @@ Partial Class FormMain
         PanelTradeBot.ResumeLayout(False)
         GroupBox4.ResumeLayout(False)
         GroupBox4.PerformLayout()
+        CType(nudSpotBotMinProfitBeforeEntry, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotRiskPause, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotRiskMaxLosses, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotRiskGiveback, ComponentModel.ISupportInitialize).EndInit()
@@ -2545,5 +2588,8 @@ Partial Class FormMain
     Friend WithEvents Label44 As Label
     Friend WithEvents chkSpotBotRiskClosePositions As CheckBox
     Friend WithEvents chkSpotBotRiskUseUnrealized As CheckBox
+    Friend WithEvents chkSpotBotProfitGateEnabled As CheckBox
+    Friend WithEvents nudSpotBotMinProfitBeforeEntry As NumericUpDown
+    Friend WithEvents Label45 As Label
 
 End Class

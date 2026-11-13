@@ -148,6 +148,11 @@ Public NotInheritable Class SpotBotConfiguration
     ' Impede uma nova entrada no mesmo ativo imediatamente após o fechamento.
     ' O bloqueio não atrasa stop, alvo ou fechamento manual; ele só filtra reentradas.
     Public Property PostExitCooldownMinutes As Decimal = 5D
+    ' Permite uma nova posição em outro ativo somente quando as posições
+    ' existentes estiverem com lucro líquido estimado acima do limite.
+    ' Grid/DCA no mesmo ativo e saídas não passam por este filtro.
+    Public Property NewPositionProfitGateEnabled As Boolean = True
+    Public Property MinimumNetProfitBeforeNewPositionPercent As Decimal = 0.5D
     Public Property MaximumPriceHistory As Integer = 250
 
     Public Property EmaFastPeriod As Integer = 9
@@ -473,6 +478,8 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property RiskBrakeClosePositionsOnHardStop As Boolean = True
     Public Property RiskBrakeUseUnrealizedPnl As Boolean = True
     Public Property PostExitCooldownMinutes As Decimal = 5D
+    Public Property NewPositionProfitGateEnabled As Boolean = True
+    Public Property MinimumNetProfitBeforeNewPositionPercent As Decimal = 0.5D
     Public Property GridV2UseNearestSupportStop As Boolean = True
     Public Property GridV2SupportBufferAtr As Decimal = 1D
     Public Property GridV2MinimumStopPercent As Decimal = 1.5D

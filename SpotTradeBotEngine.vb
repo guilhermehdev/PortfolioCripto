@@ -1229,6 +1229,26 @@ Public NotInheritable Class SpotTradeBotEngine
                                       existingPosition IsNot Nothing AndAlso
                                       existingPosition.Quantity > 0D
 
+                    ' O filtro de lucro líquido vale somente para a abertura de
+                    ' uma nova posição em outro ativo. Ele não bloqueia saídas
+                    ' e não interfere nas compras adicionais do Grid/DCA do
+                    ' ativo que já possui posição.
+                    If Not cooldownBlocked AndAlso
+                       signal.Direction = SpotBotSignalDirection.Buy AndAlso
+                       Not hasPosition AndAlso
+                       configurationSnapshot.NewPositionProfitGateEnabled Then
+                        Dim profitGateReason As String = Nothing
+                        If Not AreExistingPositionsProfitableForNewPositionLocked(
+                            normalizedSymbol,
+                            configurationSnapshot,
+                            rsiPriceSnapshot,
+                            profitGateReason) Then
+                            cooldownBlocked = True
+                            _simulationLastAction = $"FILTRO entrada bloqueada {normalizedSymbol}: {profitGateReason}"
+                            Debug.WriteLine($"[FILTRO LUCRO] {_simulationLastAction}")
+                        End If
+                    End If
+
                     ' Uma estratégia não pode alterar a posição criada pela
                     ' outra: Grid V2 administra somente posições Grid V2.
                     If hasPosition AndAlso existingPosition.GridManaged <> signal.GridManaged Then
@@ -1748,6 +1768,67 @@ Public NotInheritable Class SpotTradeBotEngine
         If price <= 0D Then Return 0D
         Dim slippage = CalculateSimulationSlippagePercent(configuration, closedCandles)
         Return price * Math.Max(0D, 1D - slippage / 100D)
+    End Function
+
+    Private Function AreExistingPositionsProfitableForNewPositionLocked(
+        candidateSymbol As String,
+        configuration As SpotBotConfiguration,
+        closedCandles As IReadOnlyList(Of SpotBotPricePoint),
+        ByRef reason As String) As Boolean
+
+        reason = String.Empty
+        If configuration Is Nothing OrElse Not configuration.NewPositionProfitGateEnabled Then Return True
+
+        Dim minimumNetRoi = Math.Max(0D, configuration.MinimumNetProfitBeforeNewPositionPercent)
+        For Each position In _simulationPositions.Values
+            If position Is Nothing OrElse position.Quantity <= 0D Then Continue For
+            If String.Equals(position.Symbol, candidateSymbol, StringComparison.OrdinalIgnoreCase) Then Continue For
+
+            Dim netRoiPercent As Decimal
+            If Not TryCalculateNetPositionRoiPercent(position, configuration, closedCandles, netRoiPercent) Then
+                reason = $"{position.Symbol} sem preço líquido disponível"
+                Return False
+            End If
+
+            If netRoiPercent < minimumNetRoi Then
+                ' Mantém a mensagem estável para não poluir o log a cada tick;
+                ' o valor calculado completo permanece no Debug para diagnóstico.
+                reason = $"{position.Symbol} abaixo de +{minimumNetRoi:0.##}% líquido"
+                Debug.WriteLine(
+                    $"[FILTRO LUCRO] {position.Symbol}: ROI líquido estimado {netRoiPercent:0.##}% " &
+                    $"(mínimo +{minimumNetRoi:0.##}%).")
+                Return False
+            End If
+        Next
+
+        Return True
+    End Function
+
+    Private Shared Function TryCalculateNetPositionRoiPercent(
+        position As SimulationPosition,
+        configuration As SpotBotConfiguration,
+        closedCandles As IReadOnlyList(Of SpotBotPricePoint),
+        ByRef netRoiPercent As Decimal) As Boolean
+
+        netRoiPercent = Decimal.MinValue
+        If position Is Nothing OrElse configuration Is Nothing OrElse
+           position.Quantity <= 0D OrElse position.CostBasis <= 0D OrElse
+           position.LastPrice <= 0D Then
+            Return False
+        End If
+
+        ' CostBasis já contém o custo da entrada e sua taxa. Aqui estimamos a
+        ' saída adversa, descontamos a taxa da saída e comparamos o líquido ao
+        ' capital efetivamente comprometido.
+        Dim estimatedExitPrice = ApplySimulationExitSlippage(position.LastPrice, configuration, closedCandles)
+        If estimatedExitPrice <= 0D Then Return False
+
+        Dim grossExit = position.Quantity * estimatedExitPrice
+        Dim exitFee = grossExit * Math.Max(0D, configuration.SimulationFeeRate)
+        Dim netExit = grossExit - exitFee
+        Dim netPnl = netExit - position.CostBasis
+        netRoiPercent = netPnl / position.CostBasis * 100D
+        Return True
     End Function
 
     Private Shared Function CreateGridLevel(
@@ -2657,6 +2738,8 @@ Public NotInheritable Class SpotTradeBotEngine
         _configuration.RiskBrakeClosePositionsOnHardStop = state.RiskBrakeClosePositionsOnHardStop
         _configuration.RiskBrakeUseUnrealizedPnl = state.RiskBrakeUseUnrealizedPnl
         _configuration.PostExitCooldownMinutes = Math.Max(0D, state.PostExitCooldownMinutes)
+        _configuration.NewPositionProfitGateEnabled = state.NewPositionProfitGateEnabled
+        _configuration.MinimumNetProfitBeforeNewPositionPercent = Math.Max(0D, state.MinimumNetProfitBeforeNewPositionPercent)
         _configuration.GridV2UseNearestSupportStop = state.GridV2UseNearestSupportStop
         _configuration.GridV2SupportBufferAtr = Math.Max(0D, state.GridV2SupportBufferAtr)
         _configuration.GridV2MinimumStopPercent = Math.Max(1.5D, state.GridV2MinimumStopPercent)
@@ -3533,6 +3616,8 @@ Public NotInheritable Class SpotTradeBotEngine
             .RiskBrakeClosePositionsOnHardStop = source.RiskBrakeClosePositionsOnHardStop,
             .RiskBrakeUseUnrealizedPnl = source.RiskBrakeUseUnrealizedPnl,
             .PostExitCooldownMinutes = source.PostExitCooldownMinutes,
+            .NewPositionProfitGateEnabled = source.NewPositionProfitGateEnabled,
+            .MinimumNetProfitBeforeNewPositionPercent = Math.Max(0D, source.MinimumNetProfitBeforeNewPositionPercent),
             .SimulationOnly = source.SimulationOnly,
             .UniverseMode = source.UniverseMode,
             .UniverseMaxAssets = source.UniverseMaxAssets,
