@@ -6115,13 +6115,11 @@ BuildSpotBotGrid:
                 _futuresUserStreamStarted = True
             End If
 
-            If UseGateFutures AndAlso lbDebug IsNot Nothing AndAlso Not lbDebug.Text.Contains("Futures ativos", StringComparison.OrdinalIgnoreCase) Then
+            If UseGateFutures Then
                 Dim activeProviders = New List(Of String)()
                 If UseBinanceFutures Then activeProviders.Add("Binance")
                 If UseGateFutures Then activeProviders.Add("Gate")
-                lbDebug.AppendText(
-                    Environment.NewLine &
-                    $"Futures ativos: {String.Join(" + ", activeProviders)}; posições via API e preços via WebSocket.")
+                Debug.WriteLine($"Futures ativos: {String.Join(" + ", activeProviders)}; posições via API e preços via WebSocket.")
             End If
             Await EnsureFuturesMarketWebSocketAsync()
 
@@ -8459,8 +8457,11 @@ BuildSpotBotGrid:
             Return
         End If
 
-        If Not connected AndAlso lbDebug IsNot Nothing Then
-            lbDebug.AppendText(Environment.NewLine & message)
+        Debug.WriteLine(message)
+        If connected AndAlso lbDebug IsNot Nothing Then
+            lbDebug.Clear()
+            lbDebug.AppendText("Status: Online")
+            changeOnOffColor("Online")
         End If
     End Sub
 
@@ -8470,8 +8471,11 @@ BuildSpotBotGrid:
             BeginInvoke(New Action(Of Boolean, String)(AddressOf GateFuturesWs_ConnectionStateChanged), connected, message)
             Return
         End If
-        If Not connected AndAlso lbDebug IsNot Nothing Then
-            lbDebug.AppendText(Environment.NewLine & message)
+        Debug.WriteLine(message)
+        If connected AndAlso lbDebug IsNot Nothing Then
+            lbDebug.Clear()
+            lbDebug.AppendText("Status: Online")
+            changeOnOffColor("Online")
         End If
     End Sub
 
