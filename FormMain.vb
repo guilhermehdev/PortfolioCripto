@@ -2675,6 +2675,11 @@ BuildSpotBotGrid:
         SetSpotBotToolTip(cbSpotBotBollingerTimeframe, "Período dos candles usados pela estratégia Bollinger.")
         SetSpotBotToolTip(cbSpotBotUniverseMode, "Escolhe entre ativos definidos manualmente ou os ativos de maior volume.")
         SetSpotBotToolTip(btSpotBotUniverse, "Abre a seleção de ativos do universo manual.")
+        SetSpotBotToolTip(chkSpotBotWavePullback, "Pullback EMA34: procura retorno à EMA34 e confirmação da retomada antes da entrada.")
+        SetSpotBotToolTip(chkSpotBotBreakoutRetest, "Breakout + Reteste: aguarda rompimento e reteste confirmado da região rompida.")
+        SetSpotBotToolTip(chkSpotBotMomentumVolume, "Momentum por volume: procura expansão de volume acompanhando um movimento direcional.")
+        SetSpotBotToolTip(chkSpotBotGridAdaptive, "Grid adaptativo V2: monta níveis individualmente em lateralização e usa proteção automática de regime.")
+        SetSpotBotToolTip(chkSpotBotValueZonePullback, "Pullback zona de valor: combina tendência M5, retorno M2 e confirmação de retomada no M1.")
 
         SetSpotBotToolTip(Label17, "Saldo virtual inicial usado na simulação do tradebot.")
         SetSpotBotToolTip(Label18, "Percentual do saldo destinado a cada entrada normal.")
