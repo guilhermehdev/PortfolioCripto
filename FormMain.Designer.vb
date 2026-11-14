@@ -142,6 +142,9 @@ Partial Class FormMain
         Label39 = New Label()
         nudSpotBotGridExposure = New NumericUpDown()
         btSpotBotUniverse = New Button()
+        chkSpotBotUniverseAutoRefresh = New CheckBox()
+        Label46 = New Label()
+        nudSpotBotUniverseRefreshMinutes = New NumericUpDown()
         Label38 = New Label()
         nudSpotBotGridReserve = New NumericUpDown()
         Label37 = New Label()
@@ -230,6 +233,7 @@ Partial Class FormMain
         CType(nudSpotBotPostExitCooldown, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotMinVolume, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotMaxAssets, ComponentModel.ISupportInitialize).BeginInit()
+        CType(nudSpotBotUniverseRefreshMinutes, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotStopLoss, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotTakeProfit, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotFee, ComponentModel.ISupportInitialize).BeginInit()
@@ -1522,6 +1526,9 @@ Partial Class FormMain
         GroupBox1.Controls.Add(Label39)
         GroupBox1.Controls.Add(nudSpotBotGridExposure)
         GroupBox1.Controls.Add(btSpotBotUniverse)
+        GroupBox1.Controls.Add(nudSpotBotUniverseRefreshMinutes)
+        GroupBox1.Controls.Add(Label46)
+        GroupBox1.Controls.Add(chkSpotBotUniverseAutoRefresh)
         GroupBox1.Controls.Add(Label38)
         GroupBox1.Controls.Add(nudSpotBotGridReserve)
         GroupBox1.Controls.Add(Label37)
@@ -1657,7 +1664,43 @@ Partial Class FormMain
         btSpotBotUniverse.TabIndex = 64
         btSpotBotUniverse.Text = "Atualizar"
         btSpotBotUniverse.UseVisualStyleBackColor = False
-        ' 
+        '
+        ' chkSpotBotUniverseAutoRefresh
+        '
+        chkSpotBotUniverseAutoRefresh.AutoSize = True
+        chkSpotBotUniverseAutoRefresh.Checked = True
+        chkSpotBotUniverseAutoRefresh.CheckState = CheckState.Checked
+        chkSpotBotUniverseAutoRefresh.ForeColor = Color.Gold
+        chkSpotBotUniverseAutoRefresh.Location = New Point(580, 164)
+        chkSpotBotUniverseAutoRefresh.Name = "chkSpotBotUniverseAutoRefresh"
+        chkSpotBotUniverseAutoRefresh.Size = New Size(72, 19)
+        chkSpotBotUniverseAutoRefresh.TabIndex = 67
+        chkSpotBotUniverseAutoRefresh.Text = "Auto lista"
+        chkSpotBotUniverseAutoRefresh.UseVisualStyleBackColor = True
+        '
+        ' Label46
+        '
+        Label46.AutoSize = True
+        Label46.ForeColor = Color.Cyan
+        Label46.Location = New Point(652, 146)
+        Label46.Name = "Label46"
+        Label46.Size = New Size(72, 15)
+        Label46.TabIndex = 68
+        Label46.Text = "Intervalo (min)"
+        '
+        ' nudSpotBotUniverseRefreshMinutes
+        '
+        nudSpotBotUniverseRefreshMinutes.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        nudSpotBotUniverseRefreshMinutes.ForeColor = Color.Gold
+        nudSpotBotUniverseRefreshMinutes.Increment = New Decimal(New Integer() {5, 0, 0, 0})
+        nudSpotBotUniverseRefreshMinutes.Location = New Point(680, 164)
+        nudSpotBotUniverseRefreshMinutes.Maximum = New Decimal(New Integer() {1440, 0, 0, 0})
+        nudSpotBotUniverseRefreshMinutes.Minimum = New Decimal(New Integer() {5, 0, 0, 0})
+        nudSpotBotUniverseRefreshMinutes.Name = "nudSpotBotUniverseRefreshMinutes"
+        nudSpotBotUniverseRefreshMinutes.Size = New Size(63, 23)
+        nudSpotBotUniverseRefreshMinutes.TabIndex = 69
+        nudSpotBotUniverseRefreshMinutes.Value = New Decimal(New Integer() {30, 0, 0, 0})
+        '
         ' Label38
         ' 
         Label38.AutoSize = True
@@ -2403,6 +2446,7 @@ Partial Class FormMain
         CType(nudSpotBotPostExitCooldown, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotMinVolume, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotMaxAssets, ComponentModel.ISupportInitialize).EndInit()
+        CType(nudSpotBotUniverseRefreshMinutes, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotStopLoss, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotTakeProfit, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotFee, ComponentModel.ISupportInitialize).EndInit()
@@ -2500,6 +2544,9 @@ Partial Class FormMain
     Friend WithEvents btTradebot As Button
     Friend WithEvents PanelTradeBot As Panel
     Friend WithEvents btSpotBotUniverse As Button
+    Friend WithEvents chkSpotBotUniverseAutoRefresh As CheckBox
+    Friend WithEvents Label46 As Label
+    Friend WithEvents nudSpotBotUniverseRefreshMinutes As NumericUpDown
     Friend WithEvents btSpotBotStart As Button
     Friend WithEvents btSpotBotStop As Button
     Friend WithEvents btSpotBotExport As Button

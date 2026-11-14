@@ -121,6 +121,8 @@ Public Class FormMain
     Private _botUniverseMaxAssets As NumericUpDown
     Private _botUniverseMinVolume As NumericUpDown
     Private _botUniverseMinTrades As NumericUpDown
+    Private _botUniverseAutoRefresh As CheckBox
+    Private _botUniverseRefreshMinutes As NumericUpDown
     Private _botGridRiskPercent As NumericUpDown
     Private _botGridReservePercent As NumericUpDown
     Private _botGridMaxExposurePercent As NumericUpDown
@@ -144,6 +146,9 @@ Public Class FormMain
     Private ReadOnly _botStrategyChecks As New Dictionary(Of SpotBotStrategyKind, CheckBox)()
     Private _lastBotSummaryUpdateUtc As DateTime
     Private _lastBotSimulationAction As String = String.Empty
+    Private _spotBotUniverseRefreshTimer As System.Windows.Forms.Timer
+    Private _spotBotUniverseRefreshInProgress As Boolean
+    Private _spotBotUniverseNextRefreshUtc As DateTime = DateTime.MinValue
     Private _cbDcaSymbol As ComboBox
     Private _cbDcaExchange As ComboBox
     Private _dcaCashRefreshRunning As Boolean
@@ -2145,6 +2150,7 @@ BuildSpotBotGrid:
 
     Private Sub SpotBotUniverseModeChanged(sender As Object, e As EventArgs)
         UpdateSpotBotUniverseButtonText()
+        UpdateSpotBotUniverseRefreshTimerState()
     End Sub
 
     Private Sub UpdateSpotBotUniverseButtonText()
@@ -2227,6 +2233,68 @@ BuildSpotBotGrid:
         symbols.Add(symbol)
     End Sub
 
+    Private Async Function LoadTopVolumeSpotBotUniverseAsync() As Task(Of List(Of String))
+        Dim maxAssets = If(_botUniverseMaxAssets Is Nothing, 20, CInt(_botUniverseMaxAssets.Value))
+        Dim minimumVolume = If(_botUniverseMinVolume Is Nothing, 1000000D, _botUniverseMinVolume.Value)
+        Dim minimumTrades = If(_botUniverseMinTrades Is Nothing, 1000, CInt(_botUniverseMinTrades.Value))
+        Dim symbols = Await B.BINANCE_GetTopSpotSymbolsByVolumeAsync(
+            maxAssets,
+            minimumVolume,
+            minimumTrades)
+
+        Return NormalizeSpotBotUniverseSymbols(symbols, maxAssets)
+    End Function
+
+    Private Function NormalizeSpotBotUniverseSymbols(
+        symbols As IEnumerable(Of String),
+        maxAssets As Integer) As List(Of String)
+
+        Return If(symbols, Enumerable.Empty(Of String)()).
+            Select(Function(item) GetSpotBaseAsset(item)).
+            Where(Function(item) Not String.IsNullOrWhiteSpace(item) AndAlso Not Cjson.stablecoins.Contains(item)).
+            Distinct(StringComparer.OrdinalIgnoreCase).
+            Take(Math.Max(1, maxAssets)).
+            ToList()
+    End Function
+
+    Private Function GetSpotBotUniverseRefreshMinutes() As Integer
+        If _botUniverseRefreshMinutes Is Nothing Then Return 30
+        Return Math.Max(5, Math.Min(1440, CInt(_botUniverseRefreshMinutes.Value)))
+    End Function
+
+    Private Sub ApplySpotBotUniverse(
+        symbols As IEnumerable(Of String),
+        mode As SpotBotUniverseMode,
+        maxAssets As Integer,
+        minimumVolume As Decimal,
+        minimumTrades As Integer)
+
+        Dim normalized = NormalizeSpotBotUniverseSymbols(symbols, maxAssets)
+        Dim autoRefreshEnabled = _botUniverseAutoRefresh Is Nothing OrElse _botUniverseAutoRefresh.Checked
+        Dim refreshMinutes = GetSpotBotUniverseRefreshMinutes()
+
+        PortfolioRepository.SaveSpotBotUniverseSettings(New SpotBotUniverseSettings With {
+            .Mode = mode,
+            .MaxAssets = maxAssets,
+            .MinimumQuoteVolume = minimumVolume,
+            .MinimumTrades24h = minimumTrades,
+            .AutoRefreshEnabled = autoRefreshEnabled,
+            .RefreshMinutes = refreshMinutes
+        })
+
+        _spotTradeBot.Configuration.UniverseMode = mode
+        _spotTradeBot.Configuration.UniverseMaxAssets = maxAssets
+        _spotTradeBot.Configuration.UniverseMinimumQuoteVolume = minimumVolume
+        _spotTradeBot.Configuration.UniverseMinimumTrades24h = minimumTrades
+        _spotTradeBot.Configuration.ManualUniverseSymbols.Clear()
+        For Each symbol In normalized
+            _spotTradeBot.Configuration.ManualUniverseSymbols.Add(symbol)
+        Next
+
+        _spotBotUniverseSymbols.Clear()
+        _spotBotUniverseSymbols.AddRange(normalized)
+    End Sub
+
     Private Async Function ResolveSpotBotUniverseAsync() As Task(Of List(Of String))
         Dim mode = If(_botUniverseMode IsNot Nothing AndAlso _botUniverseMode.SelectedIndex = 1,
                       SpotBotUniverseMode.TopVolume,
@@ -2237,7 +2305,7 @@ BuildSpotBotGrid:
         Dim symbols As New List(Of String)()
 
         If mode = SpotBotUniverseMode.TopVolume Then
-            symbols = Await B.BINANCE_GetTopSpotSymbolsByVolumeAsync(maxAssets, minimumVolume, minimumTrades)
+            symbols = Await LoadTopVolumeSpotBotUniverseAsync()
         Else
             symbols = PortfolioRepository.GetSpotBotManualUniverseSymbols()
             If symbols.Count = 0 Then symbols = GetManualSpotBotUniverseCandidates()
@@ -2250,33 +2318,120 @@ BuildSpotBotGrid:
             End If
         End If
 
-        symbols = symbols.
-            Select(Function(item) GetSpotBaseAsset(item)).
-            Where(Function(item) Not String.IsNullOrWhiteSpace(item) AndAlso Not Cjson.stablecoins.Contains(item)).
-            Distinct(StringComparer.OrdinalIgnoreCase).
-            Take(Math.Max(1, maxAssets)).
-            ToList()
-
-        PortfolioRepository.SaveSpotBotUniverseSettings(New SpotBotUniverseSettings With {
-            .Mode = mode,
-            .MaxAssets = maxAssets,
-            .MinimumQuoteVolume = minimumVolume,
-            .MinimumTrades24h = minimumTrades
-        })
-
-        _spotTradeBot.Configuration.UniverseMode = mode
-        _spotTradeBot.Configuration.UniverseMaxAssets = maxAssets
-        _spotTradeBot.Configuration.UniverseMinimumQuoteVolume = minimumVolume
-        _spotTradeBot.Configuration.UniverseMinimumTrades24h = minimumTrades
-        _spotTradeBot.Configuration.ManualUniverseSymbols.Clear()
-        For Each symbol In symbols
-            _spotTradeBot.Configuration.ManualUniverseSymbols.Add(symbol)
-        Next
-
-        _spotBotUniverseSymbols.Clear()
-        _spotBotUniverseSymbols.AddRange(symbols)
-        Return symbols
+        symbols = NormalizeSpotBotUniverseSymbols(symbols, maxAssets)
+        ApplySpotBotUniverse(symbols, mode, maxAssets, minimumVolume, minimumTrades)
+        Return _spotBotUniverseSymbols.ToList()
     End Function
+
+    Private Sub UpdateSpotBotUniverseRefreshTimerState()
+        If _spotBotUniverseRefreshTimer Is Nothing Then Return
+
+        If Not _spotTradeBot.IsRunning OrElse
+           _botUniverseMode Is Nothing OrElse
+           _botUniverseMode.SelectedIndex <> 1 OrElse
+           _botUniverseAutoRefresh Is Nothing OrElse
+           Not _botUniverseAutoRefresh.Checked Then
+            _spotBotUniverseRefreshTimer.Stop()
+            _spotBotUniverseNextRefreshUtc = DateTime.MinValue
+            Return
+        End If
+
+        _spotBotUniverseNextRefreshUtc = DateTime.UtcNow.AddMinutes(GetSpotBotUniverseRefreshMinutes())
+        _spotBotUniverseRefreshTimer.Start()
+    End Sub
+
+    Private Sub SpotBotUniverseAutoRefreshChanged(sender As Object, e As EventArgs)
+        UpdateSpotBotUniverseRefreshTimerState()
+    End Sub
+
+    Private Sub SpotBotUniverseRefreshMinutesChanged(sender As Object, e As EventArgs)
+        If _spotTradeBot.IsRunning Then
+            UpdateSpotBotUniverseRefreshTimerState()
+        End If
+    End Sub
+
+    Private Async Sub SpotBotUniverseRefreshTimer_Tick(sender As Object, e As EventArgs)
+        If _spotBotUniverseRefreshInProgress OrElse
+           Not _spotTradeBot.IsRunning OrElse
+           _botUniverseMode Is Nothing OrElse
+           _botUniverseMode.SelectedIndex <> 1 OrElse
+           _botUniverseAutoRefresh Is Nothing OrElse
+           Not _botUniverseAutoRefresh.Checked Then
+            Return
+        End If
+
+        If DateTime.UtcNow < _spotBotUniverseNextRefreshUtc Then Return
+        _spotBotUniverseNextRefreshUtc = DateTime.UtcNow.AddMinutes(GetSpotBotUniverseRefreshMinutes())
+        _spotBotUniverseRefreshInProgress = True
+
+        Try
+            Dim previousSymbols = _spotBotUniverseSymbols.ToList()
+            Dim refreshedSymbols = Await LoadTopVolumeSpotBotUniverseAsync()
+            If Not _spotTradeBot.IsRunning Then Return
+
+            If refreshedSymbols.Count = 0 Then
+                AppendSpotBotLog(
+                    "Atualização automática ignorada: nenhum ativo atende aos filtros atuais. A lista anterior foi mantida.",
+                    Color.Gold)
+                Return
+            End If
+
+            Dim addedSymbols = refreshedSymbols.Except(previousSymbols, StringComparer.OrdinalIgnoreCase).ToList()
+
+            If addedSymbols.Count > 0 Then
+                Try
+                    Dim warmup = Await _spotTradeBot.WarmupHistoricalDataAsync(
+                        addedSymbols,
+                        AddressOf LoadSpotBotHistoricalCandlesAsync,
+                        allowRunning:=True)
+
+                    If warmup.FailedSymbols.Count > 0 Then
+                        refreshedSymbols = refreshedSymbols.
+                            Where(Function(symbol) Not warmup.FailedSymbols.Contains(symbol, StringComparer.OrdinalIgnoreCase)).
+                            ToList()
+                        AppendSpotBotLog(
+                            "Ativos sem histórico e não adicionados: " &
+                            String.Join(", ", warmup.FailedSymbols.Where(Function(symbol) addedSymbols.Contains(symbol, StringComparer.OrdinalIgnoreCase))),
+                            Color.Gold)
+                    End If
+                Catch ex As Exception
+                    AppendSpotBotLog(
+                        "Atualização automática ignorada: não foi possível carregar o histórico dos novos ativos. " & ex.Message,
+                        Color.Gold)
+                    Return
+                End Try
+            End If
+
+            If Not _spotTradeBot.IsRunning Then Return
+            ApplySpotBotUniverse(
+                refreshedSymbols,
+                SpotBotUniverseMode.TopVolume,
+                CInt(_botUniverseMaxAssets.Value),
+                _botUniverseMinVolume.Value,
+                CInt(_botUniverseMinTrades.Value))
+
+            Dim appliedAddedSymbols = refreshedSymbols.Except(previousSymbols, StringComparer.OrdinalIgnoreCase).ToList()
+            Dim appliedRemovedSymbols = previousSymbols.Except(refreshedSymbols, StringComparer.OrdinalIgnoreCase).ToList()
+
+            If appliedAddedSymbols.Count = 0 AndAlso appliedRemovedSymbols.Count = 0 Then
+                AppendSpotBotLog(
+                    $"Checagem automática do universo concluída: sem alterações ({refreshedSymbols.Count} ativo(s)).",
+                    Color.LightGray)
+                Return
+            End If
+
+            Await StartBinanceWebSocket()
+            AppendSpotBotLog(
+                $"Universo atualizado automaticamente: {refreshedSymbols.Count} ativo(s), " &
+                $"+{appliedAddedSymbols.Count} novo(s), -{appliedRemovedSymbols.Count} removido(s). " &
+                "Posições abertas continuam sendo monitoradas.",
+                Color.LightGreen)
+        Catch ex As Exception
+            AppendSpotBotLog("Erro na atualização automática do universo: " & ex.Message, Color.IndianRed)
+        Finally
+            _spotBotUniverseRefreshInProgress = False
+        End Try
+    End Sub
 
     Private Sub AddSpotBotPositionColumn(name As String, headerText As String)
         _dgSpotBotPositions.Columns.Add(New DataGridViewTextBoxColumn With {
@@ -2439,6 +2594,8 @@ BuildSpotBotGrid:
         _botStopLoss = nudSpotBotStopLoss
         _botUniverseMaxAssets = nudSpotBotMaxAssets
         _botUniverseMinVolume = nudSpotBotMinVolume
+        _botUniverseAutoRefresh = chkSpotBotUniverseAutoRefresh
+        _botUniverseRefreshMinutes = nudSpotBotUniverseRefreshMinutes
         _botBreakEvenEnabled = chkSpotBotBreakEven
         _botBreakEvenTrigger = NumericUpDown2
         _botTrailingEnabled = chkSpotBotTrailing
@@ -2520,6 +2677,8 @@ BuildSpotBotGrid:
         _botUniverseMaxAssets.Value = ClampNumeric(_botUniverseMaxAssets, universeSettings.MaxAssets)
         _botUniverseMinVolume.Value = ClampNumeric(_botUniverseMinVolume, universeSettings.MinimumQuoteVolume)
         _botUniverseMinTrades.Value = ClampNumeric(_botUniverseMinTrades, universeSettings.MinimumTrades24h)
+        _botUniverseAutoRefresh.Checked = universeSettings.AutoRefreshEnabled
+        _botUniverseRefreshMinutes.Value = ClampNumeric(_botUniverseRefreshMinutes, universeSettings.RefreshMinutes)
 
         If _spotTradeBot.HasRestoredConfiguration Then
             Dim restoredSnapshot = _spotTradeBot.GetSimulationSnapshot()
@@ -2593,6 +2752,16 @@ BuildSpotBotGrid:
         _botLog.ScrollBars = RichTextBoxScrollBars.Vertical
         _botLog.Visible = True
         _dgSpotBotPositions.Visible = True
+
+        If _spotBotUniverseRefreshTimer Is Nothing Then
+            _spotBotUniverseRefreshTimer = New System.Windows.Forms.Timer With {
+                .Interval = 60 * 1000
+            }
+            AddHandler _spotBotUniverseRefreshTimer.Tick, AddressOf SpotBotUniverseRefreshTimer_Tick
+        End If
+        AddHandler _botUniverseAutoRefresh.CheckedChanged, AddressOf SpotBotUniverseAutoRefreshChanged
+        AddHandler _botUniverseRefreshMinutes.ValueChanged, AddressOf SpotBotUniverseRefreshMinutesChanged
+        UpdateSpotBotUniverseRefreshTimerState()
     End Sub
 
     Private Sub UpdateSpotBotRunButtons(snapshot As SpotBotSimulationSnapshot)
@@ -3088,6 +3257,8 @@ BuildSpotBotGrid:
         _botUniverseMaxAssets.Enabled = False
         _botUniverseMinVolume.Enabled = False
         _botUniverseMinTrades.Enabled = False
+        _botUniverseAutoRefresh.Enabled = False
+        _botUniverseRefreshMinutes.Enabled = False
         _botUniverseButton.Enabled = False
         _botTakeProfit.Enabled = False
         _botStopLoss.Enabled = False
@@ -3120,6 +3291,7 @@ BuildSpotBotGrid:
         _botBtcDailyDrawdownPercent.Enabled = False
         _botBtcDailyEnabled.Enabled = False
         Await StartBinanceWebSocket()
+        UpdateSpotBotUniverseRefreshTimerState()
         _botStart.Enabled = False
         _botStop.Enabled = True
         _lastBotSimulationAction = String.Empty
@@ -3138,6 +3310,14 @@ BuildSpotBotGrid:
             $"Timeframe: {If(_spotTradeBot.Configuration.BollingerCandleMinutes = 240, "4 horas", "diário")}.",
             Color.LightGray)
         AppendSpotBotLog($"Universo: {universe.Count} ativo(s) ({If(_spotTradeBot.Configuration.UniverseMode = SpotBotUniverseMode.TopVolume, "Top volume", "Manual")}).", Color.LightGray)
+        If _spotTradeBot.Configuration.UniverseMode = SpotBotUniverseMode.TopVolume Then
+            AppendSpotBotLog(
+                $"Atualização automática do universo: {If(_botUniverseAutoRefresh.Checked, "ativa", "desligada")}" &
+                If(_botUniverseAutoRefresh.Checked,
+                   $" a cada {GetSpotBotUniverseRefreshMinutes()} minuto(s).",
+                   "."),
+                Color.LightGray)
+        End If
         AppendSpotBotLog(
             $"Liquidez mínima: {_spotTradeBot.Configuration.UniverseMinimumQuoteVolume:0} USDT de volume e " &
             $"{_spotTradeBot.Configuration.UniverseMinimumTrades24h:0} negócios em 24h.",
@@ -3214,6 +3394,10 @@ BuildSpotBotGrid:
     End Sub
 
     Private Sub SpotBotStop_Click(sender As Object, e As EventArgs)
+        If _spotBotUniverseRefreshTimer IsNot Nothing Then
+            _spotBotUniverseRefreshTimer.Stop()
+        End If
+        _spotBotUniverseNextRefreshUtc = DateTime.MinValue
         _spotTradeBot.Stop()
         _botStart.Enabled = True
         _botStop.Enabled = False
@@ -3221,6 +3405,8 @@ BuildSpotBotGrid:
         _botUniverseMaxAssets.Enabled = True
         _botUniverseMinVolume.Enabled = True
         _botUniverseMinTrades.Enabled = True
+        _botUniverseAutoRefresh.Enabled = True
+        _botUniverseRefreshMinutes.Enabled = True
         _botUniverseButton.Enabled = True
         _botTakeProfit.Enabled = True
         _botStopLoss.Enabled = True
@@ -4442,6 +4628,15 @@ BuildSpotBotGrid:
                 End If
             Next
 
+            ' Posições abertas continuam assinadas mesmo quando o ativo deixa
+            ' de atender aos filtros do Top volume.
+            For Each openPosition In _spotTradeBot.GetOpenPositions()
+                If openPosition IsNot Nothing AndAlso
+                   Not String.IsNullOrWhiteSpace(openPosition.Symbol) Then
+                    symbols.Add(openPosition.Symbol.Trim().ToUpperInvariant())
+                End If
+            Next
+
             For Each dcaPlan In _spotDca.GetPlans()
                 If dcaPlan.Enabled AndAlso
                    Not String.Equals(dcaPlan.Exchange, "GATE.IO", StringComparison.OrdinalIgnoreCase) AndAlso
@@ -5045,11 +5240,18 @@ BuildSpotBotGrid:
     Private Function IsSpotBotUniverseSymbol(symbol As String) As Boolean
         Dim baseSymbol = GetSpotBaseAsset(symbol)
         If String.IsNullOrWhiteSpace(baseSymbol) Then Return False
-        Return _spotBotUniverseSymbols.Any(
+        If _spotBotUniverseSymbols.Any(
             Function(item) String.Equals(
                 GetSpotBaseAsset(item),
                 baseSymbol,
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase)) Then
+            Return True
+        End If
+
+        ' Um ativo removido do Top volume não pode deixar de receber preço
+        ' enquanto ainda houver posição aberta para que TP, SL e trailing
+        ' continuem sendo processados.
+        Return _spotTradeBot.HasOpenPosition(baseSymbol)
     End Function
 
     Private Sub dgPortfolio_MouseLeave(sender As Object, e As EventArgs) Handles dgPortfolio.MouseLeave
@@ -9251,6 +9453,10 @@ BuildSpotBotGrid:
     Private Async Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
 
         Try
+            If _spotBotUniverseRefreshTimer IsNot Nothing Then
+                _spotBotUniverseRefreshTimer.Stop()
+            End If
+            _spotBotUniverseNextRefreshUtc = DateTime.MinValue
             _spotTradeBot.Stop()
             Await _binanceWs.StopAsync()
             Await _gateWs.StopAsync()

@@ -106,13 +106,18 @@ Public NotInheritable Class PortfolioRepository
                     "MaxAssets INTEGER NOT NULL DEFAULT 20, " &
                     "MinimumQuoteVolume REAL NOT NULL DEFAULT 1000000, " &
                     "MinimumTrades24h INTEGER NOT NULL DEFAULT 1000, " &
+                    "AutoRefreshEnabled INTEGER NOT NULL DEFAULT 1, " &
+                    "RefreshMinutes INTEGER NOT NULL DEFAULT 30, " &
                     "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                     ");"
                 command.ExecuteNonQuery()
                 EnsureColumn(connection, "SpotBotUniverseSettings", "MinimumTrades24h", "INTEGER NOT NULL DEFAULT 1000")
+                EnsureColumn(connection, "SpotBotUniverseSettings", "AutoRefreshEnabled", "INTEGER NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotUniverseSettings", "RefreshMinutes", "INTEGER NOT NULL DEFAULT 30")
                 command.CommandText =
-                    "INSERT OR IGNORE INTO SpotBotUniverseSettings(Id, Mode, MaxAssets, MinimumQuoteVolume, MinimumTrades24h) " &
-                    "VALUES(1, 0, 20, 1000000, 1000);"
+                    "INSERT OR IGNORE INTO SpotBotUniverseSettings(" &
+                    "Id, Mode, MaxAssets, MinimumQuoteVolume, MinimumTrades24h, AutoRefreshEnabled, RefreshMinutes) " &
+                    "VALUES(1, 0, 20, 1000000, 1000, 1, 30);"
                 command.ExecuteNonQuery()
             End Using
 
@@ -252,7 +257,7 @@ Public NotInheritable Class PortfolioRepository
             connection.Open()
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
-                    "SELECT Mode, MaxAssets, MinimumQuoteVolume, MinimumTrades24h " &
+                    "SELECT Mode, MaxAssets, MinimumQuoteVolume, MinimumTrades24h, AutoRefreshEnabled, RefreshMinutes " &
                     "FROM SpotBotUniverseSettings WHERE Id = 1;"
                 Using reader = command.ExecuteReader()
                     If reader.Read() Then
@@ -264,6 +269,8 @@ Public NotInheritable Class PortfolioRepository
                         settings.MaxAssets = Math.Max(1, Math.Min(500, If(reader.IsDBNull(1), 20, reader.GetInt32(1))))
                         settings.MinimumQuoteVolume = Math.Max(0D, If(reader.IsDBNull(2), 1000000D, Convert.ToDecimal(reader.GetDouble(2), CultureInfo.InvariantCulture)))
                         settings.MinimumTrades24h = Math.Max(0, If(reader.IsDBNull(3), 1000, reader.GetInt32(3)))
+                        settings.AutoRefreshEnabled = If(reader.IsDBNull(4), True, reader.GetInt32(4) <> 0)
+                        settings.RefreshMinutes = Math.Max(5, Math.Min(1440, If(reader.IsDBNull(5), 30, reader.GetInt32(5))))
                     End If
                 End Using
             End Using
@@ -280,16 +287,20 @@ Public NotInheritable Class PortfolioRepository
             connection.Open()
             Using command As SqliteCommand = connection.CreateCommand()
                 command.CommandText =
-                    "INSERT INTO SpotBotUniverseSettings(Id, Mode, MaxAssets, MinimumQuoteVolume, MinimumTrades24h, UpdatedAt) " &
-                    "VALUES(1, $mode, $maxAssets, $minimumQuoteVolume, $minimumTrades24h, CURRENT_TIMESTAMP) " &
+                    "INSERT INTO SpotBotUniverseSettings(" &
+                    "Id, Mode, MaxAssets, MinimumQuoteVolume, MinimumTrades24h, AutoRefreshEnabled, RefreshMinutes, UpdatedAt) " &
+                    "VALUES(1, $mode, $maxAssets, $minimumQuoteVolume, $minimumTrades24h, $autoRefreshEnabled, $refreshMinutes, CURRENT_TIMESTAMP) " &
                     "ON CONFLICT(Id) DO UPDATE SET Mode = excluded.Mode, MaxAssets = excluded.MaxAssets, " &
                     "MinimumQuoteVolume = excluded.MinimumQuoteVolume, MinimumTrades24h = excluded.MinimumTrades24h, " &
+                    "AutoRefreshEnabled = excluded.AutoRefreshEnabled, RefreshMinutes = excluded.RefreshMinutes, " &
                     "UpdatedAt = CURRENT_TIMESTAMP;"
                 command.Parameters.AddWithValue("$mode", CInt(settings.Mode))
                 command.Parameters.AddWithValue("$maxAssets", Math.Max(1, Math.Min(500, settings.MaxAssets)))
                 Dim volumeParameter = command.Parameters.Add("$minimumQuoteVolume", SqliteType.Real)
                 volumeParameter.Value = Convert.ToDouble(Math.Max(0D, settings.MinimumQuoteVolume), CultureInfo.InvariantCulture)
                 command.Parameters.AddWithValue("$minimumTrades24h", Math.Max(0, settings.MinimumTrades24h))
+                command.Parameters.AddWithValue("$autoRefreshEnabled", If(settings.AutoRefreshEnabled, 1, 0))
+                command.Parameters.AddWithValue("$refreshMinutes", Math.Max(5, Math.Min(1440, settings.RefreshMinutes)))
                 command.ExecuteNonQuery()
             End Using
         End Using

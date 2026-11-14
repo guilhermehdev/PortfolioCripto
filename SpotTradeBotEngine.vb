@@ -341,7 +341,8 @@ Public NotInheritable Class SpotTradeBotEngine
 
     Public Async Function WarmupHistoricalDataAsync(
         symbols As IEnumerable(Of String),
-        loader As Func(Of String, String, Integer, Task(Of List(Of DcaCandle)))) As Task(Of SpotBotWarmupSummary)
+        loader As Func(Of String, String, Integer, Task(Of List(Of DcaCandle))),
+        Optional allowRunning As Boolean = False) As Task(Of SpotBotWarmupSummary)
 
         If loader Is Nothing Then Throw New ArgumentNullException(NameOf(loader))
 
@@ -358,7 +359,7 @@ Public NotInheritable Class SpotTradeBotEngine
 
         Dim configurationSnapshot As SpotBotConfiguration
         SyncLock _sync
-            If _running Then
+            If _running AndAlso Not allowRunning Then
                 Throw New InvalidOperationException("O histórico do TradeBot só pode ser aquecido antes de iniciar a simulação.")
             End If
 
@@ -3408,6 +3409,18 @@ Public NotInheritable Class SpotTradeBotEngine
                        End Function).
                 OrderBy(Function(position) position.Symbol, StringComparer.OrdinalIgnoreCase).
                 ToList()
+        End SyncLock
+    End Function
+
+    Public Function HasOpenPosition(symbol As String) As Boolean
+        Dim normalizedSymbol = NormalizeSymbol(symbol)
+        If String.IsNullOrWhiteSpace(normalizedSymbol) Then Return False
+
+        SyncLock _sync
+            Dim position As SimulationPosition = Nothing
+            Return _simulationPositions.TryGetValue(normalizedSymbol, position) AndAlso
+                   position IsNot Nothing AndAlso
+                   position.Quantity > 0D
         End SyncLock
     End Function
 

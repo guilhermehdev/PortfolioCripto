@@ -316,6 +316,8 @@ Public NotInheritable Class SpotBotUniverseSettings
     Public Property MaxAssets As Integer = 20
     Public Property MinimumQuoteVolume As Decimal = 1000000D
     Public Property MinimumTrades24h As Integer = 1000
+    Public Property AutoRefreshEnabled As Boolean = True
+    Public Property RefreshMinutes As Integer = 30
 End Class
 
 Public NotInheritable Class SpotBotSignalEventArgs
