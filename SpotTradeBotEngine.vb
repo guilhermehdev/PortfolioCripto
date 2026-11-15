@@ -38,6 +38,10 @@ Public NotInheritable Class SpotTradeBotEngine
     Private _restoredConfigurationLoaded As Boolean
     Private _bitcoinFlushPausedUntilUtc As DateTime
     Private _bitcoinDailyLastPauseUtc As DateTime
+    Private _bitcoinCrisisActive As Boolean
+    Private _bitcoinCrisisLowestPrice As Decimal
+    Private _bitcoinCrisisRecoveryCount As Integer
+    Private _bitcoinCrisisDayUtc As DateTime
     Private _riskBrakeState As SpotBotRiskBrakeState = SpotBotRiskBrakeState.Normal
     Private _riskBrakeSessionStartEquity As Decimal
     Private _riskBrakeManualRealizedPnl As Decimal
@@ -297,6 +301,10 @@ Public NotInheritable Class SpotTradeBotEngine
                 _gridBlockedUntilUtc.Clear()
                 _bitcoinFlushPausedUntilUtc = DateTime.MinValue
                 _bitcoinDailyLastPauseUtc = DateTime.MinValue
+                _bitcoinCrisisActive = False
+                _bitcoinCrisisLowestPrice = 0D
+                _bitcoinCrisisRecoveryCount = 0
+                _bitcoinCrisisDayUtc = DateTime.MinValue
                 ResetSimulationLocked()
                 If Not _running Then
                     _activeRunId = 0
@@ -320,6 +328,10 @@ Public NotInheritable Class SpotTradeBotEngine
                     _bitcoinDailyCandleHistory.Clear()
                     _bitcoinFlushPausedUntilUtc = DateTime.MinValue
                     _bitcoinDailyLastPauseUtc = DateTime.MinValue
+                    _bitcoinCrisisActive = False
+                    _bitcoinCrisisLowestPrice = 0D
+                    _bitcoinCrisisRecoveryCount = 0
+                    _bitcoinCrisisDayUtc = DateTime.MinValue
                 End If
                 For Each key In _lastSignals.Keys.
                     Where(Function(item) item.StartsWith(normalized & "|", StringComparison.OrdinalIgnoreCase)).
@@ -368,6 +380,7 @@ Public NotInheritable Class SpotTradeBotEngine
 
         If (configurationSnapshot.BitcoinFlushProtectionEnabled OrElse
             configurationSnapshot.BitcoinDailyProtectionEnabled OrElse
+            configurationSnapshot.BitcoinCrisisProtectionEnabled OrElse
             configurationSnapshot.GridV2BtcMildDeclineEnabled) AndAlso
            Not requestedSymbols.Contains("BTC", StringComparer.OrdinalIgnoreCase) Then
             requestedSymbols.Add("BTC")
@@ -450,6 +463,7 @@ Public NotInheritable Class SpotTradeBotEngine
         End If
 
         If configuration.BitcoinDailyProtectionEnabled OrElse
+           configuration.BitcoinCrisisProtectionEnabled OrElse
            configuration.GridV2BtcMildDeclineEnabled Then
             AddWarmupRequirement(result, "1d", 30)
         End If
@@ -554,12 +568,14 @@ Public NotInheritable Class SpotTradeBotEngine
 
             Case "1d"
                 If String.Equals(symbol, "BTC", StringComparison.OrdinalIgnoreCase) AndAlso
-                   (configuration.BitcoinDailyProtectionEnabled OrElse
-                    configuration.GridV2BtcMildDeclineEnabled) Then
+                    (configuration.BitcoinDailyProtectionEnabled OrElse
+                     configuration.BitcoinCrisisProtectionEnabled OrElse
+                     configuration.GridV2BtcMildDeclineEnabled) Then
                     _bitcoinDailyCandleHistory.Clear()
                     Dim dailyHistoryLimit = Math.Max(30, Math.Min(365, configuration.MaximumPriceHistory))
                     _bitcoinDailyCandleHistory.AddRange(
                         points.Skip(Math.Max(0, points.Count - dailyHistoryLimit)))
+                    EvaluateBitcoinCrisisFromHistoryLocked(configuration)
                 End If
 
                 If configuration.EnabledStrategies.Contains(SpotBotStrategyKind.BollingerMeanReversion) OrElse
@@ -670,6 +686,142 @@ Public NotInheritable Class SpotTradeBotEngine
             .Close = price}
     End Function
 
+    Private Sub ResetBitcoinCrisisLocked()
+        _bitcoinCrisisActive = False
+        _bitcoinCrisisLowestPrice = 0D
+        _bitcoinCrisisRecoveryCount = 0
+        _bitcoinCrisisDayUtc = DateTime.MinValue
+    End Sub
+
+    Private Function UpdateBitcoinCrisisFromDailyCandleLocked(
+        currentCandle As SpotBotPricePoint,
+        referenceCandle As SpotBotPricePoint,
+        configuration As SpotBotConfiguration,
+        nowUtc As DateTime,
+        ByRef activationReason As String) As Boolean
+
+        activationReason = String.Empty
+        If configuration Is Nothing OrElse Not configuration.BitcoinCrisisProtectionEnabled OrElse
+           currentCandle Is Nothing OrElse referenceCandle Is Nothing OrElse
+           currentCandle.Close <= 0D OrElse referenceCandle.Close <= 0D Then
+            If configuration Is Nothing OrElse Not configuration.BitcoinCrisisProtectionEnabled Then
+                ResetBitcoinCrisisLocked()
+            End If
+            Return _bitcoinCrisisActive
+        End If
+
+        Dim currentDayUtc = currentCandle.TimestampUtc.ToUniversalTime().Date
+        If _bitcoinCrisisActive AndAlso
+           _bitcoinCrisisDayUtc <> DateTime.MinValue AndAlso
+           currentDayUtc > _bitcoinCrisisDayUtc.Date Then
+            ResetBitcoinCrisisLocked()
+        End If
+
+        Dim dailyDropPercent = Math.Max(
+            0D,
+            (referenceCandle.Close - currentCandle.Close) / referenceCandle.Close * 100D)
+        Dim drawdownPercent = If(
+            currentCandle.High <= 0D,
+            0D,
+            Math.Max(0D, (currentCandle.High - currentCandle.Close) / currentCandle.High * 100D))
+        Dim dropThreshold = Math.Max(0.1D, configuration.BitcoinCrisisDropPercent)
+        Dim drawdownThreshold = Math.Max(0.1D, configuration.BitcoinCrisisDrawdownPercent)
+        Dim crisisTriggered = currentCandle.IsBearish AndAlso
+                              (dailyDropPercent >= dropThreshold OrElse
+                               drawdownPercent >= drawdownThreshold)
+
+        If crisisTriggered Then
+            Dim wasActive = _bitcoinCrisisActive
+            _bitcoinCrisisActive = True
+            _bitcoinCrisisDayUtc = currentDayUtc
+            _bitcoinCrisisLowestPrice = If(
+                _bitcoinCrisisLowestPrice > 0D,
+                Math.Min(_bitcoinCrisisLowestPrice, currentCandle.Low),
+                Math.Min(currentCandle.Low, currentCandle.Close))
+            If Not wasActive Then
+                _bitcoinCrisisRecoveryCount = 0
+                activationReason =
+                    $"MODO CRISE BTC: queda diária {dailyDropPercent:0.##}% ou drawdown {drawdownPercent:0.##}%; " &
+                    "novas entradas bloqueadas até recuperação confirmada ou próximo dia."
+            End If
+        End If
+
+        Return _bitcoinCrisisActive
+    End Function
+
+    Private Sub EvaluateBitcoinCrisisFromHistoryLocked(configuration As SpotBotConfiguration)
+        If configuration Is Nothing OrElse Not configuration.BitcoinCrisisProtectionEnabled OrElse
+           _bitcoinDailyCandleHistory.Count < 2 Then
+            Return
+        End If
+
+        Dim currentCandle = _bitcoinDailyCandleHistory(_bitcoinDailyCandleHistory.Count - 1)
+        Dim referenceCandle = _bitcoinDailyCandleHistory(_bitcoinDailyCandleHistory.Count - 2)
+        Dim activationReason As String = Nothing
+        UpdateBitcoinCrisisFromDailyCandleLocked(
+            currentCandle,
+            referenceCandle,
+            configuration,
+            DateTime.UtcNow,
+            activationReason)
+    End Sub
+
+    Private Sub UpdateBitcoinCrisisRecoveryLocked(
+        currentCandle As SpotBotPricePoint,
+        nowUtc As DateTime,
+        configuration As SpotBotConfiguration,
+        status As SpotBotBitcoinFlushStatus)
+
+        If configuration Is Nothing OrElse Not configuration.BitcoinCrisisProtectionEnabled OrElse
+           Not _bitcoinCrisisActive OrElse currentCandle Is Nothing Then
+            status.IsCrisisActive = _bitcoinCrisisActive
+            Return
+        End If
+
+        Dim currentDayUtc = currentCandle.TimestampUtc.ToUniversalTime().Date
+        If _bitcoinCrisisDayUtc <> DateTime.MinValue AndAlso
+           currentDayUtc > _bitcoinCrisisDayUtc.Date Then
+            ResetBitcoinCrisisLocked()
+            status.IsCrisisActive = False
+            status.IsPaused = _bitcoinFlushPausedUntilUtc > nowUtc
+            status.Reason = "modo crise BTC encerrado pela virada do dia."
+            Return
+        End If
+
+        If currentCandle.Low > 0D Then
+            _bitcoinCrisisLowestPrice = If(
+                _bitcoinCrisisLowestPrice > 0D,
+                Math.Min(_bitcoinCrisisLowestPrice, currentCandle.Low),
+                currentCandle.Low)
+        End If
+
+        Dim recoveryPercent = Math.Max(0.1D, configuration.BitcoinCrisisRecoveryPercent)
+        Dim recoveryPrice = _bitcoinCrisisLowestPrice * (1D + recoveryPercent / 100D)
+        If recoveryPrice > 0D AndAlso currentCandle.Close >= recoveryPrice Then
+            _bitcoinCrisisRecoveryCount += 1
+        Else
+            _bitcoinCrisisRecoveryCount = 0
+        End If
+
+        Dim requiredCandles = Math.Max(1, configuration.BitcoinCrisisRecoveryCandles)
+        If _bitcoinCrisisRecoveryCount >= requiredCandles Then
+            ResetBitcoinCrisisLocked()
+            status.IsCrisisActive = False
+            status.IsPaused = _bitcoinFlushPausedUntilUtc > nowUtc
+            status.Reason =
+                $"modo crise BTC encerrado após {requiredCandles} candles de recuperação " &
+                $"(+{recoveryPercent:0.##}% desde a mínima)."
+            _simulationLastAction = "Proteção BTC: " & status.Reason
+            Return
+        End If
+
+        status.IsCrisisActive = True
+        status.IsPaused = True
+        status.Reason =
+            $"modo crise BTC ativo; recuperação {Math.Min(_bitcoinCrisisRecoveryCount, requiredCandles)}/{requiredCandles} " &
+            $"(+{recoveryPercent:0.##}% desde a mínima)."
+    End Sub
+
     Public Function ProcessBitcoinCandle(
         interval As String,
         candleStartUtc As DateTime,
@@ -700,9 +852,12 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
 
             Dim status As New SpotBotBitcoinFlushStatus With {
-                .CurrentPrice = closePrice}
+                .CurrentPrice = closePrice,
+                .IsCrisisActive = _bitcoinCrisisActive}
 
-            If Not _running OrElse Not _configuration.BitcoinFlushProtectionEnabled Then
+            If Not _running OrElse
+               (Not _configuration.BitcoinFlushProtectionEnabled AndAlso
+                Not _configuration.BitcoinCrisisProtectionEnabled) Then
                 Return status
             End If
 
@@ -737,12 +892,16 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
 
             Dim nowUtc = DateTime.UtcNow
-            status.IsPaused = _bitcoinFlushPausedUntilUtc > nowUtc
+            UpdateBitcoinCrisisRecoveryLocked(candle, nowUtc, _configuration, status)
+            status.IsPaused = status.IsCrisisActive OrElse _bitcoinFlushPausedUntilUtc > nowUtc
             status.PauseUntilUtc = _bitcoinFlushPausedUntilUtc
             If _bitcoinFlushCandleHistory.Count <
                Math.Max(2, _configuration.BitcoinFlushLookbackMinutes) +
                Math.Max(5, _configuration.BitcoinFlushVolumeLookback) + 1 Then
-                If status.IsPaused Then
+                If status.IsCrisisActive Then
+                    ' O modo crise não depende de um timer fixo.
+                    Return status
+                ElseIf status.IsPaused Then
                     status.Reason = $"proteção BTC ativa até {_bitcoinFlushPausedUntilUtc.ToLocalTime():HH:mm:ss}"
                 End If
                 Return status
@@ -772,7 +931,9 @@ Public NotInheritable Class SpotTradeBotEngine
                 Select(Function(item) item.Volume).
                 ToList()
             If previousVolumes.Count = 0 OrElse currentCandle.Volume <= 0D Then
-                If status.IsPaused Then
+                If status.IsCrisisActive Then
+                    Return status
+                ElseIf status.IsPaused Then
                     status.Reason = $"proteção BTC ativa até {_bitcoinFlushPausedUntilUtc.ToLocalTime():HH:mm:ss}"
                 End If
                 Return status
@@ -805,7 +966,9 @@ Public NotInheritable Class SpotTradeBotEngine
                 Return status
             End If
 
-            If status.IsPaused Then
+            If status.IsCrisisActive Then
+                Return status
+            ElseIf status.IsPaused Then
                 status.Reason = $"proteção BTC ativa até {_bitcoinFlushPausedUntilUtc.ToLocalTime():HH:mm:ss}"
             End If
             Return status
@@ -829,6 +992,7 @@ Public NotInheritable Class SpotTradeBotEngine
         End If
 
         Dim trackDailyContext = _configuration.BitcoinDailyProtectionEnabled OrElse
+                                _configuration.BitcoinCrisisProtectionEnabled OrElse
                                 _configuration.GridV2BtcMildDeclineEnabled
         If Not trackDailyContext Then Return status
 
@@ -858,16 +1022,14 @@ Public NotInheritable Class SpotTradeBotEngine
                 _bitcoinDailyCandleHistory.Count - dailyHistoryLimit)
         End If
 
-        ' O regime BTC Leve Queda pode consumir o histórico diário mesmo
-        ' quando a proteção diária estiver desligada; nesse caso não deve
-        ' acionar pausa global, apenas alimentar o filtro da estratégia.
-        If Not _configuration.BitcoinDailyProtectionEnabled Then Return status
-
         Dim nowUtc = DateTime.UtcNow
-        status.IsPaused = _bitcoinFlushPausedUntilUtc > nowUtc
+        status.IsCrisisActive = _bitcoinCrisisActive
+        status.IsPaused = _bitcoinCrisisActive OrElse _bitcoinFlushPausedUntilUtc > nowUtc
         status.PauseUntilUtc = _bitcoinFlushPausedUntilUtc
         If _bitcoinDailyCandleHistory.Count < 2 Then
-            If status.IsPaused Then
+            If status.IsCrisisActive Then
+                status.Reason = "modo crise BTC ativo; aguardando recuperação confirmada ou próximo dia."
+            ElseIf status.IsPaused Then
                 status.Reason = $"proteção BTC ativa até {_bitcoinFlushPausedUntilUtc.ToLocalTime():HH:mm:ss}"
             End If
             Return status
@@ -887,6 +1049,32 @@ Public NotInheritable Class SpotTradeBotEngine
             currentCandle.Low <= 0D,
             0D,
             (currentCandle.High - currentCandle.Low) / currentCandle.Low * 100D)
+
+        Dim crisisReason As String = Nothing
+        Dim crisisActive = UpdateBitcoinCrisisFromDailyCandleLocked(
+            currentCandle,
+            referenceCandle,
+            _configuration,
+            nowUtc,
+            crisisReason)
+        If crisisActive Then
+            status.IsCrisisActive = True
+            status.IsPaused = True
+            status.Reason = If(
+                String.IsNullOrWhiteSpace(crisisReason),
+                "modo crise BTC ativo; aguardando recuperação confirmada ou próximo dia.",
+                crisisReason)
+            status.NewFlushDetected = Not String.IsNullOrWhiteSpace(crisisReason)
+            If status.NewFlushDetected Then
+                _simulationLastAction = "Proteção BTC: " & status.Reason
+            End If
+            Return status
+        End If
+
+        ' O regime BTC Leve Queda pode consumir o histórico diário mesmo
+        ' quando a proteção diária estiver desligada; nesse caso não deve
+        ' acionar pausa global, apenas alimentar o filtro da estratégia.
+        If Not _configuration.BitcoinDailyProtectionEnabled Then Return status
 
         Dim dropThreshold = Math.Max(0.1D, _configuration.BitcoinDailyDropPercent)
         Dim drawdownThreshold = Math.Max(0.1D, _configuration.BitcoinDailyDrawdownPercent)
@@ -1071,6 +1259,7 @@ Public NotInheritable Class SpotTradeBotEngine
             activeRunId = _activeRunId
             bitcoinFlushPaused = _configuration.BitcoinFlushProtectionEnabled AndAlso
                                  _bitcoinFlushPausedUntilUtc > observedAt
+            bitcoinFlushPaused = bitcoinFlushPaused OrElse _bitcoinCrisisActive
         End SyncLock
 
         If enabledStrategies.Count = 0 Then Return Nothing
@@ -3628,6 +3817,11 @@ Public NotInheritable Class SpotTradeBotEngine
             .BitcoinDailyProtectionEnabled = source.BitcoinDailyProtectionEnabled,
             .BitcoinDailyDropPercent = source.BitcoinDailyDropPercent,
             .BitcoinDailyDrawdownPercent = source.BitcoinDailyDrawdownPercent,
+            .BitcoinCrisisProtectionEnabled = source.BitcoinCrisisProtectionEnabled,
+            .BitcoinCrisisDropPercent = Math.Max(0.1D, source.BitcoinCrisisDropPercent),
+            .BitcoinCrisisDrawdownPercent = Math.Max(0.1D, source.BitcoinCrisisDrawdownPercent),
+            .BitcoinCrisisRecoveryPercent = Math.Max(0.1D, source.BitcoinCrisisRecoveryPercent),
+            .BitcoinCrisisRecoveryCandles = Math.Max(1, source.BitcoinCrisisRecoveryCandles),
             .ValueZoneFastEmaPeriod = source.ValueZoneFastEmaPeriod,
             .ValueZoneSlowEmaPeriod = source.ValueZoneSlowEmaPeriod,
             .ValueZoneAtrPeriod = source.ValueZoneAtrPeriod,

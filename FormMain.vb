@@ -2877,7 +2877,10 @@ BuildSpotBotGrid:
         SetSpotBotToolTip(Label27, "Tempo de pausa das novas entradas após a confirmação do flush do BTC.")
         SetSpotBotToolTip(Label32, "Multiplicador de volume exigido para confirmar que a queda do BTC é anormal.")
         SetSpotBotToolTip(Label31, "Unidade do multiplicador de volume usado na proteção de flush.")
-        SetSpotBotToolTip(chkSpotBotBtcDaily, "Usa a queda e a oscilação diária do BTC para bloquear entradas em uma deterioração forte.")
+        SetSpotBotToolTip(
+            chkSpotBotBtcDaily,
+            "Usa a queda e a oscilação diária do BTC para bloquear entradas em uma deterioração forte. " &
+            "Em quedas severas, ativa automaticamente o Modo Crise, que aguarda recuperação confirmada ou a virada do dia UTC.")
         SetSpotBotToolTip(Label28, "Queda diária do BTC que ativa a proteção diária.")
         SetSpotBotToolTip(Label29, "Oscilação máxima diária usada como limite de proteção do BTC.")
         SetSpotBotToolTip(Label30, "Unidade percentual do limite de oscilação diária.")
@@ -3157,6 +3160,9 @@ BuildSpotBotGrid:
         _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled = _botBtcDailyEnabled.Checked
         _spotTradeBot.Configuration.BitcoinDailyDropPercent = _botBtcDailyDropPercent.Value
         _spotTradeBot.Configuration.BitcoinDailyDrawdownPercent = _botBtcDailyDrawdownPercent.Value
+        ' O modo crise é a camada severa da proteção diária e acompanha o
+        ' mesmo checkbox para não deixar uma proteção macro oculta desligada.
+        _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled = _botBtcDailyEnabled.Checked
         _spotTradeBot.Configuration.SimulationFeeRate = _botFee.Value / 100D
         _spotTradeBot.Configuration.TakeProfitPercent = _botTakeProfit.Value
         _spotTradeBot.Configuration.StopLossPercent = _botStopLoss.Value
@@ -3354,6 +3360,13 @@ BuildSpotBotGrid:
             $"{_spotTradeBot.Configuration.BitcoinDailyDrawdownPercent:0.##}%. " &
             "A pausa bloqueia novas entradas e mantém stops ativos.",
             Color.LightGray)
+        AppendSpotBotLog(
+            $"Modo crise BTC: {If(_spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled, "ativo", "desligado")}; " &
+            $"aciona em queda/drawdown de {_spotTradeBot.Configuration.BitcoinCrisisDropPercent:0.##}% / " &
+            $"{_spotTradeBot.Configuration.BitcoinCrisisDrawdownPercent:0.##}%, " &
+            $"libera após +{_spotTradeBot.Configuration.BitcoinCrisisRecoveryPercent:0.##}% desde a mínima " &
+            $"por {_spotTradeBot.Configuration.BitcoinCrisisRecoveryCandles} candles de 1 min ou na virada do dia.",
+            Color.Orange)
         AppendSpotBotLog(
             $"Freio de perdas: {If(_spotTradeBot.Configuration.RiskBrakeEnabled, "ativo", "desligado")}; " &
             $"limite {_spotTradeBot.Configuration.RiskBrakeSessionLossPercent:0.##}%; " &
@@ -4648,6 +4661,7 @@ BuildSpotBotGrid:
             If _spotTradeBot.IsRunning AndAlso
                (_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled OrElse
                 _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled OrElse
+                 _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled OrElse
                 _spotTradeBot.Configuration.GridV2BtcMildDeclineEnabled) Then
                 symbols.Add("BTC")
             End If
@@ -4666,12 +4680,14 @@ BuildSpotBotGrid:
 
             Dim candleIntervals = _spotDca.GetRequiredCandleIntervals("BINANCE").ToList()
             If _spotTradeBot.IsRunning AndAlso
-               _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled AndAlso
+                (_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled OrElse
+                 _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled) AndAlso
                Not candleIntervals.Contains("1m", StringComparer.OrdinalIgnoreCase) Then
                 candleIntervals.Add("1m")
             End If
             If _spotTradeBot.IsRunning AndAlso
-               _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled AndAlso
+                (_spotTradeBot.Configuration.BitcoinDailyProtectionEnabled OrElse
+                 _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled) AndAlso
                Not candleIntervals.Contains("1d", StringComparer.OrdinalIgnoreCase) Then
                 candleIntervals.Add("1d")
             End If

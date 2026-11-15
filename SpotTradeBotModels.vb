@@ -289,6 +289,13 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property BitcoinDailyProtectionEnabled As Boolean = True
     Public Property BitcoinDailyDropPercent As Decimal = 4D
     Public Property BitcoinDailyDrawdownPercent As Decimal = 5D
+    ' Modo crise para quedas diárias severas. Ele bloqueia novas entradas
+    ' até uma recuperação curta confirmada ou a virada do dia UTC.
+    Public Property BitcoinCrisisProtectionEnabled As Boolean = True
+    Public Property BitcoinCrisisDropPercent As Decimal = 6D
+    Public Property BitcoinCrisisDrawdownPercent As Decimal = 6D
+    Public Property BitcoinCrisisRecoveryPercent As Decimal = 1.5D
+    Public Property BitcoinCrisisRecoveryCandles As Integer = 5
 
     ' Parâmetros do pullback em zona de valor. A estratégia usa M5 para
     ' contexto, M2 para o retorno à zona e M1 para a confirmação da entrada.
@@ -340,6 +347,7 @@ End Class
 
 Public NotInheritable Class SpotBotBitcoinFlushStatus
     Public Property IsPaused As Boolean
+    Public Property IsCrisisActive As Boolean
     Public Property NewFlushDetected As Boolean
     Public Property CurrentPrice As Decimal
     Public Property DropPercent As Decimal
