@@ -23,18 +23,18 @@ Partial Class FormMain
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
         components = New ComponentModel.Container()
-        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle12 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle13 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle14 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
-        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle5 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle7 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle8 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle9 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle10 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle11 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle15 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle16 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle17 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle18 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle19 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle20 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle21 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle22 As DataGridViewCellStyle = New DataGridViewCellStyle()
         dgPortfolio = New DataGridView()
         PanelProfits = New Panel()
         Label15 = New Label()
@@ -142,9 +142,9 @@ Partial Class FormMain
         Label39 = New Label()
         nudSpotBotGridExposure = New NumericUpDown()
         btSpotBotUniverse = New Button()
-        chkSpotBotUniverseAutoRefresh = New CheckBox()
-        Label46 = New Label()
         nudSpotBotUniverseRefreshMinutes = New NumericUpDown()
+        Label46 = New Label()
+        chkSpotBotUniverseAutoRefresh = New CheckBox()
         Label38 = New Label()
         nudSpotBotGridReserve = New NumericUpDown()
         Label37 = New Label()
@@ -227,13 +227,13 @@ Partial Class FormMain
         GroupBox1.SuspendLayout()
         CType(nudSpotBotGridLevels, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotGridExposure, ComponentModel.ISupportInitialize).BeginInit()
+        CType(nudSpotBotUniverseRefreshMinutes, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotGridReserve, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotGridRisk, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotMinTrades, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotPostExitCooldown, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotMinVolume, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotMaxAssets, ComponentModel.ISupportInitialize).BeginInit()
-        CType(nudSpotBotUniverseRefreshMinutes, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotStopLoss, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotTakeProfit, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotFee, ComponentModel.ISupportInitialize).BeginInit()
@@ -263,35 +263,35 @@ Partial Class FormMain
         dgPortfolio.BorderStyle = BorderStyle.None
         dgPortfolio.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgPortfolio.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle1.ForeColor = Color.Turquoise
-        DataGridViewCellStyle1.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle1.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
-        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
-        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
-        DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle2.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
-        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
+        DataGridViewCellStyle12.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle12.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle12.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle12.ForeColor = Color.Turquoise
+        DataGridViewCellStyle12.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle12.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle12.WrapMode = DataGridViewTriState.True
+        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle12
+        DataGridViewCellStyle13.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle13.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle13.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle13.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle13.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle13.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle13.WrapMode = DataGridViewTriState.True
+        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle13
         dgPortfolio.EnableHeadersVisualStyles = False
         dgPortfolio.Location = New Point(9, 51)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
-        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle3.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle3.Padding = New Padding(2)
-        DataGridViewCellStyle3.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle3.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
-        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
+        DataGridViewCellStyle14.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle14.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle14.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle14.Padding = New Padding(2)
+        DataGridViewCellStyle14.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle14.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle14.WrapMode = DataGridViewTriState.True
+        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle14
         dgPortfolio.RowHeadersWidth = 4
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
@@ -870,41 +870,41 @@ Partial Class FormMain
         dgFuturos.BorderStyle = BorderStyle.None
         dgFuturos.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgFuturos.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        DataGridViewCellStyle4.Font = New Font("Calibri", 10F, FontStyle.Italic)
-        DataGridViewCellStyle4.ForeColor = Color.Turquoise
-        DataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        DataGridViewCellStyle4.SelectionForeColor = Color.Turquoise
-        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
-        dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
-        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle5.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle5.ForeColor = Color.White
-        DataGridViewCellStyle5.SelectionBackColor = Color.Black
-        DataGridViewCellStyle5.SelectionForeColor = Color.White
-        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.True
-        dgFuturos.DefaultCellStyle = DataGridViewCellStyle5
+        DataGridViewCellStyle15.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle15.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle15.Font = New Font("Calibri", 10F, FontStyle.Italic)
+        DataGridViewCellStyle15.ForeColor = Color.Turquoise
+        DataGridViewCellStyle15.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle15.SelectionForeColor = Color.Turquoise
+        DataGridViewCellStyle15.WrapMode = DataGridViewTriState.True
+        dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle15
+        DataGridViewCellStyle16.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle16.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle16.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle16.ForeColor = Color.White
+        DataGridViewCellStyle16.SelectionBackColor = Color.Black
+        DataGridViewCellStyle16.SelectionForeColor = Color.White
+        DataGridViewCellStyle16.WrapMode = DataGridViewTriState.True
+        dgFuturos.DefaultCellStyle = DataGridViewCellStyle16
         dgFuturos.EnableHeadersVisualStyles = False
         dgFuturos.Location = New Point(9, 51)
         dgFuturos.MultiSelect = False
         dgFuturos.Name = "dgFuturos"
         dgFuturos.ReadOnly = True
-        DataGridViewCellStyle6.BackColor = Color.Black
-        DataGridViewCellStyle6.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle6.ForeColor = Color.White
-        DataGridViewCellStyle6.Padding = New Padding(2)
-        DataGridViewCellStyle6.SelectionBackColor = Color.Black
-        DataGridViewCellStyle6.SelectionForeColor = Color.White
-        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
-        dgFuturos.RowHeadersDefaultCellStyle = DataGridViewCellStyle6
+        DataGridViewCellStyle17.BackColor = Color.Black
+        DataGridViewCellStyle17.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle17.ForeColor = Color.White
+        DataGridViewCellStyle17.Padding = New Padding(2)
+        DataGridViewCellStyle17.SelectionBackColor = Color.Black
+        DataGridViewCellStyle17.SelectionForeColor = Color.White
+        DataGridViewCellStyle17.WrapMode = DataGridViewTriState.True
+        dgFuturos.RowHeadersDefaultCellStyle = DataGridViewCellStyle17
         dgFuturos.RowHeadersWidth = 4
-        DataGridViewCellStyle7.BackColor = Color.Black
-        DataGridViewCellStyle7.ForeColor = Color.White
-        DataGridViewCellStyle7.SelectionBackColor = Color.Black
-        DataGridViewCellStyle7.SelectionForeColor = Color.White
-        dgFuturos.RowsDefaultCellStyle = DataGridViewCellStyle7
+        DataGridViewCellStyle18.BackColor = Color.Black
+        DataGridViewCellStyle18.ForeColor = Color.White
+        DataGridViewCellStyle18.SelectionBackColor = Color.Black
+        DataGridViewCellStyle18.SelectionForeColor = Color.White
+        dgFuturos.RowsDefaultCellStyle = DataGridViewCellStyle18
         dgFuturos.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.Black
         dgFuturos.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.White
         dgFuturos.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
@@ -1253,8 +1253,11 @@ Partial Class FormMain
         GroupBox4.Controls.Add(chkSpotBotRiskClosePositions)
         GroupBox4.Controls.Add(nudSpotBotRiskPause)
         GroupBox4.Controls.Add(Label44)
+        GroupBox4.Controls.Add(nudSpotBotUniverseRefreshMinutes)
         GroupBox4.Controls.Add(nudSpotBotRiskMaxLosses)
+        GroupBox4.Controls.Add(Label46)
         GroupBox4.Controls.Add(Label43)
+        GroupBox4.Controls.Add(chkSpotBotUniverseAutoRefresh)
         GroupBox4.Controls.Add(nudSpotBotRiskGiveback)
         GroupBox4.Controls.Add(Label42)
         GroupBox4.Controls.Add(nudSpotBotRiskProfitTrigger)
@@ -1277,7 +1280,7 @@ Partial Class FormMain
         chkSpotBotProfitGateEnabled.Checked = True
         chkSpotBotProfitGateEnabled.CheckState = CheckState.Checked
         chkSpotBotProfitGateEnabled.ForeColor = Color.Gold
-        chkSpotBotProfitGateEnabled.Location = New Point(19, 160)
+        chkSpotBotProfitGateEnabled.Location = New Point(47, 155)
         chkSpotBotProfitGateEnabled.Name = "chkSpotBotProfitGateEnabled"
         chkSpotBotProfitGateEnabled.Size = New Size(83, 19)
         chkSpotBotProfitGateEnabled.TabIndex = 66
@@ -1290,7 +1293,7 @@ Partial Class FormMain
         nudSpotBotMinProfitBeforeEntry.DecimalPlaces = 2
         nudSpotBotMinProfitBeforeEntry.ForeColor = Color.Gold
         nudSpotBotMinProfitBeforeEntry.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
-        nudSpotBotMinProfitBeforeEntry.Location = New Point(200, 159)
+        nudSpotBotMinProfitBeforeEntry.Location = New Point(136, 154)
         nudSpotBotMinProfitBeforeEntry.Name = "nudSpotBotMinProfitBeforeEntry"
         nudSpotBotMinProfitBeforeEntry.Size = New Size(60, 23)
         nudSpotBotMinProfitBeforeEntry.TabIndex = 65
@@ -1300,7 +1303,7 @@ Partial Class FormMain
         ' 
         Label45.AutoSize = True
         Label45.ForeColor = Color.Cyan
-        Label45.Location = New Point(102, 164)
+        Label45.Location = New Point(136, 137)
         Label45.Name = "Label45"
         Label45.Size = New Size(92, 15)
         Label45.TabIndex = 64
@@ -1312,7 +1315,7 @@ Partial Class FormMain
         chkSpotBotRiskUseUnrealized.Checked = True
         chkSpotBotRiskUseUnrealized.CheckState = CheckState.Checked
         chkSpotBotRiskUseUnrealized.ForeColor = Color.Gold
-        chkSpotBotRiskUseUnrealized.Location = New Point(241, 38)
+        chkSpotBotRiskUseUnrealized.Location = New Point(258, 22)
         chkSpotBotRiskUseUnrealized.Name = "chkSpotBotRiskUseUnrealized"
         chkSpotBotRiskUseUnrealized.Size = New Size(104, 19)
         chkSpotBotRiskUseUnrealized.TabIndex = 63
@@ -1325,7 +1328,7 @@ Partial Class FormMain
         chkSpotBotRiskClosePositions.Checked = True
         chkSpotBotRiskClosePositions.CheckState = CheckState.Checked
         chkSpotBotRiskClosePositions.ForeColor = Color.Gold
-        chkSpotBotRiskClosePositions.Location = New Point(127, 38)
+        chkSpotBotRiskClosePositions.Location = New Point(144, 22)
         chkSpotBotRiskClosePositions.Name = "chkSpotBotRiskClosePositions"
         chkSpotBotRiskClosePositions.Size = New Size(111, 19)
         chkSpotBotRiskClosePositions.TabIndex = 62
@@ -1336,9 +1339,9 @@ Partial Class FormMain
         ' 
         nudSpotBotRiskPause.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         nudSpotBotRiskPause.ForeColor = Color.Gold
-        nudSpotBotRiskPause.Location = New Point(25, 132)
+        nudSpotBotRiskPause.Location = New Point(286, 63)
         nudSpotBotRiskPause.Name = "nudSpotBotRiskPause"
-        nudSpotBotRiskPause.Size = New Size(114, 23)
+        nudSpotBotRiskPause.Size = New Size(62, 23)
         nudSpotBotRiskPause.TabIndex = 61
         nudSpotBotRiskPause.Value = New Decimal(New Integer() {50, 0, 0, 0})
         ' 
@@ -1346,19 +1349,19 @@ Partial Class FormMain
         ' 
         Label44.AutoSize = True
         Label44.ForeColor = Color.Cyan
-        Label44.Location = New Point(22, 113)
+        Label44.Location = New Point(287, 45)
         Label44.Name = "Label44"
-        Label44.Size = New Size(154, 15)
+        Label44.Size = New Size(70, 15)
         Label44.TabIndex = 60
-        Label44.Text = "Pausa após sequência (min)"
+        Label44.Text = "Pausa (min)"
         ' 
         ' nudSpotBotRiskMaxLosses
         ' 
         nudSpotBotRiskMaxLosses.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         nudSpotBotRiskMaxLosses.ForeColor = Color.Gold
-        nudSpotBotRiskMaxLosses.Location = New Point(225, 85)
+        nudSpotBotRiskMaxLosses.Location = New Point(242, 63)
         nudSpotBotRiskMaxLosses.Name = "nudSpotBotRiskMaxLosses"
-        nudSpotBotRiskMaxLosses.Size = New Size(114, 23)
+        nudSpotBotRiskMaxLosses.Size = New Size(38, 23)
         nudSpotBotRiskMaxLosses.TabIndex = 59
         nudSpotBotRiskMaxLosses.Value = New Decimal(New Integer() {3, 0, 0, 0})
         ' 
@@ -1366,17 +1369,17 @@ Partial Class FormMain
         ' 
         Label43.AutoSize = True
         Label43.ForeColor = Color.Cyan
-        Label43.Location = New Point(222, 66)
+        Label43.Location = New Point(239, 44)
         Label43.Name = "Label43"
-        Label43.Size = New Size(120, 15)
+        Label43.Size = New Size(42, 15)
         Label43.TabIndex = 58
-        Label43.Text = "Máx. perdas seguidas"
+        Label43.Text = "Perdas"
         ' 
         ' nudSpotBotRiskGiveback
         ' 
         nudSpotBotRiskGiveback.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         nudSpotBotRiskGiveback.ForeColor = Color.Gold
-        nudSpotBotRiskGiveback.Location = New Point(105, 85)
+        nudSpotBotRiskGiveback.Location = New Point(122, 63)
         nudSpotBotRiskGiveback.Name = "nudSpotBotRiskGiveback"
         nudSpotBotRiskGiveback.Size = New Size(114, 23)
         nudSpotBotRiskGiveback.TabIndex = 57
@@ -1386,7 +1389,7 @@ Partial Class FormMain
         ' 
         Label42.AutoSize = True
         Label42.ForeColor = Color.Cyan
-        Label42.Location = New Point(102, 66)
+        Label42.Location = New Point(119, 44)
         Label42.Name = "Label42"
         Label42.Size = New Size(117, 15)
         Label42.TabIndex = 56
@@ -1398,7 +1401,7 @@ Partial Class FormMain
         nudSpotBotRiskProfitTrigger.DecimalPlaces = 2
         nudSpotBotRiskProfitTrigger.ForeColor = Color.Gold
         nudSpotBotRiskProfitTrigger.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
-        nudSpotBotRiskProfitTrigger.Location = New Point(241, 132)
+        nudSpotBotRiskProfitTrigger.Location = New Point(136, 108)
         nudSpotBotRiskProfitTrigger.Name = "nudSpotBotRiskProfitTrigger"
         nudSpotBotRiskProfitTrigger.Size = New Size(77, 23)
         nudSpotBotRiskProfitTrigger.TabIndex = 55
@@ -1408,11 +1411,11 @@ Partial Class FormMain
         ' 
         Label41.AutoSize = True
         Label41.ForeColor = Color.Cyan
-        Label41.Location = New Point(238, 113)
+        Label41.Location = New Point(136, 93)
         Label41.Name = "Label41"
-        Label41.Size = New Size(116, 15)
+        Label41.Size = New Size(96, 15)
         Label41.TabIndex = 54
-        Label41.Text = "Ativar em ganho.(%)"
+        Label41.Text = "Ativar ganho.(%)"
         ' 
         ' chkSpotBotRiskProfitLock
         ' 
@@ -1420,9 +1423,9 @@ Partial Class FormMain
         chkSpotBotRiskProfitLock.Checked = True
         chkSpotBotRiskProfitLock.CheckState = CheckState.Checked
         chkSpotBotRiskProfitLock.ForeColor = Color.Gold
-        chkSpotBotRiskProfitLock.Location = New Point(145, 133)
+        chkSpotBotRiskProfitLock.Location = New Point(36, 110)
         chkSpotBotRiskProfitLock.Name = "chkSpotBotRiskProfitLock"
-        chkSpotBotRiskProfitLock.Size = New Size(99, 19)
+        chkSpotBotRiskProfitLock.Size = New Size(100, 19)
         chkSpotBotRiskProfitLock.TabIndex = 53
         chkSpotBotRiskProfitLock.Text = "Trava de lucro"
         chkSpotBotRiskProfitLock.UseVisualStyleBackColor = True
@@ -1433,7 +1436,7 @@ Partial Class FormMain
         nudSpotBotRiskSessionLoss.DecimalPlaces = 2
         nudSpotBotRiskSessionLoss.ForeColor = Color.Gold
         nudSpotBotRiskSessionLoss.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
-        nudSpotBotRiskSessionLoss.Location = New Point(22, 85)
+        nudSpotBotRiskSessionLoss.Location = New Point(39, 63)
         nudSpotBotRiskSessionLoss.Name = "nudSpotBotRiskSessionLoss"
         nudSpotBotRiskSessionLoss.Size = New Size(77, 23)
         nudSpotBotRiskSessionLoss.TabIndex = 52
@@ -1443,9 +1446,9 @@ Partial Class FormMain
         ' 
         Label40.AutoSize = True
         Label40.ForeColor = Color.Cyan
-        Label40.Location = New Point(19, 66)
+        Label40.Location = New Point(36, 44)
         Label40.Name = "Label40"
-        Label40.Size = New Size(84, 15)
+        Label40.Size = New Size(83, 15)
         Label40.TabIndex = 51
         Label40.Text = "Perda máx.(%)"
         ' 
@@ -1455,7 +1458,7 @@ Partial Class FormMain
         chkSpotBotRiskBrakeEnabled.Checked = True
         chkSpotBotRiskBrakeEnabled.CheckState = CheckState.Checked
         chkSpotBotRiskBrakeEnabled.ForeColor = Color.Gold
-        chkSpotBotRiskBrakeEnabled.Location = New Point(19, 38)
+        chkSpotBotRiskBrakeEnabled.Location = New Point(36, 22)
         chkSpotBotRiskBrakeEnabled.Name = "chkSpotBotRiskBrakeEnabled"
         chkSpotBotRiskBrakeEnabled.Size = New Size(102, 19)
         chkSpotBotRiskBrakeEnabled.TabIndex = 44
@@ -1473,41 +1476,41 @@ Partial Class FormMain
         dgSpotBotPositionsControl.BorderStyle = BorderStyle.None
         dgSpotBotPositionsControl.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgSpotBotPositionsControl.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle8.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle8.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        DataGridViewCellStyle8.Font = New Font("Calibri", 9F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle8.ForeColor = Color.Turquoise
-        DataGridViewCellStyle8.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        DataGridViewCellStyle8.SelectionForeColor = Color.Turquoise
-        DataGridViewCellStyle8.WrapMode = DataGridViewTriState.True
-        dgSpotBotPositionsControl.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle8
-        DataGridViewCellStyle9.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle9.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle9.Font = New Font("Calibri", 8.25F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle9.ForeColor = Color.White
-        DataGridViewCellStyle9.SelectionBackColor = Color.Black
-        DataGridViewCellStyle9.SelectionForeColor = Color.White
-        DataGridViewCellStyle9.WrapMode = DataGridViewTriState.True
-        dgSpotBotPositionsControl.DefaultCellStyle = DataGridViewCellStyle9
+        DataGridViewCellStyle19.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle19.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle19.Font = New Font("Calibri", 9F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle19.ForeColor = Color.Turquoise
+        DataGridViewCellStyle19.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle19.SelectionForeColor = Color.Turquoise
+        DataGridViewCellStyle19.WrapMode = DataGridViewTriState.True
+        dgSpotBotPositionsControl.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle19
+        DataGridViewCellStyle20.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle20.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle20.Font = New Font("Calibri", 8.25F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle20.ForeColor = Color.White
+        DataGridViewCellStyle20.SelectionBackColor = Color.Black
+        DataGridViewCellStyle20.SelectionForeColor = Color.White
+        DataGridViewCellStyle20.WrapMode = DataGridViewTriState.True
+        dgSpotBotPositionsControl.DefaultCellStyle = DataGridViewCellStyle20
         dgSpotBotPositionsControl.EnableHeadersVisualStyles = False
         dgSpotBotPositionsControl.Location = New Point(0, 230)
         dgSpotBotPositionsControl.MultiSelect = False
         dgSpotBotPositionsControl.Name = "dgSpotBotPositionsControl"
         dgSpotBotPositionsControl.ReadOnly = True
-        DataGridViewCellStyle10.BackColor = Color.Black
-        DataGridViewCellStyle10.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle10.ForeColor = Color.White
-        DataGridViewCellStyle10.Padding = New Padding(2)
-        DataGridViewCellStyle10.SelectionBackColor = Color.Black
-        DataGridViewCellStyle10.SelectionForeColor = Color.White
-        DataGridViewCellStyle10.WrapMode = DataGridViewTriState.True
-        dgSpotBotPositionsControl.RowHeadersDefaultCellStyle = DataGridViewCellStyle10
+        DataGridViewCellStyle21.BackColor = Color.Black
+        DataGridViewCellStyle21.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle21.ForeColor = Color.White
+        DataGridViewCellStyle21.Padding = New Padding(2)
+        DataGridViewCellStyle21.SelectionBackColor = Color.Black
+        DataGridViewCellStyle21.SelectionForeColor = Color.White
+        DataGridViewCellStyle21.WrapMode = DataGridViewTriState.True
+        dgSpotBotPositionsControl.RowHeadersDefaultCellStyle = DataGridViewCellStyle21
         dgSpotBotPositionsControl.RowHeadersWidth = 4
-        DataGridViewCellStyle11.BackColor = Color.Black
-        DataGridViewCellStyle11.ForeColor = Color.White
-        DataGridViewCellStyle11.SelectionBackColor = Color.Black
-        DataGridViewCellStyle11.SelectionForeColor = Color.White
-        dgSpotBotPositionsControl.RowsDefaultCellStyle = DataGridViewCellStyle11
+        DataGridViewCellStyle22.BackColor = Color.Black
+        DataGridViewCellStyle22.ForeColor = Color.White
+        DataGridViewCellStyle22.SelectionBackColor = Color.Black
+        DataGridViewCellStyle22.SelectionForeColor = Color.White
+        dgSpotBotPositionsControl.RowsDefaultCellStyle = DataGridViewCellStyle22
         dgSpotBotPositionsControl.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.Black
         dgSpotBotPositionsControl.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.White
         dgSpotBotPositionsControl.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
@@ -1526,9 +1529,6 @@ Partial Class FormMain
         GroupBox1.Controls.Add(Label39)
         GroupBox1.Controls.Add(nudSpotBotGridExposure)
         GroupBox1.Controls.Add(btSpotBotUniverse)
-        GroupBox1.Controls.Add(nudSpotBotUniverseRefreshMinutes)
-        GroupBox1.Controls.Add(Label46)
-        GroupBox1.Controls.Add(chkSpotBotUniverseAutoRefresh)
         GroupBox1.Controls.Add(Label38)
         GroupBox1.Controls.Add(nudSpotBotGridReserve)
         GroupBox1.Controls.Add(Label37)
@@ -1664,50 +1664,50 @@ Partial Class FormMain
         btSpotBotUniverse.TabIndex = 64
         btSpotBotUniverse.Text = "Atualizar"
         btSpotBotUniverse.UseVisualStyleBackColor = False
-        '
+        ' 
+        ' nudSpotBotUniverseRefreshMinutes
+        ' 
+        nudSpotBotUniverseRefreshMinutes.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        nudSpotBotUniverseRefreshMinutes.ForeColor = Color.Gold
+        nudSpotBotUniverseRefreshMinutes.Increment = New Decimal(New Integer() {5, 0, 0, 0})
+        nudSpotBotUniverseRefreshMinutes.Location = New Point(305, 108)
+        nudSpotBotUniverseRefreshMinutes.Maximum = New Decimal(New Integer() {1440, 0, 0, 0})
+        nudSpotBotUniverseRefreshMinutes.Minimum = New Decimal(New Integer() {5, 0, 0, 0})
+        nudSpotBotUniverseRefreshMinutes.Name = "nudSpotBotUniverseRefreshMinutes"
+        nudSpotBotUniverseRefreshMinutes.Size = New Size(43, 23)
+        nudSpotBotUniverseRefreshMinutes.TabIndex = 69
+        nudSpotBotUniverseRefreshMinutes.Value = New Decimal(New Integer() {30, 0, 0, 0})
+        ' 
+        ' Label46
+        ' 
+        Label46.AutoSize = True
+        Label46.ForeColor = Color.Cyan
+        Label46.Location = New Point(271, 93)
+        Label46.Name = "Label46"
+        Label46.Size = New Size(85, 15)
+        Label46.TabIndex = 68
+        Label46.Text = "Intervalo (min)"
+        ' 
         ' chkSpotBotUniverseAutoRefresh
-        '
+        ' 
         chkSpotBotUniverseAutoRefresh.AutoSize = True
         chkSpotBotUniverseAutoRefresh.Checked = True
         chkSpotBotUniverseAutoRefresh.CheckState = CheckState.Checked
         chkSpotBotUniverseAutoRefresh.ForeColor = Color.Gold
-        chkSpotBotUniverseAutoRefresh.Location = New Point(580, 164)
+        chkSpotBotUniverseAutoRefresh.Location = New Point(225, 110)
         chkSpotBotUniverseAutoRefresh.Name = "chkSpotBotUniverseAutoRefresh"
-        chkSpotBotUniverseAutoRefresh.Size = New Size(72, 19)
+        chkSpotBotUniverseAutoRefresh.Size = New Size(76, 19)
         chkSpotBotUniverseAutoRefresh.TabIndex = 67
         chkSpotBotUniverseAutoRefresh.Text = "Auto lista"
         chkSpotBotUniverseAutoRefresh.UseVisualStyleBackColor = True
-        '
-        ' Label46
-        '
-        Label46.AutoSize = True
-        Label46.ForeColor = Color.Cyan
-        Label46.Location = New Point(652, 146)
-        Label46.Name = "Label46"
-        Label46.Size = New Size(72, 15)
-        Label46.TabIndex = 68
-        Label46.Text = "Intervalo (min)"
-        '
-        ' nudSpotBotUniverseRefreshMinutes
-        '
-        nudSpotBotUniverseRefreshMinutes.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        nudSpotBotUniverseRefreshMinutes.ForeColor = Color.Gold
-        nudSpotBotUniverseRefreshMinutes.Increment = New Decimal(New Integer() {5, 0, 0, 0})
-        nudSpotBotUniverseRefreshMinutes.Location = New Point(680, 164)
-        nudSpotBotUniverseRefreshMinutes.Maximum = New Decimal(New Integer() {1440, 0, 0, 0})
-        nudSpotBotUniverseRefreshMinutes.Minimum = New Decimal(New Integer() {5, 0, 0, 0})
-        nudSpotBotUniverseRefreshMinutes.Name = "nudSpotBotUniverseRefreshMinutes"
-        nudSpotBotUniverseRefreshMinutes.Size = New Size(63, 23)
-        nudSpotBotUniverseRefreshMinutes.TabIndex = 69
-        nudSpotBotUniverseRefreshMinutes.Value = New Decimal(New Integer() {30, 0, 0, 0})
-        '
+        ' 
         ' Label38
         ' 
         Label38.AutoSize = True
         Label38.ForeColor = Color.Cyan
         Label38.Location = New Point(447, 100)
         Label38.Name = "Label38"
-        Label38.Size = New Size(81, 15)
+        Label38.Size = New Size(80, 15)
         Label38.TabIndex = 49
         Label38.Text = "Exposição (%)"
         ' 
@@ -1841,7 +1841,7 @@ Partial Class FormMain
         Label23.ForeColor = Color.Cyan
         Label23.Location = New Point(184, 57)
         Label23.Name = "Label23"
-        Label23.Size = New Size(64, 15)
+        Label23.Size = New Size(63, 15)
         Label23.TabIndex = 14
         Label23.Text = "Máx ativos"
         ' 
@@ -1887,7 +1887,7 @@ Partial Class FormMain
         Label34.ForeColor = Color.Cyan
         Label34.Location = New Point(468, 57)
         Label34.Name = "Label34"
-        Label34.Size = New Size(41, 15)
+        Label34.Size = New Size(42, 15)
         Label34.TabIndex = 37
         Label34.Text = "TP (%)"
         ' 
@@ -1983,9 +1983,9 @@ Partial Class FormMain
         GroupBox3.Controls.Add(chkSpotBotBreakEven)
         GroupBox3.Controls.Add(chkSpotBotTrailing)
         GroupBox3.ForeColor = Color.Cyan
-        GroupBox3.Location = New Point(586, 12)
+        GroupBox3.Location = New Point(586, 0)
         GroupBox3.Name = "GroupBox3"
-        GroupBox3.Size = New Size(169, 181)
+        GroupBox3.Size = New Size(169, 193)
         GroupBox3.TabIndex = 17
         GroupBox3.TabStop = False
         GroupBox3.Text = "Proteções"
@@ -1994,7 +1994,7 @@ Partial Class FormMain
         ' 
         Label31.AutoSize = True
         Label31.ForeColor = Color.Gold
-        Label31.Location = New Point(143, 114)
+        Label31.Location = New Point(143, 117)
         Label31.Name = "Label31"
         Label31.Size = New Size(17, 15)
         Label31.TabIndex = 33
@@ -2004,7 +2004,7 @@ Partial Class FormMain
         ' 
         Label32.AutoSize = True
         Label32.ForeColor = Color.Gold
-        Label32.Location = New Point(26, 113)
+        Label32.Location = New Point(26, 116)
         Label32.Name = "Label32"
         Label32.Size = New Size(57, 15)
         Label32.TabIndex = 32
@@ -2016,7 +2016,7 @@ Partial Class FormMain
         nudSpotBotBtcFlushVolume.DecimalPlaces = 2
         nudSpotBotBtcFlushVolume.ForeColor = Color.Gold
         nudSpotBotBtcFlushVolume.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
-        nudSpotBotBtcFlushVolume.Location = New Point(86, 110)
+        nudSpotBotBtcFlushVolume.Location = New Point(86, 113)
         nudSpotBotBtcFlushVolume.Name = "nudSpotBotBtcFlushVolume"
         nudSpotBotBtcFlushVolume.Size = New Size(55, 23)
         nudSpotBotBtcFlushVolume.TabIndex = 31
@@ -2026,7 +2026,7 @@ Partial Class FormMain
         ' 
         Label30.AutoSize = True
         Label30.ForeColor = Color.Gold
-        Label30.Location = New Point(143, 162)
+        Label30.Location = New Point(143, 165)
         Label30.Name = "Label30"
         Label30.Size = New Size(17, 15)
         Label30.TabIndex = 30
@@ -2036,7 +2036,7 @@ Partial Class FormMain
         ' 
         Label29.AutoSize = True
         Label29.ForeColor = Color.Gold
-        Label29.Location = New Point(3, 161)
+        Label29.Location = New Point(3, 164)
         Label29.Name = "Label29"
         Label29.Size = New Size(90, 15)
         Label29.TabIndex = 29
@@ -2048,7 +2048,7 @@ Partial Class FormMain
         nudSpotBotBtcDailyDrawdown.DecimalPlaces = 2
         nudSpotBotBtcDailyDrawdown.ForeColor = Color.Gold
         nudSpotBotBtcDailyDrawdown.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
-        nudSpotBotBtcDailyDrawdown.Location = New Point(96, 158)
+        nudSpotBotBtcDailyDrawdown.Location = New Point(96, 161)
         nudSpotBotBtcDailyDrawdown.Name = "nudSpotBotBtcDailyDrawdown"
         nudSpotBotBtcDailyDrawdown.Size = New Size(45, 23)
         nudSpotBotBtcDailyDrawdown.TabIndex = 28
@@ -2058,7 +2058,7 @@ Partial Class FormMain
         ' 
         Label28.AutoSize = True
         Label28.ForeColor = Color.Gold
-        Label28.Location = New Point(144, 137)
+        Label28.Location = New Point(144, 140)
         Label28.Name = "Label28"
         Label28.Size = New Size(17, 15)
         Label28.TabIndex = 27
@@ -2070,7 +2070,7 @@ Partial Class FormMain
         nudSpotBotBtcDailyDrop.DecimalPlaces = 2
         nudSpotBotBtcDailyDrop.ForeColor = Color.Gold
         nudSpotBotBtcDailyDrop.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
-        nudSpotBotBtcDailyDrop.Location = New Point(96, 134)
+        nudSpotBotBtcDailyDrop.Location = New Point(96, 137)
         nudSpotBotBtcDailyDrop.Name = "nudSpotBotBtcDailyDrop"
         nudSpotBotBtcDailyDrop.Size = New Size(45, 23)
         nudSpotBotBtcDailyDrop.TabIndex = 26
@@ -2082,7 +2082,7 @@ Partial Class FormMain
         chkSpotBotBtcDaily.Checked = True
         chkSpotBotBtcDaily.CheckState = CheckState.Checked
         chkSpotBotBtcDaily.ForeColor = Color.Gold
-        chkSpotBotBtcDaily.Location = New Point(5, 135)
+        chkSpotBotBtcDaily.Location = New Point(5, 138)
         chkSpotBotBtcDaily.Name = "chkSpotBotBtcDaily"
         chkSpotBotBtcDaily.Size = New Size(94, 19)
         chkSpotBotBtcDaily.TabIndex = 25
@@ -2093,7 +2093,7 @@ Partial Class FormMain
         ' 
         Label27.AutoSize = True
         Label27.ForeColor = Color.Gold
-        Label27.Location = New Point(13, 90)
+        Label27.Location = New Point(13, 93)
         Label27.Name = "Label27"
         Label27.Size = New Size(70, 15)
         Label27.TabIndex = 24
@@ -2105,7 +2105,7 @@ Partial Class FormMain
         nudSpotBotBtcFlushPause.Enabled = False
         nudSpotBotBtcFlushPause.ForeColor = Color.Gold
         nudSpotBotBtcFlushPause.Increment = New Decimal(New Integer() {10, 0, 0, 0})
-        nudSpotBotBtcFlushPause.Location = New Point(86, 87)
+        nudSpotBotBtcFlushPause.Location = New Point(86, 90)
         nudSpotBotBtcFlushPause.Name = "nudSpotBotBtcFlushPause"
         nudSpotBotBtcFlushPause.Size = New Size(55, 23)
         nudSpotBotBtcFlushPause.TabIndex = 23
@@ -2115,7 +2115,7 @@ Partial Class FormMain
         ' 
         Label26.AutoSize = True
         Label26.ForeColor = Color.Gold
-        Label26.Location = New Point(144, 66)
+        Label26.Location = New Point(144, 69)
         Label26.Name = "Label26"
         Label26.Size = New Size(17, 15)
         Label26.TabIndex = 22
@@ -2127,7 +2127,7 @@ Partial Class FormMain
         nudSpotBotBtcFlushDrop.DecimalPlaces = 2
         nudSpotBotBtcFlushDrop.ForeColor = Color.Gold
         nudSpotBotBtcFlushDrop.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
-        nudSpotBotBtcFlushDrop.Location = New Point(86, 63)
+        nudSpotBotBtcFlushDrop.Location = New Point(86, 66)
         nudSpotBotBtcFlushDrop.Name = "nudSpotBotBtcFlushDrop"
         nudSpotBotBtcFlushDrop.Size = New Size(55, 23)
         nudSpotBotBtcFlushDrop.TabIndex = 21
@@ -2139,9 +2139,9 @@ Partial Class FormMain
         chkSpotBotBtcFlush.Checked = True
         chkSpotBotBtcFlush.CheckState = CheckState.Checked
         chkSpotBotBtcFlush.ForeColor = Color.Gold
-        chkSpotBotBtcFlush.Location = New Point(6, 65)
+        chkSpotBotBtcFlush.Location = New Point(6, 68)
         chkSpotBotBtcFlush.Name = "chkSpotBotBtcFlush"
-        chkSpotBotBtcFlush.Size = New Size(76, 19)
+        chkSpotBotBtcFlush.Size = New Size(77, 19)
         chkSpotBotBtcFlush.TabIndex = 20
         chkSpotBotBtcFlush.Text = "Flush BTC"
         chkSpotBotBtcFlush.UseVisualStyleBackColor = True
@@ -2150,7 +2150,7 @@ Partial Class FormMain
         ' 
         Label25.AutoSize = True
         Label25.ForeColor = Color.Gold
-        Label25.Location = New Point(144, 42)
+        Label25.Location = New Point(144, 45)
         Label25.Name = "Label25"
         Label25.Size = New Size(17, 15)
         Label25.TabIndex = 19
@@ -2160,7 +2160,7 @@ Partial Class FormMain
         ' 
         Label12.AutoSize = True
         Label12.ForeColor = Color.Gold
-        Label12.Location = New Point(144, 18)
+        Label12.Location = New Point(144, 21)
         Label12.Name = "Label12"
         Label12.Size = New Size(17, 15)
         Label12.TabIndex = 18
@@ -2172,7 +2172,7 @@ Partial Class FormMain
         NumericUpDown2.DecimalPlaces = 2
         NumericUpDown2.ForeColor = Color.Gold
         NumericUpDown2.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
-        NumericUpDown2.Location = New Point(86, 15)
+        NumericUpDown2.Location = New Point(86, 18)
         NumericUpDown2.Name = "NumericUpDown2"
         NumericUpDown2.Size = New Size(55, 23)
         NumericUpDown2.TabIndex = 8
@@ -2184,7 +2184,7 @@ Partial Class FormMain
         NumericUpDown1.DecimalPlaces = 2
         NumericUpDown1.ForeColor = Color.Gold
         NumericUpDown1.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
-        NumericUpDown1.Location = New Point(86, 39)
+        NumericUpDown1.Location = New Point(86, 42)
         NumericUpDown1.Name = "NumericUpDown1"
         NumericUpDown1.Size = New Size(55, 23)
         NumericUpDown1.TabIndex = 7
@@ -2196,7 +2196,7 @@ Partial Class FormMain
         chkSpotBotBreakEven.Checked = True
         chkSpotBotBreakEven.CheckState = CheckState.Checked
         chkSpotBotBreakEven.ForeColor = Color.Gold
-        chkSpotBotBreakEven.Location = New Point(6, 18)
+        chkSpotBotBreakEven.Location = New Point(6, 21)
         chkSpotBotBreakEven.Name = "chkSpotBotBreakEven"
         chkSpotBotBreakEven.Size = New Size(83, 19)
         chkSpotBotBreakEven.TabIndex = 4
@@ -2209,9 +2209,9 @@ Partial Class FormMain
         chkSpotBotTrailing.Checked = True
         chkSpotBotTrailing.CheckState = CheckState.Checked
         chkSpotBotTrailing.ForeColor = Color.Gold
-        chkSpotBotTrailing.Location = New Point(6, 41)
+        chkSpotBotTrailing.Location = New Point(6, 44)
         chkSpotBotTrailing.Name = "chkSpotBotTrailing"
-        chkSpotBotTrailing.Size = New Size(47, 19)
+        chkSpotBotTrailing.Size = New Size(48, 19)
         chkSpotBotTrailing.TabIndex = 3
         chkSpotBotTrailing.Text = "Trail"
         chkSpotBotTrailing.UseVisualStyleBackColor = True
@@ -2440,13 +2440,13 @@ Partial Class FormMain
         GroupBox1.PerformLayout()
         CType(nudSpotBotGridLevels, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotGridExposure, ComponentModel.ISupportInitialize).EndInit()
+        CType(nudSpotBotUniverseRefreshMinutes, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotGridReserve, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotGridRisk, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotMinTrades, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotPostExitCooldown, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotMinVolume, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotMaxAssets, ComponentModel.ISupportInitialize).EndInit()
-        CType(nudSpotBotUniverseRefreshMinutes, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotStopLoss, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotTakeProfit, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotFee, ComponentModel.ISupportInitialize).EndInit()
