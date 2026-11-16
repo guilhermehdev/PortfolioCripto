@@ -135,9 +135,9 @@ Partial Class SpotTradeBotEditor
         nudSpotBotMaxAssets = AddEditorNumeric(tpStrategies, "nudSpotBotMaxAssets", 20D, 1D, 500D, 0, 704, 108, 75)
         nudSpotBotMinVolume = AddEditorNumeric(tpStrategies, "nudSpotBotMinVolume", 1000000D, 0D, 1000000000000D, 0, 790, 108, 112)
         chkSpotBotBreakEven = AddEditorCheck(tpStrategies, "chkSpotBotBreakEven", "BE", 940, 108, 40)
-        nudSpotBotBreakEvenTrigger = AddEditorNumeric(tpStrategies, "nudSpotBotBreakEvenTrigger", 1.5D, 0D, 100D, 2, 980, 108, 62)
+        nudSpotBotBreakEvenTrigger = AddEditorNumeric(tpStrategies, "nudSpotBotBreakEvenTrigger", 0.9D, 0D, 100D, 2, 980, 108, 62)
         chkSpotBotTrailing = AddEditorCheck(tpStrategies, "chkSpotBotTrailing", "Trail", 1046, 108, 50)
-        nudSpotBotTrailingDistance = AddEditorNumeric(tpStrategies, "nudSpotBotTrailingDistance", 1D, 0.01D, 100D, 2, 1096, 108, 62)
+        nudSpotBotTrailingDistance = AddEditorNumeric(tpStrategies, "nudSpotBotTrailingDistance", 0.8D, 0.01D, 100D, 2, 1096, 108, 62)
         nudSpotBotPostExitCooldown = AddEditorNumeric(tpStrategies, "nudSpotBotPostExitCooldown", 15D, 0D, 1440D, 0, 6, 156, 82)
         nudSpotBotMinTrades = AddEditorNumeric(tpStrategies, "nudSpotBotMinTrades", 1000D, 0D, 10000000D, 0, 175, 156, 90)
         nudSpotBotGridRisk = AddEditorNumeric(tpStrategies, "nudSpotBotGridRisk", 0.5D, 0D, 100D, 2, 280, 156, 72)
@@ -175,6 +175,7 @@ Partial Class SpotTradeBotEditor
         cbSpotBotBollingerTimeframe.SelectedIndex = 1
         cbSpotBotUniverseMode.SelectedIndex = 0
         chkSpotBotBreakEven.Checked = True
+        chkSpotBotTrailing.Checked = True
         chkSpotBotGridRejection.Checked = True
         chkSpotBotBtcFlush.Checked = True
         chkSpotBotBtcDaily.Checked = True

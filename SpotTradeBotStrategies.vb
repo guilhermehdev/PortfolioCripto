@@ -1179,10 +1179,12 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
             Math.Min(configuration.GridV2SpacingMaximumPercent, volatilityPercent * 2.5D))
         spacingPercent = Math.Max(0.01D, spacingPercent)
 
-        Dim minimumStopPercent = Math.Max(1.5D, configuration.GridV2MinimumStopPercent)
+        Dim minimumStopPercent = Math.Min(2D, Math.Max(1.5D, configuration.GridV2MinimumStopPercent))
         Dim stopVolatilityMultiplier = Math.Max(0D, configuration.GridV2StopVolatilityMultiplier)
         Dim dynamicStopPercent = Math.Max(minimumStopPercent, volatilityPercent * stopVolatilityMultiplier)
-        Dim maximumStopPercent = Math.Max(minimumStopPercent, configuration.GridV2MaximumStopPercent)
+        Dim maximumStopPercent = Math.Max(
+            minimumStopPercent,
+            Math.Min(2D, Math.Max(minimumStopPercent, configuration.GridV2MaximumStopPercent)))
         If dynamicStopPercent > maximumStopPercent Then
             Return HoldSignal($"grade pausada: stop dinâmico de {dynamicStopPercent:0.##}% acima do limite de {maximumStopPercent:0.##}%")
         End If

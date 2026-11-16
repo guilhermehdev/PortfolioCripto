@@ -117,6 +117,7 @@ Public Class FormMain
     Private _botPostExitCooldown As NumericUpDown
     Private _botProfitGateEnabled As CheckBox
     Private _botMinProfitBeforeEntry As NumericUpDown
+    Private _botProfitGateFreePositions As NumericUpDown
     Private _botUniverseMode As ComboBox
     Private _botUniverseMaxAssets As NumericUpDown
     Private _botUniverseMinVolume As NumericUpDown
@@ -1046,7 +1047,7 @@ Public Class FormMain
             .Cursor = Cursors.Hand
         }
         editor.Controls.Add(_botBreakEvenEnabled)
-        _botBreakEvenTrigger = CreateBotNumeric(1.5D, 0D, 100D, 2, 980, 107, 62)
+        _botBreakEvenTrigger = CreateBotNumeric(0.9D, 0D, 100D, 2, 980, 107, 62)
         editor.Controls.Add(_botBreakEvenTrigger)
 
         _botTrailingEnabled = New CheckBox With {
@@ -1056,11 +1057,11 @@ Public Class FormMain
             .ForeColor = Color.White,
             .Location = New Point(1046, 107),
             .Size = New Size(50, 23),
-            .Checked = False,
+            .Checked = True,
             .Cursor = Cursors.Hand
         }
         editor.Controls.Add(_botTrailingEnabled)
-        _botTrailingDistance = CreateBotNumeric(1D, 0.01D, 100D, 2, 1096, 107, 62)
+        _botTrailingDistance = CreateBotNumeric(0.8D, 0.01D, 100D, 2, 1096, 107, 62)
         editor.Controls.Add(_botTrailingDistance)
         ToolTip1.SetToolTip(_botBreakEvenEnabled, "Move o stop para a entrada após o gatilho (%)")
         ToolTip1.SetToolTip(_botBreakEvenTrigger, "Gatilho do break-even em percentual")
@@ -2625,12 +2626,16 @@ BuildSpotBotGrid:
         _botRiskUseUnrealized = chkSpotBotRiskUseUnrealized
         _botProfitGateEnabled = chkSpotBotProfitGateEnabled
         _botMinProfitBeforeEntry = nudSpotBotMinProfitBeforeEntry
+        _botProfitGateFreePositions = nudSpotBotProfitGateFreePositions
         ToolTip1.SetToolTip(
             _botProfitGateEnabled,
-            "Quando ativo, uma nova posição em outro ativo só é aceita se as posições abertas estiverem acima do lucro líquido mínimo.")
+            "Quando ativo, as primeiras posições livres são permitidas; depois, uma nova posição em outro ativo só é aceita se as posições abertas estiverem acima do lucro líquido mínimo.")
         ToolTip1.SetToolTip(
             _botMinProfitBeforeEntry,
             "Lucro líquido estimado mínimo de cada posição aberta, já descontando taxa de saída e slippage.")
+        ToolTip1.SetToolTip(
+            _botProfitGateFreePositions,
+            "Quantidade de posições em ativos diferentes liberadas antes de exigir lucro líquido nas novas entradas.")
         _botStart = btSpotBotStart
         _botStop = btSpotBotStop
         _botExport = btSpotBotExport
@@ -2715,6 +2720,7 @@ BuildSpotBotGrid:
             _botRiskUseUnrealized.Checked = _spotTradeBot.Configuration.RiskBrakeUseUnrealizedPnl
             _botProfitGateEnabled.Checked = _spotTradeBot.Configuration.NewPositionProfitGateEnabled
             _botMinProfitBeforeEntry.Value = ClampNumeric(_botMinProfitBeforeEntry, _spotTradeBot.Configuration.MinimumNetProfitBeforeNewPositionPercent)
+            _botProfitGateFreePositions.Value = ClampNumeric(_botProfitGateFreePositions, _spotTradeBot.Configuration.NewPositionProfitGateFreePositions)
             For Each strategyCheck In _botStrategyChecks
                 strategyCheck.Value.Checked =
                     _spotTradeBot.Configuration.EnabledStrategies.Contains(strategyCheck.Key) OrElse
@@ -2896,7 +2902,8 @@ BuildSpotBotGrid:
         SetSpotBotToolTip(chkSpotBotRiskProfitLock, "Ativa a trava de lucro e a proteção contra devolução do pico.")
         SetSpotBotToolTip(chkSpotBotRiskClosePositions, "Encerra posições simuladas quando o Handbrake é acionado.")
         SetSpotBotToolTip(chkSpotBotRiskUseUnrealized, "Inclui o P/L aberto no cálculo do patrimônio usado pelo freio.")
-        SetSpotBotToolTip(chkSpotBotProfitGateEnabled, "Impede novas entradas quando o resultado líquido mínimo configurado ainda não foi alcançado.")
+        SetSpotBotToolTip(chkSpotBotProfitGateEnabled, "Permite as primeiras posições livres e, depois, impede novas entradas em outros ativos quando o resultado líquido mínimo configurado ainda não foi alcançado.")
+        SetSpotBotToolTip(nudSpotBotProfitGateFreePositions, "Quantidade de posições em ativos diferentes liberadas antes de exigir lucro líquido nas novas entradas.")
     End Sub
 
     Private Sub SetSpotBotToolTip(control As Control, text As String)
@@ -3167,10 +3174,10 @@ BuildSpotBotGrid:
         _spotTradeBot.Configuration.TakeProfitPercent = _botTakeProfit.Value
         _spotTradeBot.Configuration.StopLossPercent = _botStopLoss.Value
         _spotTradeBot.Configuration.BreakEvenEnabled = _botBreakEvenEnabled IsNot Nothing AndAlso _botBreakEvenEnabled.Checked
-        _spotTradeBot.Configuration.BreakEvenTriggerPercent = If(_botBreakEvenTrigger Is Nothing, 1.5D, _botBreakEvenTrigger.Value)
+        _spotTradeBot.Configuration.BreakEvenTriggerPercent = If(_botBreakEvenTrigger Is Nothing, 0.9D, _botBreakEvenTrigger.Value)
         _spotTradeBot.Configuration.BreakEvenOffsetPercent = 0.1D
         _spotTradeBot.Configuration.TrailingStopEnabled = _botTrailingEnabled IsNot Nothing AndAlso _botTrailingEnabled.Checked
-        _spotTradeBot.Configuration.TrailingStopDistancePercent = If(_botTrailingDistance Is Nothing, 1D, _botTrailingDistance.Value)
+        _spotTradeBot.Configuration.TrailingStopDistancePercent = If(_botTrailingDistance Is Nothing, 0.8D, _botTrailingDistance.Value)
         _spotTradeBot.Configuration.RiskBrakeEnabled = _botRiskBrakeEnabled Is Nothing OrElse _botRiskBrakeEnabled.Checked
         _spotTradeBot.Configuration.RiskBrakeSessionLossPercent = If(_botRiskSessionLoss Is Nothing, 2D, _botRiskSessionLoss.Value)
         _spotTradeBot.Configuration.RiskBrakeProfitLockEnabled = _botRiskProfitLockEnabled Is Nothing OrElse _botRiskProfitLockEnabled.Checked
@@ -3183,6 +3190,7 @@ BuildSpotBotGrid:
         _spotTradeBot.Configuration.PostExitCooldownMinutes = If(_botPostExitCooldown Is Nothing, 15D, _botPostExitCooldown.Value)
         _spotTradeBot.Configuration.NewPositionProfitGateEnabled = _botProfitGateEnabled Is Nothing OrElse _botProfitGateEnabled.Checked
         _spotTradeBot.Configuration.MinimumNetProfitBeforeNewPositionPercent = If(_botMinProfitBeforeEntry Is Nothing, 0.5D, _botMinProfitBeforeEntry.Value)
+        _spotTradeBot.Configuration.NewPositionProfitGateFreePositions = If(_botProfitGateFreePositions Is Nothing, 2, CInt(_botProfitGateFreePositions.Value))
         _spotTradeBot.Configuration.SimulationOnly = True
 
         _spotTradeBot.Configuration.UniverseMode = If(_botUniverseMode.SelectedIndex = 1,
@@ -3284,6 +3292,7 @@ BuildSpotBotGrid:
         _botPostExitCooldown.Enabled = False
         _botProfitGateEnabled.Enabled = False
         _botMinProfitBeforeEntry.Enabled = False
+        _botProfitGateFreePositions.Enabled = False
         _botGridRiskPercent.Enabled = False
         _botGridReservePercent.Enabled = False
         _botGridMaxExposurePercent.Enabled = False
@@ -3345,7 +3354,8 @@ BuildSpotBotGrid:
         AppendSpotBotLog(
             $"Filtro de novas posições: {If(_spotTradeBot.Configuration.NewPositionProfitGateEnabled, "ativo", "desligado")}; " &
             $"exige lucro líquido mínimo de +{_spotTradeBot.Configuration.MinimumNetProfitBeforeNewPositionPercent:0.##}% " &
-            "nas posições abertas; não bloqueia Grid/DCA do mesmo ativo nem saídas.",
+            $"a partir da {_spotTradeBot.Configuration.NewPositionProfitGateFreePositions + 1}ª posição; " &
+            "não bloqueia Grid/DCA do mesmo ativo nem saídas.",
             Color.LightGray)
         AppendSpotBotLog(
             $"Proteção flush BTC: {If(_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled, "ativa", "desligada")}; " &
@@ -3397,7 +3407,8 @@ BuildSpotBotGrid:
                 $"saída por deterioração de regime: {If(_spotTradeBot.Configuration.GridV2RegimeExitEnabled, "sim", "não")}, " &
                 $"redução progressiva por nível: {If(_spotTradeBot.Configuration.GridV2ProgressiveExposureEnabled, _spotTradeBot.Configuration.GridV2ProgressiveExposureReductionPercent.ToString("0.##") & "%", "não")}; " &
                 $"ignora suporte a menos de {_spotTradeBot.Configuration.GridV2MinimumSupportDistancePercent:0.##}%, confirma o SL em {Math.Max(1, _spotTradeBot.Configuration.GridV2StopConfirmationCandles)} candles de 1 min " &
-                $"(emergência em {_spotTradeBot.Configuration.GridV2StopEmergencyBufferPercent:0.##}%), usa SL estrutural com mínimo de {_spotTradeBot.Configuration.GridV2MinimumStopPercent:0.##}% e limite de 3%, " &
+                $"(emergência em {_spotTradeBot.Configuration.GridV2StopEmergencyBufferPercent:0.##}%), usa SL estrutural com mínimo de {_spotTradeBot.Configuration.GridV2MinimumStopPercent:0.##}% e limite de {_spotTradeBot.Configuration.GridV2MaximumStopPercent:0.##}%, " &
+                "com alvo mínimo de 1,5R por nível, " &
                 "e bloqueia o ativo após 2 stops até a recuperação confirmada." &
                 If(_spotTradeBot.Configuration.GridV2BtcMildDeclineEnabled,
                    $" Regime BTC Leve Queda ativo: queda diária entre {_spotTradeBot.Configuration.GridV2BtcMildDeclineMinimumPercent:0.##}% e {_spotTradeBot.Configuration.GridV2BtcMildDeclineMaximumPercent:0.##}%.",
@@ -3439,6 +3450,7 @@ BuildSpotBotGrid:
         _botPostExitCooldown.Enabled = True
         _botProfitGateEnabled.Enabled = True
         _botMinProfitBeforeEntry.Enabled = True
+        _botProfitGateFreePositions.Enabled = True
         _botGridRiskPercent.Enabled = True
         _botGridReservePercent.Enabled = True
         _botGridMaxExposurePercent.Enabled = True
@@ -3582,6 +3594,7 @@ BuildSpotBotGrid:
         AppendSpotBotCsvPair(builder, "CooldownPosSaidaMinutos", state.PostExitCooldownMinutes)
         AppendSpotBotCsvPair(builder, "FiltroLucroNovaPosicaoAtivo", state.NewPositionProfitGateEnabled)
         AppendSpotBotCsvPair(builder, "LucroLiquidoMinimoNovaPosicaoPercentual", state.MinimumNetProfitBeforeNewPositionPercent)
+        AppendSpotBotCsvPair(builder, "PosicoesLivresAntesFiltroLucro", state.NewPositionProfitGateFreePositions)
         AppendSpotBotCsvPair(builder, "GridV2SuporteMaisProximo", state.GridV2UseNearestSupportStop)
         AppendSpotBotCsvPair(builder, "GridV2BufferSuporteATR", state.GridV2SupportBufferAtr)
         AppendSpotBotCsvPair(builder, "GridV2StopMinimoPercentual", state.GridV2MinimumStopPercent)

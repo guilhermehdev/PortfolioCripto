@@ -23,18 +23,18 @@ Partial Class FormMain
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
         components = New ComponentModel.Container()
-        Dim DataGridViewCellStyle12 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle13 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle14 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle1 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As DataGridViewCellStyle = New DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
-        Dim DataGridViewCellStyle15 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle16 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle17 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle18 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle19 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle20 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle21 As DataGridViewCellStyle = New DataGridViewCellStyle()
-        Dim DataGridViewCellStyle22 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle4 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle5 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle6 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle7 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle8 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle9 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle10 As DataGridViewCellStyle = New DataGridViewCellStyle()
+        Dim DataGridViewCellStyle11 As DataGridViewCellStyle = New DataGridViewCellStyle()
         dgPortfolio = New DataGridView()
         PanelProfits = New Panel()
         Label15 = New Label()
@@ -119,12 +119,17 @@ Partial Class FormMain
         chkSpotBotProfitGateEnabled = New CheckBox()
         nudSpotBotMinProfitBeforeEntry = New NumericUpDown()
         Label45 = New Label()
+        nudSpotBotProfitGateFreePositions = New NumericUpDown()
+        Label47 = New Label()
         chkSpotBotRiskUseUnrealized = New CheckBox()
         chkSpotBotRiskClosePositions = New CheckBox()
         nudSpotBotRiskPause = New NumericUpDown()
         Label44 = New Label()
+        nudSpotBotUniverseRefreshMinutes = New NumericUpDown()
         nudSpotBotRiskMaxLosses = New NumericUpDown()
+        Label46 = New Label()
         Label43 = New Label()
+        chkSpotBotUniverseAutoRefresh = New CheckBox()
         nudSpotBotRiskGiveback = New NumericUpDown()
         Label42 = New Label()
         nudSpotBotRiskProfitTrigger = New NumericUpDown()
@@ -142,9 +147,6 @@ Partial Class FormMain
         Label39 = New Label()
         nudSpotBotGridExposure = New NumericUpDown()
         btSpotBotUniverse = New Button()
-        nudSpotBotUniverseRefreshMinutes = New NumericUpDown()
-        Label46 = New Label()
-        chkSpotBotUniverseAutoRefresh = New CheckBox()
         Label38 = New Label()
         nudSpotBotGridReserve = New NumericUpDown()
         Label37 = New Label()
@@ -218,7 +220,9 @@ Partial Class FormMain
         PanelTradeBot.SuspendLayout()
         GroupBox4.SuspendLayout()
         CType(nudSpotBotMinProfitBeforeEntry, ComponentModel.ISupportInitialize).BeginInit()
+        CType(nudSpotBotProfitGateFreePositions, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotRiskPause, ComponentModel.ISupportInitialize).BeginInit()
+        CType(nudSpotBotUniverseRefreshMinutes, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotRiskMaxLosses, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotRiskGiveback, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotRiskProfitTrigger, ComponentModel.ISupportInitialize).BeginInit()
@@ -227,7 +231,6 @@ Partial Class FormMain
         GroupBox1.SuspendLayout()
         CType(nudSpotBotGridLevels, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotGridExposure, ComponentModel.ISupportInitialize).BeginInit()
-        CType(nudSpotBotUniverseRefreshMinutes, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotGridReserve, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotGridRisk, ComponentModel.ISupportInitialize).BeginInit()
         CType(nudSpotBotMinTrades, ComponentModel.ISupportInitialize).BeginInit()
@@ -263,35 +266,35 @@ Partial Class FormMain
         dgPortfolio.BorderStyle = BorderStyle.None
         dgPortfolio.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgPortfolio.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle12.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle12.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle12.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle12.ForeColor = Color.Turquoise
-        DataGridViewCellStyle12.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle12.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle12.WrapMode = DataGridViewTriState.True
-        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle12
-        DataGridViewCellStyle13.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle13.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle13.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle13.ForeColor = SystemColors.ControlText
-        DataGridViewCellStyle13.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle13.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle13.WrapMode = DataGridViewTriState.True
-        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle13
+        DataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle1.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle1.ForeColor = Color.Turquoise
+        DataGridViewCellStyle1.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle1.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle1.WrapMode = DataGridViewTriState.True
+        dgPortfolio.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
+        DataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle2.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle2.ForeColor = SystemColors.ControlText
+        DataGridViewCellStyle2.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle2.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle2.WrapMode = DataGridViewTriState.True
+        dgPortfolio.DefaultCellStyle = DataGridViewCellStyle2
         dgPortfolio.EnableHeadersVisualStyles = False
         dgPortfolio.Location = New Point(9, 51)
         dgPortfolio.MultiSelect = False
         dgPortfolio.Name = "dgPortfolio"
         dgPortfolio.ReadOnly = True
-        DataGridViewCellStyle14.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle14.Font = New Font("Segoe UI", 9F)
-        DataGridViewCellStyle14.ForeColor = SystemColors.ButtonHighlight
-        DataGridViewCellStyle14.Padding = New Padding(2)
-        DataGridViewCellStyle14.SelectionBackColor = Color.Transparent
-        DataGridViewCellStyle14.SelectionForeColor = Color.Transparent
-        DataGridViewCellStyle14.WrapMode = DataGridViewTriState.True
-        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle14
+        DataGridViewCellStyle3.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle3.Font = New Font("Segoe UI", 9F)
+        DataGridViewCellStyle3.ForeColor = SystemColors.ButtonHighlight
+        DataGridViewCellStyle3.Padding = New Padding(2)
+        DataGridViewCellStyle3.SelectionBackColor = Color.Transparent
+        DataGridViewCellStyle3.SelectionForeColor = Color.Transparent
+        DataGridViewCellStyle3.WrapMode = DataGridViewTriState.True
+        dgPortfolio.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
         dgPortfolio.RowHeadersWidth = 4
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.DarkOrange
         dgPortfolio.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
@@ -870,41 +873,41 @@ Partial Class FormMain
         dgFuturos.BorderStyle = BorderStyle.None
         dgFuturos.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgFuturos.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle15.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle15.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        DataGridViewCellStyle15.Font = New Font("Calibri", 10F, FontStyle.Italic)
-        DataGridViewCellStyle15.ForeColor = Color.Turquoise
-        DataGridViewCellStyle15.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        DataGridViewCellStyle15.SelectionForeColor = Color.Turquoise
-        DataGridViewCellStyle15.WrapMode = DataGridViewTriState.True
-        dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle15
-        DataGridViewCellStyle16.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle16.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle16.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle16.ForeColor = Color.White
-        DataGridViewCellStyle16.SelectionBackColor = Color.Black
-        DataGridViewCellStyle16.SelectionForeColor = Color.White
-        DataGridViewCellStyle16.WrapMode = DataGridViewTriState.True
-        dgFuturos.DefaultCellStyle = DataGridViewCellStyle16
+        DataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle4.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle4.Font = New Font("Calibri", 10F, FontStyle.Italic)
+        DataGridViewCellStyle4.ForeColor = Color.Turquoise
+        DataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle4.SelectionForeColor = Color.Turquoise
+        DataGridViewCellStyle4.WrapMode = DataGridViewTriState.True
+        dgFuturos.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle4
+        DataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle5.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle5.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle5.ForeColor = Color.White
+        DataGridViewCellStyle5.SelectionBackColor = Color.Black
+        DataGridViewCellStyle5.SelectionForeColor = Color.White
+        DataGridViewCellStyle5.WrapMode = DataGridViewTriState.True
+        dgFuturos.DefaultCellStyle = DataGridViewCellStyle5
         dgFuturos.EnableHeadersVisualStyles = False
         dgFuturos.Location = New Point(9, 51)
         dgFuturos.MultiSelect = False
         dgFuturos.Name = "dgFuturos"
         dgFuturos.ReadOnly = True
-        DataGridViewCellStyle17.BackColor = Color.Black
-        DataGridViewCellStyle17.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle17.ForeColor = Color.White
-        DataGridViewCellStyle17.Padding = New Padding(2)
-        DataGridViewCellStyle17.SelectionBackColor = Color.Black
-        DataGridViewCellStyle17.SelectionForeColor = Color.White
-        DataGridViewCellStyle17.WrapMode = DataGridViewTriState.True
-        dgFuturos.RowHeadersDefaultCellStyle = DataGridViewCellStyle17
+        DataGridViewCellStyle6.BackColor = Color.Black
+        DataGridViewCellStyle6.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle6.ForeColor = Color.White
+        DataGridViewCellStyle6.Padding = New Padding(2)
+        DataGridViewCellStyle6.SelectionBackColor = Color.Black
+        DataGridViewCellStyle6.SelectionForeColor = Color.White
+        DataGridViewCellStyle6.WrapMode = DataGridViewTriState.True
+        dgFuturos.RowHeadersDefaultCellStyle = DataGridViewCellStyle6
         dgFuturos.RowHeadersWidth = 4
-        DataGridViewCellStyle18.BackColor = Color.Black
-        DataGridViewCellStyle18.ForeColor = Color.White
-        DataGridViewCellStyle18.SelectionBackColor = Color.Black
-        DataGridViewCellStyle18.SelectionForeColor = Color.White
-        dgFuturos.RowsDefaultCellStyle = DataGridViewCellStyle18
+        DataGridViewCellStyle7.BackColor = Color.Black
+        DataGridViewCellStyle7.ForeColor = Color.White
+        DataGridViewCellStyle7.SelectionBackColor = Color.Black
+        DataGridViewCellStyle7.SelectionForeColor = Color.White
+        dgFuturos.RowsDefaultCellStyle = DataGridViewCellStyle7
         dgFuturos.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.Black
         dgFuturos.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.White
         dgFuturos.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
@@ -1238,9 +1241,9 @@ Partial Class FormMain
         rtbSpotBotLog.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         rtbSpotBotLog.BorderStyle = BorderStyle.None
         rtbSpotBotLog.ForeColor = Color.White
-        rtbSpotBotLog.Location = New Point(738, 230)
+        rtbSpotBotLog.Location = New Point(770, 230)
         rtbSpotBotLog.Name = "rtbSpotBotLog"
-        rtbSpotBotLog.Size = New Size(413, 125)
+        rtbSpotBotLog.Size = New Size(381, 125)
         rtbSpotBotLog.TabIndex = 40
         rtbSpotBotLog.Text = ""
         ' 
@@ -1249,6 +1252,8 @@ Partial Class FormMain
         GroupBox4.Controls.Add(chkSpotBotProfitGateEnabled)
         GroupBox4.Controls.Add(nudSpotBotMinProfitBeforeEntry)
         GroupBox4.Controls.Add(Label45)
+        GroupBox4.Controls.Add(nudSpotBotProfitGateFreePositions)
+        GroupBox4.Controls.Add(Label47)
         GroupBox4.Controls.Add(chkSpotBotRiskUseUnrealized)
         GroupBox4.Controls.Add(chkSpotBotRiskClosePositions)
         GroupBox4.Controls.Add(nudSpotBotRiskPause)
@@ -1308,7 +1313,29 @@ Partial Class FormMain
         Label45.Size = New Size(92, 15)
         Label45.TabIndex = 64
         Label45.Text = "Mín. líquido (%)"
-        ' 
+        '
+        ' nudSpotBotProfitGateFreePositions
+        '
+        nudSpotBotProfitGateFreePositions.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        nudSpotBotProfitGateFreePositions.ForeColor = Color.Gold
+        nudSpotBotProfitGateFreePositions.Location = New Point(258, 154)
+        nudSpotBotProfitGateFreePositions.Maximum = New Decimal(New Integer() {20, 0, 0, 0})
+        nudSpotBotProfitGateFreePositions.Minimum = New Decimal(New Integer() {0, 0, 0, 0})
+        nudSpotBotProfitGateFreePositions.Name = "nudSpotBotProfitGateFreePositions"
+        nudSpotBotProfitGateFreePositions.Size = New Size(45, 23)
+        nudSpotBotProfitGateFreePositions.TabIndex = 70
+        nudSpotBotProfitGateFreePositions.Value = New Decimal(New Integer() {2, 0, 0, 0})
+        '
+        ' Label47
+        '
+        Label47.AutoSize = True
+        Label47.ForeColor = Color.Cyan
+        Label47.Location = New Point(257, 137)
+        Label47.Name = "Label47"
+        Label47.Size = New Size(84, 15)
+        Label47.TabIndex = 71
+        Label47.Text = "Posições livres"
+        '
         ' chkSpotBotRiskUseUnrealized
         ' 
         chkSpotBotRiskUseUnrealized.AutoSize = True
@@ -1355,6 +1382,19 @@ Partial Class FormMain
         Label44.TabIndex = 60
         Label44.Text = "Pausa (min)"
         ' 
+        ' nudSpotBotUniverseRefreshMinutes
+        ' 
+        nudSpotBotUniverseRefreshMinutes.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        nudSpotBotUniverseRefreshMinutes.ForeColor = Color.Gold
+        nudSpotBotUniverseRefreshMinutes.Increment = New Decimal(New Integer() {5, 0, 0, 0})
+        nudSpotBotUniverseRefreshMinutes.Location = New Point(305, 108)
+        nudSpotBotUniverseRefreshMinutes.Maximum = New Decimal(New Integer() {1440, 0, 0, 0})
+        nudSpotBotUniverseRefreshMinutes.Minimum = New Decimal(New Integer() {5, 0, 0, 0})
+        nudSpotBotUniverseRefreshMinutes.Name = "nudSpotBotUniverseRefreshMinutes"
+        nudSpotBotUniverseRefreshMinutes.Size = New Size(43, 23)
+        nudSpotBotUniverseRefreshMinutes.TabIndex = 69
+        nudSpotBotUniverseRefreshMinutes.Value = New Decimal(New Integer() {30, 0, 0, 0})
+        ' 
         ' nudSpotBotRiskMaxLosses
         ' 
         nudSpotBotRiskMaxLosses.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
@@ -1365,6 +1405,16 @@ Partial Class FormMain
         nudSpotBotRiskMaxLosses.TabIndex = 59
         nudSpotBotRiskMaxLosses.Value = New Decimal(New Integer() {3, 0, 0, 0})
         ' 
+        ' Label46
+        ' 
+        Label46.AutoSize = True
+        Label46.ForeColor = Color.Cyan
+        Label46.Location = New Point(271, 93)
+        Label46.Name = "Label46"
+        Label46.Size = New Size(85, 15)
+        Label46.TabIndex = 68
+        Label46.Text = "Intervalo (min)"
+        ' 
         ' Label43
         ' 
         Label43.AutoSize = True
@@ -1374,6 +1424,19 @@ Partial Class FormMain
         Label43.Size = New Size(42, 15)
         Label43.TabIndex = 58
         Label43.Text = "Perdas"
+        ' 
+        ' chkSpotBotUniverseAutoRefresh
+        ' 
+        chkSpotBotUniverseAutoRefresh.AutoSize = True
+        chkSpotBotUniverseAutoRefresh.Checked = True
+        chkSpotBotUniverseAutoRefresh.CheckState = CheckState.Checked
+        chkSpotBotUniverseAutoRefresh.ForeColor = Color.Gold
+        chkSpotBotUniverseAutoRefresh.Location = New Point(225, 110)
+        chkSpotBotUniverseAutoRefresh.Name = "chkSpotBotUniverseAutoRefresh"
+        chkSpotBotUniverseAutoRefresh.Size = New Size(76, 19)
+        chkSpotBotUniverseAutoRefresh.TabIndex = 67
+        chkSpotBotUniverseAutoRefresh.Text = "Auto lista"
+        chkSpotBotUniverseAutoRefresh.UseVisualStyleBackColor = True
         ' 
         ' nudSpotBotRiskGiveback
         ' 
@@ -1476,47 +1539,47 @@ Partial Class FormMain
         dgSpotBotPositionsControl.BorderStyle = BorderStyle.None
         dgSpotBotPositionsControl.CellBorderStyle = DataGridViewCellBorderStyle.None
         dgSpotBotPositionsControl.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None
-        DataGridViewCellStyle19.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle19.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        DataGridViewCellStyle19.Font = New Font("Calibri", 9F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle19.ForeColor = Color.Turquoise
-        DataGridViewCellStyle19.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        DataGridViewCellStyle19.SelectionForeColor = Color.Turquoise
-        DataGridViewCellStyle19.WrapMode = DataGridViewTriState.True
-        dgSpotBotPositionsControl.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle19
-        DataGridViewCellStyle20.Alignment = DataGridViewContentAlignment.MiddleLeft
-        DataGridViewCellStyle20.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
-        DataGridViewCellStyle20.Font = New Font("Calibri", 8.25F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        DataGridViewCellStyle20.ForeColor = Color.White
-        DataGridViewCellStyle20.SelectionBackColor = Color.Black
-        DataGridViewCellStyle20.SelectionForeColor = Color.White
-        DataGridViewCellStyle20.WrapMode = DataGridViewTriState.True
-        dgSpotBotPositionsControl.DefaultCellStyle = DataGridViewCellStyle20
+        DataGridViewCellStyle8.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle8.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle8.Font = New Font("Calibri", 9F, FontStyle.Italic, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle8.ForeColor = Color.Turquoise
+        DataGridViewCellStyle8.SelectionBackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
+        DataGridViewCellStyle8.SelectionForeColor = Color.Turquoise
+        DataGridViewCellStyle8.WrapMode = DataGridViewTriState.True
+        dgSpotBotPositionsControl.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle8
+        DataGridViewCellStyle9.Alignment = DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle9.BackColor = Color.FromArgb(CByte(64), CByte(64), CByte(64))
+        DataGridViewCellStyle9.Font = New Font("Calibri", 8.25F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        DataGridViewCellStyle9.ForeColor = Color.White
+        DataGridViewCellStyle9.SelectionBackColor = Color.Black
+        DataGridViewCellStyle9.SelectionForeColor = Color.White
+        DataGridViewCellStyle9.WrapMode = DataGridViewTriState.True
+        dgSpotBotPositionsControl.DefaultCellStyle = DataGridViewCellStyle9
         dgSpotBotPositionsControl.EnableHeadersVisualStyles = False
         dgSpotBotPositionsControl.Location = New Point(0, 230)
         dgSpotBotPositionsControl.MultiSelect = False
         dgSpotBotPositionsControl.Name = "dgSpotBotPositionsControl"
         dgSpotBotPositionsControl.ReadOnly = True
-        DataGridViewCellStyle21.BackColor = Color.Black
-        DataGridViewCellStyle21.Font = New Font("Calibri", 12F)
-        DataGridViewCellStyle21.ForeColor = Color.White
-        DataGridViewCellStyle21.Padding = New Padding(2)
-        DataGridViewCellStyle21.SelectionBackColor = Color.Black
-        DataGridViewCellStyle21.SelectionForeColor = Color.White
-        DataGridViewCellStyle21.WrapMode = DataGridViewTriState.True
-        dgSpotBotPositionsControl.RowHeadersDefaultCellStyle = DataGridViewCellStyle21
+        DataGridViewCellStyle10.BackColor = Color.Black
+        DataGridViewCellStyle10.Font = New Font("Calibri", 12F)
+        DataGridViewCellStyle10.ForeColor = Color.White
+        DataGridViewCellStyle10.Padding = New Padding(2)
+        DataGridViewCellStyle10.SelectionBackColor = Color.Black
+        DataGridViewCellStyle10.SelectionForeColor = Color.White
+        DataGridViewCellStyle10.WrapMode = DataGridViewTriState.True
+        dgSpotBotPositionsControl.RowHeadersDefaultCellStyle = DataGridViewCellStyle10
         dgSpotBotPositionsControl.RowHeadersWidth = 4
-        DataGridViewCellStyle22.BackColor = Color.Black
-        DataGridViewCellStyle22.ForeColor = Color.White
-        DataGridViewCellStyle22.SelectionBackColor = Color.Black
-        DataGridViewCellStyle22.SelectionForeColor = Color.White
-        dgSpotBotPositionsControl.RowsDefaultCellStyle = DataGridViewCellStyle22
+        DataGridViewCellStyle11.BackColor = Color.Black
+        DataGridViewCellStyle11.ForeColor = Color.White
+        DataGridViewCellStyle11.SelectionBackColor = Color.Black
+        DataGridViewCellStyle11.SelectionForeColor = Color.White
+        dgSpotBotPositionsControl.RowsDefaultCellStyle = DataGridViewCellStyle11
         dgSpotBotPositionsControl.RowTemplate.DefaultCellStyle.SelectionBackColor = Color.Black
         dgSpotBotPositionsControl.RowTemplate.DefaultCellStyle.SelectionForeColor = Color.White
         dgSpotBotPositionsControl.RowTemplate.DefaultCellStyle.WrapMode = DataGridViewTriState.True
         dgSpotBotPositionsControl.ScrollBars = ScrollBars.Vertical
         dgSpotBotPositionsControl.SelectionMode = DataGridViewSelectionMode.FullRowSelect
-        dgSpotBotPositionsControl.Size = New Size(736, 125)
+        dgSpotBotPositionsControl.Size = New Size(764, 125)
         dgSpotBotPositionsControl.TabIndex = 38
         dgSpotBotPositionsControl.Visible = False
         ' 
@@ -1664,42 +1727,6 @@ Partial Class FormMain
         btSpotBotUniverse.TabIndex = 64
         btSpotBotUniverse.Text = "Atualizar"
         btSpotBotUniverse.UseVisualStyleBackColor = False
-        ' 
-        ' nudSpotBotUniverseRefreshMinutes
-        ' 
-        nudSpotBotUniverseRefreshMinutes.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
-        nudSpotBotUniverseRefreshMinutes.ForeColor = Color.Gold
-        nudSpotBotUniverseRefreshMinutes.Increment = New Decimal(New Integer() {5, 0, 0, 0})
-        nudSpotBotUniverseRefreshMinutes.Location = New Point(305, 108)
-        nudSpotBotUniverseRefreshMinutes.Maximum = New Decimal(New Integer() {1440, 0, 0, 0})
-        nudSpotBotUniverseRefreshMinutes.Minimum = New Decimal(New Integer() {5, 0, 0, 0})
-        nudSpotBotUniverseRefreshMinutes.Name = "nudSpotBotUniverseRefreshMinutes"
-        nudSpotBotUniverseRefreshMinutes.Size = New Size(43, 23)
-        nudSpotBotUniverseRefreshMinutes.TabIndex = 69
-        nudSpotBotUniverseRefreshMinutes.Value = New Decimal(New Integer() {30, 0, 0, 0})
-        ' 
-        ' Label46
-        ' 
-        Label46.AutoSize = True
-        Label46.ForeColor = Color.Cyan
-        Label46.Location = New Point(271, 93)
-        Label46.Name = "Label46"
-        Label46.Size = New Size(85, 15)
-        Label46.TabIndex = 68
-        Label46.Text = "Intervalo (min)"
-        ' 
-        ' chkSpotBotUniverseAutoRefresh
-        ' 
-        chkSpotBotUniverseAutoRefresh.AutoSize = True
-        chkSpotBotUniverseAutoRefresh.Checked = True
-        chkSpotBotUniverseAutoRefresh.CheckState = CheckState.Checked
-        chkSpotBotUniverseAutoRefresh.ForeColor = Color.Gold
-        chkSpotBotUniverseAutoRefresh.Location = New Point(225, 110)
-        chkSpotBotUniverseAutoRefresh.Name = "chkSpotBotUniverseAutoRefresh"
-        chkSpotBotUniverseAutoRefresh.Size = New Size(76, 19)
-        chkSpotBotUniverseAutoRefresh.TabIndex = 67
-        chkSpotBotUniverseAutoRefresh.Text = "Auto lista"
-        chkSpotBotUniverseAutoRefresh.UseVisualStyleBackColor = True
         ' 
         ' Label38
         ' 
@@ -2176,7 +2203,7 @@ Partial Class FormMain
         NumericUpDown2.Name = "NumericUpDown2"
         NumericUpDown2.Size = New Size(55, 23)
         NumericUpDown2.TabIndex = 8
-        NumericUpDown2.Value = New Decimal(New Integer() {15, 0, 0, 65536})
+        NumericUpDown2.Value = New Decimal(New Integer() {9, 0, 0, 65536})
         ' 
         ' NumericUpDown1
         ' 
@@ -2188,7 +2215,7 @@ Partial Class FormMain
         NumericUpDown1.Name = "NumericUpDown1"
         NumericUpDown1.Size = New Size(55, 23)
         NumericUpDown1.TabIndex = 7
-        NumericUpDown1.Value = New Decimal(New Integer() {1, 0, 0, 0})
+        NumericUpDown1.Value = New Decimal(New Integer() {8, 0, 0, 65536})
         ' 
         ' chkSpotBotBreakEven
         ' 
@@ -2430,7 +2457,9 @@ Partial Class FormMain
         GroupBox4.ResumeLayout(False)
         GroupBox4.PerformLayout()
         CType(nudSpotBotMinProfitBeforeEntry, ComponentModel.ISupportInitialize).EndInit()
+        CType(nudSpotBotProfitGateFreePositions, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotRiskPause, ComponentModel.ISupportInitialize).EndInit()
+        CType(nudSpotBotUniverseRefreshMinutes, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotRiskMaxLosses, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotRiskGiveback, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotRiskProfitTrigger, ComponentModel.ISupportInitialize).EndInit()
@@ -2440,7 +2469,6 @@ Partial Class FormMain
         GroupBox1.PerformLayout()
         CType(nudSpotBotGridLevels, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotGridExposure, ComponentModel.ISupportInitialize).EndInit()
-        CType(nudSpotBotUniverseRefreshMinutes, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotGridReserve, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotGridRisk, ComponentModel.ISupportInitialize).EndInit()
         CType(nudSpotBotMinTrades, ComponentModel.ISupportInitialize).EndInit()
@@ -2638,5 +2666,7 @@ Partial Class FormMain
     Friend WithEvents chkSpotBotProfitGateEnabled As CheckBox
     Friend WithEvents nudSpotBotMinProfitBeforeEntry As NumericUpDown
     Friend WithEvents Label45 As Label
+    Friend WithEvents nudSpotBotProfitGateFreePositions As NumericUpDown
+    Friend WithEvents Label47 As Label
 
 End Class

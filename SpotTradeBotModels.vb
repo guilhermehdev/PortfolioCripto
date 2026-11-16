@@ -153,6 +153,10 @@ Public NotInheritable Class SpotBotConfiguration
     ' Grid/DCA no mesmo ativo e saídas não passam por este filtro.
     Public Property NewPositionProfitGateEnabled As Boolean = True
     Public Property MinimumNetProfitBeforeNewPositionPercent As Decimal = 0.5D
+    ' Quantidade de posições em ativos diferentes liberadas antes de o
+    ' filtro de lucro começar a bloquear novas entradas. O valor 2 permite
+    ' diversificar inicialmente e passa a exigir lucro líquido na terceira.
+    Public Property NewPositionProfitGateFreePositions As Integer = 2
     Public Property MaximumPriceHistory As Integer = 250
 
     Public Property EmaFastPeriod As Integer = 9
@@ -202,10 +206,10 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property TakeProfitPercent As Decimal = 2D
     Public Property StopLossPercent As Decimal = 1D
     Public Property BreakEvenEnabled As Boolean = True
-    Public Property BreakEvenTriggerPercent As Decimal = 1.5D
+    Public Property BreakEvenTriggerPercent As Decimal = 0.9D
     Public Property BreakEvenOffsetPercent As Decimal = 0.1D
-    Public Property TrailingStopEnabled As Boolean = False
-    Public Property TrailingStopDistancePercent As Decimal = 1D
+    Public Property TrailingStopEnabled As Boolean = True
+    Public Property TrailingStopDistancePercent As Decimal = 0.8D
 
     ' Freio de perdas da carteira virtual. O freio é uma camada externa às
     ' estratégias: ele bloqueia novas entradas sem alterar os sinais. Fechamentos
@@ -226,7 +230,7 @@ Public NotInheritable Class SpotBotConfiguration
     ' ou distante demais.
     Public Property GridV2Lookback As Integer = 48
     Public Property GridV2VolatilityPeriod As Integer = 14
-    Public Property GridV2SpacingMinimumPercent As Decimal = 0.8D
+    Public Property GridV2SpacingMinimumPercent As Decimal = 1D
     Public Property GridV2SpacingMaximumPercent As Decimal = 2.5D
     Public Property GridV2MaxRangePercent As Decimal = 12D
     Public Property GridV2MaxSlopePercent As Decimal = 2D
@@ -251,7 +255,7 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property GridV2BreakoutAtrMultiplier As Decimal = 0.5D
     Public Property GridV2MinimumStopPercent As Decimal = 1.5D
     Public Property GridV2StopVolatilityMultiplier As Decimal = 1.5D
-    Public Property GridV2MaximumStopPercent As Decimal = 3D
+    Public Property GridV2MaximumStopPercent As Decimal = 2D
     Public Property GridV2EmaFilterEnabled As Boolean = True
     Public Property GridV2FastEmaPeriod As Integer = 9
     Public Property GridV2SlowEmaPeriod As Integer = 21
@@ -266,8 +270,8 @@ Public NotInheritable Class SpotBotConfiguration
     ' confirmado por candles fechados de 1 minuto, mantendo uma saída de
     ' emergência para rompimentos rápidos.
     Public Property GridV2StopConfirmationEnabled As Boolean = True
-    Public Property GridV2StopConfirmationCandles As Integer = 2
-    Public Property GridV2StopEmergencyBufferPercent As Decimal = 0.5D
+    Public Property GridV2StopConfirmationCandles As Integer = 1
+    Public Property GridV2StopEmergencyBufferPercent As Decimal = 0.2D
     ' A grade só entra depois que o candle toca o nível e confirma rejeição.
     Public Property GridV2RequireRejection As Boolean = True
     ' Risco máximo estimado por nível, calculado contra o stop estrutural.
@@ -474,10 +478,10 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property TakeProfitPercent As Decimal = 2D
     Public Property StopLossPercent As Decimal = 1D
     Public Property BreakEvenEnabled As Boolean = True
-    Public Property BreakEvenTriggerPercent As Decimal = 1.5D
+    Public Property BreakEvenTriggerPercent As Decimal = 0.9D
     Public Property BreakEvenOffsetPercent As Decimal = 0.1D
-    Public Property TrailingStopEnabled As Boolean = False
-    Public Property TrailingStopDistancePercent As Decimal = 1D
+    Public Property TrailingStopEnabled As Boolean = True
+    Public Property TrailingStopDistancePercent As Decimal = 0.8D
     Public Property RiskBrakeEnabled As Boolean = True
     Public Property RiskBrakeSessionLossPercent As Decimal = 2D
     Public Property RiskBrakeProfitLockEnabled As Boolean = True
@@ -490,14 +494,15 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property PostExitCooldownMinutes As Decimal = 5D
     Public Property NewPositionProfitGateEnabled As Boolean = True
     Public Property MinimumNetProfitBeforeNewPositionPercent As Decimal = 0.5D
+    Public Property NewPositionProfitGateFreePositions As Integer = 2
     Public Property GridV2UseNearestSupportStop As Boolean = True
     Public Property GridV2SupportBufferAtr As Decimal = 1D
     Public Property GridV2MinimumStopPercent As Decimal = 1.5D
-    Public Property GridV2MaximumStopPercent As Decimal = 3D
+    Public Property GridV2MaximumStopPercent As Decimal = 2D
     Public Property GridV2MinimumSupportDistancePercent As Decimal = 0.8D
     Public Property GridV2StopConfirmationEnabled As Boolean = True
-    Public Property GridV2StopConfirmationCandles As Integer = 2
-    Public Property GridV2StopEmergencyBufferPercent As Decimal = 0.5D
+    Public Property GridV2StopConfirmationCandles As Integer = 1
+    Public Property GridV2StopEmergencyBufferPercent As Decimal = 0.2D
     Public Property GridV2MaxExposurePercent As Decimal = 30D
     Public Property GridV2RequireRejection As Boolean = True
     Public Property GridV2RiskPerTradePercent As Decimal = 0.5D

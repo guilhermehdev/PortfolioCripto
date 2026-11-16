@@ -51,17 +51,20 @@ Public NotInheritable Class SpotTradeBotRepository
                         "BollingerStandardDeviations REAL NOT NULL DEFAULT 3, " &
                         "BollingerCandleMinutes INTEGER NOT NULL DEFAULT 1440, " &
                          "BreakEvenEnabled INTEGER NOT NULL DEFAULT 1, " &
-                         "BreakEvenTriggerPercent REAL NOT NULL DEFAULT 1.5, " &
+                         "BreakEvenTriggerPercent REAL NOT NULL DEFAULT 0.9, " &
                          "BreakEvenOffsetPercent REAL NOT NULL DEFAULT 0.1, " &
-                         "TrailingStopEnabled INTEGER NOT NULL DEFAULT 0, " &
-                         "TrailingStopDistancePercent REAL NOT NULL DEFAULT 1, " &
+                         "TrailingStopEnabled INTEGER NOT NULL DEFAULT 1, " &
+                         "TrailingStopDistancePercent REAL NOT NULL DEFAULT 0.8, " &
                         "PostExitCooldownMinutes REAL NOT NULL DEFAULT 5, " &
                         "NewPositionProfitGateEnabled INTEGER NOT NULL DEFAULT 1, " &
                         "MinimumNetProfitBeforeNewPositionPercent REAL NOT NULL DEFAULT 0.5, " &
                          "GridV2UseNearestSupportStop INTEGER NOT NULL DEFAULT 1, " &
                          "GridV2SupportBufferAtr REAL NOT NULL DEFAULT 1, " &
                          "GridV2MinimumStopPercent REAL NOT NULL DEFAULT 1.5, " &
-                         "GridV2MaximumStopPercent REAL NOT NULL DEFAULT 3, " &
+                         "GridV2MaximumStopPercent REAL NOT NULL DEFAULT 2, " &
+                         "GridV2StopConfirmationEnabled INTEGER NOT NULL DEFAULT 1, " &
+                         "GridV2StopConfirmationCandles INTEGER NOT NULL DEFAULT 1, " &
+                         "GridV2StopEmergencyBufferPercent REAL NOT NULL DEFAULT 0.2, " &
                         "UniverseMinimumTrades24h INTEGER NOT NULL DEFAULT 1000, " &
                          "GridV2MinimumSupportDistancePercent REAL NOT NULL DEFAULT 0.8, " &
                          "GridV2MaxExposurePercent REAL NOT NULL DEFAULT 30, " &
@@ -104,11 +107,12 @@ Public NotInheritable Class SpotTradeBotRepository
                         "GridV2BtcMildDeclineMinimumPercent REAL NOT NULL DEFAULT 0.5, " &
                         "GridV2BtcMildDeclineMaximumPercent REAL NOT NULL DEFAULT 2, " &
                         "RiskBrakeManualRealizedPnl REAL NOT NULL DEFAULT 0, " &
-                        "GridV2MaximumHoldingMinutes INTEGER NOT NULL DEFAULT 240, " &
+                         "GridV2MaximumHoldingMinutes INTEGER NOT NULL DEFAULT 240, " &
                         "GridV2RegimeExitEnabled INTEGER NOT NULL DEFAULT 1, " &
                         "GridV2ProgressiveExposureEnabled INTEGER NOT NULL DEFAULT 1, " &
                         "GridV2ProgressiveExposureReductionPercent REAL NOT NULL DEFAULT 25, " &
                         "SlippagePercent REAL NOT NULL DEFAULT 0.05, " &
+                        "NewPositionProfitGateFreePositions INTEGER NOT NULL DEFAULT 2, " &
                         "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                         ");"
                     command.ExecuteNonQuery()
@@ -118,17 +122,20 @@ Public NotInheritable Class SpotTradeBotRepository
                 EnsureColumn(connection, "SpotBotRuns", "BollingerStandardDeviations", "REAL NOT NULL DEFAULT 3")
                 EnsureColumn(connection, "SpotBotRuns", "BollingerCandleMinutes", "INTEGER NOT NULL DEFAULT 1440")
                 EnsureColumn(connection, "SpotBotRuns", "BreakEvenEnabled", "INTEGER NOT NULL DEFAULT 1")
-                EnsureColumn(connection, "SpotBotRuns", "BreakEvenTriggerPercent", "REAL NOT NULL DEFAULT 1.5")
+                EnsureColumn(connection, "SpotBotRuns", "BreakEvenTriggerPercent", "REAL NOT NULL DEFAULT 0.9")
                 EnsureColumn(connection, "SpotBotRuns", "BreakEvenOffsetPercent", "REAL NOT NULL DEFAULT 0.1")
-                EnsureColumn(connection, "SpotBotRuns", "TrailingStopEnabled", "INTEGER NOT NULL DEFAULT 0")
-                EnsureColumn(connection, "SpotBotRuns", "TrailingStopDistancePercent", "REAL NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "TrailingStopEnabled", "INTEGER NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "TrailingStopDistancePercent", "REAL NOT NULL DEFAULT 0.8")
                 EnsureColumn(connection, "SpotBotRuns", "PostExitCooldownMinutes", "REAL NOT NULL DEFAULT 5")
                 EnsureColumn(connection, "SpotBotRuns", "NewPositionProfitGateEnabled", "INTEGER NOT NULL DEFAULT 1")
                 EnsureColumn(connection, "SpotBotRuns", "MinimumNetProfitBeforeNewPositionPercent", "REAL NOT NULL DEFAULT 0.5")
                 EnsureColumn(connection, "SpotBotRuns", "GridV2UseNearestSupportStop", "INTEGER NOT NULL DEFAULT 1")
                 EnsureColumn(connection, "SpotBotRuns", "GridV2SupportBufferAtr", "REAL NOT NULL DEFAULT 1")
                 EnsureColumn(connection, "SpotBotRuns", "GridV2MinimumStopPercent", "REAL NOT NULL DEFAULT 1.5")
-                EnsureColumn(connection, "SpotBotRuns", "GridV2MaximumStopPercent", "REAL NOT NULL DEFAULT 3")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2MaximumStopPercent", "REAL NOT NULL DEFAULT 2")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2StopConfirmationEnabled", "INTEGER NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2StopConfirmationCandles", "INTEGER NOT NULL DEFAULT 1")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2StopEmergencyBufferPercent", "REAL NOT NULL DEFAULT 0.2")
                 EnsureColumn(connection, "SpotBotRuns", "UniverseMinimumTrades24h", "INTEGER NOT NULL DEFAULT 1000")
                  EnsureColumn(connection, "SpotBotRuns", "GridV2MinimumSupportDistancePercent", "REAL NOT NULL DEFAULT 0.8")
                 EnsureColumn(connection, "SpotBotRuns", "GridV2MaxExposurePercent", "REAL NOT NULL DEFAULT 30")
@@ -176,6 +183,7 @@ Public NotInheritable Class SpotTradeBotRepository
                 EnsureColumn(connection, "SpotBotRuns", "RiskBrakePauseCount", "INTEGER NOT NULL DEFAULT 0")
                 EnsureColumn(connection, "SpotBotRuns", "RiskBrakeLastPauseStartedUtc", "TEXT")
                 EnsureColumn(connection, "SpotBotRuns", "RiskBrakeLastPauseEndedUtc", "TEXT")
+                EnsureColumn(connection, "SpotBotRuns", "NewPositionProfitGateFreePositions", "INTEGER NOT NULL DEFAULT 2")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -328,7 +336,7 @@ Public NotInheritable Class SpotTradeBotRepository
                           "RiskBrakeLastPauseStartedUtc, RiskBrakeLastPauseEndedUtc, " &
                          "TakeProfitPercent, StopLossPercent, GridV2BtcMildDeclineEnabled, " &
                          "GridV2BtcMildDeclineMinimumPercent, GridV2BtcMildDeclineMaximumPercent, RiskBrakeManualRealizedPnl, " &
-                         "GridV2MaximumHoldingMinutes, GridV2RegimeExitEnabled, GridV2ProgressiveExposureEnabled, GridV2ProgressiveExposureReductionPercent, SlippagePercent) " &
+                         "GridV2MaximumHoldingMinutes, GridV2RegimeExitEnabled, GridV2ProgressiveExposureEnabled, GridV2ProgressiveExposureReductionPercent, SlippagePercent, NewPositionProfitGateFreePositions, GridV2StopConfirmationEnabled, GridV2StopConfirmationCandles, GridV2StopEmergencyBufferPercent) " &
                     "VALUES ($startedAt, $status, $enabledStrategies, $combinationMode, $requiredConfirmations, " &
                         "$startingQuote, $allocationPercent, $feeRate, $equity, $quoteBalance, " &
                         "$bollingerPeriod, $bollingerStandardDeviations, $bollingerCandleMinutes, " &
@@ -350,7 +358,7 @@ Public NotInheritable Class SpotTradeBotRepository
                           "$riskBrakeLastPauseStartedUtc, $riskBrakeLastPauseEndedUtc, " &
                          "$takeProfitPercent, $stopLossPercent, $gridV2BtcMildDeclineEnabled, " &
                          "$gridV2BtcMildDeclineMinimumPercent, $gridV2BtcMildDeclineMaximumPercent, $riskBrakeManualRealizedPnl, " &
-                         "$gridV2MaximumHoldingMinutes, $gridV2RegimeExitEnabled, $gridV2ProgressiveExposureEnabled, $gridV2ProgressiveExposureReductionPercent, $slippagePercent);"
+                         "$gridV2MaximumHoldingMinutes, $gridV2RegimeExitEnabled, $gridV2ProgressiveExposureEnabled, $gridV2ProgressiveExposureReductionPercent, $slippagePercent, $newPositionProfitGateFreePositions, $gridV2StopConfirmationEnabled, $gridV2StopConfirmationCandles, $gridV2StopEmergencyBufferPercent);"
 
                 command.Parameters.AddWithValue("$startedAt", UtcText(DateTime.UtcNow))
                 command.Parameters.AddWithValue("$status", "RUNNING")
@@ -375,8 +383,9 @@ Public NotInheritable Class SpotTradeBotRepository
                 AddRealParameter(command, "$minimumNetProfitBeforeNewPositionPercent", Math.Max(0D, configuration.MinimumNetProfitBeforeNewPositionPercent))
                 command.Parameters.AddWithValue("$gridV2UseNearestSupportStop", If(configuration.GridV2UseNearestSupportStop, 1, 0))
                 AddRealParameter(command, "$gridV2SupportBufferAtr", Math.Max(0D, configuration.GridV2SupportBufferAtr))
-                AddRealParameter(command, "$gridV2MinimumStopPercent", Math.Max(1.5D, configuration.GridV2MinimumStopPercent))
-                AddRealParameter(command, "$gridV2MaximumStopPercent", Math.Max(1.5D, Math.Max(configuration.GridV2MinimumStopPercent, configuration.GridV2MaximumStopPercent)))
+                Dim minimumGridStopPercent = Math.Min(2D, Math.Max(1.5D, configuration.GridV2MinimumStopPercent))
+                AddRealParameter(command, "$gridV2MinimumStopPercent", minimumGridStopPercent)
+                AddRealParameter(command, "$gridV2MaximumStopPercent", Math.Max(minimumGridStopPercent, Math.Min(2D, configuration.GridV2MaximumStopPercent)))
                 command.Parameters.AddWithValue("$universeMinimumTrades24h", Math.Max(0, configuration.UniverseMinimumTrades24h))
                 AddRealParameter(command, "$gridV2MinimumSupportDistancePercent", Math.Max(0.8D, configuration.GridV2MinimumSupportDistancePercent))
                 AddRealParameter(command, "$gridV2MaxExposurePercent", Math.Min(100D, Math.Max(0D, configuration.GridV2MaxExposurePercent)))
@@ -424,6 +433,10 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.Parameters.AddWithValue("$gridV2ProgressiveExposureEnabled", If(configuration.GridV2ProgressiveExposureEnabled, 1, 0))
                 AddRealParameter(command, "$gridV2ProgressiveExposureReductionPercent", Math.Min(100D, Math.Max(0D, configuration.GridV2ProgressiveExposureReductionPercent)))
                 AddRealParameter(command, "$slippagePercent", Math.Min(5D, Math.Max(0D, configuration.SimulationSlippagePercent)))
+                command.Parameters.AddWithValue("$newPositionProfitGateFreePositions", Math.Max(0, configuration.NewPositionProfitGateFreePositions))
+                command.Parameters.AddWithValue("$gridV2StopConfirmationEnabled", If(configuration.GridV2StopConfirmationEnabled, 1, 0))
+                command.Parameters.AddWithValue("$gridV2StopConfirmationCandles", Math.Max(1, configuration.GridV2StopConfirmationCandles))
+                AddRealParameter(command, "$gridV2StopEmergencyBufferPercent", Math.Max(0D, configuration.GridV2StopEmergencyBufferPercent))
                 command.ExecuteNonQuery()
             End Using
 
@@ -469,6 +482,7 @@ Public NotInheritable Class SpotTradeBotRepository
                     "RiskBrakeUseUnrealizedPnl = $riskBrakeUseUnrealizedPnl, " &
                     "NewPositionProfitGateEnabled = $newPositionProfitGateEnabled, " &
                     "MinimumNetProfitBeforeNewPositionPercent = $minimumNetProfitBeforeNewPositionPercent, " &
+                    "NewPositionProfitGateFreePositions = $newPositionProfitGateFreePositions, " &
                      "TakeProfitPercent = $takeProfitPercent, " &
                      "StopLossPercent = $stopLossPercent, " &
                      "GridV2BtcMildDeclineEnabled = $gridV2BtcMildDeclineEnabled, " &
@@ -479,6 +493,9 @@ Public NotInheritable Class SpotTradeBotRepository
                      "GridV2ProgressiveExposureEnabled = $gridV2ProgressiveExposureEnabled, " &
                      "GridV2ProgressiveExposureReductionPercent = $gridV2ProgressiveExposureReductionPercent, " &
                      "SlippagePercent = $slippagePercent, " &
+                     "GridV2StopConfirmationEnabled = $gridV2StopConfirmationEnabled, " &
+                     "GridV2StopConfirmationCandles = $gridV2StopConfirmationCandles, " &
+                     "GridV2StopEmergencyBufferPercent = $gridV2StopEmergencyBufferPercent, " &
                     "UpdatedAt = CURRENT_TIMESTAMP " &
                     "WHERE Id = $runId;"
                 AddRealParameter(command, "$allocationPercent", Math.Min(100D, Math.Max(0D, configuration.SimulationAllocationPercent)))
@@ -508,6 +525,7 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.Parameters.AddWithValue("$riskBrakeUseUnrealizedPnl", If(configuration.RiskBrakeUseUnrealizedPnl, 1, 0))
                 command.Parameters.AddWithValue("$newPositionProfitGateEnabled", If(configuration.NewPositionProfitGateEnabled, 1, 0))
                 AddRealParameter(command, "$minimumNetProfitBeforeNewPositionPercent", Math.Max(0D, configuration.MinimumNetProfitBeforeNewPositionPercent))
+                command.Parameters.AddWithValue("$newPositionProfitGateFreePositions", Math.Max(0, configuration.NewPositionProfitGateFreePositions))
                 AddRealParameter(command, "$takeProfitPercent", Math.Max(0D, configuration.TakeProfitPercent))
                 AddRealParameter(command, "$stopLossPercent", Math.Max(0D, configuration.StopLossPercent))
                 command.Parameters.AddWithValue("$gridV2BtcMildDeclineEnabled", If(configuration.GridV2BtcMildDeclineEnabled, 1, 0))
@@ -518,6 +536,9 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.Parameters.AddWithValue("$gridV2ProgressiveExposureEnabled", If(configuration.GridV2ProgressiveExposureEnabled, 1, 0))
                 AddRealParameter(command, "$gridV2ProgressiveExposureReductionPercent", Math.Min(100D, Math.Max(0D, configuration.GridV2ProgressiveExposureReductionPercent)))
                 AddRealParameter(command, "$slippagePercent", Math.Min(5D, Math.Max(0D, configuration.SimulationSlippagePercent)))
+                command.Parameters.AddWithValue("$gridV2StopConfirmationEnabled", If(configuration.GridV2StopConfirmationEnabled, 1, 0))
+                command.Parameters.AddWithValue("$gridV2StopConfirmationCandles", Math.Max(1, configuration.GridV2StopConfirmationCandles))
+                AddRealParameter(command, "$gridV2StopEmergencyBufferPercent", Math.Max(0D, configuration.GridV2StopEmergencyBufferPercent))
                 command.Parameters.AddWithValue("$runId", runId)
                 command.ExecuteNonQuery()
             End Using
@@ -866,7 +887,8 @@ Public NotInheritable Class SpotTradeBotRepository
                          "TakeProfitPercent, StopLossPercent, GridV2BtcMildDeclineEnabled, " &
                          "GridV2BtcMildDeclineMinimumPercent, GridV2BtcMildDeclineMaximumPercent, RiskBrakeManualRealizedPnl, " &
                          "GridV2MaximumHoldingMinutes, GridV2RegimeExitEnabled, GridV2ProgressiveExposureEnabled, GridV2ProgressiveExposureReductionPercent, SlippagePercent, " &
-                         "NewPositionProfitGateEnabled, MinimumNetProfitBeforeNewPositionPercent " &
+                         "NewPositionProfitGateEnabled, MinimumNetProfitBeforeNewPositionPercent, NewPositionProfitGateFreePositions, " &
+                         "GridV2StopConfirmationEnabled, GridV2StopConfirmationCandles, GridV2StopEmergencyBufferPercent " &
                     "FROM SpotBotRuns ORDER BY Id DESC LIMIT 1;"
 
                 Using reader = command.ExecuteReader()
@@ -897,15 +919,15 @@ Public NotInheritable Class SpotTradeBotRepository
                         .BollingerStandardDeviations = If(reader.IsDBNull(20), 3D, Math.Max(0.1D, ReadDecimal(reader, 20))),
                          .BollingerCandleMinutes = If(reader.IsDBNull(21), 1440, If(reader.GetInt32(21) = 240, 240, 1440)),
                          .BreakEvenEnabled = If(reader.IsDBNull(22), True, reader.GetInt32(22) <> 0),
-                         .BreakEvenTriggerPercent = If(reader.IsDBNull(23), 1.5D, Math.Max(0D, ReadDecimal(reader, 23))),
+                         .BreakEvenTriggerPercent = If(reader.IsDBNull(23), 0.9D, Math.Max(0D, ReadDecimal(reader, 23))),
                          .BreakEvenOffsetPercent = If(reader.IsDBNull(24), 0.1D, Math.Max(0D, ReadDecimal(reader, 24))),
-                         .TrailingStopEnabled = If(reader.IsDBNull(25), False, reader.GetInt32(25) <> 0),
-                         .TrailingStopDistancePercent = If(reader.IsDBNull(26), 1D, Math.Max(0.01D, ReadDecimal(reader, 26))),
+                         .TrailingStopEnabled = If(reader.IsDBNull(25), True, reader.GetInt32(25) <> 0),
+                         .TrailingStopDistancePercent = If(reader.IsDBNull(26), 0.8D, Math.Max(0.01D, ReadDecimal(reader, 26))),
                           .PostExitCooldownMinutes = If(reader.IsDBNull(27), 5D, Math.Max(0D, ReadDecimal(reader, 27))),
                           .GridV2UseNearestSupportStop = If(reader.IsDBNull(28), True, reader.GetInt32(28) <> 0),
                           .GridV2SupportBufferAtr = If(reader.IsDBNull(29), 1D, Math.Max(0D, ReadDecimal(reader, 29))),
-                          .GridV2MinimumStopPercent = If(reader.IsDBNull(30), 1.5D, Math.Max(1.5D, ReadDecimal(reader, 30))),
-                          .GridV2MaximumStopPercent = If(reader.IsDBNull(31), 3D, Math.Max(0D, ReadDecimal(reader, 31))),
+                          .GridV2MinimumStopPercent = If(reader.IsDBNull(30), 1.5D, Math.Min(2D, Math.Max(1.5D, ReadDecimal(reader, 30)))),
+                          .GridV2MaximumStopPercent = If(reader.IsDBNull(31), 2D, Math.Min(2D, Math.Max(0D, ReadDecimal(reader, 31)))),
                           .UniverseMinimumTrades24h = If(reader.IsDBNull(32), 1000, Math.Max(0, reader.GetInt32(32))),
                            .GridV2MinimumSupportDistancePercent = If(reader.IsDBNull(33), 0.8D, Math.Max(0.8D, ReadDecimal(reader, 33))),
                           .GridV2MaxExposurePercent = If(reader.IsDBNull(34), 30D, Math.Min(100D, Math.Max(0D, ReadDecimal(reader, 34)))),
@@ -957,6 +979,10 @@ Public NotInheritable Class SpotTradeBotRepository
                     state.SlippagePercent = If(reader.IsDBNull(78), 0.05D, Math.Min(5D, Math.Max(0D, ReadDecimal(reader, 78))))
                     state.NewPositionProfitGateEnabled = If(reader.IsDBNull(79), True, reader.GetInt32(79) <> 0)
                     state.MinimumNetProfitBeforeNewPositionPercent = If(reader.IsDBNull(80), 0.5D, Math.Max(0D, ReadDecimal(reader, 80)))
+                    state.NewPositionProfitGateFreePositions = If(reader.IsDBNull(81), 2, Math.Max(0, reader.GetInt32(81)))
+                    state.GridV2StopConfirmationEnabled = If(reader.IsDBNull(82), True, reader.GetInt32(82) <> 0)
+                    state.GridV2StopConfirmationCandles = If(reader.IsDBNull(83), 1, Math.Max(1, reader.GetInt32(83)))
+                    state.GridV2StopEmergencyBufferPercent = If(reader.IsDBNull(84), 0.2D, Math.Max(0D, ReadDecimal(reader, 84)))
 
                     If Not reader.IsDBNull(2) Then
                         For Each strategyText In reader.GetString(2).Split(","c, StringSplitOptions.RemoveEmptyEntries)

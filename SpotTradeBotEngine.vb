@@ -1450,15 +1450,21 @@ Public NotInheritable Class SpotTradeBotEngine
                        signal.Direction = SpotBotSignalDirection.Buy AndAlso
                        Not hasPosition AndAlso
                        configurationSnapshot.NewPositionProfitGateEnabled Then
-                        Dim profitGateReason As String = Nothing
-                        If Not AreExistingPositionsProfitableForNewPositionLocked(
-                            normalizedSymbol,
-                            configurationSnapshot,
-                            rsiPriceSnapshot,
-                            profitGateReason) Then
-                            cooldownBlocked = True
-                            _simulationLastAction = $"FILTRO entrada bloqueada {normalizedSymbol}: {profitGateReason}"
-                            Debug.WriteLine($"[FILTRO LUCRO] {_simulationLastAction}")
+                        Dim freePositions = Math.Max(0, configurationSnapshot.NewPositionProfitGateFreePositions)
+                        Dim openPositionCount = _simulationPositions.Values.Where(
+                            Function(item) item IsNot Nothing AndAlso item.Quantity > 0D).Count()
+                        If openPositionCount >= freePositions Then
+                            Dim profitGateReason As String = Nothing
+                            If Not AreExistingPositionsProfitableForNewPositionLocked(
+                                normalizedSymbol,
+                                configurationSnapshot,
+                                rsiPriceSnapshot,
+                                profitGateReason) Then
+                                cooldownBlocked = True
+                                _simulationLastAction = $"FILTRO entrada bloqueada {normalizedSymbol}: {profitGateReason} " &
+                                                         $"(posições livres: {freePositions})"
+                                Debug.WriteLine($"[FILTRO LUCRO] {_simulationLastAction}")
+                            End If
                         End If
                     End If
 
@@ -2062,9 +2068,18 @@ Public NotInheritable Class SpotTradeBotEngine
             If(signal Is Nothing OrElse signal.GridSpacingPercent <= 0D,
                configuration.GridV2SpacingMinimumPercent,
                signal.GridSpacingPercent))
-        Dim targetPrice = If(signal IsNot Nothing AndAlso signal.TakeProfitPrice > entryPrice,
-                             signal.TakeProfitPrice,
-                             entryPrice * (1D + spacingPercent / 100D))
+        ' O alvo individual não pode ficar menor que o risco estrutural do
+        ' nível. Mantemos a grade responsiva, mas exigimos no mínimo 1,5R para
+        ' que um stop não exija vários pequenos ganhos para ser compensado.
+        Dim stopDistancePercent = If(
+            signal Is Nothing OrElse entryPrice <= 0D OrElse signal.StopPrice <= 0D,
+            0D,
+            Math.Max(0D, (entryPrice - signal.StopPrice) / entryPrice * 100D))
+        Dim minimumTargetPercent = Math.Max(spacingPercent, stopDistancePercent * 1.5D)
+        Dim targetPrice = entryPrice * (1D + minimumTargetPercent / 100D)
+        If signal IsNot Nothing AndAlso signal.TakeProfitPrice > entryPrice Then
+            targetPrice = Math.Max(targetPrice, signal.TakeProfitPrice)
+        End If
         Return New SpotBotGridLevel With {
             .EntryPrice = entryPrice,
             .Quantity = Math.Max(0D, quantity),
@@ -2962,11 +2977,17 @@ Public NotInheritable Class SpotTradeBotEngine
         _configuration.PostExitCooldownMinutes = Math.Max(0D, state.PostExitCooldownMinutes)
         _configuration.NewPositionProfitGateEnabled = state.NewPositionProfitGateEnabled
         _configuration.MinimumNetProfitBeforeNewPositionPercent = Math.Max(0D, state.MinimumNetProfitBeforeNewPositionPercent)
+        _configuration.NewPositionProfitGateFreePositions = Math.Max(0, state.NewPositionProfitGateFreePositions)
         _configuration.GridV2UseNearestSupportStop = state.GridV2UseNearestSupportStop
         _configuration.GridV2SupportBufferAtr = Math.Max(0D, state.GridV2SupportBufferAtr)
         _configuration.GridV2MinimumStopPercent = Math.Max(1.5D, state.GridV2MinimumStopPercent)
-        _configuration.GridV2MaximumStopPercent = Math.Max(_configuration.GridV2MinimumStopPercent, state.GridV2MaximumStopPercent)
+        _configuration.GridV2MaximumStopPercent = Math.Max(
+            _configuration.GridV2MinimumStopPercent,
+            Math.Min(2D, state.GridV2MaximumStopPercent))
         _configuration.GridV2MinimumSupportDistancePercent = Math.Max(0.8D, state.GridV2MinimumSupportDistancePercent)
+        _configuration.GridV2StopConfirmationEnabled = state.GridV2StopConfirmationEnabled
+        _configuration.GridV2StopConfirmationCandles = Math.Max(1, state.GridV2StopConfirmationCandles)
+        _configuration.GridV2StopEmergencyBufferPercent = Math.Max(0D, state.GridV2StopEmergencyBufferPercent)
         _configuration.GridV2MaxExposurePercent = Math.Min(100D, Math.Max(0D, state.GridV2MaxExposurePercent))
         _configuration.GridV2RequireRejection = state.GridV2RequireRejection
         _configuration.GridV2RiskPerTradePercent = Math.Min(100D, Math.Max(0D, state.GridV2RiskPerTradePercent))
@@ -3780,7 +3801,9 @@ Public NotInheritable Class SpotTradeBotEngine
             .GridV2BreakoutAtrMultiplier = source.GridV2BreakoutAtrMultiplier,
             .GridV2MinimumStopPercent = source.GridV2MinimumStopPercent,
             .GridV2StopVolatilityMultiplier = source.GridV2StopVolatilityMultiplier,
-            .GridV2MaximumStopPercent = source.GridV2MaximumStopPercent,
+            .GridV2MaximumStopPercent = Math.Max(
+                source.GridV2MinimumStopPercent,
+                Math.Min(2D, source.GridV2MaximumStopPercent)),
             .GridV2EmaFilterEnabled = source.GridV2EmaFilterEnabled,
             .GridV2FastEmaPeriod = source.GridV2FastEmaPeriod,
             .GridV2SlowEmaPeriod = source.GridV2SlowEmaPeriod,
@@ -3857,6 +3880,7 @@ Public NotInheritable Class SpotTradeBotEngine
             .PostExitCooldownMinutes = source.PostExitCooldownMinutes,
             .NewPositionProfitGateEnabled = source.NewPositionProfitGateEnabled,
             .MinimumNetProfitBeforeNewPositionPercent = Math.Max(0D, source.MinimumNetProfitBeforeNewPositionPercent),
+            .NewPositionProfitGateFreePositions = Math.Max(0, source.NewPositionProfitGateFreePositions),
             .SimulationOnly = source.SimulationOnly,
             .UniverseMode = source.UniverseMode,
             .UniverseMaxAssets = source.UniverseMaxAssets,

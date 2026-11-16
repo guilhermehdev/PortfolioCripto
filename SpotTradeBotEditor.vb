@@ -69,9 +69,9 @@ Public Partial Class SpotTradeBotEditor
 
         AddEditorLabel(tpStrategies, "Proteções dinâmicas", 940, 89, 210)
         chkSpotBotBreakEven = AddEditorCheck(tpStrategies, "chkSpotBotBreakEven", "BE", 940, 108, 40)
-        nudSpotBotBreakEvenTrigger = AddEditorNumeric(tpStrategies, "nudSpotBotBreakEvenTrigger", 1.5D, 0D, 100D, 2, 980, 108, 62)
+        nudSpotBotBreakEvenTrigger = AddEditorNumeric(tpStrategies, "nudSpotBotBreakEvenTrigger", 0.9D, 0D, 100D, 2, 980, 108, 62)
         chkSpotBotTrailing = AddEditorCheck(tpStrategies, "chkSpotBotTrailing", "Trail", 1046, 108, 50)
-        nudSpotBotTrailingDistance = AddEditorNumeric(tpStrategies, "nudSpotBotTrailingDistance", 1D, 0.01D, 100D, 2, 1096, 108, 62)
+        nudSpotBotTrailingDistance = AddEditorNumeric(tpStrategies, "nudSpotBotTrailingDistance", 0.8D, 0.01D, 100D, 2, 1096, 108, 62)
 
         AddEditorLabel(tpStrategies, "Cooldown pós-saída (min)", 6, 137, 160)
         nudSpotBotPostExitCooldown = AddEditorNumeric(tpStrategies, "nudSpotBotPostExitCooldown", 15D, 0D, 1440D, 0, 6, 156, 82)
@@ -122,6 +122,7 @@ Public Partial Class SpotTradeBotEditor
         cbSpotBotBollingerTimeframe.SelectedIndex = 1
         cbSpotBotUniverseMode.SelectedIndex = 0
         chkSpotBotBreakEven.Checked = True
+        chkSpotBotTrailing.Checked = True
         chkSpotBotGridRejection.Checked = True
         chkSpotBotBtcFlush.Checked = True
         chkSpotBotBtcDaily.Checked = True
