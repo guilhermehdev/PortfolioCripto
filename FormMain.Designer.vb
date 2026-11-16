@@ -1285,7 +1285,7 @@ Partial Class FormMain
         chkSpotBotProfitGateEnabled.Checked = True
         chkSpotBotProfitGateEnabled.CheckState = CheckState.Checked
         chkSpotBotProfitGateEnabled.ForeColor = Color.Gold
-        chkSpotBotProfitGateEnabled.Location = New Point(47, 155)
+        chkSpotBotProfitGateEnabled.Location = New Point(36, 154)
         chkSpotBotProfitGateEnabled.Name = "chkSpotBotProfitGateEnabled"
         chkSpotBotProfitGateEnabled.Size = New Size(83, 19)
         chkSpotBotProfitGateEnabled.TabIndex = 66
@@ -1298,7 +1298,7 @@ Partial Class FormMain
         nudSpotBotMinProfitBeforeEntry.DecimalPlaces = 2
         nudSpotBotMinProfitBeforeEntry.ForeColor = Color.Gold
         nudSpotBotMinProfitBeforeEntry.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
-        nudSpotBotMinProfitBeforeEntry.Location = New Point(136, 154)
+        nudSpotBotMinProfitBeforeEntry.Location = New Point(125, 153)
         nudSpotBotMinProfitBeforeEntry.Name = "nudSpotBotMinProfitBeforeEntry"
         nudSpotBotMinProfitBeforeEntry.Size = New Size(60, 23)
         nudSpotBotMinProfitBeforeEntry.TabIndex = 65
@@ -1308,34 +1308,33 @@ Partial Class FormMain
         ' 
         Label45.AutoSize = True
         Label45.ForeColor = Color.Cyan
-        Label45.Location = New Point(136, 137)
+        Label45.Location = New Point(98, 136)
         Label45.Name = "Label45"
         Label45.Size = New Size(92, 15)
         Label45.TabIndex = 64
         Label45.Text = "Mín. líquido (%)"
-        '
+        ' 
         ' nudSpotBotProfitGateFreePositions
-        '
+        ' 
         nudSpotBotProfitGateFreePositions.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         nudSpotBotProfitGateFreePositions.ForeColor = Color.Gold
-        nudSpotBotProfitGateFreePositions.Location = New Point(258, 154)
+        nudSpotBotProfitGateFreePositions.Location = New Point(191, 153)
         nudSpotBotProfitGateFreePositions.Maximum = New Decimal(New Integer() {20, 0, 0, 0})
-        nudSpotBotProfitGateFreePositions.Minimum = New Decimal(New Integer() {0, 0, 0, 0})
         nudSpotBotProfitGateFreePositions.Name = "nudSpotBotProfitGateFreePositions"
-        nudSpotBotProfitGateFreePositions.Size = New Size(45, 23)
+        nudSpotBotProfitGateFreePositions.Size = New Size(78, 23)
         nudSpotBotProfitGateFreePositions.TabIndex = 70
         nudSpotBotProfitGateFreePositions.Value = New Decimal(New Integer() {2, 0, 0, 0})
-        '
+        ' 
         ' Label47
-        '
+        ' 
         Label47.AutoSize = True
         Label47.ForeColor = Color.Cyan
-        Label47.Location = New Point(257, 137)
+        Label47.Location = New Point(191, 136)
         Label47.Name = "Label47"
-        Label47.Size = New Size(84, 15)
+        Label47.Size = New Size(83, 15)
         Label47.TabIndex = 71
         Label47.Text = "Posições livres"
-        '
+        ' 
         ' chkSpotBotRiskUseUnrealized
         ' 
         chkSpotBotRiskUseUnrealized.AutoSize = True
@@ -1488,7 +1487,7 @@ Partial Class FormMain
         chkSpotBotRiskProfitLock.ForeColor = Color.Gold
         chkSpotBotRiskProfitLock.Location = New Point(36, 110)
         chkSpotBotRiskProfitLock.Name = "chkSpotBotRiskProfitLock"
-        chkSpotBotRiskProfitLock.Size = New Size(100, 19)
+        chkSpotBotRiskProfitLock.Size = New Size(99, 19)
         chkSpotBotRiskProfitLock.TabIndex = 53
         chkSpotBotRiskProfitLock.Text = "Trava de lucro"
         chkSpotBotRiskProfitLock.UseVisualStyleBackColor = True
@@ -1511,7 +1510,7 @@ Partial Class FormMain
         Label40.ForeColor = Color.Cyan
         Label40.Location = New Point(36, 44)
         Label40.Name = "Label40"
-        Label40.Size = New Size(83, 15)
+        Label40.Size = New Size(84, 15)
         Label40.TabIndex = 51
         Label40.Text = "Perda máx.(%)"
         ' 
@@ -1734,7 +1733,7 @@ Partial Class FormMain
         Label38.ForeColor = Color.Cyan
         Label38.Location = New Point(447, 100)
         Label38.Name = "Label38"
-        Label38.Size = New Size(80, 15)
+        Label38.Size = New Size(81, 15)
         Label38.TabIndex = 49
         Label38.Text = "Exposição (%)"
         ' 
@@ -1868,7 +1867,7 @@ Partial Class FormMain
         Label23.ForeColor = Color.Cyan
         Label23.Location = New Point(184, 57)
         Label23.Name = "Label23"
-        Label23.Size = New Size(63, 15)
+        Label23.Size = New Size(64, 15)
         Label23.TabIndex = 14
         Label23.Text = "Máx ativos"
         ' 
@@ -1914,7 +1913,7 @@ Partial Class FormMain
         Label34.ForeColor = Color.Cyan
         Label34.Location = New Point(468, 57)
         Label34.Name = "Label34"
-        Label34.Size = New Size(42, 15)
+        Label34.Size = New Size(41, 15)
         Label34.TabIndex = 37
         Label34.Text = "TP (%)"
         ' 
@@ -2168,7 +2167,7 @@ Partial Class FormMain
         chkSpotBotBtcFlush.ForeColor = Color.Gold
         chkSpotBotBtcFlush.Location = New Point(6, 68)
         chkSpotBotBtcFlush.Name = "chkSpotBotBtcFlush"
-        chkSpotBotBtcFlush.Size = New Size(77, 19)
+        chkSpotBotBtcFlush.Size = New Size(76, 19)
         chkSpotBotBtcFlush.TabIndex = 20
         chkSpotBotBtcFlush.Text = "Flush BTC"
         chkSpotBotBtcFlush.UseVisualStyleBackColor = True
@@ -2238,7 +2237,7 @@ Partial Class FormMain
         chkSpotBotTrailing.ForeColor = Color.Gold
         chkSpotBotTrailing.Location = New Point(6, 44)
         chkSpotBotTrailing.Name = "chkSpotBotTrailing"
-        chkSpotBotTrailing.Size = New Size(48, 19)
+        chkSpotBotTrailing.Size = New Size(47, 19)
         chkSpotBotTrailing.TabIndex = 3
         chkSpotBotTrailing.Text = "Trail"
         chkSpotBotTrailing.UseVisualStyleBackColor = True
