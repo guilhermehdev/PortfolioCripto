@@ -16,6 +16,10 @@ Public NotInheritable Class SpotTradeBotEngine
     Private ReadOnly _valueZoneM5CandleHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _valueZoneM2CurrentCandles As New Dictionary(Of String, CandleState)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _valueZoneM5CurrentCandles As New Dictionary(Of String, CandleState)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _gridRegimeM15CandleHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _gridRegimeM15CurrentCandles As New Dictionary(Of String, CandleState)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _gridMacroH1CandleHistory As New Dictionary(Of String, List(Of SpotBotPricePoint))(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly _gridMacroH1CurrentCandles As New Dictionary(Of String, CandleState)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly _bitcoinFlushCandleHistory As New List(Of SpotBotPricePoint)()
     Private ReadOnly _bitcoinDailyCandleHistory As New List(Of SpotBotPricePoint)()
     Private ReadOnly _lastSignals As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
@@ -292,6 +296,10 @@ Public NotInheritable Class SpotTradeBotEngine
                 _valueZoneM5CandleHistory.Clear()
                 _valueZoneM2CurrentCandles.Clear()
                 _valueZoneM5CurrentCandles.Clear()
+                _gridRegimeM15CandleHistory.Clear()
+                _gridRegimeM15CurrentCandles.Clear()
+                _gridMacroH1CandleHistory.Clear()
+                _gridMacroH1CurrentCandles.Clear()
                 _bitcoinFlushCandleHistory.Clear()
                 _bitcoinDailyCandleHistory.Clear()
                 _lastSignals.Clear()
@@ -323,6 +331,10 @@ Public NotInheritable Class SpotTradeBotEngine
                 _valueZoneM5CandleHistory.Remove(normalized)
                 _valueZoneM2CurrentCandles.Remove(normalized)
                 _valueZoneM5CurrentCandles.Remove(normalized)
+                _gridRegimeM15CandleHistory.Remove(normalized)
+                _gridRegimeM15CurrentCandles.Remove(normalized)
+                _gridMacroH1CandleHistory.Remove(normalized)
+                _gridMacroH1CurrentCandles.Remove(normalized)
                 If String.Equals(normalized, "BTC", StringComparison.OrdinalIgnoreCase) Then
                     _bitcoinFlushCandleHistory.Clear()
                     _bitcoinDailyCandleHistory.Clear()
@@ -478,6 +490,19 @@ Public NotInheritable Class SpotTradeBotEngine
             AddWarmupRequirement(result, "5m", fiveMinuteLimit)
         End If
 
+        If enabled.Contains(SpotBotStrategyKind.GridAdaptive) Then
+            ' O Grid usa o 1m apenas para o toque/execução, confirma a rejeição
+            ' no 5m e lê o regime estrutural no 15m.
+            Dim regimeLimit = Math.Max(
+                60,
+                Math.Max(configuration.GridV2SlowEmaPeriod + 10,
+                         configuration.GridV2VolatilityPeriod + 10))
+            AddWarmupRequirement(result, "15m", regimeLimit)
+            If configuration.GridV2MacroFilterEnabled Then
+                AddWarmupRequirement(result, "1h", Math.Max(60, configuration.GridV2SlowEmaPeriod + 10))
+            End If
+        End If
+
         Dim needsBollingerCandles = enabled.Contains(SpotBotStrategyKind.BollingerMeanReversion) OrElse
                                     enabled.Contains(SpotBotStrategyKind.BaseOriginalProtected) OrElse
                                     enabled.Contains(SpotBotStrategyKind.BnfContrarian)
@@ -562,7 +587,7 @@ Public NotInheritable Class SpotTradeBotEngine
                     Dim twoMinutePoints = AggregateCandlePoints(points, 2)
                     ReplaceHistoryLocked(_valueZoneM2CandleHistory, symbol, twoMinutePoints, configuration.MaximumPriceHistory)
                     _valueZoneM2CurrentCandles(symbol) = CreateCandleState(
-                        TruncateToFixedInterval(DateTime.UtcNow, 2),
+                        TruncateToFixedInterval(points.Last().TimestampUtc, 2).AddMinutes(2),
                         points.Last().Close)
                 End If
 
@@ -598,7 +623,19 @@ Public NotInheritable Class SpotTradeBotEngine
             Case "5m"
                 ReplaceHistoryLocked(_valueZoneM5CandleHistory, symbol, points, configuration.MaximumPriceHistory)
                 _valueZoneM5CurrentCandles(symbol) = CreateCandleState(
-                    TruncateToFixedInterval(DateTime.UtcNow, 5),
+                    TruncateToFixedInterval(points.Last().TimestampUtc, 5).AddMinutes(5),
+                    points.Last().Close)
+
+            Case "15m"
+                ReplaceHistoryLocked(_gridRegimeM15CandleHistory, symbol, points, configuration.MaximumPriceHistory)
+                _gridRegimeM15CurrentCandles(symbol) = CreateCandleState(
+                    TruncateToFixedInterval(points.Last().TimestampUtc, 15).AddMinutes(15),
+                    points.Last().Close)
+
+            Case "1h"
+                ReplaceHistoryLocked(_gridMacroH1CandleHistory, symbol, points, configuration.MaximumPriceHistory)
+                _gridMacroH1CurrentCandles(symbol) = CreateCandleState(
+                    TruncateToFixedInterval(points.Last().TimestampUtc, 60).AddMinutes(60),
                     points.Last().Close)
 
             Case "4h"
@@ -1139,11 +1176,15 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim bollingerHistory As List(Of SpotBotPricePoint) = Nothing
         Dim valueZoneM2History As List(Of SpotBotPricePoint) = Nothing
         Dim valueZoneM5History As List(Of SpotBotPricePoint) = Nothing
+        Dim gridRegimeM15History As List(Of SpotBotPricePoint) = Nothing
+        Dim gridMacroH1History As List(Of SpotBotPricePoint) = Nothing
         Dim rsiPriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim bollingerPriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim wavePriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim valueZoneM2PriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim valueZoneM5PriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
+        Dim gridRegimeM15PriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
+        Dim gridMacroH1PriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim bitcoinDailyPriceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = Array.Empty(Of SpotBotPricePoint)()
         Dim rsiClosedCandle As SpotBotPricePoint = Nothing
         Dim bollingerClosedCandle As SpotBotPricePoint = Nothing
@@ -1155,6 +1196,8 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim valueZoneM1CandleClosed As Boolean
         Dim valueZoneM2CandleClosed As Boolean
         Dim valueZoneM5CandleClosed As Boolean
+        Dim gridRegimeM15CandleClosed As Boolean
+        Dim gridMacroH1CandleClosed As Boolean
         Dim valueZoneM2ClosedCandle As SpotBotPricePoint = Nothing
         Dim valueZoneM5ClosedCandle As SpotBotPricePoint = Nothing
         Dim enabledStrategies As List(Of SpotBotStrategyKind)
@@ -1222,7 +1265,8 @@ Public NotInheritable Class SpotTradeBotEngine
             End If
 
             If enabledStrategies.Contains(SpotBotStrategyKind.ValueZonePullback) OrElse
-               enabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) Then
+               enabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) OrElse
+               hasGridPositionForStops Then
                 valueZoneM2History = GetOrCreateValueZoneCandleHistory(normalizedSymbol, 2)
                 valueZoneM5History = GetOrCreateValueZoneCandleHistory(normalizedSymbol, 5)
                 valueZoneM2CandleClosed = UpdateValueZoneCandle(
@@ -1242,6 +1286,34 @@ Public NotInheritable Class SpotTradeBotEngine
                 valueZoneM2PriceSnapshot = valueZoneM2History.ToArray()
                 valueZoneM5PriceSnapshot = valueZoneM5History.ToArray()
                 candleClosed = candleClosed OrElse valueZoneM2CandleClosed OrElse valueZoneM5CandleClosed
+            End If
+
+            If enabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) OrElse hasGridPositionForStops Then
+                gridRegimeM15History = GetOrCreateGridTimeframeCandleHistory(normalizedSymbol, 15)
+                Dim gridRegimeClosedCandle As SpotBotPricePoint = Nothing
+                gridRegimeM15CandleClosed = UpdateGridTimeframeCandle(
+                    normalizedSymbol,
+                    observedAt,
+                    price,
+                    gridRegimeM15History,
+                    gridRegimeClosedCandle,
+                    15)
+                gridRegimeM15PriceSnapshot = gridRegimeM15History.ToArray()
+                candleClosed = candleClosed OrElse gridRegimeM15CandleClosed
+
+                If _configuration.GridV2MacroFilterEnabled Then
+                    gridMacroH1History = GetOrCreateGridTimeframeCandleHistory(normalizedSymbol, 60)
+                    Dim gridMacroClosedCandle As SpotBotPricePoint = Nothing
+                    gridMacroH1CandleClosed = UpdateGridTimeframeCandle(
+                        normalizedSymbol,
+                        observedAt,
+                        price,
+                        gridMacroH1History,
+                        gridMacroClosedCandle,
+                        60)
+                    gridMacroH1PriceSnapshot = gridMacroH1History.ToArray()
+                    candleClosed = candleClosed OrElse gridMacroH1CandleClosed
+                End If
             End If
 
             closedCandle = If(rsiClosedCandle, If(bollingerClosedCandle, waveClosedCandle))
@@ -1267,9 +1339,9 @@ Public NotInheritable Class SpotTradeBotEngine
         Dim priceSnapshot As IReadOnlyList(Of SpotBotPricePoint) = history.ToArray()
         Dim gridEvaluation = rsiPriceSnapshot.ToList()
         If gridEvaluation.Count > 0 Then
-            ' O Grid V2 calcula volatilidade e regime em candles de 1 minuto
-            ' fechados. O ponto atual serve somente para testar o toque/
-            ' rompimento intrabar, nunca para substituir o histórico por ticks.
+            ' O Grid V2 calcula a entrada em candles de 1 minuto. A rejeição
+            ' é confirmada separadamente no 5m e o regime estrutural fica no
+            ' 15m; o ponto atual serve somente para testar o toque intrabar.
             gridEvaluation.Add(New SpotBotPricePoint(observedAt, price, volume:=quoteVolume24h))
         Else
             gridEvaluation = priceSnapshot.ToList()
@@ -1313,6 +1385,8 @@ Public NotInheritable Class SpotTradeBotEngine
                                     normalizedSymbol,
                                     strategyPrices,
                                     valueZoneM5PriceSnapshot,
+                                    gridRegimeM15PriceSnapshot,
+                                    gridMacroH1PriceSnapshot,
                                     rsiPriceSnapshot,
                                     valueZoneM2PriceSnapshot,
                                     bitcoinDailyPriceSnapshot,
@@ -1322,6 +1396,8 @@ Public NotInheritable Class SpotTradeBotEngine
                                     normalizedSymbol,
                                     strategyPrices,
                                     valueZoneM5PriceSnapshot,
+                                    gridRegimeM15PriceSnapshot,
+                                    gridMacroH1PriceSnapshot,
                                     configurationSnapshot)
                             End If
                         Else
@@ -1329,6 +1405,8 @@ Public NotInheritable Class SpotTradeBotEngine
                                 normalizedSymbol,
                                 strategyPrices,
                                 valueZoneM5PriceSnapshot,
+                                gridRegimeM15PriceSnapshot,
+                                gridMacroH1PriceSnapshot,
                                 configurationSnapshot)
                         End If
                     Else
@@ -1525,7 +1603,7 @@ Public NotInheritable Class SpotTradeBotEngine
             automaticExit,
             stopAdjusted,
             rsiPriceSnapshot,
-            valueZoneM5PriceSnapshot)
+            gridRegimeM15PriceSnapshot)
         RaiseEvent SimulationUpdated(Me, New SpotBotSimulationEventArgs(simulationSnapshot))
 
         If activeRunId > 0 Then
@@ -3000,6 +3078,7 @@ Public NotInheritable Class SpotTradeBotEngine
         _configuration.GridV2PartialExitPercent = Math.Min(100D, Math.Max(1D, state.GridV2PartialExitPercent))
         _configuration.GridV2RegimeReductionPercent = Math.Min(100D, Math.Max(1D, state.GridV2RegimeReductionPercent))
         _configuration.GridV2TimeReductionPercent = Math.Min(100D, Math.Max(1D, state.GridV2TimeReductionPercent))
+        _configuration.GridV2MacroFilterEnabled = state.GridV2MacroFilterEnabled
         _configuration.GridV2BtcMildDeclineEnabled = state.GridV2BtcMildDeclineEnabled OrElse legacyBtcMildDecline
         _configuration.GridV2BtcMildDeclineMinimumPercent = Math.Max(0.1D, state.GridV2BtcMildDeclineMinimumPercent)
         _configuration.GridV2BtcMildDeclineMaximumPercent = Math.Max(
@@ -3257,6 +3336,68 @@ Public NotInheritable Class SpotTradeBotEngine
         End If
 
         Return history
+    End Function
+
+    Private Function GetOrCreateGridTimeframeCandleHistory(symbol As String, intervalMinutes As Integer) As List(Of SpotBotPricePoint)
+        Dim history As List(Of SpotBotPricePoint) = Nothing
+        Dim target = If(intervalMinutes = 15, _gridRegimeM15CandleHistory, _gridMacroH1CandleHistory)
+        If Not target.TryGetValue(symbol, history) Then
+            history = New List(Of SpotBotPricePoint)()
+            target(symbol) = history
+        End If
+        Return history
+    End Function
+
+    Private Function UpdateGridTimeframeCandle(
+        symbol As String,
+        timestampUtc As DateTime,
+        price As Decimal,
+        history As List(Of SpotBotPricePoint),
+        ByRef closedCandle As SpotBotPricePoint,
+        intervalMinutes As Integer) As Boolean
+
+        Dim candleStart = TruncateToFixedInterval(timestampUtc, intervalMinutes)
+        Dim currentCandle As CandleState = Nothing
+        Dim currentTarget = If(intervalMinutes = 15, _gridRegimeM15CurrentCandles, _gridMacroH1CurrentCandles)
+
+        If Not currentTarget.TryGetValue(symbol, currentCandle) Then
+            currentTarget(symbol) = New CandleState With {
+                .StartUtc = candleStart,
+                .Open = price,
+                .High = price,
+                .Low = price,
+                .Close = price}
+            Return False
+        End If
+
+        If candleStart < currentCandle.StartUtc Then Return False
+
+        If candleStart = currentCandle.StartUtc Then
+            currentCandle.High = Math.Max(currentCandle.High, price)
+            currentCandle.Low = Math.Min(currentCandle.Low, price)
+            currentCandle.Close = price
+            Return False
+        End If
+
+        closedCandle = New SpotBotPricePoint(
+            currentCandle.StartUtc,
+            currentCandle.Close,
+            currentCandle.Open,
+            currentCandle.High,
+            currentCandle.Low)
+        history.Add(closedCandle)
+        Dim maximumCandles = Math.Max(60, _configuration.MaximumPriceHistory)
+        If history.Count > maximumCandles Then
+            history.RemoveRange(0, history.Count - maximumCandles)
+        End If
+
+        currentTarget(symbol) = New CandleState With {
+            .StartUtc = candleStart,
+            .Open = price,
+            .High = price,
+            .Low = price,
+            .Close = price}
+        Return True
     End Function
 
     Private Function UpdateValueZoneCandle(
@@ -3809,6 +3950,7 @@ Public NotInheritable Class SpotTradeBotEngine
             .GridV2SlowEmaPeriod = source.GridV2SlowEmaPeriod,
             .GridV2EmaMaxSpreadPercent = source.GridV2EmaMaxSpreadPercent,
             .GridV2EmaMaxSlopePercent = source.GridV2EmaMaxSlopePercent,
+            .GridV2MacroFilterEnabled = source.GridV2MacroFilterEnabled,
             .GridV2UseNearestSupportStop = source.GridV2UseNearestSupportStop,
             .GridV2SupportBufferAtr = source.GridV2SupportBufferAtr,
             .GridV2MinimumSupportDistancePercent = source.GridV2MinimumSupportDistancePercent,

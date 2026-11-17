@@ -129,6 +129,7 @@ Public Class FormMain
     Private _botGridMaxExposurePercent As NumericUpDown
     Private _botGridMaxLevels As NumericUpDown
     Private _botGridRequireRejection As CheckBox
+    Private _botGridMacroFilter As CheckBox
     Private _botBtcFlushEnabled As CheckBox
     Private _botBtcFlushDropPercent As NumericUpDown
     Private _botBtcFlushPauseMinutes As NumericUpDown
@@ -2608,6 +2609,7 @@ BuildSpotBotGrid:
         _botGridMaxExposurePercent = nudSpotBotGridExposure
         _botGridMaxLevels = nudSpotBotGridLevels
         _botGridRequireRejection = chkSpotBotGridRejection
+        _botGridMacroFilter = chkSpotBotGridMacroFilter
         _botBtcFlushDropPercent = nudSpotBotBtcFlushDrop
         _botBtcFlushPauseMinutes = nudSpotBotBtcFlushPause
         _botBtcFlushEnabled = chkSpotBotBtcFlush
@@ -2702,6 +2704,7 @@ BuildSpotBotGrid:
             _botGridMaxExposurePercent.Value = ClampNumeric(_botGridMaxExposurePercent, _spotTradeBot.Configuration.GridV2MaxExposurePercent)
             _botGridMaxLevels.Value = ClampNumeric(_botGridMaxLevels, _spotTradeBot.Configuration.GridV2MaxLevels)
             _botGridRequireRejection.Checked = _spotTradeBot.Configuration.GridV2RequireRejection
+            _botGridMacroFilter.Checked = _spotTradeBot.Configuration.GridV2MacroFilterEnabled
             _botBtcFlushDropPercent.Value = ClampNumeric(_botBtcFlushDropPercent, _spotTradeBot.Configuration.BitcoinFlushDropPercent)
             _botBtcFlushPauseMinutes.Value = ClampNumeric(_botBtcFlushPauseMinutes, _spotTradeBot.Configuration.BitcoinFlushPauseMinutes)
             _botBtcFlushEnabled.Checked = _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled
@@ -2870,6 +2873,7 @@ BuildSpotBotGrid:
         SetSpotBotToolTip(Label38, "Exposição máxima acumulada por ativo dentro do Grid V2.")
         SetSpotBotToolTip(Label39, "Quantidade máxima de níveis/lotes que o Grid V2 pode acumular por ativo.")
         SetSpotBotToolTip(chkSpotBotGridRejection, "Exige toque no nível e confirmação de rejeição antes de abrir um novo lote do Grid V2.")
+        SetSpotBotToolTip(chkSpotBotGridMacroFilter, "Filtro macro opcional: exige regime lateral também nos candles de 1 hora. O Grid continua entrando em 1 minuto, confirmando no 5 minutos e lendo o regime no 15 minutos.")
 
         SetSpotBotToolTip(chkSpotBotBreakEven, "Move o stop para entrada mais custos quando o lucro mínimo for atingido.")
         SetSpotBotToolTip(NumericUpDown2, "Gatilho mínimo do Break Even. O motor também respeita taxas, slippage e pequeno ganho.")
@@ -3000,6 +3004,7 @@ BuildSpotBotGrid:
             _botGridMaxExposurePercent.Value = Math.Min(_botGridMaxExposurePercent.Maximum, Math.Max(_botGridMaxExposurePercent.Minimum, _spotTradeBot.Configuration.GridV2MaxExposurePercent))
             _botGridMaxLevels.Value = Math.Min(_botGridMaxLevels.Maximum, Math.Max(_botGridMaxLevels.Minimum, _spotTradeBot.Configuration.GridV2MaxLevels))
             _botGridRequireRejection.Checked = _spotTradeBot.Configuration.GridV2RequireRejection
+            _botGridMacroFilter.Checked = _spotTradeBot.Configuration.GridV2MacroFilterEnabled
             _botBtcFlushDropPercent.Value = Math.Min(_botBtcFlushDropPercent.Maximum, Math.Max(_botBtcFlushDropPercent.Minimum, _spotTradeBot.Configuration.BitcoinFlushDropPercent))
             _botBtcFlushPauseMinutes.Value = Math.Min(_botBtcFlushPauseMinutes.Maximum, Math.Max(_botBtcFlushPauseMinutes.Minimum, _spotTradeBot.Configuration.BitcoinFlushPauseMinutes))
             _botBtcFlushEnabled.Checked = _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled
@@ -3155,6 +3160,7 @@ BuildSpotBotGrid:
         _spotTradeBot.Configuration.GridV2MaxExposurePercent = _botGridMaxExposurePercent.Value
         _spotTradeBot.Configuration.GridV2MaxLevels = CInt(_botGridMaxLevels.Value)
         _spotTradeBot.Configuration.GridV2RequireRejection = _botGridRequireRejection.Checked
+        _spotTradeBot.Configuration.GridV2MacroFilterEnabled = _botGridMacroFilter.Checked
         Dim gridEnabled = _botStrategyChecks.ContainsKey(SpotBotStrategyKind.GridAdaptive) AndAlso
                           _botStrategyChecks(SpotBotStrategyKind.GridAdaptive).Checked
         ' O regime de queda leve do BTC faz parte do Grid V2 e é ativado
@@ -3298,6 +3304,7 @@ BuildSpotBotGrid:
         _botGridMaxExposurePercent.Enabled = False
         _botGridMaxLevels.Enabled = False
         _botGridRequireRejection.Enabled = False
+        _botGridMacroFilter.Enabled = False
         _botBtcFlushDropPercent.Enabled = False
         _botBtcFlushPauseMinutes.Enabled = False
         _botBtcFlushEnabled.Enabled = False
@@ -3396,8 +3403,9 @@ BuildSpotBotGrid:
         End If
         If _spotTradeBot.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) Then
             AppendSpotBotLog(
-                $"Grid V2: EMA 9/21 em candles M5 libera a grade apenas em lateralização; " &
+                $"Grid V2: EMA 9/21 em candles de 15m libera a grade apenas em lateralização; " &
                 $"custos simulados: taxa {_spotTradeBot.Configuration.SimulationFeeRate * 100D:0.###}% + slippage {_spotTradeBot.Configuration.SimulationSlippagePercent:0.###}%; " &
+                $"timeframes entrada 1m/confirmação 5m/regime 15m, macro 1h: {If(_spotTradeBot.Configuration.GridV2MacroFilterEnabled, "ativo", "desativado")}; " &
                 $"confirma rejeição: {If(_spotTradeBot.Configuration.GridV2RequireRejection, "sim", "não")}; " &
                 $"risco/nível {_spotTradeBot.Configuration.GridV2RiskPerTradePercent:0.##}%, " &
                 $"reserva {_spotTradeBot.Configuration.GridV2ReserveQuotePercent:0.##}%, " &
@@ -3456,6 +3464,7 @@ BuildSpotBotGrid:
         _botGridMaxExposurePercent.Enabled = True
         _botGridMaxLevels.Enabled = True
         _botGridRequireRejection.Enabled = True
+        _botGridMacroFilter.Enabled = True
         _botBtcFlushDropPercent.Enabled = True
         _botBtcFlushPauseMinutes.Enabled = True
         _botBtcFlushEnabled.Enabled = True
@@ -3603,6 +3612,10 @@ BuildSpotBotGrid:
         AppendSpotBotCsvPair(builder, "GridV2ConfirmacaoSLAtiva", state.GridV2StopConfirmationEnabled)
         AppendSpotBotCsvPair(builder, "GridV2ConfirmacaoSLCandles", state.GridV2StopConfirmationCandles)
         AppendSpotBotCsvPair(builder, "GridV2BufferEmergenciaSLPercentual", state.GridV2StopEmergencyBufferPercent)
+        AppendSpotBotCsvPair(builder, "GridV2TimeframeEntrada", "1m")
+        AppendSpotBotCsvPair(builder, "GridV2TimeframeConfirmacao", "5m")
+        AppendSpotBotCsvPair(builder, "GridV2TimeframeRegime", "15m")
+        AppendSpotBotCsvPair(builder, "GridV2FiltroMacro1h", state.GridV2MacroFilterEnabled)
         AppendSpotBotCsvPair(builder, "GridV2ExposicaoMaximaPercentual", state.GridV2MaxExposurePercent)
         AppendSpotBotCsvPair(builder, "GridV2ConfirmarRejeicao", state.GridV2RequireRejection)
         AppendSpotBotCsvPair(builder, "GridV2RiscoPorNivelPercentual", state.GridV2RiskPerTradePercent)

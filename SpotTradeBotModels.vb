@@ -261,6 +261,9 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property GridV2SlowEmaPeriod As Integer = 21
     Public Property GridV2EmaMaxSpreadPercent As Decimal = 1.5D
     Public Property GridV2EmaMaxSlopePercent As Decimal = 0.5D
+    ' Timeframes internos do Grid V2: entrada em 1m, confirmação em 5m,
+    ' regime em 15m e filtro macro opcional em 1h.
+    Public Property GridV2MacroFilterEnabled As Boolean = False
     Public Property GridV2UseNearestSupportStop As Boolean = True
     Public Property GridV2SupportBufferAtr As Decimal = 1D
     ' Ignora entradas quando o suporte estrutural está praticamente no preço,
@@ -515,6 +518,7 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property GridV2PartialExitPercent As Decimal = 50D
     Public Property GridV2RegimeReductionPercent As Decimal = 50D
     Public Property GridV2TimeReductionPercent As Decimal = 50D
+    Public Property GridV2MacroFilterEnabled As Boolean = False
     Public Property GridV2BtcMildDeclineEnabled As Boolean = False
     Public Property GridV2BtcMildDeclineMinimumPercent As Decimal = 0.5D
     Public Property GridV2BtcMildDeclineMaximumPercent As Decimal = 2D
@@ -585,7 +589,9 @@ Public Interface ISpotBotTrendFilterStrategy
     Function EvaluateWithTrend(
         symbol As String,
         prices As IReadOnlyList(Of SpotBotPricePoint),
-        trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        confirmationCandles As IReadOnlyList(Of SpotBotPricePoint),
+        regimeCandles As IReadOnlyList(Of SpotBotPricePoint),
+        macroCandles As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal
 End Interface
 
@@ -600,7 +606,9 @@ Public Interface ISpotBotBitcoinTrendFilterStrategy
     Function EvaluateWithTrendAndBitcoinContext(
         symbol As String,
         prices As IReadOnlyList(Of SpotBotPricePoint),
-        trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        confirmationCandles As IReadOnlyList(Of SpotBotPricePoint),
+        regimeCandles As IReadOnlyList(Of SpotBotPricePoint),
+        macroCandles As IReadOnlyList(Of SpotBotPricePoint),
         pullbackM1Candles As IReadOnlyList(Of SpotBotPricePoint),
         pullbackM2Candles As IReadOnlyList(Of SpotBotPricePoint),
         bitcoinDailyCandles As IReadOnlyList(Of SpotBotPricePoint),

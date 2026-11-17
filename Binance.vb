@@ -640,7 +640,7 @@ Public Class Binance
 
     Private Shared Function NormalizeSpotKlineInterval(interval As String) As String
         Select Case If(interval, String.Empty).Trim().ToLowerInvariant()
-            Case "1m", "5m", "4h", "1d"
+            Case "1m", "5m", "15m", "1h", "4h", "1d"
                 Return interval.Trim().ToLowerInvariant()
             Case Else
                 ' O DCA utiliza 4h/1d. O TradeBot também usa 1m/5m

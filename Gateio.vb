@@ -271,7 +271,7 @@ Public Class Gateio
             normalizedSymbol &= "_USDT"
         End If
 
-        Dim normalizedInterval = If(String.Equals(interval?.Trim(), "1d", StringComparison.OrdinalIgnoreCase), "1d", "4h")
+        Dim normalizedInterval = NormalizeGateSpotKlineInterval(interval)
         Dim requestedLimit = Math.Max(30, Math.Min(1000, limit))
         Dim url = "https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=" &
                   Uri.EscapeDataString(normalizedSymbol) &
@@ -296,7 +296,23 @@ Public Class Gateio
                 If Not Long.TryParse(item(0)?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, startSeconds) Then Continue For
 
                 Dim startUtc = DateTimeOffset.FromUnixTimeSeconds(startSeconds).UtcDateTime
-                Dim duration = If(normalizedInterval = "1d", TimeSpan.FromDays(1), TimeSpan.FromHours(4))
+                Dim duration As TimeSpan
+                Select Case normalizedInterval
+                    Case "1m"
+                        duration = TimeSpan.FromMinutes(1)
+                    Case "5m"
+                        duration = TimeSpan.FromMinutes(5)
+                    Case "15m"
+                        duration = TimeSpan.FromMinutes(15)
+                    Case "30m"
+                        duration = TimeSpan.FromMinutes(30)
+                    Case "1h"
+                        duration = TimeSpan.FromHours(1)
+                    Case "4h"
+                        duration = TimeSpan.FromHours(4)
+                    Case Else
+                        duration = TimeSpan.FromDays(1)
+                End Select
                 Dim closeUtc = startUtc.Add(duration)
                 Dim volume As Decimal
                 Dim close As Decimal
@@ -325,6 +341,15 @@ Public Class Gateio
             Where(Function(item) item.IsClosed AndAlso item.Low > 0D AndAlso item.Close > 0D).
             OrderBy(Function(item) item.StartUtc).
             ToList()
+    End Function
+
+    Private Shared Function NormalizeGateSpotKlineInterval(interval As String) As String
+        Select Case If(interval, String.Empty).Trim().ToLowerInvariant()
+            Case "1m", "5m", "15m", "30m", "1h", "4h", "1d"
+                Return interval.Trim().ToLowerInvariant()
+            Case Else
+                Return "4h"
+        End Select
     End Function
 
     Public Async Function GATE_CreateSpotOrderAsync(

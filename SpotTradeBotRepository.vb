@@ -113,6 +113,7 @@ Public NotInheritable Class SpotTradeBotRepository
                         "GridV2ProgressiveExposureReductionPercent REAL NOT NULL DEFAULT 25, " &
                         "SlippagePercent REAL NOT NULL DEFAULT 0.05, " &
                         "NewPositionProfitGateFreePositions INTEGER NOT NULL DEFAULT 2, " &
+                        "GridV2MacroFilterEnabled INTEGER NOT NULL DEFAULT 0, " &
                         "UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP" &
                         ");"
                     command.ExecuteNonQuery()
@@ -184,6 +185,7 @@ Public NotInheritable Class SpotTradeBotRepository
                 EnsureColumn(connection, "SpotBotRuns", "RiskBrakeLastPauseStartedUtc", "TEXT")
                 EnsureColumn(connection, "SpotBotRuns", "RiskBrakeLastPauseEndedUtc", "TEXT")
                 EnsureColumn(connection, "SpotBotRuns", "NewPositionProfitGateFreePositions", "INTEGER NOT NULL DEFAULT 2")
+                EnsureColumn(connection, "SpotBotRuns", "GridV2MacroFilterEnabled", "INTEGER NOT NULL DEFAULT 0")
 
                 Using command As SqliteCommand = connection.CreateCommand()
                     command.CommandText =
@@ -336,7 +338,7 @@ Public NotInheritable Class SpotTradeBotRepository
                           "RiskBrakeLastPauseStartedUtc, RiskBrakeLastPauseEndedUtc, " &
                          "TakeProfitPercent, StopLossPercent, GridV2BtcMildDeclineEnabled, " &
                          "GridV2BtcMildDeclineMinimumPercent, GridV2BtcMildDeclineMaximumPercent, RiskBrakeManualRealizedPnl, " &
-                         "GridV2MaximumHoldingMinutes, GridV2RegimeExitEnabled, GridV2ProgressiveExposureEnabled, GridV2ProgressiveExposureReductionPercent, SlippagePercent, NewPositionProfitGateFreePositions, GridV2StopConfirmationEnabled, GridV2StopConfirmationCandles, GridV2StopEmergencyBufferPercent) " &
+                         "GridV2MaximumHoldingMinutes, GridV2RegimeExitEnabled, GridV2ProgressiveExposureEnabled, GridV2ProgressiveExposureReductionPercent, SlippagePercent, NewPositionProfitGateFreePositions, GridV2StopConfirmationEnabled, GridV2StopConfirmationCandles, GridV2StopEmergencyBufferPercent, GridV2MacroFilterEnabled) " &
                     "VALUES ($startedAt, $status, $enabledStrategies, $combinationMode, $requiredConfirmations, " &
                         "$startingQuote, $allocationPercent, $feeRate, $equity, $quoteBalance, " &
                         "$bollingerPeriod, $bollingerStandardDeviations, $bollingerCandleMinutes, " &
@@ -358,7 +360,7 @@ Public NotInheritable Class SpotTradeBotRepository
                           "$riskBrakeLastPauseStartedUtc, $riskBrakeLastPauseEndedUtc, " &
                          "$takeProfitPercent, $stopLossPercent, $gridV2BtcMildDeclineEnabled, " &
                          "$gridV2BtcMildDeclineMinimumPercent, $gridV2BtcMildDeclineMaximumPercent, $riskBrakeManualRealizedPnl, " &
-                         "$gridV2MaximumHoldingMinutes, $gridV2RegimeExitEnabled, $gridV2ProgressiveExposureEnabled, $gridV2ProgressiveExposureReductionPercent, $slippagePercent, $newPositionProfitGateFreePositions, $gridV2StopConfirmationEnabled, $gridV2StopConfirmationCandles, $gridV2StopEmergencyBufferPercent);"
+                         "$gridV2MaximumHoldingMinutes, $gridV2RegimeExitEnabled, $gridV2ProgressiveExposureEnabled, $gridV2ProgressiveExposureReductionPercent, $slippagePercent, $newPositionProfitGateFreePositions, $gridV2StopConfirmationEnabled, $gridV2StopConfirmationCandles, $gridV2StopEmergencyBufferPercent, $gridV2MacroFilterEnabled);"
 
                 command.Parameters.AddWithValue("$startedAt", UtcText(DateTime.UtcNow))
                 command.Parameters.AddWithValue("$status", "RUNNING")
@@ -437,6 +439,7 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.Parameters.AddWithValue("$gridV2StopConfirmationEnabled", If(configuration.GridV2StopConfirmationEnabled, 1, 0))
                 command.Parameters.AddWithValue("$gridV2StopConfirmationCandles", Math.Max(1, configuration.GridV2StopConfirmationCandles))
                 AddRealParameter(command, "$gridV2StopEmergencyBufferPercent", Math.Max(0D, configuration.GridV2StopEmergencyBufferPercent))
+                command.Parameters.AddWithValue("$gridV2MacroFilterEnabled", If(configuration.GridV2MacroFilterEnabled, 1, 0))
                 command.ExecuteNonQuery()
             End Using
 
@@ -496,6 +499,7 @@ Public NotInheritable Class SpotTradeBotRepository
                      "GridV2StopConfirmationEnabled = $gridV2StopConfirmationEnabled, " &
                      "GridV2StopConfirmationCandles = $gridV2StopConfirmationCandles, " &
                      "GridV2StopEmergencyBufferPercent = $gridV2StopEmergencyBufferPercent, " &
+                     "GridV2MacroFilterEnabled = $gridV2MacroFilterEnabled, " &
                     "UpdatedAt = CURRENT_TIMESTAMP " &
                     "WHERE Id = $runId;"
                 AddRealParameter(command, "$allocationPercent", Math.Min(100D, Math.Max(0D, configuration.SimulationAllocationPercent)))
@@ -539,6 +543,7 @@ Public NotInheritable Class SpotTradeBotRepository
                 command.Parameters.AddWithValue("$gridV2StopConfirmationEnabled", If(configuration.GridV2StopConfirmationEnabled, 1, 0))
                 command.Parameters.AddWithValue("$gridV2StopConfirmationCandles", Math.Max(1, configuration.GridV2StopConfirmationCandles))
                 AddRealParameter(command, "$gridV2StopEmergencyBufferPercent", Math.Max(0D, configuration.GridV2StopEmergencyBufferPercent))
+                command.Parameters.AddWithValue("$gridV2MacroFilterEnabled", If(configuration.GridV2MacroFilterEnabled, 1, 0))
                 command.Parameters.AddWithValue("$runId", runId)
                 command.ExecuteNonQuery()
             End Using
@@ -888,7 +893,7 @@ Public NotInheritable Class SpotTradeBotRepository
                          "GridV2BtcMildDeclineMinimumPercent, GridV2BtcMildDeclineMaximumPercent, RiskBrakeManualRealizedPnl, " &
                          "GridV2MaximumHoldingMinutes, GridV2RegimeExitEnabled, GridV2ProgressiveExposureEnabled, GridV2ProgressiveExposureReductionPercent, SlippagePercent, " &
                          "NewPositionProfitGateEnabled, MinimumNetProfitBeforeNewPositionPercent, NewPositionProfitGateFreePositions, " &
-                         "GridV2StopConfirmationEnabled, GridV2StopConfirmationCandles, GridV2StopEmergencyBufferPercent " &
+                         "GridV2StopConfirmationEnabled, GridV2StopConfirmationCandles, GridV2StopEmergencyBufferPercent, GridV2MacroFilterEnabled " &
                     "FROM SpotBotRuns ORDER BY Id DESC LIMIT 1;"
 
                 Using reader = command.ExecuteReader()
@@ -983,6 +988,7 @@ Public NotInheritable Class SpotTradeBotRepository
                     state.GridV2StopConfirmationEnabled = If(reader.IsDBNull(82), True, reader.GetInt32(82) <> 0)
                     state.GridV2StopConfirmationCandles = If(reader.IsDBNull(83), 1, Math.Max(1, reader.GetInt32(83)))
                     state.GridV2StopEmergencyBufferPercent = If(reader.IsDBNull(84), 0.2D, Math.Max(0D, ReadDecimal(reader, 84)))
+                    state.GridV2MacroFilterEnabled = If(reader.IsDBNull(85), False, reader.GetInt32(85) <> 0)
 
                     If Not reader.IsDBNull(2) Then
                         For Each strategyText In reader.GetString(2).Split(","c, StringSplitOptions.RemoveEmptyEntries)

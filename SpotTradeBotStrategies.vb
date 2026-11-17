@@ -1097,34 +1097,40 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
         prices As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotStrategy.Evaluate
 
-        Return EvaluateInternal(symbol, prices, Nothing, Nothing, Nothing, Nothing, configuration)
+        Return EvaluateInternal(symbol, prices, prices, prices, Nothing, Nothing, Nothing, Nothing, configuration)
     End Function
 
     Public Function EvaluateWithTrend(
         symbol As String,
         prices As IReadOnlyList(Of SpotBotPricePoint),
-        trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        confirmationCandles As IReadOnlyList(Of SpotBotPricePoint),
+        regimeCandles As IReadOnlyList(Of SpotBotPricePoint),
+        macroCandles As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotTrendFilterStrategy.EvaluateWithTrend
 
-        Return EvaluateInternal(symbol, prices, trendCandles, Nothing, Nothing, Nothing, configuration)
+        Return EvaluateInternal(symbol, prices, confirmationCandles, regimeCandles, macroCandles, Nothing, Nothing, Nothing, configuration)
     End Function
 
     Public Function EvaluateWithTrendAndBitcoinContext(
         symbol As String,
         prices As IReadOnlyList(Of SpotBotPricePoint),
-        trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        confirmationCandles As IReadOnlyList(Of SpotBotPricePoint),
+        regimeCandles As IReadOnlyList(Of SpotBotPricePoint),
+        macroCandles As IReadOnlyList(Of SpotBotPricePoint),
         pullbackM1Candles As IReadOnlyList(Of SpotBotPricePoint),
         pullbackM2Candles As IReadOnlyList(Of SpotBotPricePoint),
         bitcoinDailyCandles As IReadOnlyList(Of SpotBotPricePoint),
         configuration As SpotBotConfiguration) As SpotBotStrategySignal Implements ISpotBotBitcoinTrendFilterStrategy.EvaluateWithTrendAndBitcoinContext
 
-        Return EvaluateInternal(symbol, prices, trendCandles, pullbackM1Candles, pullbackM2Candles, bitcoinDailyCandles, configuration)
+        Return EvaluateInternal(symbol, prices, confirmationCandles, regimeCandles, macroCandles, pullbackM1Candles, pullbackM2Candles, bitcoinDailyCandles, configuration)
     End Function
 
     Private Function EvaluateInternal(
         symbol As String,
         prices As IReadOnlyList(Of SpotBotPricePoint),
-        trendCandles As IReadOnlyList(Of SpotBotPricePoint),
+        confirmationCandles As IReadOnlyList(Of SpotBotPricePoint),
+        regimeCandles As IReadOnlyList(Of SpotBotPricePoint),
+        macroCandles As IReadOnlyList(Of SpotBotPricePoint),
         pullbackM1Candles As IReadOnlyList(Of SpotBotPricePoint),
         pullbackM2Candles As IReadOnlyList(Of SpotBotPricePoint),
         bitcoinDailyCandles As IReadOnlyList(Of SpotBotPricePoint),
@@ -1136,10 +1142,21 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
             btcMildDeclineActive = IsBitcoinMildDecline(bitcoinDailyCandles, configuration, btcReason)
         End If
 
-        If configuration.GridV2EmaFilterEnabled AndAlso trendCandles IsNot Nothing Then
+        If configuration.GridV2EmaFilterEnabled AndAlso regimeCandles IsNot Nothing Then
             Dim regimeReason As String = String.Empty
-            If Not IsLateralByEma(trendCandles, configuration, regimeReason) Then
+            If Not IsLateralByEma(regimeCandles, configuration, regimeReason) Then
                 Return HoldSignal(regimeReason)
+            End If
+        End If
+
+        If configuration.GridV2MacroFilterEnabled Then
+            If macroCandles Is Nothing OrElse macroCandles.Count = 0 Then
+                Return HoldSignal("grade aguardando candles do filtro macro de 1 hora")
+            End If
+
+            Dim macroReason As String = String.Empty
+            If Not IsLateralByEma(macroCandles, configuration, macroReason) Then
+                Return HoldSignal($"grade pausada: filtro macro 1h indica tendência ({macroReason})")
             End If
         End If
 
@@ -1203,7 +1220,10 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
         ' nível. Com a confirmação habilitada, o candle fechado precisa tocar
         ' o nível, fechar acima dele e ser seguido pelo rompimento do seu
         ' fechamento. Isso reduz compras no meio de um rompimento de baixa.
-        Dim lastClosed = If(window.Count >= 2, window(window.Count - 2), Nothing)
+        Dim confirmationWindow = If(confirmationCandles, Array.Empty(Of SpotBotPricePoint)()).ToList()
+        Dim lastClosed = If(confirmationWindow.Count >= 1,
+                            confirmationWindow(confirmationWindow.Count - 1),
+                            Nothing)
         Dim buyTriggered As Boolean
         If configuration.GridV2RequireRejection Then
             buyTriggered = lastClosed IsNot Nothing AndAlso
@@ -1221,7 +1241,7 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
                 symbol,
                 pullbackM1Candles,
                 pullbackM2Candles,
-                trendCandles,
+                confirmationCandles,
                 configuration)
             If defensiveSignal Is Nothing OrElse
                defensiveSignal.Direction <> SpotBotSignalDirection.Buy Then
