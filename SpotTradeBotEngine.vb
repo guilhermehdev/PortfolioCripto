@@ -1718,7 +1718,7 @@ Public NotInheritable Class SpotTradeBotEngine
             If _riskBrakeState = SpotBotRiskBrakeState.HardStop AndAlso
                configuration.RiskBrakeClosePositionsOnHardStop AndAlso
                _simulationPositions.Count > 0 Then
-                CloseAllSimulationPositionsLocked(price, timestampUtc, configuration, completedTrades)
+                CloseNegativeSimulationPositionsLocked(price, timestampUtc, configuration, completedTrades)
                 automaticExit = True
                 Return BuildSimulationSnapshotLocked(configuration)
             End If
@@ -2821,22 +2821,50 @@ Public NotInheritable Class SpotTradeBotEngine
         End If
     End Sub
 
-    Private Sub CloseAllSimulationPositionsLocked(
+    Private Function EstimateSimulationNetPnlLocked(
+        position As SimulationPosition,
+        closePrice As Decimal,
+        configuration As SpotBotConfiguration) As Decimal
+
+        If position Is Nothing OrElse closePrice <= 0D OrElse configuration Is Nothing Then Return 0D
+
+        Dim exitPrice = ApplySimulationExitSlippage(closePrice, configuration, Nothing)
+        If exitPrice <= 0D Then Return 0D
+
+        Dim gross = position.Quantity * exitPrice
+        Dim fee = gross * Math.Max(0D, configuration.SimulationFeeRate)
+        Return gross - fee - position.CostBasis
+    End Function
+
+    Private Function CloseNegativeSimulationPositionsLocked(
         price As Decimal,
         timestampUtc As DateTime,
         configuration As SpotBotConfiguration,
-        completedTrades As List(Of SpotBotSimulationTrade))
+        completedTrades As List(Of SpotBotSimulationTrade)) As Integer
 
         Dim symbols = _simulationPositions.Keys.ToList()
+        Dim closedCount = 0
         For Each symbol In symbols
             Dim position As SimulationPosition = Nothing
             If Not _simulationPositions.TryGetValue(symbol, position) OrElse position Is Nothing Then Continue For
             Dim closePrice = If(position.LastPrice > 0D, position.LastPrice, price)
+
+            ' O freio deve retirar somente posições que ainda representem
+            ' prejuízo líquido. Uma posição com ganho bruto muito pequeno
+            ' também será encerrada se taxa e slippage tornarem o resultado
+            ' líquido negativo.
+            If EstimateSimulationNetPnlLocked(position, closePrice, configuration) >= 0D Then Continue For
+
             CloseSimulationPosition(symbol, closePrice, timestampUtc, position, configuration, "FREIO", completedTrades)
+            closedCount += 1
         Next
 
-        _simulationLastAction = "HANDBRAKE: posições encerradas; execução pausada."
-    End Sub
+        _simulationLastAction = If(
+            closedCount > 0,
+            $"HANDBRAKE: {closedCount} posição(ões) negativa(s) encerrada(s); execução pausada.",
+            "HANDBRAKE: nenhuma posição negativa para encerrar; execução pausada.")
+        Return closedCount
+    End Function
 
     Private Sub CloseSimulationPosition(
         symbol As String,
