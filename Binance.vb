@@ -487,6 +487,58 @@ Public Class Binance
     End Function
 
     ''' <summary>
+    ''' Cria uma proteção OCO de venda para uma posição spot já preenchida.
+    ''' O endpoint não é chamado pelo paper trading; o chamador deve habilitar
+    ''' explicitamente a execução real.
+    ''' </summary>
+    Public Async Function BINANCE_CreateSpotProtectionOcoAsync(
+        symbol As String,
+        quantity As Decimal,
+        takeProfitPrice As Decimal,
+        stopPrice As Decimal,
+        Optional stopLimitPrice As Decimal = 0D) As Task(Of String)
+
+        Dim normalizedSymbol = symbol?.Trim().ToUpperInvariant()
+        If String.IsNullOrWhiteSpace(normalizedSymbol) OrElse quantity <= 0D OrElse
+           takeProfitPrice <= 0D OrElse stopPrice <= 0D Then
+            Throw New ArgumentException("Símbolo, quantidade, alvo e stop devem ser maiores que zero.")
+        End If
+        If takeProfitPrice <= stopPrice Then
+            Throw New ArgumentException("No OCO spot, o alvo deve ficar acima do stop para uma posição comprada.")
+        End If
+
+        Dim filters = Await BINANCE_GetSpotSymbolFiltersAsync(normalizedSymbol)
+        If filters IsNot Nothing Then
+            If filters.StepSize > 0D Then quantity = Decimal.Truncate(quantity / filters.StepSize) * filters.StepSize
+            If filters.TickSize > 0D Then
+                takeProfitPrice = Decimal.Truncate(takeProfitPrice / filters.TickSize) * filters.TickSize
+                stopPrice = Decimal.Truncate(stopPrice / filters.TickSize) * filters.TickSize
+                If stopLimitPrice > 0D Then stopLimitPrice = Decimal.Truncate(stopLimitPrice / filters.TickSize) * filters.TickSize
+            End If
+        End If
+        If stopLimitPrice <= 0D Then stopLimitPrice = stopPrice
+        If quantity <= 0D OrElse takeProfitPrice <= stopPrice OrElse stopLimitPrice <= 0D Then
+            Throw New ArgumentException("Os preços ou a quantidade ficaram inválidos após o alinhamento aos filtros da Binance.")
+        End If
+
+        Dim parameters As New List(Of String) From {
+            "symbol=" & Uri.EscapeDataString(normalizedSymbol),
+            "side=SELL",
+            "quantity=" & quantity.ToString("0.################", CultureInfo.InvariantCulture),
+            "price=" & takeProfitPrice.ToString("0.################", CultureInfo.InvariantCulture),
+            "stopPrice=" & stopPrice.ToString("0.################", CultureInfo.InvariantCulture),
+            "stopLimitPrice=" & stopLimitPrice.ToString("0.################", CultureInfo.InvariantCulture),
+            "stopLimitTimeInForce=GTC",
+            "recvWindow=60000"
+        }
+        Dim json = Await QuerySignedAsync("/api/v3/orderList/oco", String.Join("&", parameters), httpMethod:="POST")
+        If String.IsNullOrWhiteSpace(json) Then Throw New Exception("A Binance não retornou a proteção OCO.")
+        Dim response As JObject = JObject.Parse(json)
+        If response("code") IsNot Nothing Then Throw New Exception($"Binance ({response("code")}): {response("msg")}")
+        Return json
+    End Function
+
+    ''' <summary>
     ''' Envia uma compra MARKET informando diretamente o valor da moeda de cotação
     ''' (USDT). Isso evita arredondar a quantidade base antes do envio e respeita
     ''' o orçamento definido pelo DCA.

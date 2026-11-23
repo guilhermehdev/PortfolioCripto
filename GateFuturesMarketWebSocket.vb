@@ -1,6 +1,7 @@
 Imports System.Collections.Concurrent
 Imports System.Globalization
 Imports System.Net.WebSockets
+Imports System.Security.Cryptography
 Imports System.Text
 Imports System.Text.Json
 Imports System.Threading
@@ -10,6 +11,8 @@ Imports System.Threading
 ''' </summary>
 Public Class GateFuturesMarketWebSocket
     Private Const WebSocketUrl As String = "wss://fx-ws.gateio.ws/v4/ws/usdt"
+    Private Const PositionsChannel As String = "futures.positions"
+    Private ReadOnly _positionsOnly As Boolean
     Private ReadOnly _prices As New ConcurrentDictionary(Of String, Decimal)(StringComparer.OrdinalIgnoreCase)
     Private _socket As ClientWebSocket
     Private _cts As CancellationTokenSource
@@ -17,7 +20,18 @@ Public Class GateFuturesMarketWebSocket
     Private _symbols As List(Of String) = New List(Of String)()
 
     Public Event MarkPriceUpdated(symbol As String, price As Decimal)
+    Public Event PositionsUpdated()
     Public Event ConnectionStateChanged(connected As Boolean, message As String)
+
+    Public Sub New(Optional positionsOnly As Boolean = False)
+        _positionsOnly = positionsOnly
+    End Sub
+
+    Public Sub StartPositions()
+        If Not _positionsOnly OrElse _cts IsNot Nothing Then Return
+        _cts = New CancellationTokenSource()
+        _supervisorTask = SupervisorAsync(_cts.Token)
+    End Sub
 
     Public Function TryGetPrice(symbol As String, ByRef price As Decimal) As Boolean
         Return _prices.TryGetValue(Normalize(symbol), price)
@@ -68,15 +82,28 @@ Public Class GateFuturesMarketWebSocket
         _socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(20)
         Await _socket.ConnectAsync(New Uri(WebSocketUrl), token)
 
-        Dim request = New With {
+        Dim request As Object = New With {
             .time = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             .channel = "futures.tickers",
             .event = "subscribe",
             .payload = _symbols.ToArray()
         }
+        If _positionsOnly Then
+            Dim timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+            Dim message = FormattableString.Invariant($"channel={PositionsChannel}&event=subscribe&time={timestamp}")
+            Dim secret = Encoding.UTF8.GetBytes(ExchangeCredentials.GateSecretKey.Trim())
+            Dim signature = Convert.ToHexString(HMACSHA512.HashData(secret, Encoding.UTF8.GetBytes(message))).ToLowerInvariant()
+            request = New With {
+                .time = timestamp,
+                .channel = PositionsChannel,
+                .event = "subscribe",
+                .payload = {"0", "!all"},
+                .auth = New With {.method = "api_key", .KEY = ExchangeCredentials.GateAPIKey.Trim(), .SIGN = signature}
+            }
+        End If
         Dim bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request))
         Await _socket.SendAsync(New ArraySegment(Of Byte)(bytes), WebSocketMessageType.Text, True, token)
-        RaiseEvent ConnectionStateChanged(True, $"Gate Futures WebSocket conectado: {_symbols.Count} símbolos.")
+        If Not _positionsOnly Then RaiseEvent ConnectionStateChanged(True, $"Gate Futures WebSocket conectado: {_symbols.Count} símbolos.")
 
         Dim buffer(8191) As Byte
         While Not token.IsCancellationRequested AndAlso _socket.State = WebSocketState.Open
@@ -87,10 +114,38 @@ Public Class GateFuturesMarketWebSocket
                     If result.MessageType = WebSocketMessageType.Close Then Throw New WebSocketException("Gate fechou o stream de Futures.")
                     If result.Count > 0 Then ms.Write(buffer, 0, result.Count)
                 Loop Until result.EndOfMessage
-                ProcessMessage(Encoding.UTF8.GetString(ms.ToArray()))
+                Dim json = Encoding.UTF8.GetString(ms.ToArray())
+                If _positionsOnly Then
+                    ProcessPositionMessage(json)
+                Else
+                    ProcessMessage(json)
+                End If
             End Using
         End While
     End Function
+
+    Private Sub ProcessPositionMessage(json As String)
+        Using document = JsonDocument.Parse(json)
+            Dim root = document.RootElement
+            Dim channel, eventType, result, errorData As JsonElement
+            If Not root.TryGetProperty("channel", channel) OrElse channel.GetString() <> PositionsChannel OrElse
+               Not root.TryGetProperty("event", eventType) Then Return
+            If root.TryGetProperty("error", errorData) AndAlso errorData.ValueKind <> JsonValueKind.Null Then
+                Throw New InvalidOperationException("A Gate recusou a assinatura de posições Futures.")
+            End If
+            If Not root.TryGetProperty("result", result) Then Return
+
+            Select Case eventType.GetString()
+                Case "subscribe"
+                    Dim status As JsonElement
+                    If result.ValueKind <> JsonValueKind.Object OrElse Not result.TryGetProperty("status", status) OrElse
+                       status.GetString() <> "success" Then Throw New InvalidOperationException("Assinatura de posições Futures da Gate sem confirmação.")
+                    RaiseEvent PositionsUpdated()
+                Case "update"
+                    If result.ValueKind = JsonValueKind.Array AndAlso result.GetArrayLength() > 0 Then RaiseEvent PositionsUpdated()
+            End Select
+        End Using
+    End Sub
 
     Private Sub ProcessMessage(json As String)
         Try

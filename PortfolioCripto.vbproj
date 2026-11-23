@@ -29,6 +29,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="TradeBot.Tests\**" />
+    <None Remove="TradeBot.Tests\**" />
+    <Content Remove="TradeBot.Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Update="SpotTradeBotEditor.Designer.vb">
       <DesignTime>True</DesignTime>
       <DependentUpon>SpotTradeBotEditor.vb</DependentUpon>
@@ -70,4 +76,7 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="TradeBot.Tests" />
+  </ItemGroup>
 </Project>

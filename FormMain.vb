@@ -1,22 +1,33 @@
 ﻿Imports System.Globalization
 Imports System.IO
 Imports System.Text
+Imports Microsoft.VisualBasic.FileIO
 Imports System.Windows.Forms.DataVisualization.Charting
 Imports Newtonsoft.Json.Linq
 Imports System.Diagnostics
 Imports System.Diagnostics.Tracing
+Imports System.Net.Http
+Imports System.Net.Http.Headers
 Public Class FormMain
+    Private Shared ReadOnly _spotBotBacktestHttpClient As HttpClient = CreateSpotBotBacktestHttpClient()
     Public remainingtimeInSeconds As Integer
     Dim Cjson As New JSON
     Dim chart As New Charts
     Dim B As New Binance
     Private ReadOnly _gateSpot As New Gateio
+    Private ReadOnly _spotBotOrderDeduplicator As New SpotBotOrderIntentDeduplicator
+    Private ReadOnly _spotBotProtectiveOrders As SpotBotProtectiveOrderService =
+        New SpotBotProtectiveOrderService(B, _gateSpot, _spotBotOrderDeduplicator)
     Private ReadOnly _gateFutures As New GateFutures
     Dim gec As New Coingecko
     Private ReadOnly _binanceWs As New BinanceWebSocket
     Private ReadOnly _gateWs As New GateWebSocket
     Private ReadOnly _binanceFuturesMarketWs As New BinanceFuturesMarketWebSocket
     Private ReadOnly _gateFuturesMarketWs As New GateFuturesMarketWebSocket
+    Private ReadOnly _gateFuturesPositionsWs As New GateFuturesMarketWebSocket(positionsOnly:=True)
+    Private _gateFuturesRefreshPending As Boolean
+    Private _gateFuturesRefreshRunning As Boolean
+    Private _gateFuturesClosing As Boolean
     Private ReadOnly _binanceFuturesUserWs As New BinanceFuturesUserDataWebSocket
     Private ReadOnly _binanceSpotUserWs As New BinanceSpotUserDataWebSocket
     Private _marketRefreshRunning As Boolean = False
@@ -81,6 +92,11 @@ Public Class FormMain
     Private _portfolioGridDefaultHeight As Integer
     Private _futuresGridDefaultHeight As Integer
     Private _binanceWsStartRunning As Boolean
+    Private _binancePaperWsConnectionKnown As Boolean
+    Private _binancePaperWsConnected As Boolean
+    Private _lastBinanceWsAttention As String
+    Private _spotBotConnectivityTimer As System.Windows.Forms.Timer
+    Private _spotBotCheckpointTimer As System.Windows.Forms.Timer
     Private _catalogWarningShown As Boolean
     Private _binanceCatalogPromptRunning As Boolean
     Private _credentialsMenuItem As ToolStripMenuItem
@@ -144,6 +160,7 @@ Public Class FormMain
     Private _botStart As Button
     Private _botStop As Button
     Private _botExport As Button
+    Private _botBacktest As Button
     Private _btDca As Button
     Private ReadOnly _botStrategyChecks As New Dictionary(Of SpotBotStrategyKind, CheckBox)()
     Private _lastBotSummaryUpdateUtc As DateTime
@@ -151,6 +168,8 @@ Public Class FormMain
     Private _spotBotUniverseRefreshTimer As System.Windows.Forms.Timer
     Private _spotBotUniverseRefreshInProgress As Boolean
     Private _spotBotUniverseNextRefreshUtc As DateTime = DateTime.MinValue
+    Private _spotBotUniverseRefreshPending As Boolean
+    Private _spotBotUniverseRefreshResumeScheduled As Boolean
     Private _cbDcaSymbol As ComboBox
     Private _cbDcaExchange As ComboBox
     Private _dcaCashRefreshRunning As Boolean
@@ -970,7 +989,7 @@ Public Class FormMain
             .ForeColor = Color.Gold,
             .Font = New Font("Calibri", 9.0F, FontStyle.Bold),
             .Location = New Point(940, 83),
-            .Text = "SIMULAÇÃO — sem ordens reais"
+            .Text = "PAPER TRADING — sem ordens reais"
         }
         editor.Controls.Add(simulationLabel)
 
@@ -2191,6 +2210,12 @@ BuildSpotBotGrid:
             Return
         End If
 
+        If _spotTradeBot.IsBitcoinProtectionBlockingEntries Then
+            QueueSpotBotUniverseRefresh(
+                "Atualização do universo pausada: proteção BTC ativa; será retomada após a reversão confirmada.")
+            Return
+        End If
+
         Try
             Dim symbols = Await B.BINANCE_GetTopSpotSymbolsByVolumeAsync(
                 CInt(_botUniverseMaxAssets.Value),
@@ -2352,15 +2377,74 @@ BuildSpotBotGrid:
         End If
     End Sub
 
+    Private Function IsSpotBotAutomaticUniverseRefreshEnabled() As Boolean
+        Return _botUniverseMode IsNot Nothing AndAlso
+               _botUniverseMode.SelectedIndex = 1 AndAlso
+               _botUniverseAutoRefresh IsNot Nothing AndAlso
+               _botUniverseAutoRefresh.Checked
+    End Function
+
+    Private Sub QueueSpotBotUniverseRefresh(reason As String)
+        If Not IsSpotBotAutomaticUniverseRefreshEnabled() Then Return
+
+        If Not _spotBotUniverseRefreshPending Then
+            _spotBotUniverseRefreshPending = True
+            If Not String.IsNullOrWhiteSpace(reason) Then
+                AppendSpotBotLog(reason, Color.Gold)
+            End If
+        End If
+    End Sub
+
+    Private Sub SchedulePendingSpotBotUniverseRefresh()
+        If Not _spotBotUniverseRefreshPending OrElse
+           _spotBotUniverseRefreshResumeScheduled OrElse
+           Not _spotTradeBot.IsRunning OrElse
+           _spotTradeBot.IsBitcoinProtectionBlockingEntries OrElse
+           Not IsSpotBotAutomaticUniverseRefreshEnabled() OrElse
+           Not IsHandleCreated OrElse IsDisposed Then
+            Return
+        End If
+
+        _spotBotUniverseRefreshResumeScheduled = True
+        _spotBotUniverseNextRefreshUtc = DateTime.UtcNow
+        Try
+            BeginInvoke(
+                New Action(
+                    Sub()
+                        _spotBotUniverseRefreshResumeScheduled = False
+                        If Not _spotBotUniverseRefreshPending OrElse
+                           _spotTradeBot.IsBitcoinProtectionBlockingEntries Then
+                            Return
+                        End If
+
+                        AppendSpotBotLog(
+                            "BTC encontrou fundo/reversão confirmada; retomando a atualização pendente do universo.",
+                            Color.LightGreen)
+                        SpotBotUniverseRefreshTimer_Tick(Nothing, EventArgs.Empty)
+                        UpdateSpotBotUniverseRefreshTimerState()
+                    End Sub))
+        Catch ex As Exception When TypeOf ex Is InvalidOperationException OrElse
+                                  TypeOf ex Is ObjectDisposedException
+            _spotBotUniverseRefreshResumeScheduled = False
+        End Try
+    End Sub
+
     Private Async Sub SpotBotUniverseRefreshTimer_Tick(sender As Object, e As EventArgs)
         If _spotBotUniverseRefreshInProgress OrElse
-           Not _spotTradeBot.IsRunning OrElse
            _botUniverseMode Is Nothing OrElse
            _botUniverseMode.SelectedIndex <> 1 OrElse
            _botUniverseAutoRefresh Is Nothing OrElse
            Not _botUniverseAutoRefresh.Checked Then
             Return
         End If
+
+        If _spotTradeBot.IsBitcoinProtectionBlockingEntries Then
+            QueueSpotBotUniverseRefresh(
+                "Atualização automática do universo pausada: proteção BTC aguardando fundo/reversão confirmada.")
+            Return
+        End If
+
+        If Not _spotTradeBot.IsRunning Then Return
 
         If DateTime.UtcNow < _spotBotUniverseNextRefreshUtc Then Return
         _spotBotUniverseNextRefreshUtc = DateTime.UtcNow.AddMinutes(GetSpotBotUniverseRefreshMinutes())
@@ -2369,6 +2453,11 @@ BuildSpotBotGrid:
         Try
             Dim previousSymbols = _spotBotUniverseSymbols.ToList()
             Dim refreshedSymbols = Await LoadTopVolumeSpotBotUniverseAsync()
+            If _spotTradeBot.IsBitcoinProtectionBlockingEntries Then
+                QueueSpotBotUniverseRefresh(
+                    "Atualização automática do universo pausada durante a consulta: proteção BTC aguardando reversão.")
+                Return
+            End If
             If Not _spotTradeBot.IsRunning Then Return
 
             If refreshedSymbols.Count = 0 Then
@@ -2404,6 +2493,11 @@ BuildSpotBotGrid:
                 End Try
             End If
 
+            If _spotTradeBot.IsBitcoinProtectionBlockingEntries Then
+                QueueSpotBotUniverseRefresh(
+                    "Atualização automática do universo pausada antes da aplicação: proteção BTC aguardando reversão.")
+                Return
+            End If
             If Not _spotTradeBot.IsRunning Then Return
             ApplySpotBotUniverse(
                 refreshedSymbols,
@@ -2416,6 +2510,7 @@ BuildSpotBotGrid:
             Dim appliedRemovedSymbols = previousSymbols.Except(refreshedSymbols, StringComparer.OrdinalIgnoreCase).ToList()
 
             If appliedAddedSymbols.Count = 0 AndAlso appliedRemovedSymbols.Count = 0 Then
+                _spotBotUniverseRefreshPending = False
                 AppendSpotBotLog(
                     $"Checagem automática do universo concluída: sem alterações ({refreshedSymbols.Count} ativo(s)).",
                     Color.LightGray)
@@ -2423,6 +2518,7 @@ BuildSpotBotGrid:
             End If
 
             Await StartBinanceWebSocket()
+            _spotBotUniverseRefreshPending = False
             AppendSpotBotLog(
                 $"Universo atualizado automaticamente: {refreshedSymbols.Count} ativo(s), " &
                 $"+{appliedAddedSymbols.Count} novo(s), -{appliedRemovedSymbols.Count} removido(s). " &
@@ -2561,25 +2657,27 @@ BuildSpotBotGrid:
         _botBollingerTimeframe.Enabled = _botBollingerMode.SelectedIndex = 0
     End Sub
 
-    Private Sub ApplyBollingerTimeframe()
+    Private Sub ApplyBollingerTimeframe(Optional targetEngine As SpotTradeBotEngine = Nothing)
+        Dim engine = If(targetEngine, _spotTradeBot)
         If _botBollingerTimeframe Is Nothing OrElse _botBollingerTimeframe.SelectedIndex = 0 Then
-            _spotTradeBot.Configuration.BollingerCandleMinutes = 240
+            engine.Configuration.BollingerCandleMinutes = 240
         Else
-            _spotTradeBot.Configuration.BollingerCandleMinutes = 1440
+            engine.Configuration.BollingerCandleMinutes = 1440
         End If
     End Sub
 
-    Private Sub ApplyBollingerMode()
+    Private Sub ApplyBollingerMode(Optional targetEngine As SpotTradeBotEngine = Nothing)
+        Dim engine = If(targetEngine, _spotTradeBot)
         ' A Base Original Protegida é o perfil principal, mas pode ser
         ' desativada pelo combo quando o usuário quiser testar apenas as
         ' estratégias adicionais.
-        _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BnfContrarian, False)
-        _spotTradeBot.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, False)
-        _spotTradeBot.SetStrategyEnabled(
+        engine.SetStrategyEnabled(SpotBotStrategyKind.BnfContrarian, False)
+        engine.SetStrategyEnabled(SpotBotStrategyKind.BollingerMeanReversion, False)
+        engine.SetStrategyEnabled(
             SpotBotStrategyKind.BaseOriginalProtected,
             _botBollingerMode Is Nothing OrElse _botBollingerMode.SelectedIndex = 0)
-        _spotTradeBot.Configuration.BollingerPeriod = 25
-        _spotTradeBot.Configuration.BollingerStandardDeviations = 3D
+        engine.Configuration.BollingerPeriod = 25
+        engine.Configuration.BollingerStandardDeviations = 3D
     End Sub
 
     Private Sub ConfigureSpotBotManualReferences(universeSettings As SpotBotUniverseSettings)
@@ -2642,6 +2740,7 @@ BuildSpotBotGrid:
         _botStop = btSpotBotStop
         _botExport = btSpotBotExport
         _botTrades = btSpotBotTrades
+        _botBacktest = btbacktest
         _botSimulationSummary = lbSpotBotSimulationSummary
         _botLog = rtbSpotBotLog
         _dgSpotBotPositions = dgSpotBotPositionsControl
@@ -2704,6 +2803,7 @@ BuildSpotBotGrid:
             _botGridMaxExposurePercent.Value = ClampNumeric(_botGridMaxExposurePercent, _spotTradeBot.Configuration.GridV2MaxExposurePercent)
             _botGridMaxLevels.Value = ClampNumeric(_botGridMaxLevels, _spotTradeBot.Configuration.GridV2MaxLevels)
             _botGridRequireRejection.Checked = _spotTradeBot.Configuration.GridV2RequireRejection
+            chkSpotBotEmergencyReentry.Checked = _spotTradeBot.Configuration.GridStrongEmergencyReentry
             _botGridMacroFilter.Checked = _spotTradeBot.Configuration.GridV2MacroFilterEnabled
             _botBtcFlushDropPercent.Value = ClampNumeric(_botBtcFlushDropPercent, _spotTradeBot.Configuration.BitcoinFlushDropPercent)
             _botBtcFlushPauseMinutes.Value = ClampNumeric(_botBtcFlushPauseMinutes, _spotTradeBot.Configuration.BitcoinFlushPauseMinutes)
@@ -2739,6 +2839,9 @@ BuildSpotBotGrid:
         AddHandler _botStop.Click, AddressOf SpotBotStop_Click
         AddHandler _botExport.Click, AddressOf SpotBotExport_Click
         AddHandler _botTrades.Click, AddressOf SpotBotTrades_Click
+        If _botBacktest IsNot Nothing Then
+            AddHandler _botBacktest.Click, AddressOf SpotBotBacktest_Click
+        End If
         UpdateSpotBotBollingerTimeframeAvailability()
     End Sub
 
@@ -2754,6 +2857,13 @@ BuildSpotBotGrid:
         _botStop.Enabled = _spotTradeBot.IsRunning
         _botExport.Enabled = True
         _botTrades.Enabled = True
+        If _botBacktest IsNot Nothing Then
+            _botBacktest.Enabled = Not _spotTradeBot.IsRunning
+            _botBacktest.Cursor = Cursors.Hand
+            ToolTip1.SetToolTip(
+                _botBacktest,
+                "Executa um replay determinístico em modo simulado. Busca candles pela API pública da Binance ou importa CSV OHLCV.")
+        End If
         _botUniverseButton.Text = If(_botUniverseMode.SelectedIndex = 0, "Selecionar...", "Atualizar")
         _botSimulationSummary.Text = "Simulação: aguardando início"
         _botLog.ReadOnly = True
@@ -2785,6 +2895,9 @@ BuildSpotBotGrid:
         Else
             _botStart.Enabled = Not _spotTradeBot.IsRunning
             _botStop.Enabled = _spotTradeBot.IsRunning
+        End If
+        If _botBacktest IsNot Nothing Then
+            _botBacktest.Enabled = Not _spotTradeBot.IsRunning
         End If
     End Sub
 
@@ -2873,6 +2986,7 @@ BuildSpotBotGrid:
         SetSpotBotToolTip(Label38, "Exposição máxima acumulada por ativo dentro do Grid V2.")
         SetSpotBotToolTip(Label39, "Quantidade máxima de níveis/lotes que o Grid V2 pode acumular por ativo.")
         SetSpotBotToolTip(chkSpotBotGridRejection, "Exige toque no nível e confirmação de rejeição antes de abrir um novo lote do Grid V2.")
+        SetSpotBotToolTip(chkSpotBotEmergencyReentry, "Após um SL emergencial, exige novo candle fechado de 5 min recuperando o nível e rompimento da máxima para recomprar o ativo.")
         SetSpotBotToolTip(chkSpotBotGridMacroFilter, "Filtro macro opcional: exige regime lateral também nos candles de 1 hora. O Grid continua entrando em 1 minuto, confirmando no 5 minutos e lendo o regime no 15 minutos.")
 
         SetSpotBotToolTip(chkSpotBotBreakEven, "Move o stop para entrada mais custos quando o lucro mínimo for atingido.")
@@ -2890,7 +3004,8 @@ BuildSpotBotGrid:
         SetSpotBotToolTip(
             chkSpotBotBtcDaily,
             "Usa a queda e a oscilação diária do BTC para bloquear entradas em uma deterioração forte. " &
-            "Em quedas severas, ativa automaticamente o Modo Crise, que aguarda recuperação confirmada ou a virada do dia UTC.")
+            "Em quedas severas, ativa automaticamente o Modo Crise, que aguarda região de fundo semanal/mensal, " &
+            "quebra diária de estrutura e volume comprador expressivo.")
         SetSpotBotToolTip(Label28, "Queda diária do BTC que ativa a proteção diária.")
         SetSpotBotToolTip(Label29, "Oscilação máxima diária usada como limite de proteção do BTC.")
         SetSpotBotToolTip(Label30, "Unidade percentual do limite de oscilação diária.")
@@ -3004,6 +3119,7 @@ BuildSpotBotGrid:
             _botGridMaxExposurePercent.Value = Math.Min(_botGridMaxExposurePercent.Maximum, Math.Max(_botGridMaxExposurePercent.Minimum, _spotTradeBot.Configuration.GridV2MaxExposurePercent))
             _botGridMaxLevels.Value = Math.Min(_botGridMaxLevels.Maximum, Math.Max(_botGridMaxLevels.Minimum, _spotTradeBot.Configuration.GridV2MaxLevels))
             _botGridRequireRejection.Checked = _spotTradeBot.Configuration.GridV2RequireRejection
+            chkSpotBotEmergencyReentry.Checked = _spotTradeBot.Configuration.GridStrongEmergencyReentry
             _botGridMacroFilter.Checked = _spotTradeBot.Configuration.GridV2MacroFilterEnabled
             _botBtcFlushDropPercent.Value = Math.Min(_botBtcFlushDropPercent.Maximum, Math.Max(_botBtcFlushDropPercent.Minimum, _spotTradeBot.Configuration.BitcoinFlushDropPercent))
             _botBtcFlushPauseMinutes.Value = Math.Min(_botBtcFlushPauseMinutes.Maximum, Math.Max(_botBtcFlushPauseMinutes.Minimum, _spotTradeBot.Configuration.BitcoinFlushPauseMinutes))
@@ -3129,82 +3245,85 @@ BuildSpotBotGrid:
         _tradeBotButton.Location = New Point(btOrdensFuturo.Right, btOrdensFuturo.Top)
     End Sub
 
-    Private Sub ApplySpotBotControls(Optional preserveRestoredStartingQuote As Boolean = False)
-        _spotTradeBot.DisableAllStrategies()
+    Private Sub ApplySpotBotControls(Optional preserveRestoredStartingQuote As Boolean = False,
+                                     Optional targetEngine As SpotTradeBotEngine = Nothing)
+        Dim engine = If(targetEngine, _spotTradeBot)
+        engine.DisableAllStrategies()
         For Each item In _botStrategyChecks
-            _spotTradeBot.SetStrategyEnabled(item.Key, item.Value.Checked)
+            engine.SetStrategyEnabled(item.Key, item.Value.Checked)
         Next
 
-        ApplyBollingerMode()
-        ApplyBollingerTimeframe()
+        ApplyBollingerMode(engine)
+        ApplyBollingerTimeframe(engine)
 
         Select Case _botCombination.SelectedIndex
             Case 0
-                _spotTradeBot.Configuration.CombinationMode = SpotBotCombinationMode.Any
+                engine.Configuration.CombinationMode = SpotBotCombinationMode.Any
             Case 1
-                _spotTradeBot.Configuration.CombinationMode = SpotBotCombinationMode.All
+                engine.Configuration.CombinationMode = SpotBotCombinationMode.All
             Case 3
-                _spotTradeBot.Configuration.CombinationMode = SpotBotCombinationMode.WeightedScore
+                engine.Configuration.CombinationMode = SpotBotCombinationMode.WeightedScore
             Case Else
-                _spotTradeBot.Configuration.CombinationMode = SpotBotCombinationMode.MinimumConfirmations
+                engine.Configuration.CombinationMode = SpotBotCombinationMode.MinimumConfirmations
         End Select
 
-        _spotTradeBot.Configuration.RequiredConfirmations = CInt(_botConfirmations.Value)
+        engine.Configuration.RequiredConfirmations = CInt(_botConfirmations.Value)
         If Not preserveRestoredStartingQuote Then
-            _spotTradeBot.Configuration.SimulationStartingQuote = _botStartingQuote.Value
+            engine.Configuration.SimulationStartingQuote = _botStartingQuote.Value
         End If
-        _spotTradeBot.Configuration.SimulationAllocationPercent = _botAllocation.Value
-        _spotTradeBot.Configuration.GridV2LevelAllocationPercent = _botAllocation.Value
-        _spotTradeBot.Configuration.GridV2RiskPerTradePercent = _botGridRiskPercent.Value
-        _spotTradeBot.Configuration.GridV2ReserveQuotePercent = _botGridReservePercent.Value
-        _spotTradeBot.Configuration.GridV2MaxExposurePercent = _botGridMaxExposurePercent.Value
-        _spotTradeBot.Configuration.GridV2MaxLevels = CInt(_botGridMaxLevels.Value)
-        _spotTradeBot.Configuration.GridV2RequireRejection = _botGridRequireRejection.Checked
-        _spotTradeBot.Configuration.GridV2MacroFilterEnabled = _botGridMacroFilter.Checked
+        engine.Configuration.SimulationAllocationPercent = _botAllocation.Value
+        engine.Configuration.GridV2LevelAllocationPercent = _botAllocation.Value
+        engine.Configuration.GridV2RiskPerTradePercent = _botGridRiskPercent.Value
+        engine.Configuration.GridV2ReserveQuotePercent = _botGridReservePercent.Value
+        engine.Configuration.GridV2MaxExposurePercent = _botGridMaxExposurePercent.Value
+        engine.Configuration.GridV2MaxLevels = CInt(_botGridMaxLevels.Value)
+        engine.Configuration.GridV2RequireRejection = _botGridRequireRejection.Checked
+        engine.Configuration.GridStrongEmergencyReentry = chkSpotBotEmergencyReentry.Checked
+        engine.Configuration.GridV2MacroFilterEnabled = _botGridMacroFilter.Checked
         Dim gridEnabled = _botStrategyChecks.ContainsKey(SpotBotStrategyKind.GridAdaptive) AndAlso
                           _botStrategyChecks(SpotBotStrategyKind.GridAdaptive).Checked
         ' O regime de queda leve do BTC faz parte do Grid V2 e é ativado
         ' automaticamente enquanto a estratégia Grid V2 estiver habilitada.
-        _spotTradeBot.Configuration.GridV2BtcMildDeclineEnabled = gridEnabled
-        _spotTradeBot.Configuration.BitcoinFlushProtectionEnabled = _botBtcFlushEnabled.Checked
-        _spotTradeBot.Configuration.BitcoinFlushDropPercent = _botBtcFlushDropPercent.Value
-        _spotTradeBot.Configuration.BitcoinFlushPauseMinutes = _botBtcFlushPauseMinutes.Value
-        _spotTradeBot.Configuration.BitcoinFlushVolumeMultiplier = _botBtcFlushVolumeMultiplier.Value
-        _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled = _botBtcDailyEnabled.Checked
-        _spotTradeBot.Configuration.BitcoinDailyDropPercent = _botBtcDailyDropPercent.Value
-        _spotTradeBot.Configuration.BitcoinDailyDrawdownPercent = _botBtcDailyDrawdownPercent.Value
+        engine.Configuration.GridV2BtcMildDeclineEnabled = gridEnabled
+        engine.Configuration.BitcoinFlushProtectionEnabled = _botBtcFlushEnabled.Checked
+        engine.Configuration.BitcoinFlushDropPercent = _botBtcFlushDropPercent.Value
+        engine.Configuration.BitcoinFlushPauseMinutes = _botBtcFlushPauseMinutes.Value
+        engine.Configuration.BitcoinFlushVolumeMultiplier = _botBtcFlushVolumeMultiplier.Value
+        engine.Configuration.BitcoinDailyProtectionEnabled = _botBtcDailyEnabled.Checked
+        engine.Configuration.BitcoinDailyDropPercent = _botBtcDailyDropPercent.Value
+        engine.Configuration.BitcoinDailyDrawdownPercent = _botBtcDailyDrawdownPercent.Value
         ' O modo crise é a camada severa da proteção diária e acompanha o
         ' mesmo checkbox para não deixar uma proteção macro oculta desligada.
-        _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled = _botBtcDailyEnabled.Checked
-        _spotTradeBot.Configuration.SimulationFeeRate = _botFee.Value / 100D
-        _spotTradeBot.Configuration.TakeProfitPercent = _botTakeProfit.Value
-        _spotTradeBot.Configuration.StopLossPercent = _botStopLoss.Value
-        _spotTradeBot.Configuration.BreakEvenEnabled = _botBreakEvenEnabled IsNot Nothing AndAlso _botBreakEvenEnabled.Checked
-        _spotTradeBot.Configuration.BreakEvenTriggerPercent = If(_botBreakEvenTrigger Is Nothing, 0.9D, _botBreakEvenTrigger.Value)
-        _spotTradeBot.Configuration.BreakEvenOffsetPercent = 0.1D
-        _spotTradeBot.Configuration.TrailingStopEnabled = _botTrailingEnabled IsNot Nothing AndAlso _botTrailingEnabled.Checked
-        _spotTradeBot.Configuration.TrailingStopDistancePercent = If(_botTrailingDistance Is Nothing, 0.8D, _botTrailingDistance.Value)
-        _spotTradeBot.Configuration.RiskBrakeEnabled = _botRiskBrakeEnabled Is Nothing OrElse _botRiskBrakeEnabled.Checked
-        _spotTradeBot.Configuration.RiskBrakeSessionLossPercent = If(_botRiskSessionLoss Is Nothing, 2D, _botRiskSessionLoss.Value)
-        _spotTradeBot.Configuration.RiskBrakeProfitLockEnabled = _botRiskProfitLockEnabled Is Nothing OrElse _botRiskProfitLockEnabled.Checked
-        _spotTradeBot.Configuration.RiskBrakeProfitLockTriggerPercent = If(_botRiskProfitTrigger Is Nothing, 1D, _botRiskProfitTrigger.Value)
-        _spotTradeBot.Configuration.RiskBrakeProfitGivebackPercent = If(_botRiskGiveback Is Nothing, 50D, _botRiskGiveback.Value)
-        _spotTradeBot.Configuration.RiskBrakeMaxConsecutiveLosses = If(_botRiskMaxLosses Is Nothing, 3, CInt(_botRiskMaxLosses.Value))
-        _spotTradeBot.Configuration.RiskBrakePauseMinutes = If(_botRiskPauseMinutes Is Nothing, 60D, _botRiskPauseMinutes.Value)
-        _spotTradeBot.Configuration.RiskBrakeClosePositionsOnHardStop = _botRiskClosePositions Is Nothing OrElse _botRiskClosePositions.Checked
-        _spotTradeBot.Configuration.RiskBrakeUseUnrealizedPnl = _botRiskUseUnrealized Is Nothing OrElse _botRiskUseUnrealized.Checked
-        _spotTradeBot.Configuration.PostExitCooldownMinutes = If(_botPostExitCooldown Is Nothing, 15D, _botPostExitCooldown.Value)
-        _spotTradeBot.Configuration.NewPositionProfitGateEnabled = _botProfitGateEnabled Is Nothing OrElse _botProfitGateEnabled.Checked
-        _spotTradeBot.Configuration.MinimumNetProfitBeforeNewPositionPercent = If(_botMinProfitBeforeEntry Is Nothing, 0.5D, _botMinProfitBeforeEntry.Value)
-        _spotTradeBot.Configuration.NewPositionProfitGateFreePositions = If(_botProfitGateFreePositions Is Nothing, 2, CInt(_botProfitGateFreePositions.Value))
-        _spotTradeBot.Configuration.SimulationOnly = True
+        engine.Configuration.BitcoinCrisisProtectionEnabled = _botBtcDailyEnabled.Checked
+        engine.Configuration.SimulationFeeRate = _botFee.Value / 100D
+        engine.Configuration.TakeProfitPercent = _botTakeProfit.Value
+        engine.Configuration.StopLossPercent = _botStopLoss.Value
+        engine.Configuration.BreakEvenEnabled = _botBreakEvenEnabled IsNot Nothing AndAlso _botBreakEvenEnabled.Checked
+        engine.Configuration.BreakEvenTriggerPercent = If(_botBreakEvenTrigger Is Nothing, 0.9D, _botBreakEvenTrigger.Value)
+        engine.Configuration.BreakEvenOffsetPercent = 0.1D
+        engine.Configuration.TrailingStopEnabled = _botTrailingEnabled IsNot Nothing AndAlso _botTrailingEnabled.Checked
+        engine.Configuration.TrailingStopDistancePercent = If(_botTrailingDistance Is Nothing, 0.8D, _botTrailingDistance.Value)
+        engine.Configuration.RiskBrakeEnabled = _botRiskBrakeEnabled Is Nothing OrElse _botRiskBrakeEnabled.Checked
+        engine.Configuration.RiskBrakeSessionLossPercent = If(_botRiskSessionLoss Is Nothing, 2D, _botRiskSessionLoss.Value)
+        engine.Configuration.RiskBrakeProfitLockEnabled = _botRiskProfitLockEnabled Is Nothing OrElse _botRiskProfitLockEnabled.Checked
+        engine.Configuration.RiskBrakeProfitLockTriggerPercent = If(_botRiskProfitTrigger Is Nothing, 1D, _botRiskProfitTrigger.Value)
+        engine.Configuration.RiskBrakeProfitGivebackPercent = If(_botRiskGiveback Is Nothing, 50D, _botRiskGiveback.Value)
+        engine.Configuration.RiskBrakeMaxConsecutiveLosses = If(_botRiskMaxLosses Is Nothing, 3, CInt(_botRiskMaxLosses.Value))
+        engine.Configuration.RiskBrakePauseMinutes = If(_botRiskPauseMinutes Is Nothing, 60D, _botRiskPauseMinutes.Value)
+        engine.Configuration.RiskBrakeClosePositionsOnHardStop = _botRiskClosePositions Is Nothing OrElse _botRiskClosePositions.Checked
+        engine.Configuration.RiskBrakeUseUnrealizedPnl = _botRiskUseUnrealized Is Nothing OrElse _botRiskUseUnrealized.Checked
+        engine.Configuration.PostExitCooldownMinutes = If(_botPostExitCooldown Is Nothing, 15D, _botPostExitCooldown.Value)
+        engine.Configuration.NewPositionProfitGateEnabled = _botProfitGateEnabled Is Nothing OrElse _botProfitGateEnabled.Checked
+        engine.Configuration.MinimumNetProfitBeforeNewPositionPercent = If(_botMinProfitBeforeEntry Is Nothing, 0.5D, _botMinProfitBeforeEntry.Value)
+        engine.Configuration.NewPositionProfitGateFreePositions = If(_botProfitGateFreePositions Is Nothing, 2, CInt(_botProfitGateFreePositions.Value))
+        engine.Configuration.SimulationOnly = True
 
-        _spotTradeBot.Configuration.UniverseMode = If(_botUniverseMode.SelectedIndex = 1,
+        engine.Configuration.UniverseMode = If(_botUniverseMode.SelectedIndex = 1,
                                                       SpotBotUniverseMode.TopVolume,
                                                       SpotBotUniverseMode.Manual)
-        _spotTradeBot.Configuration.UniverseMaxAssets = CInt(_botUniverseMaxAssets.Value)
-        _spotTradeBot.Configuration.UniverseMinimumQuoteVolume = _botUniverseMinVolume.Value
-        _spotTradeBot.Configuration.UniverseMinimumTrades24h = If(_botUniverseMinTrades Is Nothing, 1000, CInt(_botUniverseMinTrades.Value))
+        engine.Configuration.UniverseMaxAssets = CInt(_botUniverseMaxAssets.Value)
+        engine.Configuration.UniverseMinimumQuoteVolume = _botUniverseMinVolume.Value
+        engine.Configuration.UniverseMinimumTrades24h = If(_botUniverseMinTrades Is Nothing, 1000, CInt(_botUniverseMinTrades.Value))
     End Sub
 
     Private Async Sub SpotBotStart_Click(sender As Object, e As EventArgs)
@@ -3272,6 +3391,9 @@ BuildSpotBotGrid:
         End If
 
         UpdateSpotBotPositionsGrid(_spotTradeBot.GetOpenPositions())
+        ' O motor só aceita cotações depois que o WebSocket público confirmar
+        ' conexão; isso evita entradas com um preço antigo na inicialização.
+        _spotTradeBot.SetMarketDataAvailability(False)
         _spotTradeBot.Start()
         _botUniverseMode.Enabled = False
         _botUniverseMaxAssets.Enabled = False
@@ -3304,6 +3426,7 @@ BuildSpotBotGrid:
         _botGridMaxExposurePercent.Enabled = False
         _botGridMaxLevels.Enabled = False
         _botGridRequireRejection.Enabled = False
+        chkSpotBotEmergencyReentry.Enabled = False
         _botGridMacroFilter.Enabled = False
         _botBtcFlushDropPercent.Enabled = False
         _botBtcFlushPauseMinutes.Enabled = False
@@ -3312,7 +3435,14 @@ BuildSpotBotGrid:
         _botBtcDailyDropPercent.Enabled = False
         _botBtcDailyDrawdownPercent.Enabled = False
         _botBtcDailyEnabled.Enabled = False
-        Await StartBinanceWebSocket()
+        ' Paper trading precisa somente do fluxo público de preços. O User
+        ' Data Stream autenticado não é necessário e fica fora desta sessão.
+        Await StartBinanceWebSocket(paperTradingOnly:=True)
+        EnsureSpotBotConnectivityTimer()
+        _spotBotConnectivityTimer.Start()
+        EnsureSpotBotCheckpointTimer()
+        _spotBotCheckpointTimer.Interval = Math.Max(10000, _spotTradeBot.Configuration.PaperTradingCheckpointSeconds * 1000)
+        _spotBotCheckpointTimer.Start()
         UpdateSpotBotUniverseRefreshTimerState()
         _botStart.Enabled = False
         _botStop.Enabled = True
@@ -3320,8 +3450,8 @@ BuildSpotBotGrid:
         RenderSpotBotSimulationSummary(_spotTradeBot.GetSimulationSnapshot())
         AppendSpotBotLog(
             If(resumePreviousSimulation,
-               "Bot Spot retomado em modo SIMULAÇÃO.",
-               "Bot Spot iniciado em modo SIMULAÇÃO."),
+               "Paper trading retomado: preços reais, carteira virtual e nenhuma ordem enviada.",
+               "Paper trading iniciado: preços reais, carteira virtual e nenhuma ordem enviada."),
             Color.LimeGreen)
         AppendSpotBotLog(
             If(_botBollingerMode.SelectedIndex = 0,
@@ -3381,8 +3511,13 @@ BuildSpotBotGrid:
             $"Modo crise BTC: {If(_spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled, "ativo", "desligado")}; " &
             $"aciona em queda/drawdown de {_spotTradeBot.Configuration.BitcoinCrisisDropPercent:0.##}% / " &
             $"{_spotTradeBot.Configuration.BitcoinCrisisDrawdownPercent:0.##}%, " &
-            $"libera após +{_spotTradeBot.Configuration.BitcoinCrisisRecoveryPercent:0.##}% desde a mínima " &
-            $"por {_spotTradeBot.Configuration.BitcoinCrisisRecoveryCandles} candles de 1 min ou na virada do dia.",
+            $"libera quando o diário confirmar região de fundo semanal/mensal, quebra de estrutura " &
+            $"e volume comprador >= {_spotTradeBot.Configuration.BitcoinCrisisRecoveryVolumeMultiplier:0.##}x " &
+            $"(+{_spotTradeBot.Configuration.BitcoinCrisisRecoveryPercent:0.##}% desde a mínima).",
+            Color.Orange)
+        AppendSpotBotLog(
+            "Coordenador BTC: após qualquer flush, proteção diária ou crise, " &
+            "novas entradas aguardam região de fundo semanal/mensal, quebra diária e volume comprador acima da EMA 9.",
             Color.Orange)
         AppendSpotBotLog(
             $"Freio de perdas: {If(_spotTradeBot.Configuration.RiskBrakeEnabled, "ativo", "desligado")}; " &
@@ -3426,11 +3561,28 @@ BuildSpotBotGrid:
     End Sub
 
     Private Sub SpotBotStop_Click(sender As Object, e As EventArgs)
+        If _spotBotConnectivityTimer IsNot Nothing Then
+            _spotBotConnectivityTimer.Stop()
+        End If
+        If _spotBotCheckpointTimer IsNot Nothing Then
+            _spotBotCheckpointTimer.Stop()
+        End If
         If _spotBotUniverseRefreshTimer IsNot Nothing Then
             _spotBotUniverseRefreshTimer.Stop()
         End If
         _spotBotUniverseNextRefreshUtc = DateTime.MinValue
+        Dim stoppedRunId = _spotTradeBot.ActiveRunId
         _spotTradeBot.Stop()
+        Try
+            Dim bookPath = ExportSpotBotExecutionSnapshots(stoppedRunId)
+            If Not String.IsNullOrWhiteSpace(bookPath) Then
+                AppendSpotBotLog("Livro capturado exportado: " & bookPath, Color.LightGray)
+            End If
+        Catch ex As Exception
+            AppendSpotBotLog("Não foi possível exportar o livro capturado: " & ex.Message, Color.Orange)
+        End Try
+        _binancePaperWsConnectionKnown = False
+        _binancePaperWsConnected = False
         _botStart.Enabled = True
         _botStop.Enabled = False
         _botUniverseMode.Enabled = True
@@ -3464,6 +3616,7 @@ BuildSpotBotGrid:
         _botGridMaxExposurePercent.Enabled = True
         _botGridMaxLevels.Enabled = True
         _botGridRequireRejection.Enabled = True
+        chkSpotBotEmergencyReentry.Enabled = True
         _botGridMacroFilter.Enabled = True
         _botBtcFlushDropPercent.Enabled = True
         _botBtcFlushPauseMinutes.Enabled = True
@@ -3472,8 +3625,1462 @@ BuildSpotBotGrid:
         _botBtcDailyDropPercent.Enabled = True
         _botBtcDailyDrawdownPercent.Enabled = True
         _botBtcDailyEnabled.Enabled = True
+        If _botBacktest IsNot Nothing Then _botBacktest.Enabled = True
         AppendSpotBotLog("Bot Spot parado.", Color.IndianRed)
     End Sub
+
+    Private Async Sub SpotBotBacktest_Click(sender As Object, e As EventArgs)
+        If _spotTradeBot.IsRunning Then
+            MessageBox.Show(
+                "Pare a simulação atual antes de iniciar um backtest determinístico.",
+                "Backtest do Tradebot",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim sourceDescription As String = String.Empty
+        Dim candles As List(Of SpotBotBacktestCandle) = Nothing
+        Dim previousCursor = Cursor
+        Dim previousEnabled = If(_botBacktest Is Nothing, True, _botBacktest.Enabled)
+        Try
+            Dim backtestSetup = _spotTradeBot.CreateBacktestEngine(persistRuns:=False)
+            ApplySpotBotControls(targetEngine:=backtestSetup)
+            If backtestSetup.Configuration.EnabledStrategies.Count = 0 Then
+                AppendSpotBotLog("Selecione pelo menos uma estratégia antes do backtest.", Color.Gold)
+                Return
+            End If
+
+            Dim candleSelection = Await SelectSpotBotBacktestCandles(backtestSetup.Configuration)
+            If candleSelection Is Nothing Then Return
+            sourceDescription = candleSelection.SourceDescription
+            candles = candleSelection.Candles
+            If candles.Count = 0 Then
+                Throw New InvalidDataException("O arquivo não contém candles OHLCV fechados.")
+            End If
+
+            If sourceDescription.StartsWith("Binance API:", StringComparison.OrdinalIgnoreCase) Then
+                Try
+                    Dim candlesPath = ExportSpotBotBacktestCandles(candles)
+                    AppendSpotBotLog(
+                            "Candles Binance salvos para reutilização: " & candlesPath,
+                            Color.LightGreen)
+                Catch cacheEx As Exception
+                    AppendSpotBotLog(
+                            "Não foi possível salvar o cache OHLCV; o backtest continuará em memória: " & cacheEx.Message,
+                            Color.Gold)
+                End Try
+            End If
+
+            Dim pathMode As SpotBotBacktestPathMode
+            If Not SelectSpotBotBacktestPathMode(pathMode) Then Return
+            Dim executionBook = SelectSpotBotBacktestExecutionBook()
+            Dim readStopTrades As Func(Of String, DateTime, IReadOnlyList(Of SpotBotPricePoint)) = Nothing
+            If backtestSetup.Configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive) AndAlso
+                   MessageBox.Show(Me, "Usar os negócios históricos da Binance para os stops do Grid V2? Os minutos com posição aberta serão consultados pela API pública e reutilizados nesta comparação.",
+                                   "Stops do Grid V2", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.Yes Then
+                Dim aggregateReplay As New SpotBotAggregateTradeReplay()
+                readStopTrades = AddressOf aggregateReplay.ReadMinute
+            End If
+
+            If _botBacktest IsNot Nothing Then _botBacktest.Enabled = False
+            If _botStart IsNot Nothing Then _botStart.Enabled = False
+            Cursor = Cursors.WaitCursor
+            AppendSpotBotLog(
+                    $"Backtest iniciado: {sourceDescription} ({candles.Count} candle(s)); " &
+                    $"modo intrabar: {GetSpotBotBacktestPathModeName(pathMode)}.",
+                    Color.Gold)
+
+            Dim scenarios = BuildSpotBotBacktestCostScenarios(
+                    backtestSetup.Configuration.SimulationFeeRate * 100D,
+                    backtestSetup.Configuration.SimulationSlippagePercent)
+            Dim results As New List(Of SpotBotBacktestResult)()
+            For Each scenario In scenarios
+                AppendSpotBotLog($"Cenário {scenario.ScenarioName}: taxa {scenario.FeeRateOverridePercent:0.###}%, " &
+                                     $"slippage {scenario.SlippagePercentOverride:0.###}%, spread {scenario.SpreadPercent:0.###}%, " &
+                                     $"latência entrada/saída {scenario.ExecutionDelaySeconds}/{scenario.ExitExecutionDelaySeconds}s, participação {scenario.VolumeParticipationPercent:0.#}%, " &
+                                     $"rejeição {scenario.OrderRejectionPercent:0.#}%, fill parcial {scenario.PartialFillProbabilityPercent:0.#}%.",
+                                     Color.LightGray)
+                Dim result = Await Task.Run(Function() backtestSetup.CreateBacktestEngine(persistRuns:=True).RunDeterministicBacktest(
+                        candles,
+                        New SpotBotBacktestOptions With {
+                            .PathMode = pathMode,
+                            .ResetBeforeRun = True,
+                            .StopAtEnd = True,
+                            .ScenarioName = scenario.ScenarioName,
+                            .ReadGridStopTrades = readStopTrades,
+                            .ExecutionBookReplay = executionBook,
+                            .FeeRateOverridePercent = scenario.FeeRateOverridePercent,
+                            .SlippagePercentOverride = scenario.SlippagePercentOverride,
+                            .SpreadPercent = scenario.SpreadPercent,
+                            .ExecutionDelaySeconds = scenario.ExecutionDelaySeconds,
+                            .ExitExecutionDelaySeconds = scenario.ExitExecutionDelaySeconds,
+                            .ApplyLatencyToExits = scenario.ApplyLatencyToExits,
+                            .DynamicSlippageEnabled = scenario.DynamicSlippageEnabled,
+                            .DynamicSlippageMultiplier = scenario.DynamicSlippageMultiplier,
+                            .MaximumSlippagePercent = scenario.MaximumSlippagePercent,
+                            .VolumeParticipationPercent = scenario.VolumeParticipationPercent,
+                            .OrderRejectionPercent = scenario.OrderRejectionPercent,
+                            .PartialFillEnabled = scenario.PartialFillEnabled,
+                            .PartialFillProbabilityPercent = scenario.PartialFillProbabilityPercent,
+                            .MinimumFillPercent = scenario.MinimumFillPercent,
+                            .RequireOneMinuteBaseForGrid = True,
+                            .GapToleranceIntervals = 1}))
+                results.Add(result)
+
+                Dim pnl = If(result.Snapshot Is Nothing, 0D, result.Snapshot.TotalPnl)
+                AppendSpotBotLog(
+                        $"{result.ScenarioName}: run #{result.RunId}; {result.Trades.Count} trade(s); " &
+                        $"P/L {pnl:+0.00;-0.00;0.00} USDT; gaps {result.GapCount}; " &
+                        $"pendentes E/S {result.PendingEntries}/{result.PendingExits}; ordens {result.FilledOrders}/{result.RequestedOrders}; " &
+                        $"rejeitadas {result.RejectedOrders}; parciais {result.PartialFills}.",
+                        If(pnl >= 0D, Color.LightGreen, Color.IndianRed))
+                If result.AggregateStopReplayEnabled Then AppendSpotBotLog($"  Stops Grid: {result.AggregateStopTicks} negócios históricos avaliados.", Color.LightGray)
+                For Each warning In result.ValidationWarnings
+                    AppendSpotBotLog("  " & warning, Color.Gold)
+                Next
+                For Each period In BuildSpotBotBacktestPeriodSummaries(candles, result.Trades)
+                    AppendSpotBotLog(
+                            $"  {period.Name}: {period.Trades} trade(s), " &
+                            $"P/L {period.Pnl:+0.00;-0.00;0.00} USDT, " &
+                            $"acerto {period.WinRatePercent:0.0}%.",
+                            Color.LightGray)
+                Next
+                Dim regimeBenchmark As String = Nothing
+                For Each regime In BuildSpotBotBacktestRegimeSummaries(candles, result.Trades, regimeBenchmark)
+                    AppendSpotBotLog(
+                            $"  Regime {regime.Name}: {regime.Trades} trade(s), " &
+                            $"P/L {regime.Pnl:+0.00;-0.00;0.00} USDT, " &
+                            $"acerto {regime.WinRatePercent:0.0}%, segmentos {regime.Segments}.",
+                            Color.LightGray)
+                Next
+            Next
+
+            Try
+                Dim walkForward = Await Task.Run(Function() RunSpotBotWalkForward(backtestSetup, candles, pathMode, scenarios, executionBook, readStopTrades))
+                For Each window In walkForward
+                    AppendSpotBotLog(
+                            $"Walk-forward janela {window.WindowNumber}: treino {window.SelectedProfile}/{window.SelectedScenario} " &
+                            $"{window.TrainPnl:+0.00;-0.00;0.00} USDT → teste {window.TestPnl:+0.00;-0.00;0.00} USDT " &
+                            $"({window.TestTrades} trades, acerto {window.TestWinRatePercent:0.0}%). " &
+                            $"Posições trazidas do treino: {window.CarriedTrades} saídas, {window.CarriedPnl:+0.00;-0.00;0.00} USDT.",
+                            If(window.TestPnl >= 0D, Color.LightGreen, Color.IndianRed))
+                Next
+                Dim walkForwardPath = ExportSpotBotBacktestWalkForwardComparison(walkForward)
+                AppendSpotBotLog("Walk-forward rolling exportado: " & walkForwardPath, Color.LightGreen)
+                Dim comparisonPath = ExportSpotBotBacktestScenarioComparison(results)
+                AppendSpotBotLog("Comparação de custos exportada: " & comparisonPath, Color.LightGreen)
+                Dim periodPath = ExportSpotBotBacktestPeriodComparison(candles, results)
+                AppendSpotBotLog("Validação por períodos exportada: " & periodPath, Color.LightGreen)
+                Dim regimeBenchmark As String = Nothing
+                Dim regimePath = ExportSpotBotBacktestRegimeComparison(candles, results, regimeBenchmark)
+                AppendSpotBotLog(
+                        "Walk-forward por regime exportado: " & regimePath &
+                        If(String.IsNullOrWhiteSpace(regimeBenchmark), String.Empty, " (benchmark " & regimeBenchmark & ")"),
+                        Color.LightGreen)
+            Catch exportEx As Exception
+                AppendSpotBotLog("Não foi possível exportar as comparações: " & exportEx.Message, Color.Gold)
+            End Try
+
+            Dim comparison = String.Join(
+                    Environment.NewLine,
+                    results.Select(Function(item)
+                                       Dim value = If(item.Snapshot Is Nothing, 0D, item.Snapshot.TotalPnl)
+                                       Return $"{item.ScenarioName}: {value:+0.00;-0.00;0.00} USDT ({item.Trades.Count} trades, run #{item.RunId})"
+                                   End Function))
+            MessageBox.Show(
+                    "Backtests concluídos em modo simulado:" & Environment.NewLine & comparison & Environment.NewLine & Environment.NewLine &
+                    "Nenhuma ordem real foi enviada.",
+                    "Backtest do Tradebot",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information)
+        Catch ex As Exception
+            AppendSpotBotLog("Erro no backtest: " & ex.Message, Color.IndianRed)
+            MessageBox.Show(
+                    "Não foi possível executar o backtest: " & ex.Message,
+                    "Backtest do Tradebot",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error)
+        Finally
+            Cursor = previousCursor
+            If _botBacktest IsNot Nothing Then
+                _botBacktest.Enabled = previousEnabled AndAlso Not _spotTradeBot.IsRunning
+            End If
+            UpdateSpotBotRunButtons(_spotTradeBot.GetSimulationSnapshot())
+        End Try
+    End Sub
+
+    Private Shared Function CreateSpotBotBacktestHttpClient() As HttpClient
+        Dim client As New HttpClient With {
+            .Timeout = TimeSpan.FromSeconds(60)}
+        client.DefaultRequestHeaders.UserAgent.Clear()
+        client.DefaultRequestHeaders.UserAgent.Add(New ProductInfoHeaderValue("PortfolioCripto", "1.0"))
+        Return client
+    End Function
+
+    Private NotInheritable Class SpotBotBacktestCandleSelection
+        Public Property Candles As List(Of SpotBotBacktestCandle)
+        Public Property SourceDescription As String = String.Empty
+    End Class
+
+    Private Function SelectSpotBotBacktestExecutionBook() As SpotBotExecutionBookReplay
+        If MessageBox.Show(Me, "Deseja usar um CSV de livro capturado no paper trading junto com os candles?",
+                           "Livro do backtest", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                           MessageBoxDefaultButton.Button2) <> DialogResult.Yes Then Return Nothing
+
+        Using dialog As New OpenFileDialog With {
+            .Title = "Selecionar tradebot_run_*_livro.csv",
+            .Filter = "Livro do TradeBot (*_livro.csv)|*_livro.csv|CSV (*.csv)|*.csv",
+            .CheckFileExists = True,
+            .InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)}
+            If dialog.ShowDialog(Me) <> DialogResult.OK Then Return Nothing
+            Return SpotBotExecutionBookReplay.Load(dialog.FileName)
+        End Using
+    End Function
+
+    Private Async Function SelectSpotBotBacktestCandles(configuration As SpotBotConfiguration) As Task(Of SpotBotBacktestCandleSelection)
+        Dim choice = MessageBox.Show(
+            "Escolha a fonte dos candles:" & Environment.NewLine & Environment.NewLine &
+            "SIM: buscar OHLCV pela API pública da Binance (sem chave), usando o universo atual do TradeBot." & Environment.NewLine &
+            "NÃO: importar um CSV OHLCV existente." & Environment.NewLine &
+            "CANCELAR: voltar sem iniciar o backtest.",
+            "Fonte do backtest",
+            MessageBoxButtons.YesNoCancel,
+            MessageBoxIcon.Question)
+
+        If choice = DialogResult.Cancel Then Return Nothing
+
+        If choice = DialogResult.No Then
+            Using dialog As New OpenFileDialog With {
+                .Title = "Selecionar candles OHLCV para o backtest",
+                .Filter = "CSV OHLCV (*.csv)|*.csv|Todos os arquivos (*.*)|*.*",
+                .Multiselect = False,
+                .CheckFileExists = True,
+                .InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)}
+
+                If dialog.ShowDialog(Me) <> DialogResult.OK Then Return Nothing
+                Return New SpotBotBacktestCandleSelection With {
+                    .Candles = LoadSpotBotBacktestCandles(dialog.FileName),
+                    .SourceDescription = "CSV: " & Path.GetFileName(dialog.FileName)}
+            End Using
+        End If
+
+        Dim symbols = GetCurrentSpotBotBacktestSymbols(configuration)
+        If symbols.Count = 0 Then
+            Throw New InvalidDataException(
+                "O universo do TradeBot está vazio. Selecione os ativos manuais ou atualize o Top volume antes do backtest.")
+        End If
+        If symbols.Count > 500 Then
+            Throw New InvalidDataException("O universo atual excede o limite de 500 pares por execução do backtest.")
+        End If
+
+        AppendSpotBotLog(
+            $"Ranqueando o universo atual por volume de 24h; serão usados os 50 melhores pares de até {symbols.Count}.",
+            Color.LightGray)
+        Dim allowedBaseAssets = symbols.Select(Function(item) GetSpotBaseAsset(item)).ToList()
+        Dim minimumVolume = If(_botUniverseMinVolume Is Nothing, 1000000D, _botUniverseMinVolume.Value)
+        Dim minimumTrades = If(_botUniverseMinTrades Is Nothing, 1000, CInt(_botUniverseMinTrades.Value))
+        Dim rankedBaseAssets = Await B.BINANCE_GetTopSpotSymbolsByVolumeAsync(
+            Math.Min(50, symbols.Count),
+            minimumVolume,
+            minimumTrades,
+            allowedBaseAssets)
+        If rankedBaseAssets.Count > 0 Then
+            symbols = rankedBaseAssets.Select(Function(item) ToSpotUsdtSymbol(item)).ToList()
+        Else
+            symbols = symbols.Take(Math.Min(50, symbols.Count)).ToList()
+            AppendSpotBotLog(
+                "Não foi possível obter o ranking de volume; usando os primeiros pares do universo atual.",
+                Color.Gold)
+        End If
+
+        Dim intervalText = Microsoft.VisualBasic.Interaction.InputBox(
+            "Informe o intervalo dos candles (1m, 5m, 15m, 1h, 4h ou 1d):",
+            "Intervalo da Binance",
+            "1m").Trim().ToLowerInvariant()
+        Dim intervalToken As String = Nothing
+        Dim intervalMinutes = 0
+        If Not TryNormalizeSpotBotBinanceInterval(intervalText, intervalToken, intervalMinutes) Then
+            Throw New InvalidDataException("Intervalo inválido. Use 1m, 5m, 15m, 1h, 4h ou 1d.")
+        End If
+
+        Dim gridEnabled = _spotTradeBot IsNot Nothing AndAlso
+                          configuration.EnabledStrategies.Contains(SpotBotStrategyKind.GridAdaptive)
+        If gridEnabled AndAlso intervalMinutes <> 1 Then
+            Dim gridIntervalChoice = MessageBox.Show(
+                "O Grid V2 calcula entradas na base de 1 minuto e não pode transformar candles maiores em candles de 1m." &
+                Environment.NewLine & Environment.NewLine &
+                "Sim = trocar o intervalo para 1m." & Environment.NewLine &
+                "Não = cancelar; para usar 1h/4h/1d, desmarque o Grid V2.",
+                "Intervalo incompatível com Grid V2",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning)
+            If gridIntervalChoice <> DialogResult.Yes Then Return Nothing
+            intervalToken = "1m"
+            intervalMinutes = 1
+        End If
+
+        Dim defaultStart = DateTime.UtcNow.Date.AddDays(-30)
+        Dim startText = Microsoft.VisualBasic.Interaction.InputBox(
+            "Data/hora inicial em UTC (yyyy-MM-dd ou ISO 8601):",
+            "Início dos candles",
+            defaultStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Trim()
+        Dim startUtc As DateTime
+        If Not TryParseSpotBotBacktestBoundary(startText, False, startUtc) Then
+            Throw New InvalidDataException("Data inicial inválida.")
+        End If
+
+        Dim endText = Microsoft.VisualBasic.Interaction.InputBox(
+            "Data/hora final em UTC (vazio = agora):",
+            "Fim dos candles",
+            DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Trim()
+        Dim endUtc As DateTime
+        If Not TryParseSpotBotBacktestBoundary(endText, True, endUtc) Then
+            Throw New InvalidDataException("Data final inválida.")
+        End If
+        endUtc = endUtc.ToUniversalTime()
+        If endUtc > DateTime.UtcNow Then endUtc = DateTime.UtcNow
+        If startUtc >= endUtc Then Throw New InvalidDataException("O início deve ser anterior ao fim.")
+
+        Dim estimatedCandlesPerSymbol = CLng(Math.Ceiling((endUtc - startUtc).TotalMinutes / intervalMinutes))
+        Dim estimatedCandles = estimatedCandlesPerSymbol * symbols.Count
+        If estimatedCandlesPerSymbol > 1000000L Then
+            Dim approximateDays = estimatedCandlesPerSymbol * intervalMinutes / 1440D
+            Throw New InvalidDataException(
+                $"O período gera aproximadamente {estimatedCandlesPerSymbol:N0} candles por par " &
+                $"({approximateDays:0.#} dias) no intervalo {intervalToken}. " &
+                "O limite é 1.000.000 por par; reduza o período ou use um intervalo maior.")
+        End If
+        If estimatedCandles > 5000000L Then
+            Throw New InvalidDataException(
+                $"O período gera aproximadamente {estimatedCandles:N0} candles para {symbols.Count} pares. " &
+                "O limite total é 5.000.000; reduza o período, a quantidade de pares ou use um intervalo maior.")
+        End If
+        If estimatedCandles > 250000 Then
+            Dim largeRangeChoice = MessageBox.Show(
+                $"O intervalo solicitado pode gerar aproximadamente {estimatedCandles:N0} candles e demorar bastante." &
+                Environment.NewLine & "Deseja continuar?",
+                "Download grande",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning)
+            If largeRangeChoice <> DialogResult.Yes Then Return Nothing
+        End If
+
+        Dim candles As New List(Of SpotBotBacktestCandle)()
+        For Each symbol In symbols
+            AppendSpotBotLog(
+                $"Binance API: baixando {symbol} ({intervalToken}) " &
+                $"{startUtc:yyyy-MM-dd} a {endUtc:yyyy-MM-dd}...",
+                Color.LightGray)
+            Dim symbolCandles = LoadSpotBotBacktestCandlesFromBinance(
+                symbol,
+                intervalToken,
+                intervalMinutes,
+                startUtc,
+                endUtc)
+            candles.AddRange(symbolCandles)
+            If candles.Count > 5000000 Then
+                Throw New InvalidDataException("O download excedeu 5.000.000 candles no total; reduza os pares, período ou intervalo.")
+            End If
+            AppendSpotBotLog($"{symbol}: {symbolCandles.Count:N0} candle(s) recebidos.", Color.LightGray)
+        Next
+
+        Dim sourceSymbols = String.Join(", ", symbols.Take(10))
+        If symbols.Count > 10 Then sourceSymbols &= $" e mais {symbols.Count - 10}"
+        Return New SpotBotBacktestCandleSelection With {
+            .Candles = candles.
+                OrderBy(Function(item) item.TimestampUtc).
+                ThenBy(Function(item) item.Symbol, StringComparer.OrdinalIgnoreCase).
+                ToList(),
+            .SourceDescription = $"Binance API: {symbols.Count} par(es) ({sourceSymbols}) {intervalToken} " &
+                                 $"{startUtc:yyyy-MM-dd} a {endUtc:yyyy-MM-dd}"}
+    End Function
+
+    Private Function GetCurrentSpotBotBacktestSymbols(configuration As SpotBotConfiguration) As List(Of String)
+        Dim sourceSymbols = _spotBotUniverseSymbols.ToList()
+        If sourceSymbols.Count = 0 Then
+            sourceSymbols = configuration.ManualUniverseSymbols.ToList()
+        End If
+        If sourceSymbols.Count = 0 Then
+            sourceSymbols = PortfolioRepository.GetSpotBotManualUniverseSymbols()
+        End If
+
+        Return sourceSymbols.
+            Select(Function(item) ToSpotUsdtSymbol(item)).
+            Where(Function(item) Not String.IsNullOrWhiteSpace(item) AndAlso
+                                Not Cjson.stablecoins.Contains(GetSpotBaseAsset(item)) AndAlso
+                                item.All(Function(character) Char.IsLetterOrDigit(character))).
+            Distinct(StringComparer.OrdinalIgnoreCase).
+            ToList()
+    End Function
+
+    Private Shared Function TryNormalizeSpotBotBinanceInterval(
+        text As String,
+        ByRef intervalToken As String,
+        ByRef intervalMinutes As Integer) As Boolean
+
+        intervalToken = String.Empty
+        intervalMinutes = 0
+        Select Case If(text, String.Empty).Trim().ToLowerInvariant()
+            Case "1m"
+                intervalToken = "1m"
+                intervalMinutes = 1
+            Case "5m"
+                intervalToken = "5m"
+                intervalMinutes = 5
+            Case "15m"
+                intervalToken = "15m"
+                intervalMinutes = 15
+            Case "1h"
+                intervalToken = "1h"
+                intervalMinutes = 60
+            Case "4h"
+                intervalToken = "4h"
+                intervalMinutes = 240
+            Case "1d"
+                intervalToken = "1d"
+                intervalMinutes = 1440
+            Case Else
+                Return False
+        End Select
+        Return True
+    End Function
+
+    Private Shared Function TryParseSpotBotBacktestBoundary(
+        text As String,
+        isEndBoundary As Boolean,
+        ByRef valueUtc As DateTime) As Boolean
+
+        valueUtc = DateTime.MinValue
+        If String.IsNullOrWhiteSpace(text) Then
+            If isEndBoundary Then
+                valueUtc = DateTime.UtcNow
+                Return True
+            End If
+            Return False
+        End If
+
+        Dim parsed As DateTime
+        If Not DateTime.TryParse(
+            text.Trim(),
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AllowWhiteSpaces Or DateTimeStyles.AssumeUniversal Or DateTimeStyles.AdjustToUniversal,
+            parsed) AndAlso
+           Not DateTime.TryParse(
+               text.Trim(),
+               CultureInfo.CurrentCulture,
+               DateTimeStyles.AllowWhiteSpaces Or DateTimeStyles.AssumeUniversal Or DateTimeStyles.AdjustToUniversal,
+               parsed) Then
+            Return False
+        End If
+
+        valueUtc = parsed.ToUniversalTime()
+        If isEndBoundary AndAlso text.Trim().Length <= 10 Then valueUtc = valueUtc.Date.AddDays(1)
+        Return True
+    End Function
+
+    Private Shared Function LoadSpotBotBacktestCandlesFromBinance(
+        symbol As String,
+        intervalToken As String,
+        intervalMinutes As Integer,
+        startUtc As DateTime,
+        endUtc As DateTime) As List(Of SpotBotBacktestCandle)
+
+        Dim candles As New List(Of SpotBotBacktestCandle)()
+        Dim intervalMilliseconds = CLng(intervalMinutes) * 60L * 1000L
+        Dim nextStartMilliseconds = New DateTimeOffset(startUtc.ToUniversalTime()).ToUnixTimeMilliseconds()
+        Dim endMilliseconds = New DateTimeOffset(endUtc.ToUniversalTime()).ToUnixTimeMilliseconds() - 1L
+        Dim nowMilliseconds = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        Dim requestedRows = 0
+
+        While nextStartMilliseconds <= endMilliseconds
+            Dim requestUrl =
+                "https://data-api.binance.vision/api/v3/klines?symbol=" &
+                Uri.EscapeDataString(symbol) &
+                "&interval=" & Uri.EscapeDataString(intervalToken) &
+                "&startTime=" & nextStartMilliseconds.ToString(CultureInfo.InvariantCulture) &
+                "&endTime=" & endMilliseconds.ToString(CultureInfo.InvariantCulture) &
+                "&limit=1000"
+
+            Try
+                Using response = _spotBotBacktestHttpClient.GetAsync(requestUrl).GetAwaiter().GetResult()
+                    response.EnsureSuccessStatusCode()
+                    Dim payload = JArray.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())
+                    If payload.Count = 0 Then Exit While
+
+                    Dim lastOpenMilliseconds = nextStartMilliseconds
+                    For Each token As JToken In payload
+                        Dim row = TryCast(token, JArray)
+                        If row Is Nothing OrElse row.Count < 6 Then Continue For
+
+                        Dim openMilliseconds As Long
+                        If Not Long.TryParse(row(0).ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, openMilliseconds) Then Continue For
+                        lastOpenMilliseconds = Math.Max(lastOpenMilliseconds, openMilliseconds)
+                        If openMilliseconds < nextStartMilliseconds OrElse openMilliseconds > endMilliseconds Then Continue For
+
+                        Dim closeMilliseconds = 0L
+                        If row.Count > 6 Then Long.TryParse(row(6).ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, closeMilliseconds)
+                        If closeMilliseconds <= 0L OrElse closeMilliseconds >= nowMilliseconds Then Continue For
+
+                        Dim openPrice = Decimal.Parse(row(1).ToString(), NumberStyles.Float, CultureInfo.InvariantCulture)
+                        Dim highPrice = Decimal.Parse(row(2).ToString(), NumberStyles.Float, CultureInfo.InvariantCulture)
+                        Dim lowPrice = Decimal.Parse(row(3).ToString(), NumberStyles.Float, CultureInfo.InvariantCulture)
+                        Dim closePrice = Decimal.Parse(row(4).ToString(), NumberStyles.Float, CultureInfo.InvariantCulture)
+                        Dim volume = Decimal.Parse(row(5).ToString(), NumberStyles.Float, CultureInfo.InvariantCulture)
+                        candles.Add(New SpotBotBacktestCandle With {
+                            .Symbol = symbol,
+                            .TimestampUtc = DateTimeOffset.FromUnixTimeMilliseconds(openMilliseconds).UtcDateTime,
+                            .IntervalMinutes = intervalMinutes,
+                            .Open = openPrice,
+                            .High = highPrice,
+                            .Low = lowPrice,
+                            .Close = closePrice,
+                            .Volume = Math.Max(0D, volume),
+                            .IsClosed = True})
+                    Next
+
+                    requestedRows += payload.Count
+                    If requestedRows > 1000000 Then
+                        Throw New InvalidDataException("O download excedeu 1.000.000 candles; reduza o período ou use um intervalo maior.")
+                    End If
+                    If payload.Count < 1000 Then Exit While
+
+                    Dim candidateNext = lastOpenMilliseconds + intervalMilliseconds
+                    If candidateNext <= nextStartMilliseconds Then Exit While
+                    nextStartMilliseconds = candidateNext
+                End Using
+            Catch ex As HttpRequestException
+                Throw New InvalidDataException("A API pública da Binance não respondeu: " & ex.Message, ex)
+            Catch ex As Newtonsoft.Json.JsonException
+                Throw New InvalidDataException("A resposta da API pública da Binance não está em formato válido.", ex)
+            End Try
+
+            If requestedRows Mod 5000 = 0 Then
+                Threading.Thread.Sleep(100)
+            End If
+        End While
+
+        Return candles.
+            GroupBy(Function(item) item.Symbol & "|" & item.TimestampUtc.Ticks.ToString(CultureInfo.InvariantCulture), StringComparer.OrdinalIgnoreCase).
+            Select(Function(group) group.First()).
+            OrderBy(Function(item) item.TimestampUtc).
+            ToList()
+    End Function
+
+    Private Function SelectSpotBotBacktestPathMode(ByRef pathMode As SpotBotBacktestPathMode) As Boolean
+        Dim answer = Microsoft.VisualBasic.Interaction.InputBox(
+            "Escolha a hipótese de execução intrabar:" & Environment.NewLine &
+            "1 - Conservador (abertura → mínima → máxima → fechamento)" & Environment.NewLine &
+            "2 - Alta antes da baixa (abertura → máxima → mínima → fechamento)" & Environment.NewLine &
+            "3 - Baixa antes da alta (abertura → mínima → máxima → fechamento)" & Environment.NewLine &
+            "4 - Somente fechamento" & Environment.NewLine & Environment.NewLine &
+            "Digite 1, 2, 3 ou 4:",
+            "Hipótese do backtest",
+            "1")
+
+        If String.IsNullOrWhiteSpace(answer) Then Return False
+        Select Case answer.Trim()
+            Case "1"
+                pathMode = SpotBotBacktestPathMode.ConservativeLong
+            Case "2"
+                pathMode = SpotBotBacktestPathMode.OpenHighLowClose
+            Case "3"
+                pathMode = SpotBotBacktestPathMode.OpenLowHighClose
+            Case "4"
+                pathMode = SpotBotBacktestPathMode.CloseOnly
+            Case Else
+                MessageBox.Show(
+                    "Informe somente 1, 2, 3 ou 4.",
+                    "Hipótese do backtest",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information)
+                Return False
+        End Select
+        Return True
+    End Function
+
+    Private Shared Function GetSpotBotBacktestPathModeName(pathMode As SpotBotBacktestPathMode) As String
+        Select Case pathMode
+            Case SpotBotBacktestPathMode.OpenHighLowClose
+                Return "abertura → máxima → mínima → fechamento"
+            Case SpotBotBacktestPathMode.OpenLowHighClose
+                Return "abertura → mínima → máxima → fechamento"
+            Case SpotBotBacktestPathMode.CloseOnly
+                Return "somente fechamento"
+            Case Else
+                Return "conservador (abertura → mínima → máxima → fechamento)"
+        End Select
+    End Function
+
+    Private Shared Function BuildSpotBotBacktestCostScenarios(
+        baseFeePercent As Decimal,
+        baseSlippagePercent As Decimal) As List(Of SpotBotBacktestCostScenario)
+
+        Return New List(Of SpotBotBacktestCostScenario) From {
+            New SpotBotBacktestCostScenario With {
+                .ScenarioName = "Base (form)",
+                .FeeRateOverridePercent = Math.Max(0D, baseFeePercent),
+                .SlippagePercentOverride = Math.Max(0D, baseSlippagePercent),
+                .SpreadPercent = 0D,
+                .ExecutionDelaySeconds = 0,
+                .ExitExecutionDelaySeconds = 0,
+                .DynamicSlippageEnabled = True,
+                .DynamicSlippageMultiplier = 1D,
+                .MaximumSlippagePercent = 0.5D,
+                .VolumeParticipationPercent = 100D,
+                .OrderRejectionPercent = 0D,
+                .PartialFillEnabled = True,
+                .PartialFillProbabilityPercent = 0D,
+                .MinimumFillPercent = 25D},
+            New SpotBotBacktestCostScenario With {
+                .ScenarioName = "Realista",
+                .FeeRateOverridePercent = 0.2D,
+                .SlippagePercentOverride = 0.1D,
+                .SpreadPercent = 0.05D,
+                .ExecutionDelaySeconds = 30,
+                .ExitExecutionDelaySeconds = 30,
+                .DynamicSlippageEnabled = True,
+                .DynamicSlippageMultiplier = 1D,
+                .MaximumSlippagePercent = 0.75D,
+                .VolumeParticipationPercent = 25D,
+                .OrderRejectionPercent = 2D,
+                .PartialFillEnabled = True,
+                .PartialFillProbabilityPercent = 20D,
+                .MinimumFillPercent = 25D},
+            New SpotBotBacktestCostScenario With {
+                .ScenarioName = "Estresse",
+                .FeeRateOverridePercent = 0.3D,
+                .SlippagePercentOverride = 0.2D,
+                .SpreadPercent = 0.1D,
+                .ExecutionDelaySeconds = 60,
+                .ExitExecutionDelaySeconds = 60,
+                .DynamicSlippageEnabled = True,
+                .DynamicSlippageMultiplier = 1.5D,
+                .MaximumSlippagePercent = 1.5D,
+                .VolumeParticipationPercent = 10D,
+                .OrderRejectionPercent = 5D,
+                .PartialFillEnabled = True,
+                .PartialFillProbabilityPercent = 40D,
+                .MinimumFillPercent = 10D}}
+    End Function
+
+    Private Shared Function ExportSpotBotBacktestScenarioComparison(
+        results As IReadOnlyList(Of SpotBotBacktestResult)) As String
+
+        If results Is Nothing OrElse results.Count = 0 Then Return String.Empty
+        Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        Dim filePath = Path.Combine(
+            desktop,
+            $"backtest_cenarios_{DateTime.Now:yyyyMMdd_HHmmss}.csv")
+        Dim builder As New StringBuilder()
+        builder.AppendLine("Cenario;RunId;TaxaPercentual;SlippagePercentual;SpreadPercentual;LatenciaEntradaSegundos;LatenciaSaidaSegundos;ParticipacaoVolumePercentual;RejeicaoPercentual;FillParcialAtivo;FillParcialProbabilidadePercentual;FillMinimoPercentual;OrdensSolicitadas;OrdensPreenchidas;OrdensRejeitadas;FillsParciais;Candles;CandlesComLivro;Pontos;Trades;PnlUSDT;WinRatePercentual;Gaps;EntradasPendentes;SaidasPendentes;StopPorNegocios;NegociosAvaliadosParaStop")
+        For Each result In results
+            Dim snapshot = result.Snapshot
+            builder.AppendLine(String.Join(";", {
+                EscapeSpotBotCsv(result.ScenarioName),
+                result.RunId.ToString(CultureInfo.InvariantCulture),
+                result.EffectiveFeeRatePercent.ToString("0.####", CultureInfo.InvariantCulture),
+                result.EffectiveSlippagePercent.ToString("0.####", CultureInfo.InvariantCulture),
+                result.SpreadPercent.ToString("0.####", CultureInfo.InvariantCulture),
+                result.ExecutionDelaySeconds.ToString(CultureInfo.InvariantCulture),
+                result.ExitExecutionDelaySeconds.ToString(CultureInfo.InvariantCulture),
+                result.VolumeParticipationPercent.ToString("0.##", CultureInfo.InvariantCulture),
+                result.OrderRejectionPercent.ToString("0.##", CultureInfo.InvariantCulture),
+                If(result.PartialFillEnabled, "1", "0"),
+                result.PartialFillProbabilityPercent.ToString("0.##", CultureInfo.InvariantCulture),
+                result.MinimumFillPercent.ToString("0.##", CultureInfo.InvariantCulture),
+                result.RequestedOrders.ToString(CultureInfo.InvariantCulture),
+                result.FilledOrders.ToString(CultureInfo.InvariantCulture),
+                result.RejectedOrders.ToString(CultureInfo.InvariantCulture),
+                result.PartialFills.ToString(CultureInfo.InvariantCulture),
+                result.CandlesProcessed.ToString(CultureInfo.InvariantCulture),
+                result.ExecutionBookCandles.ToString(CultureInfo.InvariantCulture),
+                result.PricePointsProcessed.ToString(CultureInfo.InvariantCulture),
+                result.Trades.Count.ToString(CultureInfo.InvariantCulture),
+                If(snapshot Is Nothing, 0D, snapshot.TotalPnl).ToString("0.####", CultureInfo.InvariantCulture),
+                If(snapshot Is Nothing, 0D, snapshot.WinRatePercent).ToString("0.##", CultureInfo.InvariantCulture),
+                result.GapCount.ToString(CultureInfo.InvariantCulture),
+                result.PendingEntries.ToString(CultureInfo.InvariantCulture),
+                result.PendingExits.ToString(CultureInfo.InvariantCulture),
+                result.AggregateStopReplayEnabled.ToString(),
+                result.AggregateStopTicks.ToString(CultureInfo.InvariantCulture)}))
+        Next
+        File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
+        Return filePath
+    End Function
+
+    Private Shared Function ExportSpotBotBacktestCandles(
+        candles As IReadOnlyList(Of SpotBotBacktestCandle)) As String
+
+        If candles Is Nothing OrElse candles.Count = 0 Then Return String.Empty
+        Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        Dim filePath = Path.Combine(
+            desktop,
+            $"binance_ohlcv_{DateTime.Now:yyyyMMdd_HHmmss}.csv")
+
+        Using writer As New StreamWriter(filePath, False, New UTF8Encoding(True))
+            writer.WriteLine("symbol;timestamp;interval;open;high;low;close;volume;bid;ask;bidDepthQuote;askDepthQuote;priceTickSize;quantityStep;minimumNotional;makerFeeRate;takerFeeRate;isclosed")
+            For Each candle In candles
+                writer.WriteLine(String.Join(";", {
+                    EscapeSpotBotCsv(candle.Symbol),
+                    candle.TimestampUtc.ToString("O", CultureInfo.InvariantCulture),
+                    candle.IntervalMinutes.ToString(CultureInfo.InvariantCulture),
+                    candle.Open.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.High.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.Low.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.Close.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.Volume.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.BidPrice.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.AskPrice.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.BidDepthQuote.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.AskDepthQuote.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.PriceTickSize.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.QuantityStep.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.MinimumNotional.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.MakerFeeRate.ToString("0.################", CultureInfo.InvariantCulture),
+                    candle.TakerFeeRate.ToString("0.################", CultureInfo.InvariantCulture),
+                    If(candle.IsClosed, "true", "false")}))
+            Next
+        End Using
+        Return filePath
+    End Function
+
+    Private Shared Function BuildSpotBotBacktestPeriodSummaries(
+        candles As IReadOnlyList(Of SpotBotBacktestCandle),
+        trades As IReadOnlyList(Of SpotBotSimulationTrade)) As List(Of SpotBotBacktestPeriodSummary)
+
+        Dim summaries As New List(Of SpotBotBacktestPeriodSummary)()
+        If candles Is Nothing OrElse candles.Count = 0 Then Return summaries
+
+        Dim firstUtc = candles.Min(Function(item) item.TimestampUtc)
+        Dim lastUtc = candles.Max(Function(item) item.TimestampUtc)
+        Dim totalTicks = Math.Max(1L, lastUtc.Ticks - firstUtc.Ticks)
+        Dim validationUtc = firstUtc.AddTicks(totalTicks \ 2L)
+        Dim outOfSampleUtc = firstUtc.AddTicks(totalTicks * 3L \ 4L)
+        Dim ranges = New List(Of Tuple(Of String, DateTime, DateTime, Boolean)) From {
+            Tuple.Create("Desenvolvimento", firstUtc, validationUtc, False),
+            Tuple.Create("Validação", validationUtc, outOfSampleUtc, False),
+            Tuple.Create("Fora da amostra", outOfSampleUtc, lastUtc, True)}
+
+        For Each range In ranges
+            Dim summary As New SpotBotBacktestPeriodSummary With {
+                .Name = range.Item1,
+                .StartUtc = range.Item2,
+                .EndUtc = range.Item3}
+            If trades IsNot Nothing Then
+                For Each trade In trades
+                    If trade Is Nothing Then Continue For
+                    Dim closedAt = trade.ClosedAtUtc.ToUniversalTime()
+                    Dim belongs = If(
+                        range.Item4,
+                        closedAt >= range.Item2 AndAlso closedAt <= range.Item3,
+                        closedAt >= range.Item2 AndAlso closedAt < range.Item3)
+                    If Not belongs Then Continue For
+                    summary.Trades += 1
+                    summary.Pnl += trade.Pnl
+                    summary.Fees += trade.Fees
+                    If trade.Pnl > 0D Then
+                        summary.WinningTrades += 1
+                    ElseIf trade.Pnl < 0D Then
+                        summary.LosingTrades += 1
+                    End If
+                Next
+            End If
+            summaries.Add(summary)
+        Next
+        Return summaries
+    End Function
+
+    Private Shared Function RunSpotBotWalkForward(
+        backtestSetup As SpotTradeBotEngine,
+        candles As IReadOnlyList(Of SpotBotBacktestCandle),
+        pathMode As SpotBotBacktestPathMode,
+        scenarios As IReadOnlyList(Of SpotBotBacktestCostScenario),
+        executionBook As SpotBotExecutionBookReplay,
+        readStopTrades As Func(Of String, DateTime, IReadOnlyList(Of SpotBotPricePoint))) As List(Of SpotBotWalkForwardSummary)
+
+        Dim summaries As New List(Of SpotBotWalkForwardSummary)()
+        If candles Is Nothing OrElse candles.Count = 0 Then Return summaries
+        Dim firstUtc = candles.Min(Function(item) item.TimestampUtc)
+        Dim lastUtc = candles.Max(Function(item) item.TimestampUtc)
+        Dim totalTicks = lastUtc.Ticks - firstUtc.Ticks
+        If totalTicks <= 0 Then Return summaries
+
+        Dim engine = backtestSetup.CreateBacktestEngine(persistRuns:=False)
+        Dim span = Math.Max(TimeSpan.FromHours(1).Ticks, totalTicks \ 4L)
+        Dim profiles = New List(Of Tuple(Of String, Decimal, Decimal, Decimal)) From {
+            Tuple.Create("Atual", engine.Configuration.GridV2SpacingMinimumPercent, engine.Configuration.GridV2MinimumStopPercent, engine.Configuration.GridV2MaximumStopPercent),
+            Tuple.Create("Grid mais largo", engine.Configuration.GridV2SpacingMinimumPercent + 0.2D, engine.Configuration.GridV2MinimumStopPercent + 0.1D, engine.Configuration.GridV2MaximumStopPercent + 0.1D),
+            Tuple.Create("Grid defensivo", engine.Configuration.GridV2SpacingMinimumPercent + 0.4D, engine.Configuration.GridV2MinimumStopPercent + 0.2D, engine.Configuration.GridV2MaximumStopPercent + 0.2D)}
+        Dim scenario = If(
+            scenarios?.FirstOrDefault(Function(item) String.Equals(item.ScenarioName, "Realista", StringComparison.OrdinalIgnoreCase)),
+            scenarios?.FirstOrDefault())
+        If scenario Is Nothing Then Return summaries
+
+        For windowNumber = 1 To 2
+            Dim trainStart = New DateTime(firstUtc.Ticks + span * (windowNumber - 1), DateTimeKind.Utc)
+            Dim trainEnd = New DateTime(firstUtc.Ticks + span * (windowNumber + 1), DateTimeKind.Utc)
+            Dim testEnd = New DateTime(firstUtc.Ticks + span * (windowNumber + 2), DateTimeKind.Utc)
+            Dim trainCandles = candles.Where(Function(item) item.TimestampUtc >= trainStart AndAlso item.TimestampUtc < trainEnd).ToList()
+            Dim replayCandles = candles.Where(Function(item) item.TimestampUtc >= trainStart AndAlso item.TimestampUtc < testEnd).ToList()
+            If trainCandles.Count = 0 OrElse replayCandles.Count = 0 Then Continue For
+
+            Dim bestProfile = profiles(0)
+            Dim bestTrainPnl = Decimal.MinValue
+            Dim bestTrainScenario = scenario.ScenarioName
+            For Each profile In profiles
+                engine.Configuration.GridV2SpacingMinimumPercent = Math.Max(0.1D, profile.Item2)
+                engine.Configuration.GridV2MinimumStopPercent = Math.Max(0.1D, profile.Item3)
+                engine.Configuration.GridV2MaximumStopPercent = Math.Max(
+                    engine.Configuration.GridV2MinimumStopPercent,
+                    profile.Item4)
+                Dim trainResult = engine.RunDeterministicBacktest(
+                    trainCandles,
+                    New SpotBotBacktestOptions With {
+                        .PathMode = pathMode,
+                        .ScenarioName = $"WF treino {windowNumber} {profile.Item1}",
+                        .ReadGridStopTrades = readStopTrades,
+                        .ExecutionBookReplay = executionBook,
+                        .FeeRateOverridePercent = scenario.FeeRateOverridePercent,
+                        .SlippagePercentOverride = scenario.SlippagePercentOverride,
+                        .SpreadPercent = scenario.SpreadPercent,
+                        .ExecutionDelaySeconds = scenario.ExecutionDelaySeconds,
+                        .ExitExecutionDelaySeconds = scenario.ExitExecutionDelaySeconds,
+                        .ApplyLatencyToExits = scenario.ApplyLatencyToExits,
+                        .DynamicSlippageEnabled = scenario.DynamicSlippageEnabled,
+                        .DynamicSlippageMultiplier = scenario.DynamicSlippageMultiplier,
+                        .MaximumSlippagePercent = scenario.MaximumSlippagePercent,
+                        .VolumeParticipationPercent = scenario.VolumeParticipationPercent,
+                        .OrderRejectionPercent = scenario.OrderRejectionPercent,
+                        .PartialFillEnabled = scenario.PartialFillEnabled,
+                        .PartialFillProbabilityPercent = scenario.PartialFillProbabilityPercent,
+                        .MinimumFillPercent = scenario.MinimumFillPercent,
+                        .RequireOneMinuteBaseForGrid = True})
+                Dim trainPnl = If(trainResult.Snapshot Is Nothing, 0D, trainResult.Snapshot.TotalPnl)
+                If trainPnl > bestTrainPnl Then
+                    bestTrainPnl = trainPnl
+                    bestProfile = profile
+                    bestTrainScenario = scenario.ScenarioName
+                End If
+            Next
+
+            engine.Configuration.GridV2SpacingMinimumPercent = Math.Max(0.1D, bestProfile.Item2)
+            engine.Configuration.GridV2MinimumStopPercent = Math.Max(0.1D, bestProfile.Item3)
+            engine.Configuration.GridV2MaximumStopPercent = Math.Max(
+                engine.Configuration.GridV2MinimumStopPercent,
+                bestProfile.Item4)
+            Dim replayResult = engine.RunDeterministicBacktest(
+                replayCandles,
+                New SpotBotBacktestOptions With {
+                    .PathMode = pathMode,
+                    .ScenarioName = $"WF teste {windowNumber} {bestProfile.Item1}",
+                    .ReadGridStopTrades = readStopTrades,
+                    .ExecutionBookReplay = executionBook,
+                    .FeeRateOverridePercent = scenario.FeeRateOverridePercent,
+                    .SlippagePercentOverride = scenario.SlippagePercentOverride,
+                    .SpreadPercent = scenario.SpreadPercent,
+                    .ExecutionDelaySeconds = scenario.ExecutionDelaySeconds,
+                    .ExitExecutionDelaySeconds = scenario.ExitExecutionDelaySeconds,
+                    .ApplyLatencyToExits = scenario.ApplyLatencyToExits,
+                    .DynamicSlippageEnabled = scenario.DynamicSlippageEnabled,
+                    .DynamicSlippageMultiplier = scenario.DynamicSlippageMultiplier,
+                    .MaximumSlippagePercent = scenario.MaximumSlippagePercent,
+                    .VolumeParticipationPercent = scenario.VolumeParticipationPercent,
+                    .OrderRejectionPercent = scenario.OrderRejectionPercent,
+                    .PartialFillEnabled = scenario.PartialFillEnabled,
+                    .PartialFillProbabilityPercent = scenario.PartialFillProbabilityPercent,
+                    .MinimumFillPercent = scenario.MinimumFillPercent,
+                    .RequireOneMinuteBaseForGrid = True})
+            Dim summary = New SpotBotWalkForwardSummary With {
+                .WindowNumber = windowNumber,
+                .TrainStartUtc = trainStart,
+                .TrainEndUtc = trainEnd,
+                .TestStartUtc = trainEnd,
+                .TestEndUtc = testEnd,
+                .SelectedProfile = bestProfile.Item1,
+                .SelectedScenario = bestTrainScenario,
+                .TrainPnl = bestTrainPnl}
+            summary.RecordTestTrades(replayResult.Trades)
+            summaries.Add(summary)
+        Next
+        Return summaries
+    End Function
+
+    Private Shared Function ExportSpotBotBacktestWalkForwardComparison(
+        summaries As IReadOnlyList(Of SpotBotWalkForwardSummary)) As String
+        Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        Dim filePath = Path.Combine(desktop, $"backtest_walkforward_{DateTime.Now:yyyyMMdd_HHmmss}.csv")
+        Dim builder As New StringBuilder()
+        builder.AppendLine("Janela;TreinoInicioUTC;TreinoFimUTC;TesteInicioUTC;TesteFimUTC;Perfil;Cenario;PnlTreinoUSDT;TradesTeste;VencedoresTeste;WinRateTeste;PnlTesteUSDT;TaxasTesteUSDT;TradesTrazidosDoTreino;PnlTrazidoDoTreinoUSDT")
+        For Each item In If(summaries, Array.Empty(Of SpotBotWalkForwardSummary)())
+            builder.AppendLine(String.Join(";", {
+                item.WindowNumber.ToString(CultureInfo.InvariantCulture),
+                item.TrainStartUtc.ToString("O", CultureInfo.InvariantCulture),
+                item.TrainEndUtc.ToString("O", CultureInfo.InvariantCulture),
+                item.TestStartUtc.ToString("O", CultureInfo.InvariantCulture),
+                item.TestEndUtc.ToString("O", CultureInfo.InvariantCulture),
+                EscapeSpotBotCsv(item.SelectedProfile),
+                EscapeSpotBotCsv(item.SelectedScenario),
+                item.TrainPnl.ToString("0.####", CultureInfo.InvariantCulture),
+                item.TestTrades.ToString(CultureInfo.InvariantCulture),
+                item.TestWinningTrades.ToString(CultureInfo.InvariantCulture),
+                item.TestWinRatePercent.ToString("0.##", CultureInfo.InvariantCulture),
+                item.TestPnl.ToString("0.####", CultureInfo.InvariantCulture),
+                item.TestFees.ToString("0.####", CultureInfo.InvariantCulture),
+                item.CarriedTrades.ToString(CultureInfo.InvariantCulture),
+                item.CarriedPnl.ToString("0.####", CultureInfo.InvariantCulture)}))
+        Next
+        File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
+        Return filePath
+    End Function
+
+    ''' <summary>
+    ''' Classifica o replay em regimes de alta, baixa e lateralização usando
+    ''' BTC como benchmark. A classificação é cronológica e não olha candles
+    ''' futuros; por isso pode ser usada como relatório walk-forward.
+    ''' </summary>
+    Private Shared Function BuildSpotBotBacktestRegimeSummaries(
+        candles As IReadOnlyList(Of SpotBotBacktestCandle),
+        trades As IReadOnlyList(Of SpotBotSimulationTrade),
+        ByRef benchmarkDescription As String) As List(Of SpotBotBacktestPeriodSummary)
+
+        benchmarkDescription = String.Empty
+        Dim summariesByRegime As New Dictionary(Of String, SpotBotBacktestPeriodSummary)(StringComparer.OrdinalIgnoreCase)
+        If candles Is Nothing OrElse candles.Count = 0 Then Return summariesByRegime.Values.ToList()
+
+        Dim benchmarkGroup = candles.
+            Where(Function(item) item IsNot Nothing AndAlso
+                                IsSpotBotBacktestBitcoinSymbol(item.Symbol)).
+            GroupBy(Function(item) item.Symbol, StringComparer.OrdinalIgnoreCase).
+            OrderByDescending(Function(group) group.Count()).
+            ThenBy(Function(group) group.Key, StringComparer.OrdinalIgnoreCase).
+            FirstOrDefault()
+        Dim isProxy = False
+        If benchmarkGroup Is Nothing Then
+            benchmarkGroup = candles.
+                Where(Function(item) item IsNot Nothing).
+                GroupBy(Function(item) item.Symbol, StringComparer.OrdinalIgnoreCase).
+                OrderByDescending(Function(group) group.Count()).
+                ThenBy(Function(group) group.Key, StringComparer.OrdinalIgnoreCase).
+                FirstOrDefault()
+            isProxy = True
+        End If
+        If benchmarkGroup Is Nothing Then Return summariesByRegime.Values.ToList()
+
+        Dim benchmarkIntervalGroup = benchmarkGroup.
+            GroupBy(Function(item) Math.Max(1, item.IntervalMinutes)).
+            OrderBy(Function(group) group.Key).
+            FirstOrDefault()
+        If benchmarkIntervalGroup Is Nothing Then Return summariesByRegime.Values.ToList()
+
+        Dim benchmark = benchmarkIntervalGroup.
+            Where(Function(item) item IsNot Nothing AndAlso item.Close > 0D).
+            OrderBy(Function(item) item.TimestampUtc).
+            ToList()
+        If benchmark.Count = 0 Then Return summariesByRegime.Values.ToList()
+
+        benchmarkDescription = If(isProxy, "proxy ", String.Empty) &
+                               benchmarkGroup.Key & " " &
+                               benchmarkIntervalGroup.Key.ToString(CultureInfo.InvariantCulture) & "m"
+        Dim intervalMinutes = Math.Max(1, benchmarkIntervalGroup.Key)
+        Dim desiredLookback = If(
+            intervalMinutes >= 1440,
+            20,
+            If(intervalMinutes >= 60, 24, If(intervalMinutes >= 15, 32, 240)))
+        Dim lookback = Math.Min(
+            Math.Max(5, desiredLookback),
+            Math.Max(1, benchmark.Count - 1))
+        If lookback <= 0 Then lookback = 1
+        Dim trendThreshold = If(
+            intervalMinutes >= 1440,
+            3D,
+            If(intervalMinutes >= 60, 2D, If(intervalMinutes >= 15, 1.5D, 1D)))
+
+        Dim regimePoints As New List(Of Tuple(Of DateTime, String))()
+        Dim previousRegime As String = Nothing
+        For index = 0 To benchmark.Count - 1
+            Dim regime = "Indefinido"
+            If index >= lookback Then
+                Dim referenceClose = benchmark(index - lookback).Close
+                Dim currentClose = benchmark(index).Close
+                Dim changePercent = If(
+                    referenceClose <= 0D,
+                    0D,
+                    (currentClose - referenceClose) / referenceClose * 100D)
+                If changePercent >= trendThreshold Then
+                    regime = "Alta"
+                ElseIf changePercent <= -trendThreshold Then
+                    regime = "Baixa"
+                Else
+                    regime = "Lateralização"
+                End If
+            End If
+
+            regimePoints.Add(Tuple.Create(benchmark(index).TimestampUtc, regime))
+            Dim summary As SpotBotBacktestPeriodSummary = Nothing
+            If Not summariesByRegime.TryGetValue(regime, summary) Then
+                summary = New SpotBotBacktestPeriodSummary With {
+                    .Name = regime,
+                    .StartUtc = benchmark(index).TimestampUtc,
+                    .EndUtc = benchmark(index).TimestampUtc,
+                    .Segments = 1}
+                summariesByRegime(regime) = summary
+            Else
+                summary.EndUtc = benchmark(index).TimestampUtc
+                If Not String.Equals(previousRegime, regime, StringComparison.OrdinalIgnoreCase) Then
+                    summary.Segments += 1
+                End If
+            End If
+            previousRegime = regime
+        Next
+
+        If trades IsNot Nothing Then
+            For Each trade In trades
+                If trade Is Nothing Then Continue For
+                Dim regime = FindSpotBotBacktestRegime(regimePoints, trade.ClosedAtUtc.ToUniversalTime())
+                Dim summary As SpotBotBacktestPeriodSummary = Nothing
+                If Not summariesByRegime.TryGetValue(regime, summary) Then
+                    summary = New SpotBotBacktestPeriodSummary With {
+                        .Name = regime,
+                        .StartUtc = trade.ClosedAtUtc.ToUniversalTime(),
+                        .EndUtc = trade.ClosedAtUtc.ToUniversalTime(),
+                        .Segments = 1}
+                    summariesByRegime(regime) = summary
+                End If
+                summary.Trades += 1
+                summary.Pnl += trade.Pnl
+                summary.Fees += trade.Fees
+                If trade.Pnl > 0D Then
+                    summary.WinningTrades += 1
+                ElseIf trade.Pnl < 0D Then
+                    summary.LosingTrades += 1
+                End If
+            Next
+        End If
+
+        Dim regimeOrder = New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase) From {
+            {"Alta", 0},
+            {"Baixa", 1},
+            {"Lateralização", 2},
+            {"Indefinido", 3}}
+        Return summariesByRegime.Values.
+            OrderBy(Function(item) If(regimeOrder.ContainsKey(item.Name), regimeOrder(item.Name), 99)).
+            ThenBy(Function(item) item.Name, StringComparer.OrdinalIgnoreCase).
+            ToList()
+    End Function
+
+    Private Shared Function IsSpotBotBacktestBitcoinSymbol(symbol As String) As Boolean
+        Dim normalized = If(symbol, String.Empty).
+            Replace("/", String.Empty, StringComparison.Ordinal).
+            Replace("-", String.Empty, StringComparison.Ordinal).
+            Replace("_", String.Empty, StringComparison.Ordinal).
+            ToUpperInvariant()
+        Return normalized = "BTCUSDT" OrElse normalized = "BTCUSDC" OrElse
+               normalized = "BTCUSD" OrElse normalized = "BTC"
+    End Function
+
+    Private Shared Function FindSpotBotBacktestRegime(
+        points As IReadOnlyList(Of Tuple(Of DateTime, String)),
+        timestampUtc As DateTime) As String
+
+        If points Is Nothing OrElse points.Count = 0 Then Return "Indefinido"
+        Dim target = timestampUtc.ToUniversalTime()
+        Dim low = 0
+        Dim high = points.Count - 1
+        Dim best = 0
+        While low <= high
+            Dim middle = low + ((high - low) \ 2)
+            If points(middle).Item1 <= target Then
+                best = middle
+                low = middle + 1
+            Else
+                high = middle - 1
+            End If
+        End While
+        Return points(best).Item2
+    End Function
+
+    Private Shared Function ExportSpotBotBacktestRegimeComparison(
+        candles As IReadOnlyList(Of SpotBotBacktestCandle),
+        results As IReadOnlyList(Of SpotBotBacktestResult),
+        ByRef benchmarkDescription As String) As String
+
+        benchmarkDescription = String.Empty
+        Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        Dim filePath = Path.Combine(
+            desktop,
+            $"backtest_regimes_{DateTime.Now:yyyyMMdd_HHmmss}.csv")
+        Dim builder As New StringBuilder()
+        builder.AppendLine("Cenario;Benchmark;Regime;InicioUTC;FimUTC;Segmentos;Trades;Vencedores;Perdedores;WinRatePercentual;PnlUSDT;TaxasUSDT")
+        If results IsNot Nothing Then
+            For Each result In results
+                Dim currentBenchmark As String = Nothing
+                For Each regime In BuildSpotBotBacktestRegimeSummaries(candles, result.Trades, currentBenchmark)
+                    If String.IsNullOrWhiteSpace(benchmarkDescription) Then benchmarkDescription = currentBenchmark
+                    builder.AppendLine(String.Join(";", {
+                        EscapeSpotBotCsv(result.ScenarioName),
+                        EscapeSpotBotCsv(currentBenchmark),
+                        EscapeSpotBotCsv(regime.Name),
+                        regime.StartUtc.ToString("O", CultureInfo.InvariantCulture),
+                        regime.EndUtc.ToString("O", CultureInfo.InvariantCulture),
+                        regime.Segments.ToString(CultureInfo.InvariantCulture),
+                        regime.Trades.ToString(CultureInfo.InvariantCulture),
+                        regime.WinningTrades.ToString(CultureInfo.InvariantCulture),
+                        regime.LosingTrades.ToString(CultureInfo.InvariantCulture),
+                        regime.WinRatePercent.ToString("0.##", CultureInfo.InvariantCulture),
+                        regime.Pnl.ToString("0.####", CultureInfo.InvariantCulture),
+                        regime.Fees.ToString("0.####", CultureInfo.InvariantCulture)}))
+                Next
+            Next
+        End If
+        File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
+        Return filePath
+    End Function
+
+    Private Shared Function ExportSpotBotBacktestPeriodComparison(
+        candles As IReadOnlyList(Of SpotBotBacktestCandle),
+        results As IReadOnlyList(Of SpotBotBacktestResult)) As String
+
+        Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        Dim filePath = Path.Combine(
+            desktop,
+            $"backtest_periodos_{DateTime.Now:yyyyMMdd_HHmmss}.csv")
+        Dim builder As New StringBuilder()
+        builder.AppendLine("Cenario;Periodo;InicioUTC;FimUTC;Trades;Vencedores;Perdedores;WinRatePercentual;PnlUSDT;TaxasUSDT")
+        If results IsNot Nothing Then
+            For Each result In results
+                For Each period In BuildSpotBotBacktestPeriodSummaries(candles, result.Trades)
+                    builder.AppendLine(String.Join(";", {
+                        EscapeSpotBotCsv(result.ScenarioName),
+                        EscapeSpotBotCsv(period.Name),
+                        period.StartUtc.ToString("O", CultureInfo.InvariantCulture),
+                        period.EndUtc.ToString("O", CultureInfo.InvariantCulture),
+                        period.Trades.ToString(CultureInfo.InvariantCulture),
+                        period.WinningTrades.ToString(CultureInfo.InvariantCulture),
+                        period.LosingTrades.ToString(CultureInfo.InvariantCulture),
+                        period.WinRatePercent.ToString("0.##", CultureInfo.InvariantCulture),
+                        period.Pnl.ToString("0.####", CultureInfo.InvariantCulture),
+                        period.Fees.ToString("0.####", CultureInfo.InvariantCulture)}))
+                Next
+            Next
+        End If
+        File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
+        Return filePath
+    End Function
+
+    Private Shared Function EscapeSpotBotCsv(value As String) As String
+        Dim text = If(value, String.Empty)
+        Dim quote = ChrW(34).ToString()
+        If text.Contains(";", StringComparison.Ordinal) OrElse text.Contains(quote, StringComparison.Ordinal) Then
+            Return quote & text.Replace(quote, quote & quote) & quote
+        End If
+        Return text
+    End Function
+
+    Private Function LoadSpotBotBacktestCandles(filePath As String) As List(Of SpotBotBacktestCandle)
+        If String.IsNullOrWhiteSpace(filePath) OrElse Not File.Exists(filePath) Then
+            Throw New FileNotFoundException("Arquivo OHLCV não encontrado.", filePath)
+        End If
+
+        Dim firstLine = File.ReadLines(filePath).FirstOrDefault(Function(line) Not String.IsNullOrWhiteSpace(line))
+        If String.IsNullOrWhiteSpace(firstLine) Then
+            Throw New InvalidDataException("O arquivo OHLCV está vazio.")
+        End If
+
+        Dim commaParts = firstLine.Split({","c}).Length
+        Dim semicolonParts = firstLine.Split({";"c}).Length
+        Dim delimiter = If(semicolonParts > commaParts, ";", ",")
+        Dim candles As New List(Of SpotBotBacktestCandle)()
+
+        Using parser As New TextFieldParser(filePath, Encoding.UTF8)
+            parser.TextFieldType = FieldType.Delimited
+            parser.SetDelimiters(delimiter)
+            parser.HasFieldsEnclosedInQuotes = True
+            parser.TrimWhiteSpace = True
+
+            If parser.EndOfData Then Return candles
+            Dim headers = parser.ReadFields()
+            If headers Is Nothing OrElse headers.Length = 0 Then
+                Throw New InvalidDataException("Não foi possível ler o cabeçalho do arquivo OHLCV.")
+            End If
+
+            Dim headerIndex As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+            For index = 0 To headers.Length - 1
+                Dim normalized = NormalizeSpotBotBacktestHeader(headers(index))
+                If Not String.IsNullOrWhiteSpace(normalized) AndAlso Not headerIndex.ContainsKey(normalized) Then
+                    headerIndex(normalized) = index
+                End If
+            Next
+
+            Dim symbolColumn = FindSpotBotBacktestColumn(headerIndex, "symbol", "ticker", "cripto", "ativo", "asset", "pair")
+            Dim timestampColumn = FindSpotBotBacktestColumn(headerIndex, "timestamp", "time", "opentime", "datetime", "date", "data")
+            Dim intervalColumn = FindSpotBotBacktestColumn(headerIndex, "interval", "timeframe", "minutes", "intervalminutes")
+            Dim openColumn = FindSpotBotBacktestColumn(headerIndex, "open", "opening", "openprice", "precoabertura")
+            Dim highColumn = FindSpotBotBacktestColumn(headerIndex, "high", "maximum", "highprice", "maxima")
+            Dim lowColumn = FindSpotBotBacktestColumn(headerIndex, "low", "minimum", "lowprice", "minima")
+            Dim closeColumn = FindSpotBotBacktestColumn(headerIndex, "close", "closing", "closeprice", "precofechamento")
+            Dim volumeColumn = FindSpotBotBacktestColumn(headerIndex, "volume", "vol", "basevolume")
+            Dim closedColumn = FindSpotBotBacktestColumn(headerIndex, "isclosed", "closed", "fechado")
+            Dim bidColumn = FindSpotBotBacktestColumn(headerIndex, "bid", "bidprice", "bestbid", "precodecompra")
+            Dim askColumn = FindSpotBotBacktestColumn(headerIndex, "ask", "askprice", "bestask", "precodevenda")
+            Dim bidDepthColumn = FindSpotBotBacktestColumn(headerIndex, "biddepth", "biddepthquote", "bidquote", "profundidadebid")
+            Dim askDepthColumn = FindSpotBotBacktestColumn(headerIndex, "askdepth", "askdepthquote", "askquote", "profundidadeask")
+            Dim tickColumn = FindSpotBotBacktestColumn(headerIndex, "ticksize", "priceticksize", "incrementopreco")
+            Dim stepColumn = FindSpotBotBacktestColumn(headerIndex, "step", "quantitystep", "lotstep", "incrementoquantidade")
+            Dim minNotionalColumn = FindSpotBotBacktestColumn(headerIndex, "minnotional", "minimumnotional", "notionalminimo")
+            Dim makerFeeColumn = FindSpotBotBacktestColumn(headerIndex, "makerfee", "makerfeerate", "taxamaker")
+            Dim takerFeeColumn = FindSpotBotBacktestColumn(headerIndex, "takerfee", "takerfeerate", "taxataker")
+
+            If timestampColumn < 0 OrElse
+               openColumn < 0 OrElse highColumn < 0 OrElse
+               lowColumn < 0 OrElse closeColumn < 0 Then
+                Throw New InvalidDataException(
+                    "O CSV precisa das colunas timestamp, open, high, low e close. " &
+                    "interval e volume são opcionais (intervalo padrão: 1 minuto).")
+            End If
+
+            Dim defaultSymbol = String.Empty
+            If symbolColumn < 0 Then
+                defaultSymbol = Microsoft.VisualBasic.Interaction.InputBox(
+                    "O CSV não possui uma coluna symbol/ticker. Informe o ativo deste arquivo (ex.: BTCUSDT):",
+                    "Símbolo do CSV",
+                    Path.GetFileNameWithoutExtension(filePath).ToUpperInvariant())
+                If String.IsNullOrWhiteSpace(defaultSymbol) Then
+                    Throw New InvalidDataException("O símbolo é obrigatório quando o CSV não possui a coluna symbol.")
+                End If
+            End If
+
+            Dim defaultIntervalMinutes = 1
+            If intervalColumn < 0 Then
+                Dim intervalText = Microsoft.VisualBasic.Interaction.InputBox(
+                    "O CSV não possui a coluna interval/timeframe. Informe o timeframe exportado (1m, 5m, 15m, 1h, 4h ou 1d):",
+                    "Timeframe do CSV",
+                    "1m")
+                If String.IsNullOrWhiteSpace(intervalText) OrElse
+                   Not TryParseSpotBotBacktestInterval(intervalText, defaultIntervalMinutes) Then
+                    Throw New InvalidDataException("O timeframe informado é inválido.")
+                End If
+            End If
+
+            Dim requiredColumn = Math.Max(symbolColumn, timestampColumn)
+            requiredColumn = Math.Max(requiredColumn, Math.Max(Math.Max(openColumn, highColumn), Math.Max(lowColumn, closeColumn)))
+            Dim rowNumber = 1
+
+            While Not parser.EndOfData
+                rowNumber += 1
+                Dim fields = parser.ReadFields()
+                If fields Is Nothing OrElse fields.All(Function(value) String.IsNullOrWhiteSpace(value)) Then Continue While
+                If fields.Length <= requiredColumn Then
+                    Throw New InvalidDataException($"Linha {rowNumber}: quantidade de colunas insuficiente.")
+                End If
+
+                Dim symbol = If(symbolColumn >= 0, fields(symbolColumn).Trim(), defaultSymbol.Trim())
+                If String.IsNullOrWhiteSpace(symbol) Then
+                    Throw New InvalidDataException($"Linha {rowNumber}: símbolo vazio.")
+                End If
+
+                Dim timestamp As DateTime
+                If Not TryParseSpotBotBacktestTimestamp(fields(timestampColumn), timestamp) Then
+                    Throw New InvalidDataException($"Linha {rowNumber}: timestamp inválido ({fields(timestampColumn)}).")
+                End If
+
+                Dim openPrice As Decimal
+                Dim highPrice As Decimal
+                Dim lowPrice As Decimal
+                Dim closePrice As Decimal
+                If Not TryParseSpotBotBacktestDecimal(fields(openColumn), openPrice) OrElse
+                   Not TryParseSpotBotBacktestDecimal(fields(highColumn), highPrice) OrElse
+                   Not TryParseSpotBotBacktestDecimal(fields(lowColumn), lowPrice) OrElse
+                   Not TryParseSpotBotBacktestDecimal(fields(closeColumn), closePrice) Then
+                    Throw New InvalidDataException($"Linha {rowNumber}: OHLC inválido.")
+                End If
+
+                Dim intervalMinutes = defaultIntervalMinutes
+                If intervalColumn >= 0 AndAlso intervalColumn < fields.Length AndAlso
+                   Not String.IsNullOrWhiteSpace(fields(intervalColumn)) AndAlso
+                   Not TryParseSpotBotBacktestInterval(fields(intervalColumn), intervalMinutes) Then
+                    Throw New InvalidDataException($"Linha {rowNumber}: intervalo inválido ({fields(intervalColumn)}).")
+                End If
+
+                Dim volume = 0D
+                If volumeColumn >= 0 AndAlso volumeColumn < fields.Length AndAlso
+                   Not String.IsNullOrWhiteSpace(fields(volumeColumn)) AndAlso
+                   Not TryParseSpotBotBacktestDecimal(fields(volumeColumn), volume) Then
+                    Throw New InvalidDataException($"Linha {rowNumber}: volume inválido.")
+                End If
+
+                Dim isClosed = True
+                If closedColumn >= 0 AndAlso closedColumn < fields.Length AndAlso
+                   Not String.IsNullOrWhiteSpace(fields(closedColumn)) Then
+                    If Not TryParseSpotBotBacktestBoolean(fields(closedColumn), isClosed) Then
+                        Throw New InvalidDataException($"Linha {rowNumber}: indicador de fechamento inválido.")
+                    End If
+                End If
+
+                Dim bidPrice = ReadOptionalSpotBotDecimal(fields, bidColumn, rowNumber, "bid")
+                Dim askPrice = ReadOptionalSpotBotDecimal(fields, askColumn, rowNumber, "ask")
+                Dim bidDepth = ReadOptionalSpotBotDecimal(fields, bidDepthColumn, rowNumber, "bidDepth")
+                Dim askDepth = ReadOptionalSpotBotDecimal(fields, askDepthColumn, rowNumber, "askDepth")
+                Dim tickSize = ReadOptionalSpotBotDecimal(fields, tickColumn, rowNumber, "tickSize")
+                Dim quantityStep = ReadOptionalSpotBotDecimal(fields, stepColumn, rowNumber, "quantityStep")
+                Dim minimumNotional = ReadOptionalSpotBotDecimal(fields, minNotionalColumn, rowNumber, "minNotional")
+                Dim makerFee = ReadOptionalSpotBotDecimal(fields, makerFeeColumn, rowNumber, "makerFee")
+                Dim takerFee = ReadOptionalSpotBotDecimal(fields, takerFeeColumn, rowNumber, "takerFee")
+
+                candles.Add(New SpotBotBacktestCandle With {
+                    .Symbol = symbol,
+                    .TimestampUtc = timestamp,
+                    .IntervalMinutes = intervalMinutes,
+                    .Open = openPrice,
+                    .High = highPrice,
+                    .Low = lowPrice,
+                    .Close = closePrice,
+                    .Volume = volume,
+                    .BidPrice = bidPrice,
+                    .AskPrice = askPrice,
+                    .BidDepthQuote = bidDepth,
+                    .AskDepthQuote = askDepth,
+                    .PriceTickSize = tickSize,
+                    .QuantityStep = quantityStep,
+                    .MinimumNotional = minimumNotional,
+                    .MakerFeeRate = makerFee,
+                    .TakerFeeRate = takerFee,
+                    .IsClosed = isClosed})
+            End While
+        End Using
+
+        Return candles
+    End Function
+
+    Private Shared Function ReadOptionalSpotBotDecimal(
+        fields As String(),
+        column As Integer,
+        rowNumber As Integer,
+        fieldName As String) As Decimal
+        If column < 0 OrElse column >= fields.Length OrElse String.IsNullOrWhiteSpace(fields(column)) Then Return 0D
+        Dim value As Decimal
+        If Not TryParseSpotBotBacktestDecimal(fields(column), value) Then
+            Throw New InvalidDataException($"Linha {rowNumber}: {fieldName} inválido.")
+        End If
+        Return Math.Max(0D, value)
+    End Function
+
+    Private Shared Function NormalizeSpotBotBacktestHeader(value As String) As String
+        If value Is Nothing Then Return String.Empty
+        Dim normalized = value.Trim().Trim(ChrW(&HFEFF)).ToLowerInvariant()
+        For Each character In New Char() {" "c, "_"c, "-"c, "/"c, "("c, ")"c, "["c, "]"c}
+            normalized = normalized.Replace(character.ToString(), String.Empty)
+        Next
+        Return normalized
+    End Function
+
+    Private Shared Function FindSpotBotBacktestColumn(
+        headers As IDictionary(Of String, Integer),
+        ParamArray aliases As String()) As Integer
+        For Each aliasName In aliases
+            Dim index As Integer
+            If headers.TryGetValue(NormalizeSpotBotBacktestHeader(aliasName), index) Then Return index
+        Next
+        Return -1
+    End Function
+
+    Private Shared Function TryParseSpotBotBacktestDecimal(text As String, ByRef value As Decimal) As Boolean
+        value = 0D
+        If String.IsNullOrWhiteSpace(text) Then Return False
+        Dim cleaned = text.Trim().Replace("%", String.Empty)
+        Dim parsed As Decimal
+        If cleaned.Contains(",", StringComparison.Ordinal) AndAlso Not cleaned.Contains(".", StringComparison.Ordinal) Then
+            If Decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.CurrentCulture, parsed) Then
+                value = parsed
+                Return True
+            End If
+            If Decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, parsed) Then
+                value = parsed
+                Return True
+            End If
+        Else
+            If Decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, parsed) Then
+                value = parsed
+                Return True
+            End If
+            If Decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.CurrentCulture, parsed) Then
+                value = parsed
+                Return True
+            End If
+        End If
+        Return False
+    End Function
+
+    Private Shared Function TryParseSpotBotBacktestTimestamp(text As String, ByRef timestampUtc As DateTime) As Boolean
+        timestampUtc = DateTime.MinValue
+        If String.IsNullOrWhiteSpace(text) Then Return False
+        Dim numeric As Decimal
+        If TryParseSpotBotBacktestDecimal(text, numeric) AndAlso numeric >= 100000000D Then
+            Try
+                If numeric >= 100000000000D Then
+                    timestampUtc = DateTimeOffset.FromUnixTimeMilliseconds(CLng(Math.Truncate(numeric))).UtcDateTime
+                Else
+                    timestampUtc = DateTimeOffset.FromUnixTimeSeconds(CLng(Math.Truncate(numeric))).UtcDateTime
+                End If
+                Return True
+            Catch ex As ArgumentOutOfRangeException
+                Return False
+            End Try
+        End If
+
+        Dim parsedDate As DateTime
+        If DateTime.TryParse(
+            text.Trim(),
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AllowWhiteSpaces Or DateTimeStyles.AssumeUniversal Or DateTimeStyles.AdjustToUniversal,
+            parsedDate) Then
+            timestampUtc = parsedDate.ToUniversalTime()
+            Return True
+        End If
+        If DateTime.TryParse(
+            text.Trim(),
+            CultureInfo.CurrentCulture,
+            DateTimeStyles.AllowWhiteSpaces Or DateTimeStyles.AssumeUniversal Or DateTimeStyles.AdjustToUniversal,
+            parsedDate) Then
+            timestampUtc = parsedDate.ToUniversalTime()
+            Return True
+        End If
+        Return False
+    End Function
+
+    Private Shared Function TryParseSpotBotBacktestInterval(text As String, ByRef intervalMinutes As Integer) As Boolean
+        intervalMinutes = 1
+        If String.IsNullOrWhiteSpace(text) Then Return False
+        Dim normalized = text.Trim().ToLowerInvariant()
+        Dim multiplier = 1
+        If normalized.EndsWith("m", StringComparison.Ordinal) Then
+            normalized = normalized.Substring(0, normalized.Length - 1)
+        ElseIf normalized.EndsWith("h", StringComparison.Ordinal) Then
+            multiplier = 60
+            normalized = normalized.Substring(0, normalized.Length - 1)
+        ElseIf normalized.EndsWith("d", StringComparison.Ordinal) Then
+            multiplier = 1440
+            normalized = normalized.Substring(0, normalized.Length - 1)
+        End If
+
+        Dim amount As Integer
+        If Not Integer.TryParse(normalized, NumberStyles.Integer, CultureInfo.InvariantCulture, amount) OrElse amount <= 0 Then Return False
+        intervalMinutes = Math.Max(1, amount * multiplier)
+        Return True
+    End Function
+
+    Private Shared Function TryParseSpotBotBacktestBoolean(text As String, ByRef value As Boolean) As Boolean
+        Select Case text.Trim().ToLowerInvariant()
+            Case "1", "true", "yes", "sim", "s", "closed", "fechado"
+                value = True
+                Return True
+            Case "0", "false", "no", "nao", "não", "n", "open", "aberto"
+                value = False
+                Return True
+            Case Else
+                Return False
+        End Select
+    End Function
 
     Private Sub SpotBotExport_Click(sender As Object, e As EventArgs)
         Try
@@ -3615,6 +5222,7 @@ BuildSpotBotGrid:
         AppendSpotBotCsvPair(builder, "GridV2TimeframeEntrada", "1m")
         AppendSpotBotCsvPair(builder, "GridV2TimeframeConfirmacao", "5m")
         AppendSpotBotCsvPair(builder, "GridV2TimeframeRegime", "15m")
+        AppendSpotBotCsvPair(builder, "GridReentradaForte", state.SimulationExecutionSettings.GridStrongEmergencyReentry)
         AppendSpotBotCsvPair(builder, "GridV2FiltroMacro1h", state.GridV2MacroFilterEnabled)
         AppendSpotBotCsvPair(builder, "GridV2ExposicaoMaximaPercentual", state.GridV2MaxExposurePercent)
         AppendSpotBotCsvPair(builder, "GridV2ConfirmarRejeicao", state.GridV2RequireRejection)
@@ -3652,7 +5260,7 @@ BuildSpotBotGrid:
             Return
         End If
 
-        Dim runs = SpotTradeBotRepository.GetRuns()
+        Dim runs = SpotTradeBotRepository.GetRuns(paperOnly:=True)
         Dim previousRun As DataRow = Nothing
         If runs IsNot Nothing Then
             previousRun = runs.AsEnumerable().
@@ -3752,6 +5360,17 @@ BuildSpotBotGrid:
 
         File.WriteAllText(filePath, builder.ToString(), New UTF8Encoding(True))
     End Sub
+
+    Private Shared Function ExportSpotBotExecutionSnapshots(runId As Long) As String
+        If runId <= 0 Then Return String.Empty
+        Dim table = SpotTradeBotRepository.GetExecutionSnapshots(runId)
+        If table Is Nothing OrElse table.Rows.Count = 0 Then Return String.Empty
+        Dim desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
+        If String.IsNullOrWhiteSpace(desktop) Then desktop = Application.StartupPath
+        Dim outputPath As String = IO.Path.Combine(desktop, $"tradebot_run_{runId}_livro.csv")
+        WriteSpotBotDataTableCsv(outputPath, table)
+        Return outputPath
+    End Function
 
     Private Shared Function FormatSpotBotCsvValue(value As Object) As String
         If value Is Nothing OrElse Convert.IsDBNull(value) Then Return String.Empty
@@ -4059,12 +5678,15 @@ BuildSpotBotGrid:
             AddHandler _binanceWs.CandleUpdated, AddressOf BinanceWs_CandleUpdated
 
             AddHandler _binanceWs.ConnectionStateChanged, AddressOf BinanceWs_ConnectionStateChanged
+            AddHandler _binanceWs.ConnectionAttentionRequired, AddressOf BinanceWs_ConnectionAttentionRequired
             AddHandler _gateWs.PriceUpdated, AddressOf GateWs_PriceUpdated
             AddHandler _gateWs.ConnectionStateChanged, AddressOf GateWs_ConnectionStateChanged
             AddHandler _binanceFuturesMarketWs.MarkPriceUpdated, AddressOf BinanceFuturesMarkPriceUpdated
             AddHandler _binanceFuturesMarketWs.ConnectionStateChanged, AddressOf BinanceFuturesWs_ConnectionStateChanged
             AddHandler _gateFuturesMarketWs.MarkPriceUpdated, AddressOf GateFuturesMarkPriceUpdated
             AddHandler _gateFuturesMarketWs.ConnectionStateChanged, AddressOf GateFuturesWs_ConnectionStateChanged
+            AddHandler _gateFuturesPositionsWs.PositionsUpdated, AddressOf GateFuturesPositionsUpdated
+            AddHandler _gateFuturesPositionsWs.ConnectionStateChanged, AddressOf GateFuturesWs_ConnectionStateChanged
             AddHandler _binanceFuturesUserWs.DataUpdated, AddressOf BinanceFuturesUserDataUpdated
             AddHandler _binanceFuturesUserWs.ConnectionStateChanged, AddressOf BinanceFuturesWs_ConnectionStateChanged
             AddHandler _binanceSpotUserWs.DataUpdated, AddressOf BinanceSpotUserDataUpdated
@@ -4583,21 +6205,85 @@ BuildSpotBotGrid:
         Debug.WriteLine(message)
 
         If connected Then
-
+            _lastBinanceWsAttention = Nothing
             lbDebug.Clear()
             lbDebug.AppendText("Status: Online")
             changeOnOffColor("Online")
 
-        Else
+        End If
 
-            lbDebug.AppendText(
-            Environment.NewLine & message)
+        If Not _spotTradeBot.IsRunning Then Return
 
+        If _binancePaperWsConnectionKnown AndAlso _binancePaperWsConnected = connected Then Return
+        _binancePaperWsConnectionKnown = True
+        _binancePaperWsConnected = connected
+        _spotTradeBot.SetMarketDataAvailability(connected)
+        _spotTradeBot.Checkpoint()
+
+    End Sub
+
+    Private Sub BinanceWs_ConnectionAttentionRequired(message As String)
+        If IsDisposed OrElse Disposing OrElse Not IsHandleCreated Then Return
+        If InvokeRequired Then
+            BeginInvoke(New Action(Of String)(AddressOf BinanceWs_ConnectionAttentionRequired), message)
+            Return
+        End If
+
+        If String.Equals(_lastBinanceWsAttention, message, StringComparison.Ordinal) Then Return
+        _lastBinanceWsAttention = message
+        lbDebug.AppendText(Environment.NewLine & message)
+    End Sub
+
+    Private Sub EnsureSpotBotConnectivityTimer()
+        If _spotBotConnectivityTimer IsNot Nothing Then Return
+
+        _spotBotConnectivityTimer = New System.Windows.Forms.Timer With {
+            .Interval = 10000}
+        AddHandler _spotBotConnectivityTimer.Tick, AddressOf SpotBotConnectivityTimer_Tick
+    End Sub
+
+    Private Sub EnsureSpotBotCheckpointTimer()
+        If _spotBotCheckpointTimer IsNot Nothing Then Return
+
+        _spotBotCheckpointTimer = New System.Windows.Forms.Timer With {
+            .Interval = 60000}
+        AddHandler _spotBotCheckpointTimer.Tick, AddressOf SpotBotCheckpointTimer_Tick
+    End Sub
+
+    Private Sub SpotBotCheckpointTimer_Tick(sender As Object, e As EventArgs)
+        If Not _spotTradeBot.IsRunning Then Return
+        _spotTradeBot.Checkpoint()
+        Try
+            Dim runId = _spotTradeBot.ActiveRunId
+            If runId <= 0 Then Return
+            For Each item In _binanceWs.GetExecutionSnapshots()
+                SpotTradeBotRepository.SaveExecutionSnapshot(runId, item.Key, item.Value.CapturedAtUtc, item.Value)
+            Next
+        Catch ex As Exception
+            Debug.WriteLine("Erro salvando snapshot do livro: " & ex.Message)
+        End Try
+    End Sub
+
+    Private Sub SpotBotConnectivityTimer_Tick(sender As Object, e As EventArgs)
+        If Not _spotTradeBot.IsRunning Then Return
+
+        Dim nowUtc = DateTime.UtcNow
+        If _binanceWs.IsConnected Then
+            Dim lastActivity = If(_binanceWs.LastMessageUtc = DateTime.MinValue,
+                                  _binanceWs.LastConnectedUtc, _binanceWs.LastMessageUtc)
+            If lastActivity <> DateTime.MinValue AndAlso nowUtc - lastActivity >= TimeSpan.FromSeconds(60) Then
+                BinanceWs_ConnectionStateChanged(False, "Binance WebSocket sem mensagens há 60 segundos.")
+                _binanceWs.ReconnectIfSilent(nowUtc, TimeSpan.FromSeconds(60))
+            ElseIf _binanceWs.LastMessageUtc <> DateTime.MinValue AndAlso Not _binancePaperWsConnected Then
+                BinanceWs_ConnectionStateChanged(True, "Binance WebSocket ativo; fluxo de mercado recebido.")
+            End If
+        ElseIf Not _binancePaperWsConnectionKnown Then
+            BinanceWs_ConnectionStateChanged(False, "Aguardando conexão com o mercado da Binance.")
         End If
 
     End Sub
 
-    Private Async Function StartBinanceWebSocket() As Task
+    Private Async Function StartBinanceWebSocket(Optional paperTradingOnly As Boolean = False) As Task
         If _binanceWsStartRunning Then
             Return
         End If
@@ -4606,7 +6292,9 @@ BuildSpotBotGrid:
 
         Try
 
-            Await StartBinanceSpotUserWebSocket()
+            If Not paperTradingOnly Then
+                Await StartBinanceSpotUserWebSocket()
+            End If
 
             Dim symbols As New List(Of String)
 
@@ -4684,11 +6372,13 @@ BuildSpotBotGrid:
                 End If
             Next
 
-            If _spotTradeBot.IsRunning AndAlso
+            Dim monitorBitcoin = _spotTradeBot.IsRunning OrElse _spotTradeBot.IsHandbrakeAwaitingRecovery
+            If monitorBitcoin AndAlso
                (_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled OrElse
                 _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled OrElse
-                 _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled OrElse
-                _spotTradeBot.Configuration.GridV2BtcMildDeclineEnabled) Then
+                _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled OrElse
+                _spotTradeBot.Configuration.GridV2BtcMildDeclineEnabled OrElse
+                _spotTradeBot.IsHandbrakeAwaitingRecovery) Then
                 symbols.Add("BTC")
             End If
 
@@ -4705,19 +6395,23 @@ BuildSpotBotGrid:
             End If
 
             Dim candleIntervals = _spotDca.GetRequiredCandleIntervals("BINANCE").ToList()
-            If _spotTradeBot.IsRunning AndAlso
+            If monitorBitcoin AndAlso
                 (_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled OrElse
-                 _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled) AndAlso
+                 _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled OrElse
+                 _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled OrElse
+                 _spotTradeBot.IsHandbrakeAwaitingRecovery) AndAlso
                Not candleIntervals.Contains("1m", StringComparer.OrdinalIgnoreCase) Then
                 candleIntervals.Add("1m")
             End If
-            If _spotTradeBot.IsRunning AndAlso
-                (_spotTradeBot.Configuration.BitcoinDailyProtectionEnabled OrElse
-                 _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled) AndAlso
+            If monitorBitcoin AndAlso
+                (_spotTradeBot.Configuration.BitcoinFlushProtectionEnabled OrElse
+                 _spotTradeBot.Configuration.BitcoinDailyProtectionEnabled OrElse
+                 _spotTradeBot.Configuration.BitcoinCrisisProtectionEnabled OrElse
+                 _spotTradeBot.IsHandbrakeAwaitingRecovery) AndAlso
                Not candleIntervals.Contains("1d", StringComparer.OrdinalIgnoreCase) Then
                 candleIntervals.Add("1d")
             End If
-            If _spotTradeBot.IsRunning AndAlso
+            If monitorBitcoin AndAlso
                _spotTradeBot.Configuration.GridV2BtcMildDeclineEnabled AndAlso
                Not candleIntervals.Contains("1d", StringComparer.OrdinalIgnoreCase) Then
                 candleIntervals.Add("1d")
@@ -5225,7 +6919,9 @@ BuildSpotBotGrid:
             Return
         End If
 
-        ProcessSpotBotPrice(symbol, price, quoteVolume24h)
+        Dim executionSnapshot As SpotBotExecutionSnapshot = Nothing
+        _binanceWs.TryGetExecutionSnapshot(symbol, executionSnapshot)
+        ProcessSpotBotPrice(symbol, price, quoteVolume24h, executionSnapshot)
         _spotDca.ProcessPrice(symbol, price)
     End Sub
 
@@ -5252,6 +6948,7 @@ BuildSpotBotGrid:
             isClosed)
 
         If String.Equals(symbol, "BTC", StringComparison.OrdinalIgnoreCase) Then
+            Dim bitcoinWasBlocked = _spotTradeBot.IsBitcoinProtectionBlockingEntries
             Dim protection = _spotTradeBot.ProcessBitcoinCandle(
                 interval,
                 candleStartUtc,
@@ -5261,6 +6958,25 @@ BuildSpotBotGrid:
                 closePrice,
                 volume,
                 isClosed)
+            Dim handbrakeResumed = String.Equals(interval?.Trim(), "1d", StringComparison.OrdinalIgnoreCase) AndAlso
+                                   isClosed AndAlso
+                                   _spotTradeBot.TryAutoResumeAfterBitcoinRecovery()
+            Dim bitcoinRecoveryConfirmed = String.Equals(interval?.Trim(), "1d", StringComparison.OrdinalIgnoreCase) AndAlso
+                                           isClosed AndAlso
+                                           bitcoinWasBlocked AndAlso
+                                           Not _spotTradeBot.IsBitcoinProtectionBlockingEntries
+            If bitcoinRecoveryConfirmed Then
+                SchedulePendingSpotBotUniverseRefresh()
+            End If
+            If handbrakeResumed AndAlso Me.IsHandleCreated Then
+                Me.BeginInvoke(
+                    New Action(
+                        Sub()
+                            AppendSpotBotLog(
+                                "HANDBRAKE: BTC recuperado; operação retomada automaticamente.",
+                                Color.LimeGreen)
+                        End Sub))
+            End If
             If protection IsNot Nothing AndAlso protection.NewFlushDetected AndAlso
                Me.IsHandleCreated Then
                 Dim protectionMessage = protection.Reason
@@ -5273,10 +6989,18 @@ BuildSpotBotGrid:
         End If
     End Sub
 
-    Private Sub ProcessSpotBotPrice(symbol As String, price As Decimal, Optional quoteVolume24h As Decimal = 0D)
+    Private Sub ProcessSpotBotPrice(
+        symbol As String,
+        price As Decimal,
+        Optional quoteVolume24h As Decimal = 0D,
+        Optional executionSnapshot As SpotBotExecutionSnapshot = Nothing)
         If Not _spotTradeBot.IsRunning Then Return
         If Not IsSpotBotUniverseSymbol(symbol) Then Return
-        _spotTradeBot.ProcessPrice(symbol, price, quoteVolume24h:=quoteVolume24h)
+        _spotTradeBot.ProcessPrice(
+            symbol,
+            price,
+            quoteVolume24h:=quoteVolume24h,
+            executionSnapshot:=executionSnapshot)
     End Sub
 
     Private Function IsSpotBotUniverseSymbol(symbol As String) As Boolean
@@ -6331,6 +8055,9 @@ BuildSpotBotGrid:
         dgFuturos.Cursor = Cursors.WaitCursor
 
         Try
+            If UseGateFutures AndAlso Not _gateFuturesClosing Then
+                _gateFuturesPositionsWs.StartPositions()
+            End If
             Dim positions As New List(Of BinanceFuturesPosition)()
             Dim protectionOrders As New List(Of BinanceFuturesProtectionOrder)()
             Dim futuresAccount As New BinanceFuturesAccountSummary()
@@ -7596,7 +9323,8 @@ BuildSpotBotGrid:
                 _futuresLeverageBySymbol(FuturesProviderKey(exchange, symbol)) = leverage
             End If
             If exchange = "GATE" Then
-                Await _gateFutures.GATE_CreateFuturesOrderAsync(symbol, positionSide, orderType, quantity, price)
+                Dim order = Await _gateFutures.GATE_CreateFuturesOrderAsync(symbol, positionSide, orderType, quantity, price)
+                If order.ExecutedQuantity > 0D Then GateFuturesPositionsUpdated()
             Else
                 Await B.BINANCE_CreateFuturesOrderAsync(symbol, positionSide, orderType, quantity, price)
             End If
@@ -8914,6 +10642,31 @@ BuildSpotBotGrid:
         Next
     End Sub
 
+    Private Async Sub GateFuturesPositionsUpdated()
+        If IsDisposed OrElse Disposing OrElse Not IsHandleCreated Then Return
+        If InvokeRequired Then
+            BeginInvoke(New MethodInvoker(AddressOf GateFuturesPositionsUpdated))
+            Return
+        End If
+        If _gateFuturesClosing OrElse Not UseGateFutures Then Return
+
+        _gateFuturesRefreshPending = True
+        If _gateFuturesRefreshRunning Then Return
+        _gateFuturesRefreshRunning = True
+        Try
+            While _gateFuturesRefreshPending AndAlso Not _gateFuturesClosing
+                ' Agrupa notificações parciais e espera uma consulta anterior terminar.
+                Await Task.Delay(250)
+                If _gateFuturesClosing Then Exit While
+                If _futuresLoadRunning Then Continue While
+                _gateFuturesRefreshPending = False
+                Await LoadFuturesPositionsAsync()
+            End While
+        Finally
+            _gateFuturesRefreshRunning = False
+        End Try
+    End Sub
+
     Private Async Sub BinanceFuturesUserDataUpdated()
         If Not dgFuturos.Visible AndAlso Not PanelFuturos.Visible Then Return
 
@@ -9493,18 +11246,31 @@ BuildSpotBotGrid:
         End Using
     End Function
     Private Async Sub FormMain_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        _gateFuturesClosing = True
 
         Try
+            If _spotBotConnectivityTimer IsNot Nothing Then
+                _spotBotConnectivityTimer.Stop()
+            End If
+            If _spotBotCheckpointTimer IsNot Nothing Then
+                _spotBotCheckpointTimer.Stop()
+            End If
             If _spotBotUniverseRefreshTimer IsNot Nothing Then
                 _spotBotUniverseRefreshTimer.Stop()
             End If
             _spotBotUniverseNextRefreshUtc = DateTime.MinValue
+            Dim closingRunId = _spotTradeBot.ActiveRunId
             _spotTradeBot.Stop()
+            Try
+                ExportSpotBotExecutionSnapshots(closingRunId)
+            Catch
+            End Try
             Await _binanceWs.StopAsync()
             Await _gateWs.StopAsync()
             Await _binanceSpotUserWs.StopAsync()
             Await _binanceFuturesMarketWs.StopAsync()
             Await _gateFuturesMarketWs.StopAsync()
+            Await _gateFuturesPositionsWs.StopAsync()
             Await _binanceFuturesUserWs.StopAsync()
         Catch
         End Try

@@ -387,6 +387,55 @@ Public Class Gateio
         Return Await SendSignedSpotAsync("POST", "/api/v4/spot/orders", String.Empty, body.ToString(Newtonsoft.Json.Formatting.None))
     End Function
 
+    ''' <summary>
+    ''' Cria uma ordem spot disparada por preço. A Gate não oferece OCO spot
+    ''' idêntico ao da Binance neste endpoint, portanto o serviço de proteção
+    ''' cria uma SL e um TP independentes e cancela a primeira se a segunda
+    ''' falhar.
+    ''' </summary>
+    Public Async Function GATE_CreateSpotPriceTriggeredOrderAsync(
+        symbol As String,
+        side As String,
+        quantity As Decimal,
+        triggerPrice As Decimal,
+        triggerRule As String,
+        Optional limitPrice As Decimal = 0D,
+        Optional expirationSeconds As Integer = 0) As Task(Of String)
+
+        Dim normalizedSide = side?.Trim().ToLowerInvariant()
+        Dim normalizedRule = If(triggerRule, String.Empty).Trim()
+        If normalizedSide <> "buy" AndAlso normalizedSide <> "sell" Then Throw New ArgumentException("O lado deve ser BUY ou SELL.")
+        If normalizedRule <> ">=" AndAlso normalizedRule <> "<=" Then Throw New ArgumentException("A regra deve ser >= ou <=.")
+        If String.IsNullOrWhiteSpace(symbol) OrElse quantity <= 0D OrElse triggerPrice <= 0D Then Throw New ArgumentException("Símbolo, quantidade e preço são obrigatórios.")
+
+        Dim executionPrice = If(limitPrice > 0D, limitPrice, triggerPrice)
+        Dim body As New JObject From {
+            {"trigger", New JObject From {
+                {"price", triggerPrice.ToString("0.################", CultureInfo.InvariantCulture)},
+                {"rule", normalizedRule},
+                {"expiration", Math.Max(0, expirationSeconds)}}},
+            {"put", New JObject From {
+                {"type", If(limitPrice > 0D, "limit", "market")},
+                {"side", normalizedSide},
+                {"price", executionPrice.ToString("0.################", CultureInfo.InvariantCulture)},
+                {"amount", quantity.ToString("0.################", CultureInfo.InvariantCulture)},
+                {"account", "normal"},
+                {"time_in_force", If(limitPrice > 0D, "gtc", "ioc")},
+                {"text", "t-tradebot-protection"}}},
+            {"market", ToGatePair(symbol)}}
+
+        Return Await SendSignedSpotAsync("POST", "/api/v4/spot/price_orders", String.Empty, body.ToString(Newtonsoft.Json.Formatting.None))
+    End Function
+
+    Public Async Function GATE_CancelSpotPriceTriggeredOrderAsync(orderId As String) As Task(Of String)
+        If String.IsNullOrWhiteSpace(orderId) Then Throw New ArgumentException("O identificador da proteção é obrigatório.")
+        Return Await SendSignedSpotAsync(
+            "DELETE",
+            "/api/v4/spot/price_orders/" & Uri.EscapeDataString(orderId.Trim()),
+            String.Empty,
+            String.Empty)
+    End Function
+
     Public Async Function ParExisteNaGateIo(symbol As String) As Task(Of Boolean)
         Try
             Dim parComUnderline As String = $"{symbol.Trim().ToUpper()}_USDT"

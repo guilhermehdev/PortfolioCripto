@@ -111,12 +111,15 @@ Partial Class FormMain
         btOrdensFuturo = New Button()
         btTradebot = New Button()
         PanelTradeBot = New Panel()
+        btbacktest = New Button()
         btSpotBotTrades = New Button()
         btSpotBotExport = New Button()
         lbSpotBotSimulationSummary = New Label()
         rtbSpotBotLog = New RichTextBox()
         GroupBox4 = New GroupBox()
         chkSpotBotProfitGateEnabled = New CheckBox()
+        chkSpotBotEmergencyReentry = New CheckBox()
+        chkSpotBotGridMacroFilter = New CheckBox()
         nudSpotBotMinProfitBeforeEntry = New NumericUpDown()
         Label45 = New Label()
         nudSpotBotProfitGateFreePositions = New NumericUpDown()
@@ -141,7 +144,6 @@ Partial Class FormMain
         dgSpotBotPositionsControl = New DataGridView()
         GroupBox1 = New GroupBox()
         chkSpotBotGridRejection = New CheckBox()
-        chkSpotBotGridMacroFilter = New CheckBox()
         nudSpotBotGridLevels = New NumericUpDown()
         btSpotBotStart = New Button()
         btSpotBotStop = New Button()
@@ -1179,6 +1181,7 @@ Partial Class FormMain
         ' 
         PanelTradeBot.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         PanelTradeBot.BackColor = Color.FromArgb(CByte(30), CByte(30), CByte(30))
+        PanelTradeBot.Controls.Add(btbacktest)
         PanelTradeBot.Controls.Add(btSpotBotTrades)
         PanelTradeBot.Controls.Add(btSpotBotExport)
         PanelTradeBot.Controls.Add(lbSpotBotSimulationSummary)
@@ -1190,6 +1193,20 @@ Partial Class FormMain
         PanelTradeBot.Name = "PanelTradeBot"
         PanelTradeBot.Size = New Size(1151, 355)
         PanelTradeBot.TabIndex = 46
+        ' 
+        ' btbacktest
+        ' 
+        btbacktest.BackColor = Color.DarkOrange
+        btbacktest.Cursor = Cursors.Hand
+        btbacktest.FlatAppearance.BorderSize = 0
+        btbacktest.FlatStyle = FlatStyle.Flat
+        btbacktest.ForeColor = Color.White
+        btbacktest.Location = New Point(917, 204)
+        btbacktest.Name = "btbacktest"
+        btbacktest.Size = New Size(90, 26)
+        btbacktest.TabIndex = 70
+        btbacktest.Text = "Backtest"
+        btbacktest.UseVisualStyleBackColor = False
         ' 
         ' btSpotBotTrades
         ' 
@@ -1232,7 +1249,7 @@ Partial Class FormMain
         lbSpotBotSimulationSummary.Location = New Point(0, 202)
         lbSpotBotSimulationSummary.Name = "lbSpotBotSimulationSummary"
         lbSpotBotSimulationSummary.Padding = New Padding(4, 0, 4, 0)
-        lbSpotBotSimulationSummary.Size = New Size(1002, 26)
+        lbSpotBotSimulationSummary.Size = New Size(911, 26)
         lbSpotBotSimulationSummary.TabIndex = 69
         lbSpotBotSimulationSummary.Text = "Simulação: aguardando início"
         lbSpotBotSimulationSummary.TextAlign = ContentAlignment.MiddleLeft
@@ -1251,6 +1268,7 @@ Partial Class FormMain
         ' GroupBox4
         ' 
         GroupBox4.Controls.Add(chkSpotBotProfitGateEnabled)
+        GroupBox4.Controls.Add(chkSpotBotEmergencyReentry)
         GroupBox4.Controls.Add(chkSpotBotGridMacroFilter)
         GroupBox4.Controls.Add(nudSpotBotMinProfitBeforeEntry)
         GroupBox4.Controls.Add(Label45)
@@ -1287,12 +1305,35 @@ Partial Class FormMain
         chkSpotBotProfitGateEnabled.Checked = True
         chkSpotBotProfitGateEnabled.CheckState = CheckState.Checked
         chkSpotBotProfitGateEnabled.ForeColor = Color.Gold
-        chkSpotBotProfitGateEnabled.Location = New Point(19, 154)
+        chkSpotBotProfitGateEnabled.Location = New Point(19, 144)
         chkSpotBotProfitGateEnabled.Name = "chkSpotBotProfitGateEnabled"
         chkSpotBotProfitGateEnabled.Size = New Size(83, 19)
         chkSpotBotProfitGateEnabled.TabIndex = 66
         chkSpotBotProfitGateEnabled.Text = "Filtro lucro"
         chkSpotBotProfitGateEnabled.UseVisualStyleBackColor = True
+        ' 
+        ' chkSpotBotEmergencyReentry
+        ' 
+        chkSpotBotEmergencyReentry.AutoSize = True
+        chkSpotBotEmergencyReentry.Checked = True
+        chkSpotBotEmergencyReentry.CheckState = CheckState.Checked
+        chkSpotBotEmergencyReentry.ForeColor = Color.Gold
+        chkSpotBotEmergencyReentry.Location = New Point(19, 168)
+        chkSpotBotEmergencyReentry.Name = "chkSpotBotEmergencyReentry"
+        chkSpotBotEmergencyReentry.Size = New Size(150, 19)
+        chkSpotBotEmergencyReentry.TabIndex = 67
+        chkSpotBotEmergencyReentry.Text = "Reentrada forte após SL"
+        ' 
+        ' chkSpotBotGridMacroFilter
+        ' 
+        chkSpotBotGridMacroFilter.AutoSize = True
+        chkSpotBotGridMacroFilter.ForeColor = Color.Gold
+        chkSpotBotGridMacroFilter.Location = New Point(258, 144)
+        chkSpotBotGridMacroFilter.Name = "chkSpotBotGridMacroFilter"
+        chkSpotBotGridMacroFilter.Size = New Size(106, 19)
+        chkSpotBotGridMacroFilter.TabIndex = 70
+        chkSpotBotGridMacroFilter.Text = "Filtro macro 1h"
+        chkSpotBotGridMacroFilter.UseVisualStyleBackColor = True
         ' 
         ' nudSpotBotMinProfitBeforeEntry
         ' 
@@ -1300,7 +1341,7 @@ Partial Class FormMain
         nudSpotBotMinProfitBeforeEntry.DecimalPlaces = 2
         nudSpotBotMinProfitBeforeEntry.ForeColor = Color.Gold
         nudSpotBotMinProfitBeforeEntry.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
-        nudSpotBotMinProfitBeforeEntry.Location = New Point(108, 153)
+        nudSpotBotMinProfitBeforeEntry.Location = New Point(108, 143)
         nudSpotBotMinProfitBeforeEntry.Name = "nudSpotBotMinProfitBeforeEntry"
         nudSpotBotMinProfitBeforeEntry.Size = New Size(60, 23)
         nudSpotBotMinProfitBeforeEntry.TabIndex = 65
@@ -1310,7 +1351,7 @@ Partial Class FormMain
         ' 
         Label45.AutoSize = True
         Label45.ForeColor = Color.Cyan
-        Label45.Location = New Point(81, 136)
+        Label45.Location = New Point(81, 126)
         Label45.Name = "Label45"
         Label45.Size = New Size(92, 15)
         Label45.TabIndex = 64
@@ -1320,7 +1361,7 @@ Partial Class FormMain
         ' 
         nudSpotBotProfitGateFreePositions.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         nudSpotBotProfitGateFreePositions.ForeColor = Color.Gold
-        nudSpotBotProfitGateFreePositions.Location = New Point(174, 153)
+        nudSpotBotProfitGateFreePositions.Location = New Point(174, 143)
         nudSpotBotProfitGateFreePositions.Maximum = New Decimal(New Integer() {20, 0, 0, 0})
         nudSpotBotProfitGateFreePositions.Name = "nudSpotBotProfitGateFreePositions"
         nudSpotBotProfitGateFreePositions.Size = New Size(78, 23)
@@ -1331,7 +1372,7 @@ Partial Class FormMain
         ' 
         Label47.AutoSize = True
         Label47.ForeColor = Color.Cyan
-        Label47.Location = New Point(174, 136)
+        Label47.Location = New Point(174, 126)
         Label47.Name = "Label47"
         Label47.Size = New Size(83, 15)
         Label47.TabIndex = 71
@@ -1367,7 +1408,7 @@ Partial Class FormMain
         ' 
         nudSpotBotRiskPause.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         nudSpotBotRiskPause.ForeColor = Color.Gold
-        nudSpotBotRiskPause.Location = New Point(269, 63)
+        nudSpotBotRiskPause.Location = New Point(269, 59)
         nudSpotBotRiskPause.Name = "nudSpotBotRiskPause"
         nudSpotBotRiskPause.Size = New Size(62, 23)
         nudSpotBotRiskPause.TabIndex = 61
@@ -1377,7 +1418,7 @@ Partial Class FormMain
         ' 
         Label44.AutoSize = True
         Label44.ForeColor = Color.Cyan
-        Label44.Location = New Point(270, 45)
+        Label44.Location = New Point(270, 41)
         Label44.Name = "Label44"
         Label44.Size = New Size(70, 15)
         Label44.TabIndex = 60
@@ -1388,7 +1429,7 @@ Partial Class FormMain
         nudSpotBotUniverseRefreshMinutes.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         nudSpotBotUniverseRefreshMinutes.ForeColor = Color.Gold
         nudSpotBotUniverseRefreshMinutes.Increment = New Decimal(New Integer() {5, 0, 0, 0})
-        nudSpotBotUniverseRefreshMinutes.Location = New Point(288, 108)
+        nudSpotBotUniverseRefreshMinutes.Location = New Point(288, 104)
         nudSpotBotUniverseRefreshMinutes.Maximum = New Decimal(New Integer() {1440, 0, 0, 0})
         nudSpotBotUniverseRefreshMinutes.Minimum = New Decimal(New Integer() {5, 0, 0, 0})
         nudSpotBotUniverseRefreshMinutes.Name = "nudSpotBotUniverseRefreshMinutes"
@@ -1400,7 +1441,7 @@ Partial Class FormMain
         ' 
         nudSpotBotRiskMaxLosses.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         nudSpotBotRiskMaxLosses.ForeColor = Color.Gold
-        nudSpotBotRiskMaxLosses.Location = New Point(225, 63)
+        nudSpotBotRiskMaxLosses.Location = New Point(225, 59)
         nudSpotBotRiskMaxLosses.Name = "nudSpotBotRiskMaxLosses"
         nudSpotBotRiskMaxLosses.Size = New Size(38, 23)
         nudSpotBotRiskMaxLosses.TabIndex = 59
@@ -1410,7 +1451,7 @@ Partial Class FormMain
         ' 
         Label46.AutoSize = True
         Label46.ForeColor = Color.Cyan
-        Label46.Location = New Point(254, 93)
+        Label46.Location = New Point(254, 85)
         Label46.Name = "Label46"
         Label46.Size = New Size(85, 15)
         Label46.TabIndex = 68
@@ -1420,7 +1461,7 @@ Partial Class FormMain
         ' 
         Label43.AutoSize = True
         Label43.ForeColor = Color.Cyan
-        Label43.Location = New Point(222, 44)
+        Label43.Location = New Point(222, 40)
         Label43.Name = "Label43"
         Label43.Size = New Size(42, 15)
         Label43.TabIndex = 58
@@ -1432,7 +1473,7 @@ Partial Class FormMain
         chkSpotBotUniverseAutoRefresh.Checked = True
         chkSpotBotUniverseAutoRefresh.CheckState = CheckState.Checked
         chkSpotBotUniverseAutoRefresh.ForeColor = Color.Gold
-        chkSpotBotUniverseAutoRefresh.Location = New Point(208, 110)
+        chkSpotBotUniverseAutoRefresh.Location = New Point(208, 102)
         chkSpotBotUniverseAutoRefresh.Name = "chkSpotBotUniverseAutoRefresh"
         chkSpotBotUniverseAutoRefresh.Size = New Size(76, 19)
         chkSpotBotUniverseAutoRefresh.TabIndex = 67
@@ -1443,7 +1484,7 @@ Partial Class FormMain
         ' 
         nudSpotBotRiskGiveback.BackColor = Color.FromArgb(CByte(40), CByte(40), CByte(40))
         nudSpotBotRiskGiveback.ForeColor = Color.Gold
-        nudSpotBotRiskGiveback.Location = New Point(105, 63)
+        nudSpotBotRiskGiveback.Location = New Point(105, 59)
         nudSpotBotRiskGiveback.Name = "nudSpotBotRiskGiveback"
         nudSpotBotRiskGiveback.Size = New Size(114, 23)
         nudSpotBotRiskGiveback.TabIndex = 57
@@ -1453,7 +1494,7 @@ Partial Class FormMain
         ' 
         Label42.AutoSize = True
         Label42.ForeColor = Color.Cyan
-        Label42.Location = New Point(102, 44)
+        Label42.Location = New Point(102, 40)
         Label42.Name = "Label42"
         Label42.Size = New Size(117, 15)
         Label42.TabIndex = 56
@@ -1465,7 +1506,7 @@ Partial Class FormMain
         nudSpotBotRiskProfitTrigger.DecimalPlaces = 2
         nudSpotBotRiskProfitTrigger.ForeColor = Color.Gold
         nudSpotBotRiskProfitTrigger.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
-        nudSpotBotRiskProfitTrigger.Location = New Point(119, 108)
+        nudSpotBotRiskProfitTrigger.Location = New Point(119, 100)
         nudSpotBotRiskProfitTrigger.Name = "nudSpotBotRiskProfitTrigger"
         nudSpotBotRiskProfitTrigger.Size = New Size(77, 23)
         nudSpotBotRiskProfitTrigger.TabIndex = 55
@@ -1475,7 +1516,7 @@ Partial Class FormMain
         ' 
         Label41.AutoSize = True
         Label41.ForeColor = Color.Cyan
-        Label41.Location = New Point(119, 93)
+        Label41.Location = New Point(119, 85)
         Label41.Name = "Label41"
         Label41.Size = New Size(96, 15)
         Label41.TabIndex = 54
@@ -1487,7 +1528,7 @@ Partial Class FormMain
         chkSpotBotRiskProfitLock.Checked = True
         chkSpotBotRiskProfitLock.CheckState = CheckState.Checked
         chkSpotBotRiskProfitLock.ForeColor = Color.Gold
-        chkSpotBotRiskProfitLock.Location = New Point(19, 110)
+        chkSpotBotRiskProfitLock.Location = New Point(19, 102)
         chkSpotBotRiskProfitLock.Name = "chkSpotBotRiskProfitLock"
         chkSpotBotRiskProfitLock.Size = New Size(100, 19)
         chkSpotBotRiskProfitLock.TabIndex = 53
@@ -1500,7 +1541,7 @@ Partial Class FormMain
         nudSpotBotRiskSessionLoss.DecimalPlaces = 2
         nudSpotBotRiskSessionLoss.ForeColor = Color.Gold
         nudSpotBotRiskSessionLoss.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
-        nudSpotBotRiskSessionLoss.Location = New Point(22, 63)
+        nudSpotBotRiskSessionLoss.Location = New Point(22, 59)
         nudSpotBotRiskSessionLoss.Name = "nudSpotBotRiskSessionLoss"
         nudSpotBotRiskSessionLoss.Size = New Size(77, 23)
         nudSpotBotRiskSessionLoss.TabIndex = 52
@@ -1510,7 +1551,7 @@ Partial Class FormMain
         ' 
         Label40.AutoSize = True
         Label40.ForeColor = Color.Cyan
-        Label40.Location = New Point(19, 44)
+        Label40.Location = New Point(19, 40)
         Label40.Name = "Label40"
         Label40.Size = New Size(83, 15)
         Label40.TabIndex = 51
@@ -1646,17 +1687,6 @@ Partial Class FormMain
         chkSpotBotGridRejection.TabIndex = 43
         chkSpotBotGridRejection.Text = "Confirmar rejeição Grid"
         chkSpotBotGridRejection.UseVisualStyleBackColor = True
-        ' 
-        ' chkSpotBotGridMacroFilter
-        ' 
-        chkSpotBotGridMacroFilter.AutoSize = True
-        chkSpotBotGridMacroFilter.ForeColor = Color.Gold
-        chkSpotBotGridMacroFilter.Location = New Point(258, 154)
-        chkSpotBotGridMacroFilter.Name = "chkSpotBotGridMacroFilter"
-        chkSpotBotGridMacroFilter.Size = New Size(106, 19)
-        chkSpotBotGridMacroFilter.TabIndex = 70
-        chkSpotBotGridMacroFilter.Text = "Filtro macro 1h"
-        chkSpotBotGridMacroFilter.UseVisualStyleBackColor = True
         ' 
         ' nudSpotBotGridLevels
         ' 
@@ -2646,6 +2676,7 @@ Partial Class FormMain
     Friend WithEvents nudSpotBotMaxAssets As NumericUpDown
     Friend WithEvents nudSpotBotMinVolume As NumericUpDown
     Friend WithEvents chkSpotBotGridRejection As CheckBox
+    Friend WithEvents chkSpotBotEmergencyReentry As CheckBox
     Friend WithEvents chkSpotBotGridMacroFilter As CheckBox
     Friend WithEvents nudSpotBotPostExitCooldown As NumericUpDown
     Friend WithEvents nudSpotBotMinTrades As NumericUpDown
@@ -2680,5 +2711,6 @@ Partial Class FormMain
     Friend WithEvents Label45 As Label
     Friend WithEvents nudSpotBotProfitGateFreePositions As NumericUpDown
     Friend WithEvents Label47 As Label
+    Friend WithEvents btbacktest As Button
 
 End Class

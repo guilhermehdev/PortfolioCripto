@@ -103,6 +103,7 @@ Public NotInheritable Class SpotBotPricePoint
 End Class
 
 Public NotInheritable Class SpotBotStrategySignal
+    Public Property GridBuyLevel As Decimal
     Public Property Strategy As SpotBotStrategyKind
     Public Property Direction As SpotBotSignalDirection
     Public Property Confidence As Decimal
@@ -117,6 +118,7 @@ Public NotInheritable Class SpotBotStrategySignal
 End Class
 
 Public NotInheritable Class SpotBotSignal
+    Public Property GridBuyLevel As Decimal
     Public Property Symbol As String = String.Empty
     Public Property TimestampUtc As DateTime
     Public Property Price As Decimal
@@ -136,6 +138,7 @@ Public NotInheritable Class SpotBotSignal
 End Class
 
 Public NotInheritable Class SpotBotConfiguration
+    Public Property GridStrongEmergencyReentry As Boolean = True
     Public Sub New()
         EnabledStrategies = New HashSet(Of SpotBotStrategyKind)()
     End Sub
@@ -203,6 +206,31 @@ Public NotInheritable Class SpotBotConfiguration
     ' Slippage adverso aplicado às execuções simuladas: compra paga acima da
     ' cotação observada e venda recebe abaixo dela.
     Public Property SimulationSlippagePercent As Decimal = 0.05D
+    ' Parâmetros adicionais usados somente pelo replay determinístico. Eles
+    ' ficam na configuração para que entradas e saídas usem o mesmo modelo.
+    Public Property SimulationSpreadPercent As Decimal = 0D
+    Public Property SimulationExecutionDelaySeconds As Integer = 0
+    Public Property SimulationDynamicSlippageEnabled As Boolean = True
+    Public Property SimulationDynamicSlippageMultiplier As Decimal = 1D
+    Public Property SimulationMaximumSlippagePercent As Decimal = 0.5D
+    Public Property SimulationVolumeParticipationPercent As Decimal = 100D
+    ' Execução realista do replay: rejeições e preenchimentos parciais.
+    Public Property SimulationOrderRejectionPercent As Decimal = 0D
+    Public Property SimulationPartialFillEnabled As Boolean = True
+    Public Property SimulationPartialFillProbabilityPercent As Decimal = 0D
+    Public Property SimulationMinimumFillPercent As Decimal = 25D
+    ' Microestrutura opcional do replay. Quando um candle fornece livro,
+    ' esses valores prevalecem; sem livro, os fallbacks mantêm o modelo
+    ' determinístico baseado em OHLCV.
+    Public Property SimulationExitExecutionDelaySeconds As Integer = 0
+    Public Property SimulationApplyLatencyToExits As Boolean = True
+    Public Property SimulationUseExecutionBook As Boolean = True
+    Public Property SimulationPriceTickSize As Decimal = 0D
+    Public Property SimulationQuantityStep As Decimal = 0D
+    Public Property SimulationMinimumNotional As Decimal = 0D
+    Public Property SimulationMakerFeeRate As Decimal = 0D
+    Public Property SimulationTakerFeeRate As Decimal = 0D
+    Public Property SimulationUseTakerFee As Boolean = True
     Public Property TakeProfitPercent As Decimal = 2D
     Public Property StopLossPercent As Decimal = 1D
     Public Property BreakEvenEnabled As Boolean = True
@@ -297,12 +325,20 @@ Public NotInheritable Class SpotBotConfiguration
     Public Property BitcoinDailyDropPercent As Decimal = 4D
     Public Property BitcoinDailyDrawdownPercent As Decimal = 5D
     ' Modo crise para quedas diárias severas. Ele bloqueia novas entradas
-    ' até uma recuperação curta confirmada ou a virada do dia UTC.
+    ' até uma recuperação diária confirmada.
     Public Property BitcoinCrisisProtectionEnabled As Boolean = True
     Public Property BitcoinCrisisDropPercent As Decimal = 6D
     Public Property BitcoinCrisisDrawdownPercent As Decimal = 6D
     Public Property BitcoinCrisisRecoveryPercent As Decimal = 1.5D
-    Public Property BitcoinCrisisRecoveryCandles As Integer = 5
+    ' Volume comprador mínimo relativo à média dos candles diários anteriores
+    ' para confirmar capitulação/reversão.
+    Public Property BitcoinCrisisRecoveryVolumeMultiplier As Decimal = 1.5D
+    ' Mantido para compatibilidade com configurações antigas; a confirmação
+    ' atual não exige mais uma sequência fixa de candles consecutivos.
+    Public Property BitcoinCrisisRecoveryCandles As Integer = 1
+    ' O coordenador unificado reutiliza os parâmetros de recuperação acima:
+    ' depois de qualquer proteção BTC, só libera novas entradas após um fundo
+    ' semanal/mensal e uma quebra diária de estrutura com volume comprador acima da EMA 9.
 
     ' Parâmetros do pullback em zona de valor. A estratégia usa M5 para
     ' contexto, M2 para o retorno à zona e M1 para a confirmação da entrada.
@@ -317,6 +353,11 @@ Public NotInheritable Class SpotBotConfiguration
     ' O motor começa sempre em simulação. A execução real será conectada
     ' depois de validarmos os sinais e os limites de risco.
     Public Property SimulationOnly As Boolean = True
+    ' Proteções reais permanecem desativadas até haver uma ativação explícita.
+    Public Property ProtectiveOrdersEnabled As Boolean = False
+    Public Property ProtectiveOrdersRequireExplicitApproval As Boolean = True
+    Public Property ProtectiveOrdersExchange As String = "BINANCE"
+    Public Property PaperTradingCheckpointSeconds As Integer = 60
 
     Public Property UniverseMode As SpotBotUniverseMode = SpotBotUniverseMode.Manual
     Public Property UniverseMaxAssets As Integer = 20
@@ -356,6 +397,9 @@ Public NotInheritable Class SpotBotBitcoinFlushStatus
     Public Property IsPaused As Boolean
     Public Property IsCrisisActive As Boolean
     Public Property NewFlushDetected As Boolean
+    Public Property HandbrakeRecoveryDetected As Boolean
+    Public Property HandbrakeRecoveryCount As Integer
+    Public Property HandbrakeRecoveryRequired As Integer
     Public Property CurrentPrice As Decimal
     Public Property DropPercent As Decimal
     Public Property CandleDropPercent As Decimal
@@ -401,7 +445,15 @@ Public NotInheritable Class SpotBotSimulationSnapshot
     End Property
 End Class
 
+Public NotInheritable Class SpotBotStopObservation
+    Public Property TriggerUtc As DateTime
+    Public Property TriggerPrice As Decimal
+    Public Property BestBid As Decimal?
+    Public Property BookAgeMs As Double?
+End Class
+
 Public NotInheritable Class SpotBotSimulationTrade
+    Public Property StopObservation As SpotBotStopObservation
     Public Property Symbol As String = String.Empty
     Public Property Strategy As String = String.Empty
     Public Property ExitReason As String = String.Empty
@@ -457,6 +509,7 @@ Public NotInheritable Class SpotBotOpenPosition
 End Class
 
 Public NotInheritable Class SpotBotGridGuardState
+    Public Property EmergencyExitUtc As DateTime
     Public Property Symbol As String = String.Empty
     Public Property ConsecutiveStops As Integer
     Public Property RecoveryEntryPrice As Decimal
@@ -477,6 +530,7 @@ Public NotInheritable Class SpotBotPersistedSimulationState
     Public Property BollingerCandleMinutes As Integer = 1440
     Public Property AllocationPercent As Decimal = 10D
     Public Property FeeRate As Decimal = 0.001D
+    Public Property SimulationExecutionSettings As New SpotBotSimulationExecutionSettings()
     Public Property SlippagePercent As Decimal = 0.05D
     Public Property TakeProfitPercent As Decimal = 2D
     Public Property StopLossPercent As Decimal = 1D
@@ -543,6 +597,283 @@ Public NotInheritable Class SpotBotSimulationEventArgs
     End Sub
 
     Public ReadOnly Property Snapshot As SpotBotSimulationSnapshot
+End Class
+
+''' <summary>
+''' Ordem determinística usada quando um candle histórico contém apenas OHLCV.
+''' Como o caminho intrabar não é conhecido, o backtest precisa declarar a
+''' hipótese usada para decidir qual extremo ocorreu primeiro.
+''' </summary>
+Public Enum SpotBotBacktestPathMode
+    ' Para posições compradas, testa a mínima antes da máxima.
+    ConservativeLong = 0
+    OpenHighLowClose = 1
+    OpenLowHighClose = 2
+    CloseOnly = 3
+End Enum
+
+Public NotInheritable Class SpotBotBacktestCandle
+    Public Property Symbol As String = String.Empty
+    Public Property TimestampUtc As DateTime
+    Public Property IntervalMinutes As Integer = 1
+    Public Property Open As Decimal
+    Public Property High As Decimal
+    Public Property Low As Decimal
+    Public Property Close As Decimal
+    Public Property Volume As Decimal
+    Public Property IsClosed As Boolean = True
+    ' Colunas opcionais para CSVs enriquecidos com microestrutura.
+    Public Property BidPrice As Decimal
+    Public Property AskPrice As Decimal
+    Public Property BidDepthQuote As Decimal
+    Public Property AskDepthQuote As Decimal
+    Public Property PriceTickSize As Decimal
+    Public Property QuantityStep As Decimal
+    Public Property MinimumNotional As Decimal
+    Public Property MakerFeeRate As Decimal
+    Public Property TakerFeeRate As Decimal
+End Class
+
+''' <summary>
+''' Snapshot de execução usado pelo replay. É deliberadamente opcional:
+''' OHLCV puro continua funcionando, mas CSVs com bid/ask e profundidade
+''' permitem testar fills e custos sem fingir que o fechamento é executável.
+''' </summary>
+Public NotInheritable Class SpotBotExecutionSnapshot
+    Public Property CapturedAtUtc As DateTime
+    Public Property BidPrice As Decimal
+    Public Property AskPrice As Decimal
+    Public Property BidDepthQuote As Decimal
+    Public Property AskDepthQuote As Decimal
+    Public Property PriceTickSize As Decimal
+    Public Property QuantityStep As Decimal
+    Public Property MinimumNotional As Decimal
+    Public Property MakerFeeRate As Decimal
+    Public Property TakerFeeRate As Decimal
+
+    Public ReadOnly Property HasBook As Boolean
+        Get
+            Return BidPrice > 0D OrElse AskPrice > 0D OrElse
+                   BidDepthQuote > 0D OrElse AskDepthQuote > 0D
+        End Get
+    End Property
+End Class
+
+''' <summary>
+''' Configurações de microestrutura persistidas em um único JSON no SQLite.
+''' </summary>
+Public NotInheritable Class SpotBotSimulationExecutionSettings
+    Public Property GridStrongEmergencyReentry As Boolean = True
+    Public Property SpreadPercent As Decimal
+    Public Property ExecutionDelaySeconds As Integer
+    Public Property DynamicSlippageEnabled As Boolean = True
+    Public Property DynamicSlippageMultiplier As Decimal = 1D
+    Public Property MaximumSlippagePercent As Decimal = 0.5D
+    Public Property VolumeParticipationPercent As Decimal = 100D
+    Public Property OrderRejectionPercent As Decimal
+    Public Property PartialFillEnabled As Boolean = True
+    Public Property PartialFillProbabilityPercent As Decimal
+    Public Property MinimumFillPercent As Decimal = 25D
+    Public Property ExitExecutionDelaySeconds As Integer
+    Public Property ApplyLatencyToExits As Boolean = True
+    Public Property UseExecutionBook As Boolean = True
+    Public Property PriceTickSize As Decimal
+    Public Property QuantityStep As Decimal
+    Public Property MinimumNotional As Decimal
+    Public Property MakerFeeRate As Decimal
+    Public Property TakerFeeRate As Decimal
+    Public Property UseTakerFee As Boolean = True
+    Public Property ProtectiveOrdersEnabled As Boolean = False
+    Public Property ProtectiveOrdersRequireExplicitApproval As Boolean = True
+    Public Property ProtectiveOrdersExchange As String = "BINANCE"
+    Public Property PaperTradingCheckpointSeconds As Integer = 60
+End Class
+
+''' <summary>Deduplicador thread-safe para intenções de ordem.</summary>
+Public NotInheritable Class SpotBotOrderIntentDeduplicator
+    Private ReadOnly _sync As New Object()
+    Private ReadOnly _inFlight As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+    Public Function TryBegin(intentKey As String) As Boolean
+        Dim normalized = If(intentKey, String.Empty).Trim()
+        If String.IsNullOrWhiteSpace(normalized) Then Return False
+        SyncLock _sync
+            Return _inFlight.Add(normalized)
+        End SyncLock
+    End Function
+
+    Public Sub Complete(intentKey As String)
+        Dim normalized = If(intentKey, String.Empty).Trim()
+        If String.IsNullOrWhiteSpace(normalized) Then Return
+        SyncLock _sync
+            _inFlight.Remove(normalized)
+        End SyncLock
+    End Sub
+
+    Public Sub Clear()
+        SyncLock _sync
+            _inFlight.Clear()
+        End SyncLock
+    End Sub
+
+    Public ReadOnly Property Count As Integer
+        Get
+            SyncLock _sync
+                Return _inFlight.Count
+            End SyncLock
+        End Get
+    End Property
+End Class
+
+Public NotInheritable Class SpotBotBacktestOptions
+    Friend Property ReadGridStopTrades As Func(Of String, DateTime, IReadOnlyList(Of SpotBotPricePoint))
+    Friend Property ExecutionBookReplay As SpotBotExecutionBookReplay
+    Public Property PathMode As SpotBotBacktestPathMode = SpotBotBacktestPathMode.ConservativeLong
+    Public Property ResetBeforeRun As Boolean = True
+    Public Property StopAtEnd As Boolean = True
+    Public Property ScenarioName As String = "Base"
+    ' Valores percentuais. Valor negativo mantém a configuração do formulário.
+    Public Property FeeRateOverridePercent As Decimal = -1D
+    Public Property SlippagePercentOverride As Decimal = -1D
+    Public Property SpreadPercent As Decimal = 0D
+    Public Property ExecutionDelaySeconds As Integer = 0
+    Public Property ExitExecutionDelaySeconds As Integer = 0
+    Public Property ApplyLatencyToExits As Boolean = True
+    Public Property DynamicSlippageEnabled As Boolean = True
+    Public Property DynamicSlippageMultiplier As Decimal = 1D
+    Public Property MaximumSlippagePercent As Decimal = 0.5D
+    ' Percentual do volume base do candle que o simulador pode consumir.
+    ' 100 significa sem limitação de participação.
+    Public Property VolumeParticipationPercent As Decimal = 100D
+    Public Property OrderRejectionPercent As Decimal = 0D
+    Public Property PartialFillEnabled As Boolean = True
+    Public Property PartialFillProbabilityPercent As Decimal = 0D
+    Public Property MinimumFillPercent As Decimal = 25D
+    Public Property UseExecutionBook As Boolean = True
+    Public Property PriceTickSize As Decimal = 0D
+    Public Property QuantityStep As Decimal = 0D
+    Public Property MinimumNotional As Decimal = 0D
+    Public Property MakerFeeRatePercent As Decimal = -1D
+    Public Property TakerFeeRatePercent As Decimal = -1D
+    ' O Grid V2 usa entrada em 1m; não é permitido inventar precisão a
+    ' partir de candles maiores quando esta validação está ativa.
+    Public Property RequireOneMinuteBaseForGrid As Boolean = True
+    Public Property GapToleranceIntervals As Integer = 1
+End Class
+
+Public NotInheritable Class SpotBotBacktestCostScenario
+    Public Property ScenarioName As String = "Base"
+    Public Property FeeRateOverridePercent As Decimal
+    Public Property SlippagePercentOverride As Decimal
+    Public Property SpreadPercent As Decimal
+    Public Property ExecutionDelaySeconds As Integer
+    Public Property ExitExecutionDelaySeconds As Integer
+    Public Property ApplyLatencyToExits As Boolean = True
+    Public Property DynamicSlippageEnabled As Boolean = True
+    Public Property DynamicSlippageMultiplier As Decimal = 1D
+    Public Property MaximumSlippagePercent As Decimal = 0.5D
+    Public Property VolumeParticipationPercent As Decimal = 100D
+    Public Property OrderRejectionPercent As Decimal = 0D
+    Public Property PartialFillEnabled As Boolean = True
+    Public Property PartialFillProbabilityPercent As Decimal = 0D
+    Public Property MinimumFillPercent As Decimal = 25D
+End Class
+
+Public NotInheritable Class SpotBotBacktestResult
+    Public Property RunId As Long
+    Public Property CandlesProcessed As Integer
+    Public Property PricePointsProcessed As Integer
+    Public Property FirstTimestampUtc As DateTime
+    Public Property LastTimestampUtc As DateTime
+    Public Property PathMode As SpotBotBacktestPathMode
+    Public Property ScenarioName As String = "Base"
+    Public Property EffectiveFeeRatePercent As Decimal
+    Public Property EffectiveSlippagePercent As Decimal
+    Public Property SpreadPercent As Decimal
+    Public Property ExecutionDelaySeconds As Integer
+    Public Property ExitExecutionDelaySeconds As Integer
+    Public Property ApplyLatencyToExits As Boolean = True
+    Public Property VolumeParticipationPercent As Decimal
+    Public Property OrderRejectionPercent As Decimal
+    Public Property PartialFillEnabled As Boolean = True
+    Public Property PartialFillProbabilityPercent As Decimal
+    Public Property MinimumFillPercent As Decimal
+    Public Property AggregateStopReplayEnabled As Boolean
+    Public Property AggregateStopTicks As Long
+    Public Property ExecutionBookCandles As Integer
+    Public Property UseExecutionBook As Boolean
+    Public Property PriceTickSize As Decimal
+    Public Property QuantityStep As Decimal
+    Public Property MinimumNotional As Decimal
+    Public Property MakerFeeRatePercent As Decimal
+    Public Property TakerFeeRatePercent As Decimal
+    Public Property GapCount As Integer
+    Public Property ValidationWarnings As New List(Of String)()
+    Public Property PendingEntries As Integer
+    Public Property PendingExits As Integer
+    Public Property RequestedOrders As Integer
+    Public Property FilledOrders As Integer
+    Public Property RejectedOrders As Integer
+    Public Property PartialFills As Integer
+    Public Property Snapshot As SpotBotSimulationSnapshot
+    Public Property Trades As New List(Of SpotBotSimulationTrade)()
+    Public Property OpenPositions As New List(Of SpotBotOpenPosition)()
+End Class
+
+Public NotInheritable Class SpotBotBacktestPeriodSummary
+    Public Property Name As String = String.Empty
+    Public Property StartUtc As DateTime
+    Public Property EndUtc As DateTime
+    Public Property Trades As Integer
+    Public Property WinningTrades As Integer
+    Public Property LosingTrades As Integer
+    Public Property Pnl As Decimal
+    Public Property Fees As Decimal
+    Public Property Segments As Integer = 1
+
+    Public ReadOnly Property WinRatePercent As Decimal
+        Get
+            Return If(Trades <= 0, 0D, WinningTrades * 100D / Trades)
+        End Get
+    End Property
+End Class
+
+Public NotInheritable Class SpotBotWalkForwardSummary
+    Public Property WindowNumber As Integer
+    Public Property TrainStartUtc As DateTime
+    Public Property TrainEndUtc As DateTime
+    Public Property TestStartUtc As DateTime
+    Public Property TestEndUtc As DateTime
+    Public Property SelectedProfile As String = String.Empty
+    Public Property SelectedScenario As String = String.Empty
+    Public Property TrainPnl As Decimal
+    Public Property TestPnl As Decimal
+    Public Property TestTrades As Integer
+    Public Property TestWinningTrades As Integer
+    Public Property TestFees As Decimal
+    Public Property CarriedTrades As Integer
+    Public Property CarriedPnl As Decimal
+
+    Friend Sub RecordTestTrades(trades As IEnumerable(Of SpotBotSimulationTrade))
+        For Each trade In trades
+            If trade Is Nothing OrElse trade.ClosedAtUtc < TestStartUtc OrElse trade.ClosedAtUtc >= TestEndUtc Then Continue For
+            If trade.OpenedAtUtc < TestStartUtc Then
+                CarriedTrades += 1
+                CarriedPnl += trade.Pnl
+            Else
+                TestTrades += 1
+                TestPnl += trade.Pnl
+                TestFees += trade.Fees
+                If trade.Pnl > 0D Then TestWinningTrades += 1
+            End If
+        Next
+    End Sub
+
+    Public ReadOnly Property TestWinRatePercent As Decimal
+        Get
+            Return If(TestTrades <= 0, 0D, TestWinningTrades * 100D / TestTrades)
+        End Get
+    End Property
 End Class
 
 Public Interface ISpotBotStrategy

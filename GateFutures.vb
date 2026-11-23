@@ -144,29 +144,43 @@ Public Class GateFutures
             If initial Is Nothing OrElse trigger Is Nothing Then Continue For
 
             Dim contract = ReadString(initial, "contract")
+            If String.IsNullOrWhiteSpace(contract) Then Continue For
+            Dim symbol = contract.Replace("_", String.Empty, StringComparison.OrdinalIgnoreCase)
             Dim sizeContracts = ReadDecimal(initial, "size", "amount")
-            Dim multiplier = Await GetContractMultiplierAsync(contract)
             Dim triggerPrice = ReadDecimal(trigger, "price", "trigger_price")
-            Dim markPrice = positions.
-                Where(Function(position) String.Equals(position.Symbol, contract.Replace("_", String.Empty, StringComparison.OrdinalIgnoreCase), StringComparison.OrdinalIgnoreCase)).
-                Select(Function(position) position.MarkPrice).
-                FirstOrDefault()
-            Dim side = If(sizeContracts < 0D, "SHORT", "LONG")
-            Dim autoSize = ReadString(item, "auto_size", "order_type")
-            If autoSize.Contains("short", StringComparison.OrdinalIgnoreCase) Then side = "SHORT"
-            If autoSize.Contains("long", StringComparison.OrdinalIgnoreCase) Then side = "LONG"
+            Dim rule = ReadLong(trigger, "rule")
+            If triggerPrice <= 0D OrElse (rule <> 1L AndAlso rule <> 2L) Then Continue For
 
-            Dim isTakeProfit = If(
-                markPrice > 0D,
-                If(String.Equals(side, "SHORT", StringComparison.OrdinalIgnoreCase), triggerPrice < markPrice, triggerPrice > markPrice),
-                ReadLong(trigger, "rule") = 1L)
+            Dim closeType = ReadString(item, "order_type")
+            Dim autoSize = ReadString(initial, "auto_size")
+            If String.IsNullOrEmpty(autoSize) Then autoSize = ReadString(item, "auto_size")
+            Dim positionSide As String
+            If closeType.Contains("close-short", StringComparison.OrdinalIgnoreCase) OrElse autoSize = "close_short" Then
+                positionSide = "SHORT"
+            ElseIf closeType.Contains("close-long", StringComparison.OrdinalIgnoreCase) OrElse autoSize = "close_long" Then
+                positionSide = "LONG"
+            Else
+                If Not (CType(initial("reduce_only"), Boolean?) = True OrElse CType(initial("is_reduce_only"), Boolean?) = True OrElse
+                        CType(initial("close"), Boolean?) = True OrElse CType(initial("is_close"), Boolean?) = True) Then Continue For
+                If sizeContracts <> 0D Then
+                    positionSide = If(sizeContracts > 0D, "SHORT", "LONG")
+                Else
+                    Dim sides = positions.Where(Function(position) String.Equals(position.Symbol, symbol, StringComparison.OrdinalIgnoreCase)).
+                        Select(Function(position) position.PositionSide).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                    If sides.Count <> 1 Then Continue For
+                    positionSide = sides(0)
+                End If
+            End If
+            Dim isShort = String.Equals(positionSide, "SHORT", StringComparison.OrdinalIgnoreCase)
+            Dim isTakeProfit = If(isShort, rule = 2L, rule = 1L)
+            Dim multiplier = Await GetContractMultiplierAsync(contract)
 
             result.Add(New BinanceFuturesProtectionOrder With {
                 .Exchange = "GATE",
                 .AlgoId = ReadLong(item, "id", "id_string"),
-                .Symbol = contract.Replace("_", String.Empty, StringComparison.OrdinalIgnoreCase),
-                .PositionSide = side,
-                .Side = If(String.Equals(side, "SHORT", StringComparison.OrdinalIgnoreCase), "BUY", "SELL"),
+                .Symbol = symbol,
+                .PositionSide = positionSide,
+                .Side = If(isShort, "BUY", "SELL"),
                 .OrderType = If(isTakeProfit, "TAKE_PROFIT", "STOP_LOSS"),
                 .Quantity = Math.Abs(sizeContracts * multiplier),
                 .StopPrice = triggerPrice,
@@ -245,7 +259,7 @@ Public Class GateFutures
         Dim multiplier = Await GetContractMultiplierAsync(contract)
         Dim sizeContracts As Long = ToGateContractSize(quantity, multiplier)
         Dim isShort = String.Equals(positionSide, "SHORT", StringComparison.OrdinalIgnoreCase)
-        If isShort Then sizeContracts = -Math.Abs(sizeContracts) Else sizeContracts = Math.Abs(sizeContracts)
+        sizeContracts = If(isShort, sizeContracts, -sizeContracts)
         Dim isTakeProfit = protectionType.Contains("TAKE", StringComparison.OrdinalIgnoreCase) OrElse protectionType.Contains("TP", StringComparison.OrdinalIgnoreCase)
         Dim rule = If(isShort,
                       If(isTakeProfit, 2, 1),
@@ -267,7 +281,17 @@ Public Class GateFutures
             }}
         }
         Dim raw = Await SendSignedAsync(HttpMethod.Post, "/futures/usdt/price_orders", String.Empty, body.ToString(Newtonsoft.Json.Formatting.None))
-        Return ReadLong(JObject.Parse(raw), "id", "id_string")
+        Dim orderId = ReadLong(JObject.Parse(raw), "id", "id_string")
+        If orderId <= 0L Then Throw New InvalidOperationException("A Gate não retornou o ID da proteção.")
+
+        Dim orderPath = "/futures/usdt/price_orders/" & orderId.ToString(CultureInfo.InvariantCulture)
+        Dim order = JObject.Parse(Await SendSignedAsync(HttpMethod.Get, orderPath, String.Empty, String.Empty))
+        Dim status = ReadString(order, "status")
+        If Not String.Equals(status, "open", StringComparison.OrdinalIgnoreCase) Then
+            Dim reason = ReadString(order, "reason", "finish_as")
+            Throw New InvalidOperationException($"A proteção #{orderId} não ficou ativa na Gate ({status}). {reason}".Trim())
+        End If
+        Return orderId
     End Function
 
     Public Async Function GATE_CancelFuturesProtectionOrderAsync(symbol As String, algoId As Long) As Task(Of Boolean)
@@ -317,6 +341,7 @@ Public Class GateFutures
     End Function
 
     Private Shared Function ParseCreatedOrder(item As JObject, contract As String, size As Decimal, price As Decimal, orderType As String) As BinanceFuturesOrder
+        Dim remaining = Math.Abs(ReadDecimal(item, "left"))
         Return New BinanceFuturesOrder With {
             .Exchange = "GATE",
             .Symbol = contract.Replace("_", String.Empty, StringComparison.OrdinalIgnoreCase),
@@ -326,7 +351,8 @@ Public Class GateFutures
             .OrderType = orderType,
             .Status = ReadString(item, "status", "open_status", "finish_as"),
             .Quantity = Math.Abs(size),
-            .ExecutedQuantity = 0D,
+            .ExecutedQuantity = If(item("left") Is Nothing OrElse item("left").Type = JTokenType.Null,
+                                   0D, Math.Max(0D, Math.Abs(size) - remaining)),
             .Price = price,
             .StopPrice = 0D,
             .OrderTime = ReadDateTime(item, "create_time")

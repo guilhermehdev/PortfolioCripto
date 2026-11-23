@@ -1288,6 +1288,8 @@ Public NotInheritable Class SpotBotGridAdaptiveStrategy
                 .ObservedValue = spacingPercent,
                 .EntryPrice = latest,
                 .StopPrice = stopPrice,
+                .GridBuyLevel = buyLevel,
+                .TakeProfitPrice = latest * (1D + Math.Max(spacingPercent, stopDistancePercent * 1.5D) / 100D),
                 .SupportPrice = supportPrice,
                 .GridManaged = True,
                 .GridSpacingPercent = spacingPercent,
